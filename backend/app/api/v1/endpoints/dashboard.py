@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.get("/stats", response_model=DashboardStats)
 def get_dashboard_stats(
-    time_range: str = Query("24h", regex="^(24h|7d|30d|all|custom)$"),
+    time_range: str = Query("24h", pattern="^(24h|7d|30d|all|custom)$"),
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
     db: Session = Depends(deps.get_db),

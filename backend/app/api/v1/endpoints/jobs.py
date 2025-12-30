@@ -385,7 +385,7 @@ def get_step_logs(
 def get_step_data(
     run_id: int,
     step_id: int,
-    direction: str = Query("out", regex="^(in|out)$"),
+    direction: str = Query("out", pattern="^(in|out)$"),
     limit: int = Query(10, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
