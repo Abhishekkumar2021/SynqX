@@ -10,13 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { type AssetBulkCreate, bulkCreateAssets } from '@/lib/api';
 import { AssetType, ConnectorType } from '@/lib/enums';
 import { ASSET_META } from '@/lib/asset-definitions';
 import { toast } from 'sonner';
-import { Plus, X, Database, ArrowRightLeft, Sparkles, Loader2, Code, TrendingUp } from 'lucide-react';
+import { Plus, X, ArrowRightLeft, Sparkles, Loader2, Code, TrendingUp } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -93,7 +92,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
     const availableAssetTypes = CONNECTOR_ASSET_TYPES[connectorType] || DEFAULT_ASSET_TYPES;
     const defaultAssetType = availableAssetTypes[0];
 
-    const { register, control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormValues>({
+    const { register, control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
         defaultValues: {
             assets: [{
                 name: '',
@@ -146,7 +145,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
     const onSubmit = (data: FormValues) => {
         const payload: AssetBulkCreate = {
             assets: data.assets.filter(a => a.name.trim() !== '').map(asset => {
-                let config: Record<string, any> = {};
+                const config: Record<string, any> = {};
                 
                 // For REST APIs, we treat the name as an endpoint
                 let finalName = asset.name.trim();

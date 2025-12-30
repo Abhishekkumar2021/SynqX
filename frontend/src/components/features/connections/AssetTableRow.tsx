@@ -1,11 +1,9 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Table as TableIcon, Eye, MoreHorizontal, RefreshCw, FileJson, Terminal,
-    FileText, Database, Copy, Check, Maximize2, Minimize2, Search, ArrowUpDown, 
-    ChevronDown, Filter, X, Download, Code, FileCode, Workflow, Layers
+    FileText, Database, Copy, Check, Maximize2, Minimize2, 
+    Code, FileCode, Workflow, Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,8 +27,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -148,7 +144,7 @@ export const AssetTableRow: React.FC<AssetTableRowProps> = ({ asset, connectionI
                     <div className="flex flex-col">
                         <span className="text-foreground font-semibold">{asset.name}</span>
                         {asset.fully_qualified_name && asset.fully_qualified_name !== asset.name && (
-                            <span className="text-[10px] text-muted-foreground/60 font-mono truncate max-w-[200px]">
+                            <span className="text-[10px] text-muted-foreground/60 font-mono truncate max-w-50">
                                 {asset.fully_qualified_name}
                             </span>
                         )}

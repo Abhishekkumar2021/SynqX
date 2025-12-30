@@ -9,7 +9,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { Layout } from './components/layout/Layout';
 import { ThemeProvider } from './components/providers/ThemeProvider';
 import { AuthProvider } from './components/providers/AuthProvider';
-import { ZenProvider } from './context/ZenContext';
+import { ZenProvider } from '@/components/providers/ZenProvider';
 import { useAuth } from './hooks/useAuth';
 import { Toaster } from './components/ui/sonner';
 

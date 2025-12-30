@@ -6,7 +6,6 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, formatNumber } from '@/lib/utils';
 
@@ -40,7 +39,7 @@ const formatBytes = (bytes: number) => {
 const CustomTooltip = ({ active, payload, label, viewType }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-[1.5rem] border border-border/40 bg-background/95 backdrop-blur-2xl p-4 shadow-2xl ring-1 ring-white/10 min-w-[200px] z-[100]">
+            <div className="rounded-[1.5rem] border border-border/40 bg-background/95 backdrop-blur-2xl p-4 shadow-2xl ring-1 ring-white/10 min-w-50 z-100">
                 <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-white/5 pb-2">
                     {label}
                 </p>
@@ -105,7 +104,7 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
                 </div>
             </CardHeader>
 
-            <CardContent className="flex-1 px-6 pt-4 pb-8 min-h-[350px]">
+            <CardContent className="flex-1 px-6 pt-4 pb-8 min-h-87.5">
                 <ResponsiveContainer width="100%" height="100%" key={`${theme}-${view}`}>
                     {view === 'jobs' ? (
                         <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>

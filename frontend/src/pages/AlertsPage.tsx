@@ -22,7 +22,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import { AlertListItem } from '@/components/features/alerts/AlertListItem';
 
 export const AlertsPage: React.FC = () => {

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { PageMeta } from '@/components/common/PageMeta';
 import { motion } from 'framer-motion';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import { cn } from '@/lib/utils';
 
 import { ConnectionsHeader } from '@/components/features/connections/ConnectionsHeader';

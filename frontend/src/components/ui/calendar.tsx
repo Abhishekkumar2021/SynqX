@@ -10,9 +10,8 @@ import {
   DayPicker,
   getDefaultClassNames,
   type DayButton,
-  type DateRange,
 } from "react-day-picker"
-import { motion, LayoutGroup } from "framer-motion"
+import { motion } from "framer-motion"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -22,8 +21,6 @@ function Calendar({
   classNames,
   showOutsideDays = true,
   captionLayout = "label",
-  buttonVariant = "ghost",
-  formatters,
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
-    GitBranch, MoreHorizontal, Play, Settings, 
+    MoreHorizontal, Play, Settings, 
     Workflow, Calendar, CheckCircle2, XCircle, Loader2,
-    History, Trash2, ChevronDown, Zap
+    History, Trash2, Zap
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -199,14 +199,14 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                     {/* Schedule Badge */}
                     <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground/80 bg-muted/40 px-2.5 py-1 rounded-lg border border-border/20">
                         <Calendar className="h-3 w-3 opacity-60" />
-                        <span className="truncate max-w-[80px] font-mono">{pipeline.schedule_cron || 'Manual'}</span>
+                        <span className="truncate max-w-20 font-mono">{pipeline.schedule_cron || 'Manual'}</span>
                     </div>
 
                     {/* Quick Run Button */}
                     <div className="flex items-center">
                         <Button 
                             size="sm" 
-                            className="h-9 rounded-xl pl-4 pr-3 text-xs font-bold shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:translate-y-[-1px] transition-all bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                            className="h-9 rounded-xl pl-4 pr-3 text-xs font-bold shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:-translate-y-px transition-all bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
                             onClick={() => onRun(pipeline.id)}
                         >
                             <Zap className="h-3.5 w-3.5 fill-current" />

@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import { PageMeta } from '@/components/common/PageMeta';
 import { useTheme } from '@/hooks/useTheme';
 import { ApiKeysManager } from '@/components/settings/ApiKeysManager';
@@ -113,8 +113,8 @@ export const SettingsPage: React.FC = () => {
 
             {/* --- Ambient Background Effects (Subtle) --- */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] opacity-30" />
-                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px] opacity-20" />
+                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-125 h-125 bg-primary/5 rounded-full blur-[100px] opacity-30" />
+                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-100 h-100 bg-blue-500/5 rounded-full blur-[100px] opacity-20" />
             </div>
 
             {/* --- Page Header --- */}

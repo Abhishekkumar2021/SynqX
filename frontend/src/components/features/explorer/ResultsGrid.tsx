@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -5,7 +6,7 @@ import { type QueryResponse } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Terminal, ListFilter, Copy,
-    Database, Download, FileJson, FileText,
+    Download, FileJson, FileText,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Columns, Settings2, EyeOff, MoreHorizontal,
     PinOff, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, X
@@ -51,6 +52,7 @@ import {
     type ColumnPinningState,
     type Column,
 } from "@tanstack/react-table"
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ResultsGridProps {
     data: QueryResponse | null;
@@ -292,11 +294,11 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         {title && (
                             <div className="flex flex-col mr-2 shrink-0">
-                                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-foreground truncate max-w-[120px] sm:max-w-none">{title}</span>
-                                {description && <span className="text-[9px] text-muted-foreground font-medium truncate max-w-[120px] sm:max-w-none hidden xs:block">{description}</span>}
+                                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-foreground truncate max-w-30 sm:max-w-none">{title}</span>
+                                {description && <span className="text-[9px] text-muted-foreground font-medium truncate max-w-30 sm:max-w-none hidden xs:block">{description}</span>}
                             </div>
                         )}
-                        <div className="relative flex-1 max-w-[240px] group">
+                        <div className="relative flex-1 max-w-60 group">
                             <ListFilter className={cn(
                                 "z-20 absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 transition-colors",
                                 globalFilter ? "text-primary" : "text-muted-foreground group-focus-within:text-primary"
@@ -338,7 +340,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                                     <Settings2 size={15} />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-48 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 z-[10000]" align="end">
+                            <DropdownMenuContent className="w-48 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 z-10000" align="end">
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Density</DropdownMenuLabel>
                                 <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
                                     <DropdownMenuRadioItem value="compact" className="text-xs font-medium rounded-lg">Compact</DropdownMenuRadioItem>
@@ -356,7 +358,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                                     <span className="hidden md:inline">Columns</span>
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 max-h-96 overflow-y-auto custom-scrollbar z-[10000]" align="end">
+                            <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 max-h-96 overflow-y-auto custom-scrollbar z-10000" align="end">
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Visible Columns</DropdownMenuLabel>
                                 {table.getAllColumns().filter(c => c.id !== 'select' && c.id !== 'index').map(column => (
                                     <DropdownMenuCheckboxItem
@@ -383,7 +385,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                                     <span className="hidden md:inline">Export</span>
                                 </Button>
                             </DropdownMenuTrigger>
-                             <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-2 z-[10000]" align="end">
+                             <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-2 z-10000" align="end">
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Data Formats</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => handleExport('json')} className="rounded-lg gap-3 py-2.5 cursor-pointer">
                                     <FileJson className="h-4 w-4 text-orange-500" />
@@ -494,7 +496,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                              <SelectTrigger className="h-7 w-16 text-[10px] font-bold">
                                 <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="z-[10000]">
+                             <SelectContent className="z-10000">
                                 {[10, 25, 50, 100, 500].map(size => (
                                      <SelectItem key={size} value={String(size)} className="text-[10px] font-bold">{size}</SelectItem>
                                 ))}
@@ -646,7 +648,7 @@ const DataTableColumnHeader = ({ column, title }: { column: Column<any, unknown>
                             )}
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 z-[10001]">
+                    <DropdownMenuContent align="end" className="w-56 z-10001">
                          <div className="px-2 py-2">
                             <Input
                                 placeholder={`Filter ${title}...`}

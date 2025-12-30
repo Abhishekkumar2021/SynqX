@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // UI Imports
 import { AlertTriangle, TrendingDown } from 'lucide-react';
 import type { FailingPipeline } from '@/lib/api';
-import { cn } from '@/lib/utils';
 
 interface TopFailingPipelinesProps {
     pipelines: FailingPipeline[];

@@ -52,7 +52,7 @@ import {
 import { CreateConnectionDialog } from '@/components/features/connections/CreateConnectionDialog';
 import { PageMeta } from '@/components/common/PageMeta';
 import { useMemo, useState } from 'react';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import { motion } from 'framer-motion';
 import { AssetsTabContent } from '@/components/features/connections/AssetsTabContent';
 import { ConnectionConfigStats } from '@/components/features/connections/ConnectionConfigStats';

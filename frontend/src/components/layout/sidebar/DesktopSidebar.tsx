@@ -20,7 +20,7 @@ import { NavGroup } from '../navigation/NavGroup';
 import { NavItem } from '../navigation/NavItem';
 import { DocsSidebar } from '../navigation/DocsSidebar';
 import { useAuth } from '@/hooks/useAuth';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import { MAIN_NAV, KNOWLEDGE_NAV, CONFIG_NAV } from '@/lib/main-nav';
 
 interface DesktopSidebarProps {

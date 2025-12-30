@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useJobLogs } from '@/hooks/useJobLogs';
 import {
@@ -126,7 +125,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                 <div className="flex items-center justify-between px-5 py-2.5 bg-muted/30 border-b border-border/40 backdrop-blur-md shrink-0">
                     <div className="flex items-center gap-5">
                         <div className={cn(
-                            "flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em] border transition-all duration-500",
+                            "flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all duration-500",
                             isConnected ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20" : "bg-destructive/10 text-destructive border-destructive/20"
                         )}>
                             {isConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
@@ -258,12 +257,12 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                                     <div 
                                         key={log.id || idx} 
                                         className={cn(
-                                            "flex group relative min-h-[22px] transition-all duration-75 border-l-2 border-transparent hover:border-primary/50 hover:bg-muted/30",
+                                            "flex group relative min-h-5.5 transition-all duration-75 border-l-2 border-transparent hover:border-primary/50 hover:bg-muted/30",
                                             cfg.line
                                         )}
                                     >
                                         {/* Row Accent */}
-                                        <div className={cn("absolute left-0 top-0 bottom-0 w-[2px] opacity-0 group-hover:opacity-100 transition-opacity", cfg.accent)} />
+                                        <div className={cn("absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity", cfg.accent)} />
                                         
                                         {/* Gutter */}
                                         <div className="w-12 shrink-0 text-right pr-4 text-[9px] font-bold text-muted-foreground/20 select-none border-r border-border/40 pt-1 group-hover:text-primary/40">

@@ -1,7 +1,7 @@
 import { OperatorLibrary } from '@/components/features/operators/OperatorLibrary';
 import { Blocks } from 'lucide-react';
 import { PageMeta } from '@/components/common/PageMeta';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import { cn } from '@/lib/utils';
 
 import { motion } from 'framer-motion';

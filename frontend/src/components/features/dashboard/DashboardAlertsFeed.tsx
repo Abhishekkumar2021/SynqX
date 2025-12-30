@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bell, Info, AlertTriangle, XCircle, CheckCircle2 } from 'lucide-react';
 import type { DashboardAlert } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 interface DashboardAlertsFeedProps {
     alerts: DashboardAlert[];

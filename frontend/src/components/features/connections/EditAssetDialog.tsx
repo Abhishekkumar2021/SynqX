@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/incompatible-library */
 import React, { useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -19,8 +20,7 @@ import {
 } from "@/components/ui/select";
 import { updateAsset, type Asset, type AssetUpdate } from '@/lib/api';
 import { toast } from 'sonner';
-import { Sparkles, Loader2, Code, TrendingUp, Settings } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Loader2, Code, TrendingUp, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface EditAssetDialogProps {
@@ -42,7 +42,7 @@ type FormValues = {
 
 export const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ connectionId, asset, open, onOpenChange }) => {
     const queryClient = useQueryClient();
-    const { register, control, handleSubmit, reset, watch, formState: { errors } } = useForm<FormValues>();
+    const { register, control, handleSubmit, reset, watch } = useForm<FormValues>();
 
     const isIncremental = watch("is_incremental_capable");
     
@@ -90,7 +90,7 @@ export const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ connectionId, 
     const onSubmit = (data: FormValues) => {
         if (!asset) return;
 
-        let config: Record<string, any> = { ...asset.config };
+        const config: Record<string, any> = { ...asset.config };
         
         // Update Query if applicable
         if (['sql_query', 'nosql_query'].includes(asset.asset_type)) {
@@ -173,7 +173,7 @@ export const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ connectionId, 
                             <Textarea 
                                 {...register('description')}
                                 placeholder="Describe the purpose of this asset..."
-                                className="bg-background/50 border-border/40 min-h-[80px] text-sm"
+                                className="bg-background/50 border-border/40 min-h-20 text-sm"
                             />
                         </div>
 
@@ -231,7 +231,7 @@ export const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ connectionId, 
                                         name="write_mode"
                                         render={({ field }) => (
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <SelectTrigger className="w-[120px] h-9 rounded-xl bg-background border-border/40 text-xs font-bold uppercase">
+                                                <SelectTrigger className="w-30 h-9 rounded-xl bg-background border-border/40 text-xs font-bold uppercase">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent className="rounded-xl">
@@ -254,7 +254,7 @@ export const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ connectionId, 
                                 </Label>
                                 <Textarea 
                                     {...register('query')}
-                                    className="font-mono text-xs min-h-[120px] bg-background/50 border-border/40"
+                                    className="font-mono text-xs min-h-30 bg-background/50 border-border/40"
                                 />
                             </div>
                         )}

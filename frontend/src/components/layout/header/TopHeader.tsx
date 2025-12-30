@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 
 interface TopHeaderProps {
     setIsMobileMenuOpen: (isOpen: boolean) => void;

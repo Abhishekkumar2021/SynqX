@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Lock, Copy, Check, MousePointer2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,7 +54,7 @@ export const ConfigField: React.FC<ConfigFieldProps> = ({
 
             <div 
                 className={cn(
-                    "relative min-h-[44px] flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border transition-all duration-300",
+                    "relative min-h-11 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border transition-all duration-300",
                     "bg-muted/5 border-border/40 backdrop-blur-sm",
                     "group-hover/field:border-primary/30 group-hover/field:bg-primary/5 group-hover/field:shadow-sm",
                     copyable && "cursor-pointer active:scale-[0.98]",

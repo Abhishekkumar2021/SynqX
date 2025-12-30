@@ -1,4 +1,3 @@
-/* eslint-disable no-empty */
 /* eslint-disable react-hooks/incompatible-library */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -32,10 +31,7 @@ import {
     SelectContent, 
     SelectItem, 
     SelectTrigger, 
-    SelectValue,
-    SelectGroup,
-    SelectLabel
-} from '@/components/ui/select';
+    SelectValue} from '@/components/ui/select';
 import {
     AlertDialog,
     AlertDialogTrigger,
@@ -48,7 +44,7 @@ import {
     AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { getConnections, getConnectionAssets } from '@/lib/api';
-import { NODE_DEFINITIONS, getNodeIcon, getOperatorDefinition, type OperatorField } from '@/lib/pipeline-definitions';
+import { getNodeIcon, getOperatorDefinition, type OperatorField } from '@/lib/pipeline-definitions';
 
 interface NodePropertiesProps {
     node: Node | null;
@@ -66,7 +62,7 @@ const HelpIcon = ({ content }: { content?: string }) => {
                 <TooltipTrigger asChild>
                     <HelpCircle className="h-3 w-3 text-muted-foreground/50 hover:text-primary cursor-help transition-colors ml-1.5" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[220px] text-[10px] leading-relaxed p-3 rounded-xl border-border/40 bg-background/95 backdrop-blur-md shadow-2xl z-50">
+                <TooltipContent className="max-w-55 text-[10px] leading-relaxed p-3 rounded-xl border-border/40 bg-background/95 backdrop-blur-md shadow-2xl z-50">
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-1.5 text-primary/80 font-bold uppercase tracking-widest text-[9px]">
                             <Info className="h-3 w-3" /> Information
@@ -82,7 +78,7 @@ const HelpIcon = ({ content }: { content?: string }) => {
 };
 
 export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, onUpdate, onDelete, onDuplicate }) => {
-    const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<any>();
+    const { register, handleSubmit, watch, reset, control } = useForm<any>();
     const [activeTab, setActiveTab] = useState('settings');
 
     // Watchers
@@ -115,7 +111,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
     useEffect(() => {
         if (node) {
             const config = node.data.config as any || {};
-            let currentType = ((node.data.type as string) || (node.data.operator_type as string) || 'transform').toLowerCase();
+            const currentType = ((node.data.type as string) || (node.data.operator_type as string) || 'transform').toLowerCase();
             const currentOpClass = (node.data.operator_class as string) || (currentType === 'source' ? 'extractor' : currentType === 'sink' ? 'loader' : 'pandas_transform');
 
             const def = getOperatorDefinition(currentOpClass);
@@ -254,7 +250,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                         <Textarea 
                             {...register(field.name)} 
                             placeholder={field.placeholder}
-                            className="font-mono text-[10px] min-h-[100px] bg-background/50 rounded-lg"
+                            className="font-mono text-[10px] min-h-25 bg-background/50 rounded-lg"
                         />
                         {field.description && <p className="text-[9px] text-muted-foreground">{field.description}</p>}
                     </div>
@@ -478,7 +474,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                     <Textarea
                                         {...register('description')}
                                         placeholder="Optional node description or notes..."
-                                        className="min-h-[80px] rounded-lg bg-background/50 border-border/40 focus:ring-primary/20 text-xs resize-none"
+                                        className="min-h-20 rounded-lg bg-background/50 border-border/40 focus:ring-primary/20 text-xs resize-none"
                                     />
                                 </div>
 
@@ -499,7 +495,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                     </div>
                                     <Textarea
                                         {...register('config', { required: true })}
-                                        className="font-mono text-[11px] min-h-[450px] bg-[#0a0a0a]/80 text-emerald-500 border-white/5 rounded-xl p-4 resize-none leading-relaxed shadow-2xl"
+                                        className="font-mono text-[11px] min-h-112.5 bg-[#0a0a0a]/80 text-emerald-500 border-white/5 rounded-xl p-4 resize-none leading-relaxed shadow-2xl"
                                         spellCheck={false}
                                     />
                                 </div>

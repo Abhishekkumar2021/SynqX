@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
@@ -6,7 +7,7 @@ export function useJobsListTelemetry() {
   const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const isMountedRef = useRef(true);
 

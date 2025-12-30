@@ -3,7 +3,7 @@ import { useLocation, Outlet } from 'react-router-dom';
 import { Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { SearchDialog } from './navigation/SearchDialog';

@@ -13,7 +13,7 @@ import { JobsList } from '@/components/features/jobs/JobsList';
 import { JobDetails } from '@/components/features/jobs/JobDetails';
 import { PageMeta } from '@/components/common/PageMeta';
 import { useJobsListTelemetry } from '@/hooks/useJobsListTelemetry';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import {
     DropdownMenu,
     DropdownMenuContent,

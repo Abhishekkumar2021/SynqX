@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import {
     Database, ArrowRightLeft, HardDriveUpload, Server,
     Settings2, Loader2, Layers, ShieldCheck, 
-    Zap, Activity, Clock, Info, CheckCircle2, AlertCircle,
-    ChevronRight, Terminal
+    Zap, Activity, Clock, CheckCircle2, AlertCircle,
+    Terminal
 } from 'lucide-react';
 import { cn, formatNumber } from '@/lib/utils';
 
@@ -48,7 +49,7 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
     return (
         <div
             className={cn(
-                "group relative flex w-[340px] flex-col rounded-[2.5rem] transition-all duration-500 ease-out border-2",
+                "group relative flex w-85 flex-col rounded-[2.5rem] transition-all duration-500 ease-out border-2",
                 "bg-card text-card-foreground shadow-xl",
                 selected 
                     ? "ring-2 ring-primary ring-offset-4 ring-offset-background scale-[1.02] z-50 shadow-[0_0_50px_rgba(var(--primary),0.1)] border-primary/50" 
@@ -63,11 +64,11 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                 {/* --- Header Section --- */}
                 <div className={cn(
                     "flex items-center gap-4 p-6 pb-5 relative z-10 border-b border-border/5",
-                    isRunning && "bg-primary/[0.02]"
+                    isRunning && "bg-primary/2"
                 )}>
                     <div className="relative shrink-0">
                         <div className={cn(
-                            "flex h-14 w-14 items-center justify-center rounded-[1.25rem] border-2 transition-all duration-500 shadow-sm",
+                            "flex h-14 w-14 items-center justify-center rounded-3xl border-2 transition-all duration-500 shadow-sm",
                             isRunning ? "bg-primary text-primary-foreground border-primary shadow-primary/20 scale-110" : 
                                        "bg-muted/30 text-muted-foreground border-border/40 group-hover:border-border-strong",
                             !isRunning && themeStyles.text
@@ -95,7 +96,7 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                                 {config.label}
                             </span>
                         </div>
-                        <span className="text-[15px] font-bold tracking-tight text-foreground whitespace-normal break-words leading-[1.2]">
+                        <span className="text-[15px] font-bold tracking-tight text-foreground whitespace-normal wrap-break-word leading-[1.2]">
                             {nodeData.label}
                         </span>
                     </div>
@@ -189,7 +190,7 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-[11px] font-bold leading-relaxed text-destructive/90 break-words pl-1 border-l-2 border-destructive/20 ml-1">
+                                    <p className="text-[11px] font-bold leading-relaxed text-destructive/90 wrap-break-word pl-1 border-l-2 border-destructive/20 ml-1">
                                         {nodeData.error}
                                     </p>
                                 )}
@@ -204,14 +205,14 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                 <Handle
                     type="target"
                     position={Position.Left}
-                    className="!w-4 !h-12 !rounded-full !bg-background !border-2 !border-border/40 !-left-[10px] hover:!border-primary hover:!scale-110 transition-all shadow-xl z-50"
+                    className="w-4! h-12! rounded-full! bg-background! border-2! border-border/40! -left-2.5! hover:border-primary! hover:scale-110! transition-all shadow-xl z-50"
                 />
             )}
             {type !== 'sink' && type !== 'destination' && (
                 <Handle
                     type="source"
                     position={Position.Right}
-                    className="!w-4 !h-12 !rounded-full !bg-background !border-2 !border-border/40 !-right-[10px] hover:!border-primary hover:!scale-110 transition-all shadow-xl z-50"
+                    className="w-4! h-12! rounded-full! bg-background! border-2! border-border/40! -right-2.5! hover:border-primary! hover:scale-110! transition-all shadow-xl z-50"
                 />
             )}
         </div>

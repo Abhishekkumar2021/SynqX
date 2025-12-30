@@ -350,6 +350,17 @@ export const ExplorerPage: React.FC = () => {
         }
     };
 
+    const activeIndex = useMemo(() => {
+        const tab = tabs.find(t => t.id === activeTabId);
+        if (!tab) return undefined;
+
+        const index = tab.results.indexOf(activeResult!);
+        if (index === -1) return undefined;
+
+        return index + 1;
+    }, [tabs, activeTabId, activeResult]);
+
+
     const runQueryRef = useRef(runQuery);
     useEffect(() => {
         runQueryRef.current = runQuery;
@@ -420,7 +431,7 @@ export const ExplorerPage: React.FC = () => {
                                 )}
                             >
                                 <TableIcon size={12} className={activeTabId === tab.id ? "text-primary" : "opacity-40"} />
-                                <span className="truncate max-w-[120px]">{tab.title}</span>
+                                <span className="truncate max-w-30">{tab.title}</span>
                                 <button
                                     onClick={(e) => closeTab(tab.id, e)}
                                     className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 hover:text-destructive rounded-md transition-all ml-1"
@@ -639,7 +650,7 @@ export const ExplorerPage: React.FC = () => {
                                         )}
                                     >
                                         <span className="opacity-50">#{idx + 1}</span>
-                                        <span className="truncate max-w-[100px]">{res.statement.substring(0, 15)}...</span>
+                                        <span className="truncate max-w-25">{res.statement.substring(0, 15)}...</span>
                                         {activeTab.activeResultId === res.id && (
                                             <span className="ml-1 text-[8px] bg-primary/20 px-1 rounded text-primary/80">{res.data.results.length}</span>
                                         )}
@@ -692,10 +703,10 @@ export const ExplorerPage: React.FC = () => {
             </div>
 
             <div className="flex-1 min-h-0 w-full relative">
-                <ResultsGrid 
-                    data={activeResult ? activeResult.data : null} 
-                    isLoading={isExecuting} 
-                    title={activeResult ? `Result #${tabs.find(t => t.id === activeTabId)?.results.indexOf(activeResult)! + 1}` : undefined}
+                <ResultsGrid
+                    data={activeResult ? activeResult.data : null}
+                    isLoading={isExecuting}
+                    title={activeIndex ? `Result #${activeIndex}` : undefined}
                     description={activeResult ? activeResult.statement.substring(0, 60) + '...' : undefined}
                 />
             </div>
@@ -723,53 +734,53 @@ export const ExplorerPage: React.FC = () => {
 
             <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden bg-background rounded-3xl border border-border/40 shadow-2xl">
                 <AnimatePresence>
-                {maximizedView === 'editor' && <MaximizePortal>{renderEditor()}</MaximizePortal>}
-                {maximizedView === 'results' && <MaximizePortal >{renderResults()}</MaximizePortal>}
-                {showHistory && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowHistory(false)}
-                            className="absolute inset-0 bg-background/20 backdrop-blur-sm z-80"
+                    {maximizedView === 'editor' && <MaximizePortal>{renderEditor()}</MaximizePortal>}
+                    {maximizedView === 'results' && <MaximizePortal >{renderResults()}</MaximizePortal>}
+                    {showHistory && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setShowHistory(false)}
+                                className="absolute inset-0 bg-background/20 backdrop-blur-sm z-80"
+                            />
+                            <ExecutionHistory
+                                history={history}
+                                onClose={() => setShowHistory(false)}
+                                onRestore={(q) => {
+                                    setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, query: q } : t));
+                                    setShowHistory(false);
+                                }}
+                                onClear={() => clearHistoryMutation.mutate()}
+                            />
+                        </>
+                    )}
+                </AnimatePresence>
+
+                <ResizablePanelGroup direction="horizontal">
+                    <ResizablePanel defaultSize={20} minSize={15} className="bg-muted/5 border-r border-border/40">
+                        <SchemaBrowser
+                            connectionId={selectedConnectionId ? parseInt(selectedConnectionId) : null}
+                            onAction={handleSchemaAction}
                         />
-                        <ExecutionHistory
-                            history={history}
-                            onClose={() => setShowHistory(false)}
-                            onRestore={(q) => {
-                                setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, query: q } : t));
-                                setShowHistory(false);
-                            }}
-                            onClear={() => clearHistoryMutation.mutate()}
-                        />
-                    </>
-                )}
-            </AnimatePresence>
+                    </ResizablePanel>
 
-            <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel defaultSize={20} minSize={15} className="bg-muted/5 border-r border-border/40">
-                    <SchemaBrowser
-                        connectionId={selectedConnectionId ? parseInt(selectedConnectionId) : null}
-                        onAction={handleSchemaAction}
-                    />
-                </ResizablePanel>
+                    <ResizableHandle withHandle className="bg-transparent" />
 
-                <ResizableHandle withHandle className="bg-transparent" />
-
-                <ResizablePanel defaultSize={80}>
-                    <ResizablePanelGroup direction="vertical">
-                        <ResizablePanel defaultSize={50} minSize={20} className="relative overflow-hidden isolate flex flex-col">
-                            {renderEditor()}
-                        </ResizablePanel>
-                        <ResizableHandle withHandle className="bg-transparent" />
-                        <ResizablePanel defaultSize={50} minSize={10} className="overflow-hidden">
-                            {renderResults()}
-                        </ResizablePanel>
-                    </ResizablePanelGroup>
-                </ResizablePanel>
-            </ResizablePanelGroup>
-        </div>
+                    <ResizablePanel defaultSize={80}>
+                        <ResizablePanelGroup direction="vertical">
+                            <ResizablePanel defaultSize={50} minSize={20} className="relative overflow-hidden isolate flex flex-col">
+                                {renderEditor()}
+                            </ResizablePanel>
+                            <ResizableHandle withHandle className="bg-transparent" />
+                            <ResizablePanel defaultSize={50} minSize={10} className="overflow-hidden">
+                                {renderResults()}
+                            </ResizablePanel>
+                        </ResizablePanelGroup>
+                    </ResizablePanel>
+                </ResizablePanelGroup>
+            </div>
         </div>
     );
 };

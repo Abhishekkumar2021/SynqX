@@ -28,7 +28,7 @@ import { RunPipelineDialog } from '@/components/features/dashboard/RunPipelineDi
 import { PageMeta } from '@/components/common/PageMeta';
 import { StatsCard } from '@/components/ui/StatsCard';
 import { useDashboardTelemetry } from '@/hooks/useDashboardTelemetry';
-import { useZenMode } from '@/context/ZenContext';
+import { useZenMode } from '@/hooks/useZenMode';
 import { cn, formatNumber } from '@/lib/utils';
 import { motion, type Variants } from 'framer-motion';
 import { DateRangePicker } from '@/components/features/dashboard/DateRangePicker';

@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import { ChevronLeft } from 'lucide-react';
 import { NavItem } from './NavItem';
 import { DOCS_NAV } from '@/lib/docs-nav';
 
