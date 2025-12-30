@@ -1,3 +1,4 @@
+import sys
 from typing import Any, Dict, Iterator, List, Optional, Union
 import os
 import pandas as pd
@@ -11,7 +12,7 @@ try:
     from cassandra.cluster import Cluster
     from cassandra.auth import PlainTextAuthProvider
     from cassandra.io.asynciobackend import AsyncioConnection
-except ImportError:
+except (ImportError, Exception):
     Cluster = None
     PlainTextAuthProvider = None
     AsyncioConnection = None
@@ -71,7 +72,8 @@ class CassandraConnector(BaseConnector):
 
             # For Python 3.12/3.13, AsyncioConnection can be used but requires careful loop handling in sync apps.
             # We default to standard connection (Sync) which is safer for this Connector architecture.
-            if self._config_model.use_asyncio and AsyncioConnection:
+            # However, for 3.12+, AsyncioConnection is required if C-extensions are missing.
+            if (self._config_model.use_asyncio or sys.version_info >= (3, 12)) and AsyncioConnection:
                 cluster_kwargs["connection_class"] = AsyncioConnection
                 logger.info("Using AsyncioConnection for Cassandra")
 
