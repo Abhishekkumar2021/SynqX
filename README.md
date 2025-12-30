@@ -20,7 +20,7 @@ SynqX employs a decoupled, event-driven architecture designed for high availabil
 ```mermaid
 graph TD
     subgraph "Control Plane"
-        UI[Console UI (React)] <--> API[API Gateway (FastAPI)]
+        UI["Console UI (React)"] <--> API["API Gateway (FastAPI)"]
         API <--> DB[(PostgreSQL)]
     end
 
@@ -86,7 +86,7 @@ The easiest way to get started is using the unified management script, which han
 *   **Docker & Docker Compose** (Recommended)
 *   *Or for local dev:* Python 3.13+, Node.js 18+, PostgreSQL 15+, Redis 7+
 
-### One-Command Launch (Docker)
+### One-Command Launch
 
 ```bash
 # 1. Clone the repository
