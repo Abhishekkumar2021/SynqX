@@ -7,6 +7,7 @@ import {
     Zap, Activity, Clock, CheckCircle2, AlertCircle,
     Terminal
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { cn, formatNumber } from '@/lib/utils';
 
 // --- Visual Mapping ---
@@ -31,6 +32,11 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
     const isError = ['failed', 'error'].includes(status);
     const isSuccess = ['success', 'completed'].includes(status);
     const isWarning = status === 'warning';
+
+    const diffStatus = nodeData.diffStatus || 'none';
+    const isAdded = diffStatus === 'added';
+    const isRemoved = diffStatus === 'removed';
+    const isModified = diffStatus === 'modified';
 
     // Theme Styles Helper - Simplified
     const getThemeStyles = (colorVar: string) => {
@@ -57,6 +63,10 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                 
                 isError && "border-destructive/40",
                 isRunning && "border-primary/50 scale-[1.02] z-50",
+
+                isAdded && "border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.2)]",
+                isRemoved && "border-destructive/30 border-dashed opacity-50 grayscale",
+                isModified && "border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.2)]",
             )}
         >
             {/* Content Wrapper to maintain internal clipping */}
@@ -95,6 +105,16 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                             )}>
                                 {config.label}
                             </span>
+                            {diffStatus !== 'none' && (
+                                <Badge className={cn(
+                                    "text-[8px] font-black uppercase tracking-widest h-4 px-1.5",
+                                    isAdded && "bg-emerald-500/20 text-emerald-500 border-emerald-500/30",
+                                    isRemoved && "bg-destructive/20 text-destructive border-destructive/30",
+                                    isModified && "bg-amber-500/20 text-amber-500 border-amber-500/30",
+                                )}>
+                                    {diffStatus}
+                                </Badge>
+                            )}
                         </div>
                         <span className="text-[15px] font-bold tracking-tight text-foreground whitespace-normal wrap-break-word leading-[1.2]">
                             {nodeData.label}

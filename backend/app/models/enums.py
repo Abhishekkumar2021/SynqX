@@ -140,6 +140,7 @@ class AlertType(str, enum.Enum):
 class AlertDeliveryMethod(str, enum.Enum):
     EMAIL = "email"
     SLACK = "slack"
+    TEAMS = "teams"
     WEBHOOK = "webhook"
     PAGERDUTY = "pagerduty"
     IN_APP = "in_app"

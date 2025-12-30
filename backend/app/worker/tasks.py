@@ -9,7 +9,7 @@ from app.models.pipelines import PipelineVersion
 from app.engine.runner import PipelineRunner
 from app.core.db_logging import DBLogger
 from app.core.errors import ConfigurationError
-import app.connectors.impl # Ensure connectors are registered
+import httpx
 
 logger = get_logger(__name__)
 
@@ -18,6 +18,135 @@ logger = get_logger(__name__)
 def test_celery():
     """Health check task for Celery workers."""
     return "Celery OK"
+
+
+@celery_app.task(
+    name="app.worker.tasks.deliver_alert_task",
+    bind=True,
+    max_retries=5,
+    default_retry_delay=30,
+)
+def deliver_alert_task(self, alert_id: int):
+    """Deliver an alert to an external system (Slack, Teams, Webhook)."""
+    from app.models.monitoring import Alert
+    from app.models.enums import AlertStatus, AlertDeliveryMethod
+
+    with session_scope() as session:
+        alert = session.query(Alert).filter(Alert.id == alert_id).first()
+        if not alert or not alert.recipient:
+            return
+
+        alert.status = AlertStatus.SENDING
+        session.commit()
+
+        try:
+            success = False
+            if alert.delivery_method == AlertDeliveryMethod.SLACK:
+                # Basic Slack Webhook implementation
+                payload = {
+                    "text": f"*{alert.level.value.upper()}*: {alert.message}",
+                    "attachments": [{
+                        "color": "#36a64f" if alert.level.value == "success" else "#ff0000",
+                        "fields": [
+                            {"title": "Pipeline ID", "value": str(alert.pipeline_id), "short": True},
+                            {"title": "Job ID", "value": str(alert.job_id) if alert.job_id else "N/A", "short": True}
+                        ],
+                        "footer": "SynqX Notification System",
+                        "ts": int(datetime.now(timezone.utc).timestamp())
+                    }]
+                }
+                response = httpx.post(alert.recipient, json=payload, timeout=10)
+                success = response.status_code < 300
+
+            elif alert.delivery_method == AlertDeliveryMethod.TEAMS:
+                # Basic MS Teams Webhook (Connector) implementation
+                payload = {
+                    "@type": "MessageCard",
+                    "@context": "http://schema.org/extensions",
+                    "themeColor": "0076D7",
+                    "summary": alert.message,
+                    "sections": [{
+                        "activityTitle": f"SynqX Alert: {alert.level.value.upper()}",
+                        "activitySubtitle": alert.message,
+                        "facts": [
+                            {"name": "Pipeline ID", "value": str(alert.pipeline_id)},
+                            {"name": "Job ID", "value": str(alert.job_id) if alert.job_id else "N/A"}
+                        ],
+                        "markdown": True
+                    }]
+                }
+                response = httpx.post(alert.recipient, json=payload, timeout=10)
+                success = response.status_code < 300
+            
+            elif alert.delivery_method == AlertDeliveryMethod.WEBHOOK:
+                payload = {
+                    "alert_id": alert.id,
+                    "level": alert.level.value,
+                    "message": alert.message,
+                    "pipeline_id": alert.pipeline_id,
+                    "job_id": alert.job_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+                response = httpx.post(alert.recipient, json=payload, timeout=10)
+                success = response.status_code < 300
+            
+            elif alert.delivery_method == AlertDeliveryMethod.EMAIL:
+                import smtplib
+                from email.mime.text import MIMEText
+                from app.core.config import settings
+                
+                if not settings.SMTP_USER:
+                    logger.warning("SMTP_USER not configured, skipping email delivery")
+                    success = False
+                else:
+                    msg = MIMEText(f"SynqX Alert: {alert.message}\n\nPipeline: {alert.pipeline_id}\nJob: {alert.job_id or 'N/A'}")
+                    msg['Subject'] = f"[{alert.level.value.upper()}] SynqX Pipeline Alert"
+                    msg['From'] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
+                    msg['To'] = alert.recipient
+                    
+                    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                        if settings.SMTP_TLS:
+                            server.starttls()
+                        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                        server.send_message(msg)
+                    success = True
+
+            elif alert.delivery_method == AlertDeliveryMethod.PAGERDUTY:
+                # PagerDuty Events API v2
+                payload = {
+                    "routing_key": alert.recipient, # In PagerDuty, this is the Integration Key
+                    "event_action": "trigger",
+                    "payload": {
+                        "summary": alert.message,
+                        "severity": "critical" if alert.level.value in ("critical", "error") else "warning",
+                        "source": "SynqX ETL",
+                        "component": f"Pipeline-{alert.pipeline_id}",
+                        "custom_details": {
+                            "job_id": alert.job_id,
+                            "pipeline_id": alert.pipeline_id
+                        }
+                    }
+                }
+                response = httpx.post("https://events.pagerduty.com/v2/enqueue", json=payload, timeout=10)
+                success = response.status_code < 300
+            
+            else:
+                success = True 
+
+            if success:
+                alert.status = AlertStatus.SENT
+            else:
+                alert.status = AlertStatus.FAILED
+            
+            session.commit()
+
+        except Exception as e:
+            logger.error(f"Failed to deliver alert {alert_id}: {e}")
+            if self.request.retries < self.max_retries:
+                raise self.retry(exc=e)
+            
+            alert.status = AlertStatus.FAILED
+            session.commit()
 
 
 @celery_app.task(
@@ -421,7 +550,7 @@ def _mark_job_failed(
         "completed_at": job.completed_at.isoformat() if job.completed_at else None,
         "error_message": error_message
     })
-    manager.broadcast_sync("jobs_list", {"type": "job_list_update"})
+    ws_manager.broadcast_sync("jobs_list", {"type": "job_list_update"})
 
     # Trigger Alerts based on Config
     try:

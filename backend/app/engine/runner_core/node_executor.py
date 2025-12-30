@@ -346,7 +346,14 @@ class NodeExecutor:
                         job_id=pipeline_run.job_id
                     )
                     
-                    transform = TransformFactory.get_transform(node.operator_class, node.config)
+                    # Inject run-time context for advanced features
+                    t_config = {
+                        **node.config, 
+                        "_run_id": pipeline_run.id, 
+                        "_node_id": node.id,
+                        "_pipeline_id": pipeline_run.pipeline_id
+                    }
+                    transform = TransformFactory.get_transform(node.operator_class, t_config)
                     data_iter = transform.transform_multi(input_iters)
                 
                 else:
@@ -364,8 +371,15 @@ class NodeExecutor:
                                 f"Applying transformation logic: {node.operator_class}",
                                 job_id=pipeline_run.job_id
                             )
+                            # Inject run-time context for advanced features
+                            t_config = {
+                                **node.config, 
+                                "_run_id": pipeline_run.id, 
+                                "_node_id": node.id,
+                                "_pipeline_id": pipeline_run.pipeline_id
+                            }
                             transform = TransformFactory.get_transform(
-                                node.operator_class, node.config
+                                node.operator_class, t_config
                             )
                             data_iter = transform.transform(upstream_it)
                         

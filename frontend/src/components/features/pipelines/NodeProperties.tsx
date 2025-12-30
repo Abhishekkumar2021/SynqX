@@ -6,13 +6,15 @@ import { useForm, Controller } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import {
     X, Trash2, Save, Code, Sliders,
-    Database, 
-    Info, HelpCircle, Copy
+    Database,
+    Info, HelpCircle, Copy,
+    Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -20,18 +22,20 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { type Node } from '@xyflow/react';
 import { toast } from 'sonner';
-import { 
+import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { 
-    Select, 
-    SelectContent, 
-    SelectItem, 
-    SelectTrigger, 
-    SelectValue} from '@/components/ui/select';
+import { GitCompare, ArrowRight } from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select';
 import {
     AlertDialog,
     AlertDialogTrigger,
@@ -115,7 +119,14 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
             const currentOpClass = (node.data.operator_class as string) || (currentType === 'source' ? 'extractor' : currentType === 'sink' ? 'loader' : 'pandas_transform');
 
             const def = getOperatorDefinition(currentOpClass);
-            
+
+            // Auto-switch to diff tab if there's a diff
+            if (node.data.diffStatus && node.data.diffStatus !== 'none') {
+                setActiveTab('diff');
+            } else {
+                setActiveTab('settings');
+            }
+
             const formValues: any = {
                 label: (node.data.label as string) || '',
                 description: (node.data.description as string) || '',
@@ -138,6 +149,8 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                     // IMPORTANT: Use field.name as the key for react-hook-form
                     if (field.type === 'json') {
                         formValues[field.name] = val ? JSON.stringify(val, null, 2) : '';
+                    } else if (field.type === 'boolean') {
+                        formValues[field.name] = val === true;
                     } else if (Array.isArray(val)) {
                         formValues[field.name] = val.join(', ');
                     } else {
@@ -165,17 +178,19 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 opDef.fields.forEach(field => {
                     const val = data[field.name]; // Retrieve from form using field.name
                     if (field.type === 'json') {
-                        try { 
+                        try {
                             if (val && val.trim()) {
-                                dynamicConfig[field.configKey] = JSON.parse(val); 
+                                dynamicConfig[field.configKey] = JSON.parse(val);
                             }
-                        } catch(e) {
+                        } catch (e) {
                             console.error(`Failed to parse JSON for field ${field.name}`, e);
                         }
                     } else if (field.description?.toLowerCase().includes('comma separated')) {
                         dynamicConfig[field.configKey] = val.split(',').map((s: string) => s.trim()).filter(Boolean);
                     } else if (field.type === 'number') {
                         dynamicConfig[field.configKey] = Number(val);
+                    } else if (field.type === 'boolean') {
+                        dynamicConfig[field.configKey] = Boolean(val);
                     } else {
                         dynamicConfig[field.configKey] = val;
                     }
@@ -187,8 +202,8 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 description: data.description,
                 type: data.operator_type,
                 operator_class: data.operator_class,
-                config: { 
-                    ...baseConfig, 
+                config: {
+                    ...baseConfig,
                     ...dynamicConfig,
                     write_strategy: data.operator_type === 'sink' ? data.write_strategy : undefined
                 },
@@ -247,13 +262,39 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                             <Label className="text-[10px] font-bold">{field.label}</Label>
                             <HelpIcon content={field.tooltip} />
                         </div>
-                        <Textarea 
-                            {...register(field.name)} 
+                        <Textarea
+                            {...register(field.name)}
                             placeholder={field.placeholder}
                             className="font-mono text-[10px] min-h-25 bg-background/50 rounded-lg"
                         />
                         {field.description && <p className="text-[9px] text-muted-foreground">{field.description}</p>}
                     </div>
+                );
+            case 'boolean':
+                return (
+                    <Controller
+                        key={field.name}
+                        control={control}
+                        name={field.name}
+                        render={({ field: checkboxField }) => (
+                            <div className="flex items-center space-x-2 py-1">
+                                <Checkbox
+                                    id={field.name}
+                                    checked={checkboxField.value}
+                                    onCheckedChange={checkboxField.onChange}
+                                />
+                                <div className="grid gap-1.5 leading-none">
+                                    <label
+                                        htmlFor={field.name}
+                                        className="text-[10px] font-bold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center"
+                                    >
+                                        {field.label}
+                                        <HelpIcon content={field.tooltip} />
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+                    />
                 );
             default:
                 return (
@@ -262,9 +303,9 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                             <Label className="text-[10px] font-bold">{field.label}</Label>
                             <HelpIcon content={field.tooltip} />
                         </div>
-                        <Input 
-                            {...register(field.name)} 
-                            type={field.type} 
+                        <Input
+                            {...register(field.name)}
+                            type={field.type}
                             placeholder={field.placeholder}
                             className="h-9 bg-background/50 rounded-lg"
                         />
@@ -282,8 +323,8 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                     <div className={cn(
                         "h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-colors",
                         nodeType === 'source' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
-                        nodeType === 'sink' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                        "bg-primary/10 text-primary border-primary/20"
+                            nodeType === 'sink' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                                "bg-primary/10 text-primary border-primary/20"
                     )}>
                         <Icon size={20} />
                     </div>
@@ -301,7 +342,11 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 <div className="px-6 pt-4 shrink-0">
                     <TabsList className="w-full grid grid-cols-2 h-9 bg-muted/50 p-1 rounded-lg">
                         <TabsTrigger value="settings" className="text-xs gap-2 rounded-md"><Sliders size={14} /> Basic</TabsTrigger>
-                        <TabsTrigger value="advanced" className="text-xs gap-2 rounded-md"><Code size={14} /> Advanced</TabsTrigger>
+                        {node.data.diffStatus && node.data.diffStatus !== 'none' ? (
+                            <TabsTrigger value="diff" className="text-xs gap-2 rounded-md bg-amber-500/10 text-amber-500"><GitCompare size={14} /> Diff</TabsTrigger>
+                        ) : (
+                            <TabsTrigger value="advanced" className="text-xs gap-2 rounded-md"><Code size={14} /> Advanced</TabsTrigger>
+                        )}
                     </TabsList>
                 </div>
 
@@ -445,7 +490,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-2 gap-4">
                                         {watch('retry_strategy') !== 'none' && (
                                             <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -500,6 +545,60 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                     />
                                 </div>
                             </TabsContent>
+
+                            <TabsContent value="diff" className="m-0 space-y-6 focus-visible:outline-none">
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2">
+                                        <Badge className={cn(
+                                            "text-[10px] font-black uppercase tracking-widest",
+                                            (node.data as any).diffStatus === 'added' ? "bg-emerald-500/20 text-emerald-500" :
+                                                (node.data as any).diffStatus === 'removed' ? "bg-destructive/20 text-destructive" :
+                                                    "bg-amber-500/20 text-amber-500"
+                                        )}>
+                                            {String((node.data as any).diffStatus || '')}
+                                        </Badge>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Change Analysis</span>
+                                    </div>
+
+                                    {(node.data as any).diffInfo?.changes?.name && (
+                                        <div className="p-4 rounded-xl border border-border/40 bg-muted/10 space-y-2">
+                                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Identity Changed</Label>
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <span className="text-destructive line-through decoration-destructive/50">{(node.data as any).diffInfo.changes.name.from}</span>
+                                                <ArrowRight size={12} className="text-muted-foreground" />
+                                                <span className="text-emerald-500 font-bold">{(node.data as any).diffInfo.changes.name.to}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {(node.data as any).diffInfo?.changes?.config && (
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Configuration Delta</Label>
+                                            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 overflow-hidden">
+                                                <pre className="text-[10px] font-mono leading-relaxed text-muted-foreground overflow-x-auto">
+                                                    {JSON.stringify((node.data as any).diffInfo.changes.config, null, 2)}
+                                                </pre>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {(node.data as any).diffStatus === 'added' && (
+                                        <div className="p-8 text-center border-2 border-dashed border-emerald-500/20 rounded-2xl bg-emerald-500/5">
+                                            <Plus size={24} className="text-emerald-500/40 mx-auto mb-2" />
+                                            <p className="text-xs font-bold text-emerald-500/80">New Operator Added</p>
+                                            <p className="text-[10px] text-muted-foreground mt-1">This node was not present in the base version.</p>
+                                        </div>
+                                    )}
+
+                                    {(node.data as any).diffStatus === 'removed' && (
+                                        <div className="p-8 text-center border-2 border-dashed border-destructive/20 rounded-2xl bg-destructive/5">
+                                            <Trash2 size={24} className="text-destructive/40 mx-auto mb-2" />
+                                            <p className="text-xs font-bold text-destructive/80">Operator Decommissioned</p>
+                                            <p className="text-[10px] text-muted-foreground mt-1">This node was removed in the target version.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </TabsContent>
                         </div>
                     </ScrollArea>
 
@@ -508,7 +607,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                         <Button type="submit" className="flex-1 rounded-xl h-10 font-bold text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20">
                             <Save size={14} className="mr-2" /> Save Config
                         </Button>
-                        
+
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>

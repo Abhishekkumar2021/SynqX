@@ -1,4 +1,5 @@
 from typing import Optional, List
+import json
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,7 @@ from app.schemas.pipeline import (
     PipelinePublishResponse,
     PipelineValidationResponse,
     PipelineStatsResponse,
+    PipelineDiffResponse,
 )
 from app.services.pipeline_service import PipelineService
 from app.core.errors import AppError, ConfigurationError
@@ -651,6 +653,96 @@ def get_pipeline_stats(
             },
         )
 
+
+@router.get(
+    "/{pipeline_id}/diff",
+    response_model=PipelineDiffResponse,
+    summary="Diff Two Pipeline Versions",
+    description="Compare two versions of a pipeline and return structural and config differences"
+)
+def get_pipeline_diff(
+    pipeline_id: int,
+    base_v: int = Query(..., description="Base version ID"),
+    target_v: int = Query(..., description="Target version ID"),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+):
+    try:
+        from deepdiff import DeepDiff
+        service = PipelineService(db)
+        
+        v1 = service.get_pipeline_version(pipeline_id, base_v, user_id=current_user.id)
+        v2 = service.get_pipeline_version(pipeline_id, target_v, user_id=current_user.id)
+        
+        if not v1 or not v2:
+            raise HTTPException(status_code=404, detail="One or both versions not found")
+            
+        # Diff Nodes
+        v1_nodes = {n.node_id: n for n in v1.nodes}
+        v2_nodes = {n.node_id: n for n in v2.nodes}
+        
+        added_nodes = [nid for nid in v2_nodes if nid not in v1_nodes]
+        removed_nodes = [nid for nid in v1_nodes if nid not in v2_nodes]
+        modified_nodes = []
+        
+        for nid in v1_nodes:
+            if nid in v2_nodes:
+                n1, n2 = v1_nodes[nid], v2_nodes[nid]
+                
+                # Ensure configs are dicts
+                c1 = n1.config if isinstance(n1.config, dict) else {}
+                c2 = n2.config if isinstance(n2.config, dict) else {}
+
+                # Create a copy for comparison that ignores UI position noise
+                comp_c1 = {k: v for k, v in c1.items() if k != 'ui'}
+                comp_c2 = {k: v for k, v in c2.items() if k != 'ui'}
+
+                # Compare critical attributes and config
+                ddiff = DeepDiff(comp_c1, comp_c2, ignore_order=True)
+                config_diff_raw = json.loads(ddiff.to_json()) if ddiff else {}
+                
+                name_changed = n1.name != n2.name
+                type_changed = n1.operator_type != n2.operator_type
+                
+                if (name_changed or type_changed or config_diff_raw):
+                    changes = {}
+                    if name_changed: 
+                        changes["name"] = {"from": n1.name, "to": n2.name}
+                    if type_changed: 
+                        changes["operator_type"] = {"from": n1.operator_type, "to": n2.operator_type}
+                    if config_diff_raw: 
+                        changes["config"] = config_diff_raw
+                    
+                    modified_nodes.append({
+                        "node_id": nid,
+                        "changes": changes
+                    })
+
+        # Diff Edges using logical node_id strings
+        v1_edges = {f"{e.from_node.node_id}->{e.to_node.node_id}" for e in v1.edges if e.from_node and e.to_node}
+        v2_edges = {f"{e.from_node.node_id}->{e.to_node.node_id}" for e in v2.edges if e.from_node and e.to_node}
+        
+        added_edges = list(v2_edges - v1_edges)
+        removed_edges = list(v1_edges - v2_edges)
+        
+        return {
+            "base_version": v1.version,
+            "target_version": v2.version,
+            "nodes": {
+                "added": added_nodes,
+                "removed": removed_nodes,
+                "modified": modified_nodes
+            },
+            "edges": {
+                "added": added_edges,
+                "removed": removed_edges
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error diffing versions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get(
     "/{pipeline_id}/watermarks/{asset_id}",

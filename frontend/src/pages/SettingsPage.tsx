@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
     User, Palette, Bell, ShieldAlert,
-    Save, Mail,
+    Save, 
     Laptop, Lock, 
     RefreshCw, Trash2, Moon, Sun, Monitor
 } from 'lucide-react';
@@ -23,7 +23,8 @@ import { useZenMode } from '@/hooks/useZenMode';
 import { PageMeta } from '@/components/common/PageMeta';
 import { useTheme } from '@/hooks/useTheme';
 import { ApiKeysManager } from '@/components/settings/ApiKeysManager';
-import { updateUser, deleteUser, getAlertConfigs, updateAlertConfig } from '@/lib/api';
+import { AlertConfigDialog } from '@/components/settings/AlertConfigDialog';
+import { updateUser, deleteUser, getAlertConfigs, updateAlertConfig, deleteAlertConfig } from '@/lib/api';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 type SettingsTab = 'general' | 'security' | 'notifications';
@@ -94,6 +95,15 @@ export const SettingsPage: React.FC = () => {
             });
         },
         onError: () => toast.error("Failed to update alert preferences")
+    });
+
+    const deleteAlertMutation = useMutation({
+        mutationFn: deleteAlertConfig,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['alerts'] });
+            toast.success("Alert rule deleted");
+        },
+        onError: () => toast.error("Failed to delete alert rule")
     });
 
     const tabs = [
@@ -347,7 +357,6 @@ export const SettingsPage: React.FC = () => {
                         </motion.div>
                     )}
 
-                    {activeTab === 'notifications' && (
                         <motion.div 
                             key="notifications"
                             initial={{ opacity: 0 }}
@@ -357,11 +366,14 @@ export const SettingsPage: React.FC = () => {
                             className="space-y-6"
                         >
                             <Card className="border-border/60 bg-card/40 backdrop-blur-md">
-                                <CardHeader>
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Mail className="h-4 w-4 text-emerald-500" /> Email Notifications
-                                    </CardTitle>
-                                    <CardDescription>Choose what updates you want to receive via email.</CardDescription>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                                    <div className="space-y-1">
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <Bell className="h-4 w-4 text-emerald-500" /> Notification Rules
+                                        </CardTitle>
+                                        <CardDescription>Configure where and how you receive pipeline alerts.</CardDescription>
+                                    </div>
+                                    <AlertConfigDialog />
                                 </CardHeader>
                                 <CardContent className="space-y-6">
                                     {loadingAlerts ? (
@@ -370,37 +382,57 @@ export const SettingsPage: React.FC = () => {
                                             <Skeleton className="h-12 w-full" />
                                         </div>
                                     ) : alerts && alerts.length > 0 ? (
-                                        alerts.map((alert) => (
-                                            <div key={alert.id} className="flex items-center justify-between space-x-4">
-                                                <div className="flex flex-col space-y-1">
-                                                    <Label className="text-sm font-medium leading-none">{alert.name}</Label>
-                                                    <p className="text-xs text-muted-foreground">{alert.description || alert.alert_type}</p>
+                                        <div className="space-y-4">
+                                            {alerts.map((alert) => (
+                                                <div key={alert.id} className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-background/30 group">
+                                                    <div className="flex flex-col space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <Label className="text-sm font-bold leading-none">{alert.name}</Label>
+                                                            <Badge variant="outline" className="text-[9px] uppercase tracking-tighter h-4">
+                                                                {alert.delivery_method}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">{alert.alert_type} • {alert.recipient || 'In-App'}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <Switch 
+                                                            checked={alert.enabled} 
+                                                            onCheckedChange={(enabled) => toggleAlertMutation.mutate({ id: alert.id, enabled })}
+                                                        />
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-8 w-8 text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                                                            onClick={() => deleteAlertMutation.mutate(alert.id)}
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                <Switch 
-                                                    checked={alert.enabled} 
-                                                    onCheckedChange={(enabled) => toggleAlertMutation.mutate({ id: alert.id, enabled })}
-                                                />
-                                            </div>
-                                        ))
+                                            ))}
+                                        </div>
                                     ) : (
-                                        <div className="text-center text-muted-foreground text-sm py-4">
-                                            No alert configurations found.
+                                        <div className="text-center py-12 border-2 border-dashed border-border/40 rounded-3xl bg-muted/5">
+                                            <Bell className="h-8 w-8 text-muted-foreground/20 mx-auto mb-3" />
+                                            <p className="text-sm text-muted-foreground font-medium">No custom alert rules defined.</p>
+                                            <p className="text-xs text-muted-foreground/60 mb-6">Create a rule to receive notifications in Slack or Teams.</p>
                                         </div>
                                     )}
                                     
                                     <Separator className="bg-border/40" />
                                     
-                                    <div className="flex items-center justify-between space-x-4 opacity-50 cursor-not-allowed">
-                                        <div className="flex flex-col space-y-1">
-                                            <Label className="text-sm font-medium leading-none">System Announcements</Label>
-                                            <p className="text-xs text-muted-foreground">Major feature releases and maintenance.</p>
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex items-center justify-between space-x-4 opacity-50 cursor-not-allowed">
+                                            <div className="flex flex-col space-y-1">
+                                                <Label className="text-sm font-medium leading-none">System Announcements</Label>
+                                                <p className="text-xs text-muted-foreground">Major feature releases and maintenance.</p>
+                                            </div>
+                                            <Switch defaultChecked disabled />
                                         </div>
-                                        <Switch defaultChecked disabled />
                                     </div>
                                 </CardContent>
                             </Card>
                         </motion.div>
-                    )}
                     </AnimatePresence>
                 </div>
             </div>

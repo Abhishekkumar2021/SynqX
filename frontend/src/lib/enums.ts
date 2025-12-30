@@ -159,6 +159,7 @@ export type AlertType = typeof AlertType[keyof typeof AlertType];
 export const AlertDeliveryMethod = {
     EMAIL: "email",
     SLACK: "slack",
+    TEAMS: "teams",
     WEBHOOK: "webhook",
     PAGERDUTY: "pagerduty",
     IN_APP: "in_app"

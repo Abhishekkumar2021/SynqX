@@ -333,3 +333,13 @@ class PipelineStatsResponse(BaseModel):
     average_duration_seconds: Optional[float]
     last_run_at: Optional[datetime]
     next_scheduled_run: Optional[datetime]
+
+class NodeDiff(BaseModel):
+    node_id: str
+    changes: Dict[str, Any]
+
+class PipelineDiffResponse(BaseModel):
+    base_version: int
+    target_version: int
+    nodes: Dict[str, Any]
+    edges: Dict[str, Any]

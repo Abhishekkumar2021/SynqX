@@ -1,4 +1,3 @@
-from typing import Dict, Any
 from app.connectors.impl.sql.base import SQLConnector
 from app.core.errors import ConfigurationError
 from pydantic import Field

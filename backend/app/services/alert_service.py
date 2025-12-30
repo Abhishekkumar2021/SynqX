@@ -74,6 +74,14 @@ class AlertService:
                 db.add(config)
                 alerts.append(alert)
 
+                # Dispatch to external delivery worker if needed
+                if alert.delivery_method in (AlertDeliveryMethod.SLACK, AlertDeliveryMethod.TEAMS, AlertDeliveryMethod.WEBHOOK, AlertDeliveryMethod.EMAIL):
+                    try:
+                        from app.worker.tasks import deliver_alert_task
+                        deliver_alert_task.delay(alert.id)
+                    except Exception as task_err:
+                        logger.error(f"Failed to dispatch alert task: {task_err}")
+
                 # Broadcast to WebSocket
                 try:
                     notification_payload = {

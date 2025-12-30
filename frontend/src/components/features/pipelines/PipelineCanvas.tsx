@@ -29,6 +29,7 @@ import {
     ExternalLink, Trash2, Plus, Undo, Redo } from 'lucide-react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import dagre from 'dagre';
 import { cn } from '@/lib/utils';
@@ -51,6 +52,7 @@ import {
     createPipelineVersion, 
     publishPipelineVersion,
     getPipelineVersion,
+    getPipelineDiff,
     deletePipeline,
     getPipelineVersions,
     type PipelineNode as ApiNode, 
@@ -62,6 +64,8 @@ import {
 import PipelineNode from '@/components/features/pipelines/PipelineNode'; 
 import GlowEdge from '@/components/features/pipelines/GlowEdge';
 import { NodeProperties } from '@/components/features/pipelines/NodeProperties';
+import { DeployCommitDialog } from '@/components/features/pipelines/DeployCommitDialog';
+import { GitCompare, XCircle, Info as InfoIcon } from 'lucide-react';
 
 const edgeTypes = {
     glow: GlowEdge,
@@ -111,6 +115,9 @@ export const PipelineCanvas: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const versionIdParam = searchParams.get('version');
+  const isDiffMode = searchParams.get('diff') === 'true';
+  const baseV = searchParams.get('base');
+  const targetV = searchParams.get('target');
   
   const isNew = id === 'new';
   const queryClient = useQueryClient();
@@ -126,6 +133,8 @@ export const PipelineCanvas: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [pipelineName, setPipelineName] = useState("Untitled Pipeline");
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [deployDialogOpen, setDeployDialogOpen] = useState(false);
+  const [diffData, setDiffData] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const initializedVersionId = useRef<number | null>(null);
 
@@ -144,7 +153,17 @@ export const PipelineCanvas: React.FC = () => {
       enabled: !isNew && !!versionIdParam
   });
 
-  const isLoading = isLoadingPipeline || (!!versionIdParam && isLoadingVersion);
+  const { isLoading: isLoadingDiff } = useQuery({
+      queryKey: ['pipeline-diff', id, baseV, targetV],
+      queryFn: async () => {
+          const data = await getPipelineDiff(parseInt(id!), parseInt(baseV!), parseInt(targetV!));
+          setDiffData(data);
+          return data;
+      },
+      enabled: !isNew && isDiffMode && !!baseV && !!targetV
+  });
+
+  const isLoading = isLoadingPipeline || (!!versionIdParam && isLoadingVersion) || (isDiffMode && isLoadingDiff);
 
   const nodeTypes = useMemo<NodeTypes>(() => ({
     source: PipelineNode,
@@ -188,22 +207,104 @@ export const PipelineCanvas: React.FC = () => {
       }
   });
 
-  // --- Initialization ---
   useEffect(() => {
     if (!pipeline) return;
     
-    // Determine which version to load:
-    // 1. Specifically requested one (?version=X)
-    // 2. The latest version (most recent work/draft)
-    // 3. The published version (active)
+    // 1. Handle Diff Mode
+    if (isDiffMode && diffData) {
+        setPipelineName(pipeline.name);
+        const loadDiff = async () => {
+            // Target version is the 'Current' state we are looking at
+            const vData = await getPipelineVersion(parseInt(id!), parseInt(targetV!));
+            const bData = await getPipelineVersion(parseInt(id!), parseInt(baseV!));
+            
+            const flowNodes: Node[] = vData.nodes.map((n: ApiNode) => {
+                let diffStatus: 'added' | 'removed' | 'modified' | 'none' = 'none';
+                if (diffData.nodes.added.includes(n.node_id)) diffStatus = 'added';
+                if (diffData.nodes.modified.some((m: any) => m.node_id === n.node_id)) diffStatus = 'modified';
+                
+                return {
+                    id: n.node_id, 
+                    type: mapOperatorToNodeType(n.operator_type), 
+                    data: { 
+                        label: n.name, 
+                        config: n.config,
+                        type: mapOperatorToNodeType(n.operator_type),
+                        operator_class: n.operator_class,
+                        status: 'idle',
+                        diffStatus: diffStatus,
+                        diffInfo: diffData.nodes.modified.find((m: any) => m.node_id === n.node_id)
+                    },
+                    position: n.config?.ui?.position || { x: 0, y: 0 },
+                };
+            });
+
+            // Add removed nodes as 'ghosts' from the base version
+            bData.nodes.forEach((n: ApiNode) => {
+                if (diffData.nodes.removed.includes(n.node_id)) {
+                    flowNodes.push({
+                        id: n.node_id,
+                        type: mapOperatorToNodeType(n.operator_type),
+                        data: {
+                            label: n.name,
+                            config: n.config,
+                            type: mapOperatorToNodeType(n.operator_type),
+                            operator_class: n.operator_class,
+                            diffStatus: 'removed',
+                        },
+                        position: n.config?.ui?.position || { x: 0, y: 0 },
+                        className: 'opacity-40 grayscale',
+                    });
+                }
+            });
+
+            const flowEdges: Edge[] = vData.edges.map((e: ApiEdge) => {
+                const edgeKey = `${e.from_node_id}->${e.to_node_id}`;
+                const isAdded = diffData.edges.added.includes(edgeKey);
+                
+                return {
+                    id: `e-${e.from_node_id}-${e.to_node_id}`,
+                    source: e.from_node_id,
+                    target: e.to_node_id,
+                    type: 'glow', 
+                    animated: isAdded,
+                    style: { 
+                        strokeWidth: 3,
+                        stroke: isAdded ? '#10b981' : undefined
+                    },
+                };
+            });
+
+            // Add removed edges as dashed red lines
+            diffData.edges.removed.forEach((edgeKey: string) => {
+                const [source, target] = edgeKey.split('->');
+                flowEdges.push({
+                    id: `removed-${edgeKey}`,
+                    source,
+                    target,
+                    type: 'glow',
+                    style: { stroke: '#ef4444', strokeDasharray: '5,5', opacity: 0.5 },
+                    animated: false
+                });
+            });
+
+            const layouted = getLayoutedElements(flowNodes, flowEdges);
+            setNodes(layouted.nodes);
+            setEdges(layouted.edges);
+            setTimeout(() => fitView({ padding: 0.2 }), 100);
+        };
+        loadDiff();
+        return;
+    }
+
+    // 2. Handle Normal Mode (Static version or latest)
     const versionToLoad = specificVersion || pipeline.latest_version || pipeline.published_version;
-    
     if (!versionToLoad) {
         setPipelineName(pipeline.name);
         return;
     }
 
-    if (initializedVersionId.current === versionToLoad.id) return;
+    if (initializedVersionId.current === versionToLoad.id && !isDiffMode) return;
     
     initializedVersionId.current = versionToLoad.id;
     setPipelineName(pipeline.name);
@@ -233,13 +334,12 @@ export const PipelineCanvas: React.FC = () => {
         style: { strokeWidth: 2 },
     }));
 
-    // Always apply layout on initial mount to ensure clean structure
     const layouted = getLayoutedElements(flowNodes, flowEdges);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
     
-    setTimeout(() => window.requestAnimationFrame(() => fitView({ padding: 0.2 })), 100);
-  }, [pipeline, specificVersion, setNodes, setEdges, fitView]);
+    setTimeout(() => fitView({ padding: 0.2 }), 100);
+  }, [pipeline, specificVersion, setNodes, setEdges, fitView, isDiffMode, diffData, id, baseV, targetV]);
 
   // --- Handlers ---
   const onConnect = useCallback(
@@ -379,7 +479,7 @@ export const PipelineCanvas: React.FC = () => {
   });
 
   const saveMutation = useMutation({
-      mutationFn: async ({ deploy = false }: { deploy?: boolean }) => {
+      mutationFn: async ({ deploy = false, notes = "" }: { deploy?: boolean, notes?: string }) => {
           try {
               setIsSaving(true);
               
@@ -409,7 +509,7 @@ export const PipelineCanvas: React.FC = () => {
                       initial_version: {
                           nodes: apiNodes,
                           edges: apiEdges,
-                          version_notes: "Initial draft"
+                          version_notes: notes || "Initial draft"
                       }
                   };
                   const createdPipeline = await createPipeline(payload);
@@ -427,7 +527,7 @@ export const PipelineCanvas: React.FC = () => {
                   const newVersion = await createPipelineVersion(parseInt(id!), {
                       nodes: apiNodes,
                       edges: apiEdges,
-                      version_notes: deploy ? `Deployed at ${new Date().toLocaleTimeString()}` : 'Auto-save'
+                      version_notes: notes || (deploy ? `Deployed at ${new Date().toLocaleTimeString()}` : 'Auto-save')
                   });
                   
                   if (deploy) await publishPipelineVersion(parseInt(id!), newVersion.id);
@@ -455,6 +555,8 @@ export const PipelineCanvas: React.FC = () => {
                     ? "Your changes are now live and will be used for future runs." 
                     : "Work-in-progress changes have been saved."
               });
+              // Close dialog if open
+              setDeployDialogOpen(false);
           }
       },
       onSettled: () => {
@@ -500,25 +602,20 @@ export const PipelineCanvas: React.FC = () => {
               <div className="flex flex-col gap-0.5">
                   <div className="relative group flex items-center">
                     <Input 
-                        value={pipelineName}
-                        onChange={(e) => setPipelineName(e.target.value)}
+                        value={isDiffMode ? `Comparing: ${pipelineName}` : pipelineName}
+                        onChange={(e) => !isDiffMode && setPipelineName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                        className="
-                            h-9 w-[200px] md:w-[260px] 
-                            bg-transparent border-none shadow-none 
-                            text-base font-semibold tracking-tight 
-                            px-3 rounded-lg
-                            transition-all duration-200 
-                            text-foreground
-                            placeholder:text-muted-foreground/50
-                            hover:bg-foreground/5 
-                            focus-visible:bg-foreground/5 focus-visible:ring-1 focus-visible:ring-primary/20
-                            truncate pr-9 cursor-text
-                        "
+                        readOnly={isDiffMode}
+                        className={cn(
+                            "h-9 w-[200px] md:w-[350px] bg-transparent border-none shadow-none text-base font-semibold tracking-tight px-3 rounded-lg transition-all duration-200 text-foreground placeholder:text-muted-foreground/50 hover:bg-foreground/5 focus-visible:bg-foreground/5 focus-visible:ring-1 focus-visible:ring-primary/20 truncate pr-9 cursor-text",
+                            isDiffMode && "text-amber-500 hover:bg-transparent cursor-default"
+                        )}
                     />
-                    <div className="absolute right-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-                        <Pencil className="h-3.5 w-3.5 text-muted-foreground/60" />
-                    </div>
+                    {!isDiffMode && (
+                        <div className="absolute right-3 flex items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground/60" />
+                        </div>
+                    )}
                 </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground px-2">
                       <Badge variant="outline" className={cn(
@@ -528,9 +625,15 @@ export const PipelineCanvas: React.FC = () => {
                           {isNew ? 'DRAFT' : pipeline?.status?.toUpperCase()}
                       </Badge>
                       <span className="hidden sm:inline">
-                          {isNew ? 'v1' : `v${versionIdParam || pipeline?.latest_version?.version || pipeline?.published_version?.version || '?'}`}
+                          {isDiffMode ? (
+                              <span className="flex items-center gap-1 text-primary">
+                                  v{diffData?.base_version || '?'} <GitCompare size={10}/> v{diffData?.target_version || '?'}
+                              </span>
+                          ) : (
+                              isNew ? 'v1' : `v${versionIdParam || pipeline?.latest_version?.version || pipeline?.published_version?.version || '?'}`
+                          )}
                       </span>
-                      {!isNew && (
+                      {!isNew && !isDiffMode && (
                         <Button 
                             variant="ghost" 
                             size="sm" 
@@ -548,62 +651,96 @@ export const PipelineCanvas: React.FC = () => {
           {/* Right: Actions */}
           <div className="flex items-center gap-3">
             {!isNew && (
-                <div className="flex items-center gap-2">
-                     <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        onClick={() => setIsDeleteDialogOpen(true)}
-                        disabled={deleteMutation.isPending}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                    <div className="w-px h-4 bg-border/40 mx-1" />
-                     {isRunning ? (
-                        <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            className="h-9 rounded-full px-4 gap-2 animate-in fade-in"
-                            onClick={() => setIsRunning(false)}
+                <AnimatePresence mode="wait">
+                    {!isDiffMode && (
+                        <motion.div 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="flex items-center gap-2"
                         >
-                            <Square className="h-3.5 w-3.5 fill-current" />
-                            <span className="hidden sm:inline">Stop</span>
-                        </Button>
-                     ) : (
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-9 rounded-full border-success/20 text-success hover:text-success hover:bg-success/5 hover:border-success/40 gap-2"
-                            onClick={() => runMutation.mutate()}
-                            disabled={runMutation.isPending}
-                        >
-                            {runMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <Play className="h-3.5 w-3.5 fill-current" />}
-                            <span className="hidden sm:inline">Run</span>
-                        </Button>
-                     )}
-                </div>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                onClick={() => setIsDeleteDialogOpen(true)}
+                                disabled={deleteMutation.isPending}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <div className="w-px h-4 bg-border/40 mx-1" />
+                            {isRunning ? (
+                                <motion.div
+                                    key="stop-btn"
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0.8, opacity: 0 }}
+                                >
+                                    <Button 
+                                        variant="destructive" 
+                                        size="sm" 
+                                        className="h-9 rounded-full px-4 gap-2 shadow-lg shadow-destructive/20"
+                                        onClick={() => setIsRunning(false)}
+                                    >
+                                        <Square className="h-3.5 w-3.5 fill-current" />
+                                        <span className="hidden sm:inline font-bold uppercase tracking-widest text-[10px]">Stop</span>
+                                    </Button>
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="run-btn"
+                                    initial={{ scale: 0.8, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0.8, opacity: 0 }}
+                                >
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-9 rounded-full border-success/30 text-success hover:text-success hover:bg-success/10 hover:border-success/50 gap-2 px-4"
+                                        onClick={() => runMutation.mutate()}
+                                        disabled={runMutation.isPending}
+                                    >
+                                        {runMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <Play className="h-3.5 w-3.5 fill-current" />}
+                                        <span className="hidden sm:inline font-bold uppercase tracking-widest text-[10px]">Run</span>
+                                    </Button>
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             )}
              
             <div className="flex items-center gap-2">
-                 <Button 
-                    variant="secondary"
-                    size="sm" 
-                    onClick={() => saveMutation.mutate({ deploy: false })} 
-                    disabled={isSaving || !!versionIdParam}
-                    className="h-9 rounded-full px-4 font-medium"
-                >
-                    <Save className="mr-2 h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Draft</span>
-                </Button>
-                 <Button 
-                    size="sm" 
-                    onClick={() => saveMutation.mutate({ deploy: true })} 
-                    disabled={isSaving || !!versionIdParam}
-                    className="h-9 rounded-full px-5 shadow-lg shadow-primary/20 bg-primary text-primary-foreground font-semibold hover:shadow-primary/30 transition-all gap-2"
-                >
-                    {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <Rocket className="h-3.5 w-3.5" />}
-                    <span className="hidden sm:inline">Deploy</span>
-                </Button>
+                 <AnimatePresence mode="wait">
+                    {!isDiffMode && (
+                        <motion.div 
+                            initial={{ x: 20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 20, opacity: 0 }}
+                            className="flex items-center gap-2"
+                        >
+                            <Button 
+                                variant="secondary"
+                                size="sm" 
+                                onClick={() => saveMutation.mutate({ deploy: false })} 
+                                disabled={isSaving || !!versionIdParam}
+                                className="h-9 rounded-full px-4 font-bold uppercase tracking-widest text-[10px] bg-muted/50 hover:bg-muted"
+                            >
+                                <Save className="mr-2 h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Draft</span>
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                onClick={() => setDeployDialogOpen(true)} 
+                                disabled={isSaving || !!versionIdParam}
+                                className="h-9 rounded-full px-5 shadow-lg shadow-primary/25 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[10px] hover:shadow-primary/40 transition-all gap-2 hover:-translate-y-0.5 active:translate-y-0"
+                            >
+                                {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <Rocket className="h-3.5 w-3.5" />}
+                                <span className="hidden sm:inline">Deploy</span>
+                            </Button>
+                        </motion.div>
+                    )}
+                 </AnimatePresence>
              </div>
           </div>
       </header>
@@ -612,8 +749,37 @@ export const PipelineCanvas: React.FC = () => {
       <div className="flex-1 w-full relative glass-panel rounded-xl overflow-hidden shadow-2xl border border-border/50 bg-background/50">
           <div className="absolute inset-0 bg-grid-subtle opacity-20 pointer-events-none" />
 
+          {/* Diff Mode Banner - Relocated to Bottom */}
+          {isDiffMode && (
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-100 w-fit min-w-[500px] max-w-[90%] bg-background/60 backdrop-blur-2xl border border-amber-500/30 rounded-2xl px-6 py-4 flex items-center justify-between gap-8 shadow-2xl animate-in slide-in-from-bottom duration-500 ring-1 ring-white/5">
+                  <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center ring-1 ring-amber-500/20">
+                          <GitCompare className="h-5 w-5 text-amber-500" />
+                      </div>
+                      <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">Comparison Mode</span>
+                            <Badge className="h-4 px-1.5 bg-amber-500/20 text-amber-500 border-none text-[9px] font-black">v{diffData?.base_version} → v{diffData?.target_version}</Badge>
+                          </div>
+                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                              <InfoIcon size={12} className="text-amber-500/60"/>
+                              Visualizing structural changes between selected versions.
+                          </span>
+                      </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => navigate(`/pipelines/${id}`)}
+                    className="h-10 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-500 hover:bg-amber-500 hover:text-white transition-all duration-300 gap-2 text-[10px] font-black uppercase tracking-widest px-4"
+                  >
+                      Exit Diff <XCircle className="h-3.5 w-3.5" />
+                  </Button>
+              </div>
+          )}
+
           {/* Historical Version Banner - Relocated to Bottom for better UX */}
-          {versionIdParam && (
+          {versionIdParam && !isDiffMode && (
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-100 w-fit min-w-[400px] max-w-[90%] bg-background/60 backdrop-blur-2xl border border-primary/30 rounded-2xl px-6 py-4 flex items-center justify-between gap-8 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom duration-500 ring-1 ring-white/5">
                   <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
@@ -683,117 +849,126 @@ export const PipelineCanvas: React.FC = () => {
                             position="bottom-right"
                         />
             {/* FLOATING TOOLBOX PANEL */}
-            <Panel position="top-center" className="mt-8 pointer-events-none">
-                <div className="flex items-center p-2 gap-2 glass-panel rounded-4xl! shadow-2xl pointer-events-auto border-border/20 bg-background/60 backdrop-blur-3xl transition-all duration-300 hover:scale-[1.02] hover:shadow-primary/20 hover:border-primary/30 hover:bg-background/80 ring-1 ring-white/5">
-                    
-                    {/* Primary Controls Group */}
-                    <div className="flex items-center gap-1.5 pr-3 border-r border-border/10 mr-1">
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => undo(nodes, edges, setNodes, setEdges)} disabled={!canUndo}>
-                                        <Undo className="h-5 w-5 group-active:scale-90" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => redo(nodes, edges, setNodes, setEdges)} disabled={!canRedo}>
-                                        <Redo className="h-5 w-5 group-active:scale-90" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={onLayout}>
-                                        <Layout className="h-5 w-5 group-active:scale-90" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Auto-Layout Canvas</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-
-                    {/* Unified Add Node Menu */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button 
-                                className="h-10 rounded-2xl px-5 gap-2.5 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:-translate-y-0.5"
-                            >
-                                <Plus className="h-4 w-4 stroke-3" /> Add Operator
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent 
-                            align="center" 
-                            sideOffset={10}
-                            className="w-64 bg-background/80 backdrop-blur-md border-border/20 shadow-xl rounded-xl p-1.5 ring-1 ring-white/10"
+            <AnimatePresence>
+                {!isDiffMode && !versionIdParam && (
+                    <Panel position="top-center" className="mt-4 pointer-events-none">
+                        <motion.div 
+                            initial={{ y: -20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: -20, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                            className="flex items-center p-1.5 gap-1.5 glass-panel rounded-[2rem] shadow-2xl pointer-events-auto border-border/20 bg-background/60 backdrop-blur-3xl transition-all duration-500 hover:shadow-primary/10 hover:border-primary/20 ring-1 ring-white/5"
                         >
-                            <div className="px-2 py-2 mb-1">
-                                <div className="relative group">
-                                    <Plus className="z-20 absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                    <Input 
-                                        placeholder="Search..." 
-                                        value={opSearch}
-                                        onChange={(e) => setOpSearch(e.target.value)}
-                                        className="h-8 pl-8 rounded-lg bg-muted/30 border-none text-xs focus-visible:ring-1 focus-visible:ring-primary/20 transition-all placeholder:text-[10px]"
-                                        autoFocus
-                                    />
-                                </div>
-                            </div>
-                            <div className="max-h-[300px] overflow-y-auto custom-scrollbar px-1 space-y-2 pb-1">
-                                {filteredDefinitions.length === 0 ? (
-                                    <div className="py-8 text-center flex flex-col items-center gap-2">
-                                        <div className="h-8 w-8 rounded-full bg-muted/20 flex items-center justify-center text-muted-foreground/30">
-                                            <Plus className="h-4 w-4 rotate-45" />
-                                        </div>
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50">No matches</span>
-                                    </div>
-                                ) : (
-                                    filteredDefinitions.map((category, idx) => (
-                                        <div key={idx} className="space-y-0.5">
-                                            <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 flex items-center gap-2">
-                                                {category.category}
-                                                <div className="h-px flex-1 bg-border/20" />
-                                            </div>
-                                            {category.items.map((item, i) => (
-                                                <DropdownMenuItem 
-                                                    key={i}
-                                                    className="group flex items-center gap-3 p-2 rounded-lg focus:bg-primary/5 focus:text-primary cursor-pointer transition-all duration-200"
-                                                    onClick={() => onAddNode(item.type, (item as any).opClass, item.label)}
-                                                >
-                                                    <div className={cn(
-                                                        "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border transition-all duration-300 group-hover:scale-105 group-hover:shadow-sm",
-                                                        item.type === 'source' ? "bg-chart-1/10 border-chart-1/20 text-chart-1" :
-                                                        item.type === 'sink' ? "bg-chart-2/10 border-chart-2/20 text-chart-2" :
-                                                        item.type === 'validate' ? "bg-chart-4/10 border-chart-4/20 text-chart-4" :
-                                                        ['join', 'union', 'merge'].includes(item.type) ? "bg-chart-5/10 border-chart-5/20 text-chart-5" :
-                                                        "bg-chart-3/10 border-chart-3/20 text-chart-3"
-                                                    )}>
-                                                        <item.icon className="h-4 w-4" />
-                                                    </div>
-                                                    <div className="flex flex-col gap-0.5 overflow-hidden">
-                                                        <span className="text-[11px] font-semibold tracking-tight">{item.label}</span>
-                                                        <span className="text-[9px] text-muted-foreground/60 group-hover:text-primary/60 truncate leading-none">{item.desc}</span>
-                                                    </div>
-                                                </DropdownMenuItem>
-                                            ))}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                            {/* Primary Controls Group */}
+                            <div className="flex items-center gap-1 px-2 border-r border-border/10 mr-1">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => undo(nodes, edges, setNodes, setEdges)} disabled={!canUndo}>
+                                                <Undo className="h-4 w-4 group-active:scale-90" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
 
-                </div>
-            </Panel>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => redo(nodes, edges, setNodes, setEdges)} disabled={!canRedo}>
+                                                <Redo className="h-4 w-4 group-active:scale-90" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={onLayout}>
+                                                <Layout className="h-4 w-4 group-active:scale-90" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Auto-Layout Canvas</TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+
+                            {/* Unified Add Node Menu */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button 
+                                        className="h-9 rounded-2xl px-4 gap-2 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                    >
+                                        <Plus className="h-3.5 w-3.5 stroke-[3]" /> Add Operator
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent 
+                                    align="center" 
+                                    sideOffset={12}
+                                    className="w-64 bg-background/80 backdrop-blur-xl border-border/20 shadow-2xl rounded-2xl p-1.5 ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-200"
+                                >
+                                    <div className="px-2 py-2 mb-1">
+                                        <div className="relative group">
+                                            <Plus className="z-20 absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                            <Input 
+                                                placeholder="Search..." 
+                                                value={opSearch}
+                                                onChange={(e) => setOpSearch(e.target.value)}
+                                                className="h-8 pl-8 rounded-xl bg-muted/30 border-none text-xs focus-visible:ring-1 focus-visible:ring-primary/20 transition-all placeholder:text-[10px]"
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar px-1 space-y-2 pb-1">
+                                        {filteredDefinitions.length === 0 ? (
+                                            <div className="py-8 text-center flex flex-col items-center gap-2">
+                                                <div className="h-8 w-8 rounded-full bg-muted/20 flex items-center justify-center text-muted-foreground/30">
+                                                    <Plus className="h-4 w-4 rotate-45" />
+                                                </div>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50">No matches</span>
+                                            </div>
+                                        ) : (
+                                            filteredDefinitions.map((category, idx) => (
+                                                <div key={idx} className="space-y-0.5">
+                                                    <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 flex items-center gap-2">
+                                                        {category.category}
+                                                        <div className="h-px flex-1 bg-border/20" />
+                                                    </div>
+                                                    {category.items.map((item, i) => (
+                                                        <DropdownMenuItem 
+                                                            key={i}
+                                                            className="group flex items-center gap-3 p-2 rounded-xl focus:bg-primary/5 focus:text-primary cursor-pointer transition-all duration-200"
+                                                            onClick={() => onAddNode(item.type, (item as any).opClass, item.label)}
+                                                        >
+                                                            <div className={cn(
+                                                                "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border transition-all duration-300 group-hover:scale-105 group-hover:shadow-sm",
+                                                                item.type === 'source' ? "bg-chart-1/10 border-chart-1/20 text-chart-1" :
+                                                                item.type === 'sink' ? "bg-chart-2/10 border-chart-2/20 text-chart-2" :
+                                                                item.type === 'validate' ? "bg-chart-4/10 border-chart-4/20 text-chart-4" :
+                                                                ['join', 'union', 'merge'].includes(item.type) ? "bg-chart-5/10 border-chart-5/20 text-chart-5" :
+                                                                "bg-chart-3/10 border-chart-3/20 text-chart-3"
+                                                            )}>
+                                                                <item.icon className="h-4 w-4" />
+                                                            </div>
+                                                            <div className="flex flex-col gap-0.5 overflow-hidden">
+                                                                <span className="text-[11px] font-semibold tracking-tight">{item.label}</span>
+                                                                <span className="text-[9px] text-muted-foreground/60 group-hover:text-primary/60 truncate leading-none">{item.desc}</span>
+                                                            </div>
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                        </motion.div>
+                    </Panel>
+                )}
+            </AnimatePresence>
           </ReactFlow>
 
           {/* Properties Inspector */}
@@ -829,6 +1004,13 @@ export const PipelineCanvas: React.FC = () => {
                 pipelineName={pipelineName}
                 open={versionsOpen} 
                 onOpenChange={setVersionsOpen} 
+            />
+
+            <DeployCommitDialog
+                open={deployDialogOpen}
+                onOpenChange={setDeployDialogOpen}
+                onConfirm={(notes) => saveMutation.mutate({ deploy: true, notes })}
+                isSaving={isSaving}
             />
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

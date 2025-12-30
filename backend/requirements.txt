@@ -69,3 +69,4 @@ cassandra-driver>=3.29.1
 pyairtable>=2.3.3
 simple-salesforce>=1.12.5
 lxml>=5.2.1
+deepdiff>=6.7.1

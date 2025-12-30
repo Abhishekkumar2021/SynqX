@@ -946,15 +946,33 @@ export const getPipelineVersions = async (id: number) => {
   return data;
 };
 
-export const getPipelineVersion = async (
-  pipelineId: number,
-  versionId: number
-) => {
+export const getPipelineVersion = async (pipelineId: number, versionId: number) => {
+
   const { data } = await api.get<PipelineVersionRead>(
+
     `/pipelines/${pipelineId}/versions/${versionId}`
+
   );
+
   return data;
+
 };
+
+
+
+export const getPipelineDiff = async (pipelineId: number, baseV: number, targetV: number) => {
+
+  const { data } = await api.get<any>(`/pipelines/${pipelineId}/diff`, {
+
+    params: { base_v: baseV, target_v: targetV }
+
+  });
+
+  return data;
+
+};
+
+
 
 export const publishPipelineVersion = async (
   pipelineId: number,
@@ -1087,11 +1105,21 @@ export const getAlertConfigs = async () => {
   return data;
 };
 
+export const createAlertConfig = async (payload: Partial<AlertConfig>) => {
+  const { data } = await api.post<AlertConfig>("/alerts", payload);
+  return data;
+};
+
 export const updateAlertConfig = async (
   id: number,
   payload: AlertConfigUpdate
 ) => {
   const { data } = await api.patch<AlertConfig>(`/alerts/${id}`, payload);
+  return data;
+};
+
+export const deleteAlertConfig = async (id: number) => {
+  const { data } = await api.delete(`/alerts/${id}`);
   return data;
 };
 

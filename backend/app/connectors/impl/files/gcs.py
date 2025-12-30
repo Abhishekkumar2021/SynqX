@@ -1,4 +1,3 @@
-import os
 import posixpath
 import io
 from typing import Any, Dict, Iterator, List, Optional, Union

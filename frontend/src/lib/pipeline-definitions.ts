@@ -20,7 +20,7 @@ import { OperatorType } from './enums';
 export interface OperatorField {
     name: string;
     label: string;
-    type: 'text' | 'select' | 'textarea' | 'number' | 'json';
+    type: 'text' | 'select' | 'textarea' | 'number' | 'json' | 'boolean';
     placeholder?: string;
     options?: { label: string; value: string }[];
     configKey: string; // The key in the JSON config
@@ -205,6 +205,14 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                         name: 'schema', label: 'Validation Rules', type: 'json', configKey: 'schema', 
                         placeholder: '[ { "column": "id", "check": "not_null" } ]',
                         tooltip: 'List of validation rules to apply. Ensures data integrity before reaching downstream sinks.'
+                    },
+                    {
+                        name: 'strict', label: 'Strict Mode', type: 'boolean', configKey: 'strict',
+                        tooltip: 'If enabled, the entire pipeline will fail if any row fails validation.'
+                    },
+                    {
+                        name: 'quarantine', label: 'Quarantine', type: 'boolean', configKey: 'quarantine',
+                        tooltip: 'If enabled, invalid rows will be captured in a separate forensic buffer for inspection.'
                     }
                 ]
             },

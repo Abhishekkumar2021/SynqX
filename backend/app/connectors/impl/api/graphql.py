@@ -5,7 +5,7 @@ import requests
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from app.connectors.base import BaseConnector
-from app.core.errors import ConfigurationError, ConnectionFailedError, DataTransferError
+from app.core.errors import ConfigurationError, DataTransferError
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
