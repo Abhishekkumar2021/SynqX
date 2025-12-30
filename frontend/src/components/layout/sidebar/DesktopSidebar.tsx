@@ -1,10 +1,9 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-    LayoutDashboard, Cable, Workflow, Activity, Settings,
-    Search, PanelLeft, Home, LogOut,
-    User, CreditCard, Users, Book, Sparkles
-} from 'lucide-react';
+    Workflow, 
+    PanelLeft, LogOut,
+    User, CreditCard, Users} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -102,6 +101,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ isSidebarCollaps
                         ) : (
                             <>
                                 <NavGroup collapsed={isSidebarCollapsed}>
+                                    {MAIN_NAV.map((item) => (
                                         <NavItem 
                                             key={item.to}
                                             to={item.to} 
@@ -110,6 +110,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ isSidebarCollaps
                                             collapsed={isSidebarCollapsed} 
                                             end={item.end}
                                         />
+                                    ))}
                                 </NavGroup>
 
                                 {/* Theme-aware divider */}
