@@ -1,0 +1,62 @@
+---
+title: "Execution Runtime"
+description: "Technical deep dive into the SynqX distributed orchestration engine."
+---
+
+# Execution Runtime
+
+The SynqX runtime is engineered for high-availability distributed data processing. It leverages **Celery** for asynchronous task orchestration and **Pandas** for vectorized, high-performance data transformation.
+
+## 1. Job Orchestration Lifecycle
+
+Execution begins when a pipeline is triggered via the API, the distributed scheduler, or an external event.
+
+### The Worker Handshake
+1.  **Job Enqueue**: A job payload is pushed to the Redis message broker.
+2.  **Acquisition**: An available worker claims the task, transition the `Job` to a `RUNNING` state and assigning a `correlation_id` for end-to-end tracing.
+3.  **Context Resolution**: The worker resolves the specific **Immutable Pipeline Version** and retrieves active **Watermarks** for incremental data processing.
+
+---
+
+## 2. DAG Traversal & Execution
+
+The `PipelineRunner` acts as the primary orchestrator within the worker process.
+
+### Topological Sequencing
+Prior to execution, the runner validates the graph and calculates a **Topological Sort**. This ensures that every node is processed only after its dependencies have successfully completed. Nodes with no inter-dependencies are grouped into **Parallel Layers** to maximize throughput.
+
+### High-Performance Streaming
+To maintain a low memory footprint, SynqX utilizes a **Generator-based Streaming** pattern:
+-   **Extraction**: Source nodes yield `pd.DataFrame` chunks (defaulting to 10,000 rows).
+-   **Transformation**: Logic is applied to each chunk in-memory before being yielded to downstream nodes.
+-   **Loading**: Destination nodes consume the final data stream, performing optimized batch writes to the target system.
+
+---
+
+## 3. Real-time Observability Stack
+
+SynqX provides a "Glass Box" experience for data operations.
+
+### Granular Telemetry
+Each node execution generates a `StepRun` record, capturing:
+-   **I/O Metrics**: Exact counts of records extracted, transformed, and loaded.
+-   **Performance**: Precision microsecond timing.
+-   **Forensics**: Sample snapshots of data at the node boundaries for rapid debugging.
+
+### Live Forensic Streaming
+Internal engine operations utilize the `DBLogger` service, which performs a dual-action dispatch:
+1.  **Persistence**: Writes structured logs to the PostgreSQL `step_logs` table.
+2.  **Broadcast**: Publishes logs to localized Redis Pub/Sub channels.
+The FastAPI WebSocket manager handles real-time delivery of these logs to the Console terminal.
+
+---
+
+## 4. Fault Tolerance & Integrity
+
+### Node-Level Resiliency
+Operators support configurable retry strategies:
+-   **Linear/Exponential Backoff**: Delays calculated to reduce pressure on upstream systems.
+-   **Execution TTL**: Enforces strict time limits on individual tasks to prevent resource contention.
+
+### State Consistency (Watermarks)
+SynqX manages incremental synchronization state via the **Watermark** model. Watermarks are updated only after a successful `LOAD` operation, guaranteeing "at-least-once" delivery and exactly-once processing when combined with upsert strategies.

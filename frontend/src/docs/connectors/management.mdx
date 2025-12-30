@@ -1,0 +1,61 @@
+---
+title: "Connection Management"
+description: "Discover assets and infer schemas from your data sources."
+---
+
+
+# Connection Management
+
+SynqX goes beyond simple connectivity. It provides powerful tools to discover what data is available in your sources and automatically infer its structure.
+
+## Overview
+
+The Connection Details page serves as the hub for exploring a data source.
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+    <Card icon={<Search className="h-5 w-5"/>} title="Asset Discovery">
+        Scan your database or API to find all available tables, views, streams, or files.
+    </Card>
+    <Card icon={<FileJson className="h-5 w-5"/>} title="Schema Inference">
+        Analyze the data within an asset to generate a JSON schema automatically.
+    </Card>
+</div>
+
+## Workflows
+
+### 1. Connecting to a Source
+
+<Steps>
+    #### Create Connection
+    Navigate to the **Connections** page and click "New Connection". Select your type (e.g., PostgreSQL, Snowflake) and provide credentials.
+
+    #### Test Connectivity
+    Click the **Test** button on the connection card to verify SynqX can reach the source.
+</Steps>
+
+### 2. Discovering Assets
+
+Once connected, you need to know *what* data is available.
+
+1.  Click on the connection name to open the **Connection Details** page.
+2.  Click the **Scan for Assets** button.
+3.  SynqX will query the source's system catalog (or equivalent) and populate the list of assets.
+
+### 3. Inferring Schema
+
+To build pipelines, SynqX needs to understand the data types.
+
+1.  Expand an asset card (e.g., `public.users`) in the list.
+2.  Click **Infer Schema**.
+3.  SynqX samples the data and generates a versioned JSON schema.
+4.  You can view the history of schema changes over time.
+
+## Supported Connectors
+
+| Connector | Discovery Support | Schema Inference |
+| :--- | :--- | :--- |
+| **PostgreSQL** | Full (Tables/Views) | Full |
+| **Snowflake** | Full | Full |
+| **MySQL** | Full | Full |
+| **REST API** | Configured Endpoints | Response Sampling |
+| **S3** | File Listing | File Content (Parquet/CSV/JSON) |

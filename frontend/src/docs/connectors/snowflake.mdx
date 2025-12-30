@@ -1,0 +1,38 @@
+---
+title: Snowflake Connector
+description: Connect to Snowflake Data Cloud.
+---
+
+# Snowflake Connector
+
+The **Snowflake Connector** enables high-performance data loading and extraction from Snowflake.
+
+## Configuration
+
+```json
+{
+  "user": "myuser",
+  "password": "mypassword",
+  "account": "xy12345.us-east-1",
+  "warehouse": "COMPUTE_WH",
+  "database": "MYDB",
+  "schema": "PUBLIC",
+  "role": "SYSADMIN"
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `user` | string | Yes | Username. |
+| `password` | string | Yes | Password. |
+| `account` | string | Yes | Snowflake Account Identifier. |
+| `warehouse` | string | Yes | Compute Warehouse. |
+| `database` | string | Yes | Target Database. |
+| `schema` | string | No | Target Schema (default: PUBLIC). |
+| `role` | string | No | Role to assume. |
+
+## Usage
+- Supports full SQL reading and writing.
+- Uses `pandas` connector under the hood.

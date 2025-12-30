@@ -1,0 +1,36 @@
+---
+title: "Visual Editor"
+description: "Designing data workflows with SynqX Intelligence."
+---
+
+
+# The Visual Pipeline Editor
+
+SynqX features a sophisticated, low-code visual editor powered by **React Flow**. It allows data engineers to design, test, and deploy complex DAGs with high-fidelity visual feedback.
+
+## Canvas Interface
+
+The workspace is designed for maximum productivity:
+-   **Interactive Nodes**: Custom-styled nodes for **Sources**, **Transforms**, and **Destinations** with semantic icons and color-coding.
+-   **Properties Panel**: A contextual sidebar that provides deep configuration for every step, including schema selection and retry logic.
+-   **Intelligent Layout**: One-click **Auto-Layout** (powered by `dagre`) that organizes complex graphs for maximum clarity.
+
+### Building Your First Workflow
+
+1.  **Drafting**: Click "New Pipeline" to open a fresh canvas.
+2.  **Adding Nodes**: Use the sidebar to drag data sources (e.g., PostgreSQL) and processors onto the workspace.
+3.  **Connecting Logic**: Click and drag edges between node ports to define the data flow and execution order.
+4.  **Validation**: The editor performs real-time cycle detection and schema validation to prevent deployment errors.
+
+## Instant Execution
+
+You can trigger your pipeline directly from the editor header:
+-   **Manual Run**: Click the **Run Now** button to start an immediate execution.
+-   **Live Status**: The editor displays real-time execution pulses on active nodes as data moves through the system.
+-   **Forensic Jump**: A quick-link button allows you to jump directly from the active editor to the **Execution Forensic** logs.
+
+## Deployment & Rollback
+
+Every time you save and publish a pipeline, SynqX creates an immutable **Pipeline Version**.
+-   **Production Safety**: Only published versions are picked up by the scheduler.
+-   **Instant Rollback**: If a new version causes issues, you can navigate to the version history and re-publish a known-good configuration in seconds.

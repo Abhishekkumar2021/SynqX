@@ -1,0 +1,61 @@
+---
+title: "Live Forensic Feed"
+description: "Streaming job logs and system notifications via WebSockets."
+---
+
+# Real-time Forensic Stack
+
+SynqX utilizes a high-performance WebSocket architecture to provide instantaneous visibility into system operations.
+
+## Notification Feed
+
+SynqX broadcasts system-wide alerts to authorized users in real-time.
+
+- **Endpoint**: `ws://<host>:<port>/api/v1/ws/notifications/{user_id}`
+
+**Event Payload:**
+
+```json
+{
+  "id": 789,
+  "type": "new_alert",
+  "message": "Pipeline 'Daily Backup' Failed",
+  "level": "error",
+  "job_id": 101,
+  "pipeline_id": 5,
+  "created_at": "2023-10-27T10:05:00Z"
+}
+```
+
+## High-Fidelity Job Logs
+
+The production-ready **Job Log Viewer** streams execution data directly from the Celery worker engine.
+
+### Connection Endpoints
+
+- **Job Level**: `ws://<host>:<port>/api/v1/ws/jobs/{job_id}`
+- **Step Level**: `ws://<host>:<port>/api/v1/ws/steps/{step_run_id}`
+
+### Terminal Features
+
+The log terminal is designed for high-volume forensic analysis:
+
+1.  **Level Highlighting**: Automatic color coding for `INFO`, `WARNING`, `ERROR`, and `SUCCESS`.
+2.  **Line Anchoring**: Every log line is indexed with a persistent line number for team collaboration.
+3.  **Auto-Scroll with Pause**: Intelligent scrolling that can be manually paused to inspect specific events without losing the live feed.
+4.  **Forensic Search**: Highlight-integrated search that isolates critical log segments instantly.
+5.  **Data Export**: One-click download of the complete raw log history for external analysis.
+
+### Message Structure
+
+```json
+{
+  "type": "job_log",
+  "id": 123,
+  "job_id": 1,
+  "level": "INFO",
+  "message": "Starting batch processing node...",
+  "timestamp": "2023-10-27T10:00:00Z",
+  "source": "runner"
+}
+```

@@ -1,0 +1,71 @@
+---
+title: "Data Models: Core & Physical"
+description: "Deep dive into Connections, Assets, and Schema Intelligence."
+---
+
+# Core Entities & Physical Layer
+
+These models define where data lives and how SynqX interacts with external systems.
+
+## Base Mixins
+
+SynqX enforces consistent metadata across all tables using specialized mixins.
+
+### `AuditMixin`
+Every primary entity tracks its lifecycle:
+-   `created_at`: Set on insert (UTC).
+-   `updated_at`: Updated automatically on every save.
+-   `created_by`: User ID of the creator.
+-   `updated_by`: User ID of the last modifier.
+
+### `OwnerMixin`
+Enforces user-level scoping:
+-   `user_id`: Foreign key to the `User` model. All queries are automatically filtered by this ID to ensure security.
+
+---
+
+## Connection Management
+
+The `Connection` model abstracts authentication and connectivity.
+
+### `connections` table
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `Integer` | Primary Key. |
+| `name` | `String` | Friendly identifier. |
+| `connector_type` | `Enum` | `postgresql`, `mysql`, `snowflake`, `s3`, etc. |
+| `config_encrypted` | `Text` | The most sensitive field. Contains encrypted JSON credentials. |
+| `health_status` | `String` | Cached result of the last connectivity test. |
+| `last_test_at` | `DateTime` | When the connection was last validated. |
+| `asset_count` | `Integer` | Computed field for quick UI overview. |
+
+---
+
+## Asset Discovery & Lifecycle
+
+An `Asset` is a logical dataset within a `Connection`. The physical layer is responsible for translating abstract assets into specific system calls (e.g., SQL queries or API requests).
+
+### `assets` table
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `Integer` | Primary Key. |
+| `connection_id` | `FK` | Link to the parent `Connection`. |
+| `name` | `String` | Logical name (e.g., `orders`). |
+| `fully_qualified_name` | `String` | Physical path (e.g., `prod.sales.orders`). |
+| `is_source` | `Boolean` | Can be read from? |
+| `is_destination` | `Boolean` | Can be written to? |
+| `is_incremental_capable` | `Boolean` | Flag indicating if this asset supports watermarking. |
+| `row_count_estimate` | `Integer` | Cached metadata for planning. |
+
+### Automated Discovery Mechanism
+When a user clicks "Scan for Assets", the backend:
+1.  **Instantiates the Connector**: Decrypts the config and creates a temporary session.
+2.  **Queries System Catalog**: For SQL databases, it queries `INFORMATION_SCHEMA`. For S3, it lists objects.
+3.  **Deduplication**: Compares found objects with existing assets to prevent duplicates.
+4.  **Batch Ingestion**: Persists multiple assets in a single transaction.
+
+### Schema Intelligence: `asset_schema_versions`
+SynqX fingerprints every asset to detect drift.
+-   **Immutable Versions**: Every time a schema is inferred, a new version is created.
+-   **Drift Detection**: Uses a `schema_hash` to compare structural changes instantly.
+-   **Breaking Changes**: A boolean flag used to pause pipelines if a destructive upstream change is detected.

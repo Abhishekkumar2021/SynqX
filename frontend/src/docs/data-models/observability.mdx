@@ -1,0 +1,44 @@
+---
+title: "Data Models: Observability"
+description: "Data schema for structured logs, alerts, and system events."
+---
+
+# Observability & Eventing
+
+SynqX treats logs and alerts as first-class data citizens.
+
+## Structured Logging
+
+Unlike plain text logs, SynqX stores logs in structured tables for forensic analysis.
+
+### `job_logs` & `step_logs`
+-   `level`: Standard syslog levels (`INFO`, `WARNING`, `ERROR`).
+-   `message`: Human-readable summary.
+-   `metadata_payload`: A `JSON` field allowing operators to log rich context (e.g., specific batch IDs or data quality metrics).
+-   `timestamp`: Precision UTC time.
+
+---
+
+## The Alerting Engine
+
+The notification system is decoupled from the execution engine via the `Alert` schema.
+
+### `alert_configs` table
+Defines the rules for notification dispatch.
+-   `alert_type`: `job_failure`, `job_success`, `sla_breach`.
+-   `delivery_method`: `in_app`, `email`, `slack`, `webhook`.
+-   `cooldown_minutes`: Prevents notification spam during retries.
+
+### `alerts` table
+The persistent history of notifications.
+-   `status`: `pending`, `sent`, `failed`, `acknowledged`.
+-   `recipient`: The target destination (Email or Webhook URL).
+-   `acknowledged_at`: Tracks when a user dismissed the alert in the Console.
+
+---
+
+## Scheduler Forensics
+
+The `scheduler_events` table provides an audit trail of why jobs were or were not triggered.
+-   `event_type`: `triggered`, `skipped`, `paused`.
+-   `reason`: Contextual info (e.g., "Overlapped with existing run" or "Pipeline disabled").

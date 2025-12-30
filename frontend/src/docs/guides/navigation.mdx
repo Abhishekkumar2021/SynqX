@@ -1,0 +1,41 @@
+---
+title: "Command Palette (⌘K)"
+description: "Master navigation and forensic search in SynqX."
+---
+
+
+# The Command Palette
+
+SynqX Intelligence features a powerful command palette that allows you to navigate the entire platform without leaving your keyboard.
+
+## Accessing the Palette
+
+Press <kbd>⌘</kbd> <kbd>K</kbd> (Mac) or <kbd>Ctrl</kbd> <kbd>K</kbd> (Windows/Linux) from anywhere in the application to open the search dialog.
+
+## Navigation Modes
+
+The palette automatically categorizes results to help you find information faster.
+
+### 1. Data Pipelines
+Simply start typing the name or description of a pipeline.
+- **Visual Cues**: Identified by the <Workflow className="inline h-4 w-4 text-blue-500" /> icon.
+- **Action**: Press `Enter` to jump directly to the **Visual Editor** for that pipeline.
+
+### 2. Forensic History (Executions)
+Search for specific runs by their execution ID or current status.
+- **ID Search**: Type `#` followed by the job ID (e.g., `#42`) to jump to a specific run.
+- **Status Search**: Type "success", "failed", or "running" to see the most recent executions matching those states.
+- **Visual Cues**: Identified by the <Hash className="inline h-4 w-4 text-primary" /> icon.
+- **Action**: Press `Enter` to open the **Execution Forensic** panel for that job.
+
+## Interactive Experience
+
+- **Live Loading**: Results are fetched and filtered in real-time as you type.
+- **Keyboard Control**: Use the <kbd>↑</kbd> and <kbd>↓</kbd> arrow keys to browse results and `Enter` to select.
+- **Deep Linking**: Selecting a job automatically updates the application URL, allowing you to share forensic links with your team.
+
+## Best Practices
+
+- **Quick Jump**: Use the palette to move between different pipelines while designing complex workflows.
+- **Error forensic**: When you receive an alert, use the job ID to quickly pull up the logs and identify the root cause.
+- **Status Monitoring**: Regularly search for "running" to get a quick snapshot of active system load.

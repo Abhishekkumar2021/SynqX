@@ -1,0 +1,59 @@
+---
+title: "Operators"
+description: "Technical reference for built-in extraction, transformation, and loading logic."
+---
+
+# Operator Reference
+
+Operators are the functional building blocks of a SynqX pipeline. Each node in your DAG is an instance of an operator, configured to perform a specific data operation.
+
+## Telemetry & Monitoring
+Every built-in operator provides standardized telemetry:
+-   **Throughput**: `records_in` vs `records_out`.
+-   **Performance**: Microsecond-precision execution timing.
+-   **Resource Usage**: CPU and Memory footprint captured during the run.
+
+---
+
+## Connectivity Operators
+
+### Extract (Source)
+Extraction operators pull data from external systems into the SynqX engine.
+
+| Class | Type | Features |
+| :--- | :--- | :--- |
+| `PostgresConnector` | Relational | High-watermark incremental loading, batch fetching. |
+| `RestApiConnector` | API | Dot-notation JSON parsing, adaptive pagination, multi-auth. |
+| `S3Connector` | Object Storage | Prefix filtering, support for Parquet, CSV, and JSONL. |
+| `MongoDBConnector` | NoSQL | BSON-to-DataFrame normalization, projection support. |
+
+### Load (Destination)
+Loading operators push processed data from the engine into target systems.
+
+| Class | Type | Strategies |
+| :--- | :--- | :--- |
+| `PostgresConnector` | Relational | Append, Overwrite (Truncate), Upsert (Merge). |
+| `RestApiConnector` | API | Batch HTTP requests, configurable verbs (POST/PUT/PATCH). |
+| `LocalFileConnector` | Filesystem | Multi-format support, automated directory management. |
+
+---
+
+## Transformation Operators
+
+Transformation nodes modify data in-flight between extraction and loading.
+
+### 1. Schema & Structure
+-   **Rename Columns**: Map upstream names to standardized downstream identifiers.
+-   **Type Cast**: Enforce data types (e.g., String to Decimal) to ensure warehouse compatibility.
+-   **Drop Columns**: Prune unnecessary fields to optimize performance and security.
+
+### 2. Logic & Computation
+-   **Aggregate**: Powerful grouping and summarization (Sum, Mean, Count, etc.).
+-   **Join**: Perform horizontal merges between multiple data streams (Inner, Left, Outer).
+-   **Code Transform**: Execute arbitrary Python logic using Pandas for complex, custom requirements.
+-   **Filter**: Apply boolean predicates to include or exclude specific records.
+
+### 3. Data Quality
+-   **Deduplicate**: Remove redundant records based on unique key subsets.
+-   **Fill Nulls**: Handle missing data through statistical imputation or static constants.
+-   **Validate**: Enforce structural contracts and data quality rules.

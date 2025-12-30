@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "synqx.fullname" . }}-beat
+  labels:
+    {{- include "synqx.labels" . | nindent 4 }}
+    component: beat
+spec:
+  replicas: {{ .Values.beat.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "synqx.selectorLabels" . | nindent 6 }}
+      component: beat
+  template:
+    metadata:
+      labels:
+        {{- include "synqx.selectorLabels" . | nindent 8 }}
+        component: beat
+    spec:
+      serviceAccountName: {{ include "synqx.serviceAccountName" . }}
+      containers:
+        - name: beat
+          image: "{{ .Values.beat.image.repository }}:{{ .Values.beat.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.beat.image.pullPolicy }}
+          command: ["celery", "-A", "app.core.celery_app", "beat", "--loglevel=info"]
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "synqx.fullname" . }}-secrets
+                  key: postgres-password
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+            - name: REDIS_URL
+              value: "redis://{{ .Release.Name }}-redis-master:6379/0"
+            - name: ENVIRONMENT
+              value: {{ .Values.env.ENVIRONMENT | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.env.LOG_LEVEL | quote }}
+            - name: LOG_CONSOLE_ENABLED
+              value: {{ .Values.env.LOG_CONSOLE_ENABLED | quote }}
+            - name: LOG_FILE_ENABLED
+              value: {{ .Values.env.LOG_FILE_ENABLED | quote }}
+            - name: LOG_FORMAT
+              value: {{ .Values.env.LOG_FORMAT | quote }}
+            - name: API_V1_STR
+              value: {{ .Values.env.API_V1_STR | quote }}
+            - name: ACCESS_TOKEN_EXPIRE_MINUTES
+              value: {{ .Values.env.ACCESS_TOKEN_EXPIRE_MINUTES | quote }}
+            - name: ALLOWED_ORIGINS
+              value: {{ .Values.env.ALLOWED_ORIGINS | quote }}
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "synqx.fullname" . }}-secrets
+                  key: secret-key
+            - name: MASTER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "synqx.fullname" . }}-secrets
+                  key: master-password
+          resources:
+            {{- toYaml .Values.beat.resources | nindent 12 }}

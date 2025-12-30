@@ -1,0 +1,33 @@
+---
+title: BigQuery Connector
+description: Connect to Google BigQuery.
+---
+
+# BigQuery Connector
+
+The **BigQuery Connector** allows interaction with Google's serverless data warehouse.
+
+## Configuration
+
+You must provide credentials either via a JSON string or a file path.
+
+```json
+{
+  "project_id": "my-gcp-project",
+  "dataset_id": "my_dataset",
+  "credentials_path": "/path/to/service-account.json"
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `project_id` | string | Yes | GCP Project ID. |
+| `dataset_id` | string | Yes | BigQuery Dataset ID. |
+| `credentials_json` | string | No | JSON content of service account key. |
+| `credentials_path` | string | No | Path to service account key file. |
+
+## Usage
+- **Reading**: Executes SQL queries.
+- **Writing**: Uses `load_table_from_dataframe` for efficient batch loading.

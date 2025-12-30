@@ -1,0 +1,59 @@
+---
+title: "Data Models: Logical Orchestration"
+description: "In-depth look at Pipelines, Versions, Nodes, and Edges."
+---
+
+# Pipelines & Versioning
+
+These models represent the logical design of your data workflows.
+
+## Pipeline Lifecycle
+
+The `Pipeline` table acts as a container for multiple versions.
+
+### `pipelines` table
+-   `published_version_id`: The "active" version that will be executed by the scheduler.
+-   `schedule_cron`: Timezone-aware cron expression.
+-   `status`: `draft`, `active`, `paused`, `broken`, `archived`.
+
+---
+
+## Immutable Versioning
+
+The `PipelineVersion` is the actual executable artifact.
+
+### `pipeline_versions` table
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `Integer` | Primary Key. |
+| `version` | `Integer` | Sequential version (1, 2, 3...). |
+| `config_snapshot` | `JSON` | A complete recursive backup of all nodes and edges. |
+| `is_published` | `Boolean` | Flag indicating if this is the live version. |
+
+---
+
+## Nodes & Operators
+
+A `PipelineNode` is a single unit of work (e.g., Extract, Transform).
+
+### `pipeline_nodes` table
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `node_id` | `String` | Unique string ID within the DAG (e.g., `extract_pg`). |
+| `operator_class` | `String` | The Python class implementation (e.g., `PostgresConnector`). |
+| `config` | `JSON` | Parameters passed to the operator constructor. |
+| `order_index` | `Integer` | Hint for visual rendering and execution sequence. |
+
+---
+
+## Edges & Dependencies
+
+`PipelineEdge` defines the graph topology.
+
+### `pipeline_edges` table
+-   `from_node_id`: The upstream node (Source).
+-   `to_node_id`: The downstream node (Target).
+-   `edge_type`: `data` (passes dataframes) or `signal` (triggers next step only).
+
+**Validation Logic**:
+The backend performs a **Topological Sort** on these edges before publishing. If a cycle is detected, the publish action is rejected with a `ConfigurationError`.

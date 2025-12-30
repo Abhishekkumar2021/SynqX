@@ -1,0 +1,60 @@
+---
+title: "Console UI"
+description: "Experience the premium SynqX Intelligence interface."
+---
+
+import { Lightbulb, LayoutDashboard, Cable, Workflow, Activity, Search, Bell } from 'lucide-react';
+
+# SynqX Console: Premium Intelligence
+
+The SynqX Console is a state-of-the-art management interface built for speed, depth, and clarity. Featuring a high-end **Glass-Panel Design**, it offers a unified experience across monitoring, orchestration, and configuration.
+
+<Card className="not-prose mt-8 mb-8">
+  <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/10 text-primary border border-primary/20">
+    <Lightbulb className="h-5 w-5" />
+    <p className="text-sm font-bold uppercase tracking-wider">
+      Pro Tip: Use <kbd className="bg-background/50 px-1.5 py-0.5 rounded border">CMD+K</kbd> to search everything instantly.
+    </p>
+  </div>
+</Card>
+
+## Core Interface Elements
+
+### 1. Command Palette (CMD+K)
+The global search dialog is the heart of SynqX navigation. It provides:
+-   **Instant Navigation**: Jump to any pipeline by name or description.
+-   **Forensic Search**: Search for specific job executions by ID (e.g., `#123`) or status.
+-   **Intelligent Loading**: Results are fetched in real-time with integrated visual feedback.
+
+### 2. Live Notification System
+The notification bell in the top navigation bar provides real-time updates:
+-   **Instant Alerts**: Receive push notifications for pipeline success or failure via WebSockets.
+-   **Direct Action**: Click on any notification to jump directly to the corresponding execution logs.
+-   **Unread Tracking**: Visual badges keep you informed of new system events.
+
+### 3. Forensic History & Real-time Logs
+The **Execution History** (`/jobs`) has been designed for deep forensic analysis:
+-   **Pipeline Filtering**: Isolate executions for a specific workflow.
+-   **Status Quick-Filters**: One-click toggles to view only Success, Failed, or Running jobs.
+-   **ArgoCD-Style Terminal**: A production-ready log viewer with line numbers, level-based filtering, and high-performance auto-scroll.
+
+### 4. Connection Management
+Manage and monitor your data sources with a few clicks:
+-   **Full Configuration**: Edit existing connections (like PostgreSQL) to update credentials or settings.
+-   **Connectivity Testing**: Real-time health checks ensure your credentials are valid before deployment.
+-   **Asset Discovery**: Scan sources to automatically list and fingerprint data assets.
+
+### 5. Premium Glass-Panel Aesthetic
+SynqX utilizes a sophisticated design system:
+-   **Adaptive Theming**: Seamless support for Light and Dark modes with semantic color mapping.
+-   **Visual Depth**: High-quality backdrop blurs, subtle borders, and layered shadows create a modern, high-performance feel.
+-   **Responsive Navigation**: A collapsible glass sidebar that provides more room for your workspace while maintaining accessibility.
+
+## Navigation Hotkeys
+
+| Key | Action |
+| :--- | :--- |
+| <kbd>⌘</kbd> <kbd>K</kbd> | Open Search Command Palette |
+| <kbd>ESC</kbd> | Close Dialogs / Clear Selection |
+| <kbd>↵</kbd> | Select / Open Item in Search |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Navigate Search Results |

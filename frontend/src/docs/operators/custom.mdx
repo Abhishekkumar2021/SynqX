@@ -1,0 +1,73 @@
+---
+title: "Custom Operators"
+description: "Extending SynqX with your own logic."
+---
+
+
+# Developing Custom Operators
+
+When the built-in operators aren't enough, you can extend the `BaseOperator` class.
+
+## The Operator Contract
+
+A custom operator must implement the `execute` method.
+
+```python title="app/operators/custom_example.py"
+from app.operators.base import BaseOperator, OperatorResult, OperatorType
+
+class CurrencyConverter(BaseOperator):
+    """
+    Converts a money column from one currency to another using a live API.
+    """
+    
+    # 1. Define Metadata
+    operator_type = OperatorType.TRANSFORM
+    
+    # 2. Define Config Schema (for UI validation)
+    config_schema = {
+        "amount_column": {"type": "string", "required": True},
+        "target_currency": {"type": "string", "default": "USD"}
+    }
+
+    def execute(self, context, inputs):
+        # 3. Access Configuration
+        col = self.config["amount_column"]
+        target = self.config["target_currency"]
+        
+        # 4. Get Input Data (Pandas DataFrame)
+        df = inputs[0]
+        
+        self.log.info(f"Converting {len(df)} rows to {target}...")
+        
+        # ... Perform business logic ...
+        rate = 1.15 # Fetch from API in real code
+        df[f"{col}_{target}"] = df[col] * rate
+        
+        # 5. Return Result
+        return OperatorResult(
+            status="SUCCESS",
+            output=df,
+            metrics={
+                "conversion_rate": rate
+            }
+        )
+```
+
+## Context Object
+
+The `context` dictionary provides access to runtime variables:
+-   `run_id`: The Pipeline Run ID.
+-   `execution_date`: The logical date of the run (for idempotency).
+-   `parameters`: Runtime parameters passed to the pipeline.
+-   `watermarks`: Access to previous watermark values.
+
+## Registration
+
+To make your operator visible to the system, register it in `app/registry.py`:
+
+```python
+from app.registry import register_operator
+from app.operators.custom_example import CurrencyConverter
+
+register_operator("CurrencyConverter", CurrencyConverter)
+```

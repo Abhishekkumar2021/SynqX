@@ -1,0 +1,125 @@
+# Global settings
+global:
+  storageClass: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Backend API Configuration
+api:
+  replicaCount: 2
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+  image:
+    repository: synqx-backend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /api/v1/health
+      port: 8000
+    initialDelaySeconds: 30
+  readinessProbe:
+    httpGet:
+      path: /api/v1/health
+      port: 8000
+    initialDelaySeconds: 15
+
+# Celery Worker Configuration
+worker:
+  replicaCount: 3
+  image:
+    repository: synqx-backend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2048Mi
+    requests:
+      cpu: 1000m
+      memory: 1024Mi
+
+# Celery Beat Configuration
+beat:
+  replicaCount: 1
+  image:
+    repository: synqx-backend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# Frontend Configuration
+frontend:
+  replicaCount: 2
+  image:
+    repository: synqx-frontend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    type: LoadBalancer
+    port: 80
+  ingress:
+    enabled: false
+    className: "nginx"
+    hosts:
+      - host: synqx.local
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+
+# Environment Variables
+env:
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"
+  LOG_CONSOLE_ENABLED: "True"
+  LOG_FILE_ENABLED: "False"
+  LOG_FORMAT: "console"
+  API_V1_STR: "/api/v1"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "11520"
+  ALLOWED_ORIGINS: '["*"]'
+
+# Secrets (These should be overridden in production)
+secrets:
+  secretKey: "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+  masterPassword: "changeme"
+
+# Database Dependency (Bitnami Postgres)
+postgresql:
+  enabled: true
+  auth:
+    database: synqx_database
+    username: postgres
+    password: "production_password_change_me"
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Redis Dependency (Bitnami Redis)
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false

@@ -1,0 +1,56 @@
+---
+title: "Security & User Scoping"
+description: "How SynqX protects your credentials and data."
+---
+
+# Security Architecture
+
+SynqX is designed with a "Secure by Default" philosophy, ensuring that your connection credentials and data workflows are protected at every layer.
+
+## 1. Authentication & API Security
+
+SynqX uses **JWT (JSON Web Tokens)** for secure, stateless API access.
+
+### The Authentication Flow
+1.  **Identity Verification**: Users authenticate via the `/auth/login` endpoint using their email and hashed password.
+2.  **Token Issuance**: The server issues a high-entropy JWT signed with a `SECRET_KEY` using the `HS256` algorithm.
+3.  **Stateless Access**: All subsequent requests must include the `Authorization: Bearer <token>` header. Tokens are valid for 8 days by default but can be revoked instantly.
+
+### Password Hashing
+SynqX never stores plain-text passwords. All credentials use **bcrypt** with a high work factor, making them resilient to brute-force attacks.
+
+---
+
+## 2. Credential Encryption (The Vault)
+
+SynqX handles sensitive information (DB passwords, API keys) using a specialized **Vault Service**.
+
+### Zero-Trust Storage
+-   **Encryption Algorithm**: Uses **AES-256 GCM** (authenticated encryption). This ensures not only that the credentials are private but also that they haven't been tampered with.
+-   **Separation of Concerns**: The control plane (API) encrypts credentials before they reach the database. The database only ever sees ciphertext.
+-   **Ephemeral Decryption**: Workers only decrypt credentials in-memory during the execution of a job. The clear-text secrets never touch the disk on worker nodes.
+
+---
+
+## 3. User Isolation
+
+SynqX is built for shared environments, using a strict ownership model to prevent data leakage.
+
+### The Ownership Pattern
+Almost every model in the backend (Pipelines, Connections, Assets, Alerts) is tied to a specific user.
+-   **Scope**: Every record is tied to a specific `user_id`.
+-   **Enforcement**: The backend automatically filters all database queries based on the authenticated user's ID. You can only see or modify resources that you own.
+
+---
+
+## 4. Operational Security
+
+### API Key Management
+For external programmatic access, users can generate **Scoped API Keys**.
+-   **Prefixing**: Keys are prefixed (e.g., `sqx_...`) for easy identification by security scanners.
+-   **Least Privilege**: Keys can be restricted to specific scopes (e.g., `read:pipelines`, `trigger:runs`).
+
+### Audit Logging
+The `AuditMixin` tracks exactly who performed what action and when. This provides a clear trail for security audits and troubleshooting.
+-   `created_at`: Creation timestamp.
+-   `updated_at`: Last update timestamp.

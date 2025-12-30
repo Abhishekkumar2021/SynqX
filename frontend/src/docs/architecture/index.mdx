@@ -1,0 +1,49 @@
+---
+title: "Architecture"
+description: "In-depth look at SynqX system components and data flow orchestration."
+---
+
+# System Architecture
+
+SynqX utilizes a decoupled architecture that separates the **Control Plane** (Metadata, Orchestration, Scheduling) from the **Data Plane** (Execution, Connectivity, Transformation).
+
+## Core Components
+
+### 1. Orchestration Layer (FastAPI)
+The API layer serves as the central brain of the platform. It handles:
+-   **Security**: RBAC and session management via OAuth2 and JWT.
+-   **Metadata Management**: Version control for pipelines and asset registries.
+-   **The Vault**: An application-layer encryption service (AES-256) that secures credentials at rest.
+-   **DAG Compiler**: Translates visual graph definitions into executable logical plans.
+
+### 2. Distributed Execution Engine (Celery)
+The execution engine consists of stateless worker nodes that perform the heavy lifting of data movement.
+-   **Task Dispatching**: Jobs are enqueued via Redis and picked up by available workers.
+-   **Runtime Isolation**: Each step run operates within its own context, with enforced timeouts and resource monitoring.
+-   **Dynamic Operator Binding**: Workers instantiate operator classes on-the-fly based on the node configuration.
+
+### 3. Metadata Persistence (PostgreSQL)
+A strictly typed relational store that maintains the authoritative state of all system entities.
+-   **Immutability**: Historical versions are preserved indefinitely for audit and rollback.
+-   **Telemetry Storage**: Persists detailed execution metrics, including records processed and duration.
+
+---
+
+## Data Flow Lifecycle
+
+1.  **Definition**: A user designs a DAG in the Console UI.
+2.  **Snapshot**: Upon publishing, a recursive JSON snapshot of the graph is captured.
+3.  **Scheduling**: Celery Beat monitors triggers and dispatches jobs based on concurrency limits.
+4.  **Execution**: Workers resolve credentials via the Vault, instantiate connectors, and stream data through the defined nodes.
+5.  **Observability**: Real-time progress is streamed via WebSockets while logs are persisted for forensic analysis.
+
+## Technical Stack
+
+| Category | Technology |
+| :--- | :--- |
+| **Backend** | Python 3.12+, FastAPI |
+| **Worker Engine** | Celery + Redis |
+| **Metadata DB** | PostgreSQL |
+| **Frontend** | React, TypeScript, Vite, Tailwind CSS |
+| **Security** | Fernet (AES-256), BCrypt |
+| **Infrastructure** | Docker-ready, Distributed-first design |

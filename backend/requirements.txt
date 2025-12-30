@@ -1,0 +1,74 @@
+# Core Framework
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+setuptools
+email-validator
+
+# Database - System DB
+sqlalchemy
+alembic
+psycopg2-binary
+
+# Database - Supported Drivers
+pymysql
+pymssql
+oracledb
+pymongo
+redis
+
+# Cloud/Data Warehouse Connectors
+snowflake-connector-python
+snowflake-sqlalchemy
+google-cloud-bigquery
+boto3
+s3fs
+
+# Task Queue (keeping Celery as alternative to Prefect)
+celery
+flower
+
+# Security & Encryption
+cryptography
+python-multipart
+python-jose[cryptography]
+bcrypt
+
+# Data Processing
+pandas
+pyarrow
+duckdb
+
+# Workflow Orchestration
+# prefect removed (using Celery)
+
+# Utilities
+python-dotenv
+httpx
+structlog
+croniter
+psutil
+
+# Development & Testing
+pytest
+pytest-asyncio
+black
+ruff
+mypy
+
+# File Format Support
+fastparquet
+
+# Connectors
+elasticsearch
+google-cloud-storage
+azure-storage-blob
+paramiko
+kafka-python
+databricks-sql-connector
+pika
+cassandra-driver
+pyairtable
+simple-salesforce
+lxml

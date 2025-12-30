@@ -1,0 +1,95 @@
+---
+title: "Building Your First Pipeline"
+description: "A comprehensive guide to creating an end-to-end pipeline."
+---
+
+
+# Building Your First Pipeline
+
+This guide will walk you through creating a pipeline that moves user data from a transactional PostgreSQL database to a Snowflake data warehouse, applying a simple transformation along the way.
+
+## Prerequisites
+-   A running instance of SynqX.
+-   Access to a Postgres database.
+-   Access to a Snowflake account.
+
+---
+
+<Steps>
+<Step>
+## 1. Create Connections
+
+Navigate to the **Connections** tab and create two connections.
+
+**Source: Production DB**
+-   Type: `POSTGRES`
+-   Host: `db.prod.example.com`
+-   User/Pass: (Enter your credentials)
+
+**Destination: Analytics Warehouse**
+-   Type: `SNOWFLAKE`
+-   Account: `xy12345.us-east-1`
+-   Warehouse: `COMPUTE_WH`
+</Step>
+
+<Step>
+## 2. Define Assets
+
+SynqX needs to know *what* to move.
+
+**Create Source Asset**
+-   Connection: `Production DB`
+-   Name: `users_table`
+-   Table: `public.users`
+-   **Incremental**: Check "Yes" -> Column: `updated_at`.
+
+**Create Destination Asset**
+-   Connection: `Analytics Warehouse`
+-   Name: `raw_users`
+-   Table: `RAW.USERS`
+</Step>
+
+<Step>
+## 3. Design the Pipeline
+
+Go to **Pipelines** -> **New Pipeline**.
+
+**Basic Settings**
+-   Name: `sync_users_daily`
+-   Schedule: `0 2 * * *` (Daily at 2 AM)
+
+**Add Nodes**
+
+1.  **Extract Users** (`PostgresSource`)
+    -   Asset: `users_table`
+    -   Mode: `INCREMENTAL`
+
+2.  **Mask Emails** (`PythonTransform`)
+    -   Script:
+        ```python
+        def transform(df):
+            # Simple masking
+            df['email'] = df['email'].apply(lambda x: '***')
+            return df
+        ```
+
+3.  **Load Snowflake** (`SnowflakeLoader`)
+    -   Asset: `raw_users`
+    -   Write Mode: `UPSERT`
+    -   Primary Key: `id`
+
+**Connect Edges**
+`Extract Users` --> `Mask Emails` --> `Load Snowflake`
+</Step>
+
+<Step>
+## 4. Publish & Test
+
+Click **Publish**. This creates `Version 1`.
+
+Click **Trigger Now** to manually start a run.
+-   Navigate to the **Run Details** page.
+-   Watch the steps turn from `PENDING` -> `RUNNING` -> `SUCCESS`.
+-   Verify the data in Snowflake.
+</Step>
+</Steps>

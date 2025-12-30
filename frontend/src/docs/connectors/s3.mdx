@@ -1,0 +1,51 @@
+---
+title: S3 Connector
+description: Read and write files to Amazon S3 and compatible object storage.
+---
+
+# S3 Connector
+
+The **S3 Connector** allows SynqX to read from and write to Amazon S3 buckets. It also supports S3-compatible services like MinIO.
+
+## Configuration
+
+```json
+{
+  "bucket": "my-data-bucket",
+  "region_name": "us-east-1",
+  "aws_access_key_id": "ACCESS_KEY",
+  "aws_secret_access_key": "SECRET_KEY",
+  "endpoint_url": "https://s3.amazonaws.com"
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `bucket` | string | Yes | The target S3 bucket name. | - |
+| `region_name` | string | No | AWS Region. | us-east-1 |
+| `aws_access_key_id` | string | No | AWS Access Key ID (if not using IAM roles). | - |
+| `aws_secret_access_key` | string | No | AWS Secret Access Key. | - |
+| `endpoint_url` | string | No | Custom endpoint URL (required for MinIO). | - |
+
+## Usage
+
+### Supported Formats
+
+- CSV (`.csv`)
+- Parquet (`.parquet`)
+- JSON (`.json`)
+- Excel (`.xlsx`) - Read only
+
+### Reading Data (Source)
+
+- **Discovery**: Lists files within the bucket matching supported extensions.
+- **Reading**: Automatically detects format based on file extension.
+
+### Writing Data (Destination)
+
+- **Modes**:
+    - `append`: Appends data to existing file (reads into memory first) or creates new file.
+    - `replace`: Overwrites the existing file.
+- **Note**: Modifying existing files in object storage involves rewriting the entire object. Use `append` with caution on large files.

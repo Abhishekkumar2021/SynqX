@@ -1,0 +1,55 @@
+---
+title: "Data Models"
+description: "Authoritative reference for the SynqX metadata and state persistence schema."
+---
+
+# Data Persistence Architecture
+
+SynqX utilizes a highly structured relational schema to maintain the authoritative state of data pipelines, connections, and execution history. The models are implemented using **SQLAlchemy 2.0** declarative mapping, ensuring strict typing and comprehensive referential integrity.
+
+<div className="w-full h-[600px] border rounded-3xl overflow-hidden my-8 bg-background shadow-2xl ring-1 ring-border/40">
+  <iframe 
+    src="/erd.html" 
+    className="w-full h-full border-0 bg-background"
+    title="SynqX ERD"
+  />
+</div>
+
+## Logical Domains
+
+The schema is partitioned into four primary logical domains:
+
+### 1. Connectivity Registry
+Manages physical system definitions and the logical assets contained within them.
+-   **Connections**: Encrypted system configurations and auth parameters.
+-   **Assets**: Abstracted data entities (tables, endpoints, files).
+-   **Schema Versions**: Fingerprints of asset structure at specific points in time.
+
+### 2. Pipeline Orchestration
+Defines the structure and versioning of Directed Acyclic Graphs (DAGs).
+-   **Pipelines**: High-level workflow containers and scheduling configurations.
+-   **Versions**: Immutable snapshots of DAG configurations.
+-   **Nodes & Edges**: The functional vertices and data flow relationships of the graph.
+
+### 3. Runtime & Execution
+Tracks the lifecycle of asynchronous jobs and granular task progress.
+-   **Jobs**: Distributed execution units triggered by users or the scheduler.
+-   **Pipeline Runs**: Aggregated metrics and status for a single job execution.
+-   **Step Runs**: Node-level telemetry (I/O throughput, duration, resource usage).
+
+### 4. Observability & Forensic
+Maintains the audit trail and real-time event history.
+-   **Job & Step Logs**: Persistent records of internal engine operations.
+-   **Alerts**: Log of sent and pending notifications based on system triggers.
+
+---
+
+## Architectural Mixins
+
+SynqX implements standardized behavior across all models through a set of reusable mixins:
+
+| Mixin | Functionality |
+| :--- | :--- |
+| `AuditMixin` | Automatically tracks `created_at`, `updated_at`, and the associated `user_id`. |
+| `SoftDeleteMixin` | Enables safe record removal via `deleted_at` timestamps, preventing data loss. |
+| `OwnerMixin` | Enforces multi-tenant isolation by scoping queries to specific user identities. |

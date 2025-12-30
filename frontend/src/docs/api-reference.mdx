@@ -1,0 +1,62 @@
+---
+title: "API Reference"
+description: "Technical specification for the SynqX Backend API."
+---
+
+# API Reference
+
+SynqX provides a powerful REST API for programmatic orchestration, monitoring, and configuration. The API is built with FastAPI and follows standard REST principles, using JSON for request and response bodies.
+
+## Interactive API Explorer
+
+Use the interactive explorer below to test endpoints, view request/response schemas, and generate client code in multiple languages.
+
+<ApiReference />
+
+---
+
+## Authentication
+
+All API requests (except login and registration) require a valid JWT token in the `Authorization` header.
+
+<Steps>
+<Step>
+### 1. Get Access Token
+Send a POST request to `/api/v1/auth/login` with your credentials.
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "username=admin@synqx.dev&password=password"
+```
+</Step>
+
+<Step>
+### 2. Use the Token
+Include the received token in the `Authorization` header for subsequent requests.
+
+```bash
+Authorization: Bearer <your_access_token>
+```
+</Step>
+</Steps>
+
+---
+
+## Error Handling
+
+SynqX uses standard HTTP status codes to indicate the success or failure of an API request.
+
+- `200 OK`: Request succeeded.
+- `201 Created`: Resource created successfully.
+- `400 Bad Request`: Invalid parameters.
+- `401 Unauthorized`: Authentication failed or missing.
+- `403 Forbidden`: Insufficient permissions.
+- `404 Not Found`: Resource does not exist.
+- `500 Internal Server Error`: Something went wrong on our end.
+
+```json
+{
+  "detail": "Connection with ID conn_123 not found."
+}
+```

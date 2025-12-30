@@ -1,0 +1,82 @@
+---
+title: "SynqX Documentation"
+description: "The complete technical reference for SynqX — the universal, connector-agnostic ETL agent."
+---
+
+import { NotebookPen, Server, Activity, Database, GitGraph, FileJson, Laptop, Bell } from 'lucide-react';
+
+# Welcome to SynqX
+
+**SynqX** is a next-generation ETL orchestration engine designed for high-performance data delivery, deep observability, and schema intelligence. Unlike traditional ETL tools, SynqX treats pipelines as **versioned, immutable DAGs** and provides a premium, "Glass Box" experience for monitoring complex data workflows in real-time.
+
+---
+
+## Core Modules
+
+Explore the SynqX ecosystem through its primary domains.
+
+<Cards>
+  <Card 
+    icon={<NotebookPen className="text-purple-500" />}
+    title="Introduction" 
+    href="/docs/intro"
+    description="High-level concepts, design philosophy, and system capabilities."
+  />
+  <Card 
+    icon={<Server className="text-blue-500" />}
+    title="Architecture" 
+    href="/docs/architecture"
+    description="System internals, execution hierarchy, and component interactions."
+  />
+  <Card 
+    icon={<Database className="text-green-500" />}
+    title="Data Models" 
+    href="/docs/data-models"
+    description="Comprehensive schema definitions and metadata architecture."
+  />
+  <Card 
+    icon={<GitGraph className="text-orange-500" />}
+    title="Pipelines & DAGs" 
+    href="/docs/pipelines"
+    description="Understanding nodes, versioning, and visual orchestration."
+  />
+  <Card 
+    icon={<Activity className="text-red-500" />}
+    title="Execution Runtime" 
+    href="/docs/execution"
+    description="Jobs, Pipeline Runs, Step Runs, and the Celery worker engine."
+  />
+  <Card 
+    icon={<FileJson className="text-cyan-500" />}
+    title="Observability & Forensic" 
+    href="/docs/observability"
+    description="Real-time terminal logs, status filtering, and forensic analysis."
+  />
+  <Card 
+    icon={<Bell className="text-pink-500" />}
+    title="Alerts & Notifications" 
+    href="/docs/observability/notifications"
+    description="Live WebSocket notifications and automated alerting rules."
+  />
+  <Card 
+    icon={<Laptop className="text-blue-400" />}
+    title="Console UI" 
+    href="/docs/frontend-ui"
+    description="Explore the premium glass-panel interface and CMD+K search."
+  />
+</Cards>
+
+---
+
+## Developer Resources
+
+Resources for extending and implementing SynqX.
+
+<Cards>
+    <Card title="Connectors & Assets" href="/docs/connectors" />
+    <Card title="Operator Reference" href="/docs/operators" />
+    <Card title="Custom Operators" href="/docs/operators/custom" />
+    <Card title="API Reference" href="/docs/api-reference" description="Detailed REST API specification." />
+    <Card title="Guides & Tutorials" href="/docs/guides" />
+  </Cards>
+  

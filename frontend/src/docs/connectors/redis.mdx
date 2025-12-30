@@ -1,0 +1,38 @@
+---
+title: Redis Connector
+description: Read and write data to Redis key-value store.
+---
+
+# Redis Connector
+
+The **Redis Connector** allows SynqX to interact with Redis for high-speed caching or key-value storage.
+
+## Configuration
+
+```json
+{
+  "host": "localhost",
+  "port": 6379,
+  "password": "mypassword",
+  "db": 0
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `host` | string | Yes | Redis Host. | localhost |
+| `port` | number | Yes | Redis Port. | 6379 |
+| `password` | string | No | Redis Password. | - |
+| `db` | number | No | Database Index. | 0 |
+
+## Usage
+
+### Reading Data
+- **Asset**: Treated as a key pattern (e.g., `user:*`).
+- **Schema**: Returns `key` and `value` columns.
+
+### Writing Data
+- **Asset**: Ignored (keys are embedded in data).
+- **Format**: DataFrame must have `key` and `value` columns.

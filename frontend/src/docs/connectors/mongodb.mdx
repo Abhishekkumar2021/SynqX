@@ -1,0 +1,60 @@
+---
+title: MongoDB Connector
+description: Connect to MongoDB collections for NoSQL data integration.
+---
+
+# MongoDB Connector
+
+The **MongoDB Connector** enables reading from and writing to MongoDB collections. It handles JSON-like documents and maps them to DataFrame structures.
+
+## Configuration
+
+You can configure the connection using a standard connection string (URI) or individual parameters.
+
+### Option 1: Connection String
+
+```json
+{
+  "connection_string": "mongodb://user:pass@host:27017/db?authSource=admin",
+  "database": "my_database"
+}
+```
+
+### Option 2: Individual Parameters
+
+```json
+{
+  "host": "localhost",
+  "port": 27017,
+  "username": "user",
+  "password": "pass",
+  "database": "my_database",
+  "auth_source": "admin"
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `connection_string` | string | No | Full MongoDB URI. | - |
+| `host` | string | No | Server hostname. | localhost |
+| `port` | number | No | Server port. | 27017 |
+| `username` | string | No | Authentication username. | - |
+| `password` | string | No | Authentication password. | - |
+| `database` | string | Yes | Target database name. | - |
+| `auth_source` | string | No | Database to authenticate against. | admin |
+
+## Usage
+
+### Reading Data (Source)
+
+- **Discovery**: Lists all collections in the database.
+- **Schema**: Since MongoDB is schema-less, the schema is inferred from a sample of documents.
+- **Flattening**: Top-level fields are mapped to columns. Nested objects are currently kept as dictionaries/strings.
+
+### Writing Data (Destination)
+
+- **Modes**:
+    - `append`: Inserts documents into the collection.
+    - `replace`: Drops the collection before inserting.

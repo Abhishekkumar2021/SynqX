@@ -1,0 +1,53 @@
+---
+title: PostgreSQL Connector
+description: Connect to PostgreSQL databases for reading and writing data.
+---
+
+# PostgreSQL Connector
+
+The **PostgreSQL Connector** enables SynqX to interact with PostgreSQL databases. It supports efficient data extraction using standard SQL and high-performance loading.
+
+## Configuration
+
+```json
+{
+  "username": "myuser",
+  "password": "mypassword",
+  "host": "localhost",
+  "port": 5432,
+  "database": "mydb",
+  "db_schema": "public"
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `username` | string | Yes | Database user. | - |
+| `password` | string | Yes | Database password. | - |
+| `host` | string | Yes | Server hostname or IP. | - |
+| `port` | number | No | Server port. | 5432 |
+| `database` | string | Yes | Database name. | - |
+| `db_schema` | string | No | Target schema. | public |
+
+## Usage
+
+### Configuration Management
+
+- **Persistence**: Connection details are encrypted and stored in the metadata layer.
+- **Updates**: You can update credentials, host addresses, or database settings for an existing connection without re-creating it. This is useful for rotating passwords or adjusting connection pool sizes.
+
+### Reading Data (Source)
+
+- **Discovery**: Automatically lists tables in the configured schema.
+- **Querying**: Reads data using `SELECT * FROM schema.table`.
+- **Incremental Loading**: Supports standard offset/limit pagination for batched reading.
+
+### Writing Data (Destination)
+
+- **Modes**:
+    - `append`: Inserts new rows into the table.
+    - `replace`: Drops the table if it exists and creates a new one.
+    - `fail`: Fails if the table already exists.
+- **Performance**: Uses `pandas.to_sql` for data insertion.

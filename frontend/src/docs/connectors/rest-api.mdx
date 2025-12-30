@@ -1,0 +1,63 @@
+---
+title: REST API Connector
+description: High-performance connectivity for JSON-based RESTful services.
+---
+
+# REST API Connector
+
+The **REST API Connector** is a production-grade interface designed to interact with any HTTP-based service. It handles the complexities of modern API interaction, including multi-tier authentication, dynamic pagination, and nested JSON normalization.
+
+## Configuration
+
+Connector settings are defined at the **Connection** level and can be overridden at the **Asset** level.
+
+```json
+{
+  "base_url": "https://api.example.com/v1",
+  "auth_type": "bearer",
+  "auth_token": "YOUR_SECURE_TOKEN",
+  "headers": {
+    "Accept": "application/json",
+    "X-Platform": "SynqX"
+  },
+  "pagination_type": "limit_offset",
+  "page_size": 100
+}
+```
+
+### Core Parameters
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `base_url` | string | The root URL for all requests. |
+| `auth_type` | enum | `none`, `basic`, `bearer`, or `api_key`. |
+| `data_key` | string | Dot-notation path to the record array (e.g., `data.results`). |
+| `pagination_type` | enum | `none`, `limit_offset`, or `page_number`. |
+
+---
+
+## Usage Patterns
+
+### As a Source (Extraction)
+Assets represent specific endpoints. The `fully_qualified_name` should be the endpoint path relative to the `base_url`.
+
+-   **Asset FQN**: `/users` or `orders/search`.
+-   **Incremental Loading**: Supports high-watermark filtering if the API provides a sortable field (e.g., `updated_at`).
+-   **Schema Inference**: The engine automatically flattens nested JSON structures into a relational format for transformation nodes.
+
+### As a Destination (Loading)
+Data is transmitted as JSON payloads.
+
+-   **Write Method**: Configurable per asset (`POST`, `PUT`, or `PATCH`).
+-   **Batching**: Optimized for high-volume loading by grouping records into single HTTP requests if supported by the target API.
+-   **Upsert Logic**: When the `upsert` strategy is selected, the connector utilizes `PUT` or `PATCH` based on the existence of a primary identifier.
+
+## Advanced Features
+
+### Dot-Notation Record Extraction
+If an API wraps its data in a response envelope, use the `data_key` property to point the engine to the record array:
+*   Response: `{ "meta": {...}, "data": { "items": [...] } }`
+*   Config: `data_key: "data.items"`
+
+### Adaptive Pagination
+The connector automatically manages cursor or offset state across multiple batches to ensure complete dataset extraction without memory overflow.

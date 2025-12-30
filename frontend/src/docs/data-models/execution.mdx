@@ -1,0 +1,54 @@
+---
+title: "Data Models: Execution State"
+description: "How SynqX tracks jobs, runs, and performance metrics."
+---
+
+# Execution State
+
+These models capture the live runtime telemetry of the system.
+
+## The Job Wrapper
+
+The `Job` table represents the infrastructure-level task handled by the worker queue.
+
+### `jobs` table
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `celery_task_id` | `String` | Maps to the physical task in Redis/RabbitMQ. |
+| `status` | `Enum` | `pending`, `running`, `success`, `failed`, `retrying`. |
+| `execution_time_ms` | `Integer` | High-precision duration for performance monitoring. |
+| `worker_id` | `String` | Identifies which physical node performed the work. |
+
+---
+
+## Logical Runs
+
+A `PipelineRun` is the logical execution of a specific `PipelineVersion`.
+
+### `pipeline_runs` table
+-   **Run Numbering**: Each pipeline has an incremental `run_number` (1, 2, 3...) independent of its global ID.
+-   **Metrics Aggregation**: Stores `total_extracted`, `total_loaded`, and `bytes_processed`.
+-   **Traceability**: Links to the specific `job_id` that triggered it.
+
+---
+
+## Granular Telemetry
+
+`StepRun` tracks the individual nodes within a run.
+
+### `step_runs` table
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `records_in` | `Integer` | Input row count. |
+| `records_out` | `Integer` | Output row count. |
+| `duration_seconds`| `Float` | How long this specific node took. |
+| `error_message` | `Text` | Detailed traceback if the step failed. |
+
+---
+
+## Incremental State: `watermarks`
+
+Allows for efficient "Delta" processing.
+-   **High-Water Mark**: Stores the last processed value (e.g., `max(updated_at)` or `max(id)`).
+-   **Scoped to Pipeline/Asset**: A single asset can have different watermarks for different pipelines.
+-   **Persistence**: Watermarks are only updated *after* a successful destination commit, ensuring exactly-once semantics.

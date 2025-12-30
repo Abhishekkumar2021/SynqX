@@ -1,0 +1,49 @@
+---
+title: "Observability & Forensic"
+description: "Full visibility into your data operations."
+---
+
+
+# Observability: Glass Box Monitoring
+
+SynqX provides "Glass Box" observability. You shouldn't need to check five different systems to know if your data is up to date or why a job failed.
+
+## Real-time Notifications
+
+The integrated alert system ensures you are always informed of critical system events as they happen.
+
+-   **Live WebSocket Feed**: New alerts are pushed directly to the browser, updating the notification badge instantly.
+-   **In-App Alerts**: A real-time toast and bell menu provide context for success and failure events.
+-   **Interactive forensic**: Clicking an alert takes you directly to the log forensic for that specific execution.
+
+## Execution Forensic
+
+The **Jobs & Runs** interface is a deep forensic tool designed for root-cause analysis.
+
+### High-Fidelity Logs
+-   **Structured Metadata**: Logs capture complex JSON payloads for data-driven debugging.
+-   **Line-Level Referencing**: Line numbers and level-based highlighting (ArgoCD style) make navigating millions of lines effortless.
+-   **Live Tail**: High-performance auto-scrolling allows you to watch data move through the system in real-time.
+
+### Forensic Filters
+Quickly isolate the information you need:
+-   **Status Overlays**: Instantly filter by `Success`, `Failed`, `Running`, or `Pending`.
+-   **Pipeline Context**: Isolate executions belonging to a specific workflow to trace historical patterns.
+
+## Alerting Engine
+
+The `AlertConfig` engine allows you to define flexible rules.
+
+### Scoping & Filtering
+-   **Global Rules**: "Notify me if ANY pipeline fails."
+-   **Scoped Rules**: "Notify the #revenue channel only for Finance pipelines with ERROR severity."
+
+### Intelligent Suppression
+To prevent "Alert Fatigue", SynqX implements adaptive cooldowns.
+-   **Cooldown Period**: Configurable window (e.g., 60 minutes) during which identical alerts are suppressed.
+-   **Status Deduplication**: Only the first failure or recovery event triggers a notification within the cooldown window.
+
+### Delivery Methods
+-   **In-App**: Real-time WebSocket notifications in the Console.
+-   **Email**: Professional HTML templates for stakeholder reports.
+-   **Slack/Webhook**: JSON payloads for integration with modern incident management stacks.
