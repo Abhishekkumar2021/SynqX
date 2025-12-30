@@ -1,22 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPipelines, triggerPipeline, type Pipeline } from '@/lib/api';
+import { getPipelines, triggerPipeline } from '@/lib/api';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogFooter,
-    DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-    Loader2, Play, Sparkles, Workflow, CalendarClock, Activity, Search, 
-    LayoutGrid, List as ListIcon, CheckCircle2, PauseCircle, XCircle
-} from 'lucide-react';
+    Loader2, Play, Sparkles, Workflow, CalendarClock, Search, 
+    LayoutGrid, List as ListIcon, CheckCircle2} from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -52,7 +50,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
             let matchesFilter = true;
             if (activeFilter === 'Active') matchesFilter = p.status === 'active';
             if (activeFilter === 'Paused') matchesFilter = p.status === 'paused';
-            if (activeFilter === 'Failed') matchesFilter = p.status === 'failed' || p.status === 'broken';
+            if (activeFilter === 'Failed') matchesFilter = p.status === 'broken';
 
             return matchesSearch && matchesFilter;
         });
@@ -95,19 +93,10 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
         }
     };
 
-    const getStatusIcon = (status: string) => {
-         switch (status) {
-            case 'active': return CheckCircle2;
-            case 'paused': return PauseCircle;
-            case 'failed':
-            case 'broken': return XCircle;
-            default: return Activity;
-        }
-    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-5xl h-[750px] flex flex-col p-0 gap-0 overflow-hidden rounded-[2.5rem] border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
+            <DialogContent className="max-w-5xl h-187.5 flex flex-col p-0 gap-0 overflow-hidden rounded-[2.5rem] border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
                 
                 {/* --- Header Section --- */}
                 <div className="flex flex-col border-b border-border/40 shrink-0 bg-muted/5 relative overflow-hidden">
@@ -202,7 +191,6 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                         {filteredPipelines.map((p) => {
                                             const isSelected = selectedPipelineId === p.id.toString();
-                                            const StatusIcon = getStatusIcon(p.status);
                                             const statusColor = getStatusColor(p.status);
                                             
                                             return (
@@ -311,7 +299,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
                                     </div>
                                 )
                             ) : (
-                                <div className="flex flex-col items-center justify-center h-[400px] text-center opacity-80">
+                                <div className="flex flex-col items-center justify-center h-100 text-center opacity-80">
                                     <div className="h-20 w-20 rounded-full bg-muted/30 flex items-center justify-center mb-6 border border-border/50">
                                         <Search className="h-8 w-8 text-muted-foreground/40" />
                                     </div>
@@ -362,7 +350,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
                             onClick={handleRun} 
                             disabled={!selectedPipelineId || runMutation.isPending}
                             className={cn(
-                                "rounded-xl h-12 px-8 font-bold shadow-lg shadow-primary/20 transition-all gap-2.5 min-w-[160px]",
+                                "rounded-xl h-12 px-8 font-bold shadow-lg shadow-primary/20 transition-all gap-2.5 min-w-40",
                                 !selectedPipelineId ? "opacity-50 grayscale" : "hover:shadow-primary/40 hover:scale-[1.02] active:scale-[0.98]"
                             )}
                         >
