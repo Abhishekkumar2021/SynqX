@@ -30,7 +30,7 @@ class KafkaConfig(BaseSettings):
 class KafkaConnector(BaseConnector):
     def __init__(self, config: Dict[str, Any]):
         if KafkaConsumer is None:
-            raise ConfigurationError("Kafka client not installed. Run 'pip install kafka-python'.")
+            raise ConfigurationError("Kafka client not installed. Run 'pip install kafka-python-ng'.")
         
         self._config_model: Optional[KafkaConfig] = None
         self._producer: Optional[KafkaProducer] = None

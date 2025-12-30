@@ -1,74 +1,71 @@
 # Core Framework
-fastapi
-uvicorn[standard]
-pydantic
-pydantic-settings
-setuptools
-email-validator
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+setuptools>=69.2.0
+email-validator>=2.1.0
 
 # Database - System DB
-sqlalchemy
-alembic
-psycopg2-binary
+sqlalchemy>=2.0.29
+alembic>=1.13.1
+psycopg2-binary>=2.9.9
 
 # Database - Supported Drivers
-pymysql
-pymssql
-oracledb
-pymongo
-redis
+pymysql>=1.1.0
+pymssql>=2.3.0
+oracledb>=2.1.0
+pymongo>=4.6.3
+redis>=5.0.3
 
 # Cloud/Data Warehouse Connectors
-snowflake-connector-python
-snowflake-sqlalchemy
-google-cloud-bigquery
-boto3
-s3fs
+snowflake-connector-python>=3.8.0
+snowflake-sqlalchemy>=1.5.1
+google-cloud-bigquery>=3.20.0
+boto3>=1.34.80
+s3fs>=2024.3.1
 
-# Task Queue (keeping Celery as alternative to Prefect)
-celery
-flower
+# Task Queue
+celery>=5.3.6
+flower>=2.0.1
 
 # Security & Encryption
-cryptography
-python-multipart
-python-jose[cryptography]
-bcrypt
+cryptography>=42.0.5
+python-multipart>=0.0.9
+python-jose[cryptography]>=3.3.0
+bcrypt>=4.1.2
 
 # Data Processing
-pandas
-pyarrow
-duckdb
-
-# Workflow Orchestration
-# prefect removed (using Celery)
+pandas>=2.2.2
+pyarrow>=15.0.2
+duckdb>=0.10.1
 
 # Utilities
-python-dotenv
-httpx
-structlog
-croniter
-psutil
+python-dotenv>=1.0.1
+httpx>=0.27.0
+structlog>=24.1.0
+croniter>=2.0.3
+psutil>=5.9.8
 
 # Development & Testing
-pytest
-pytest-asyncio
-black
-ruff
-mypy
+pytest>=8.1.1
+pytest-asyncio>=0.23.6
+black>=24.3.0
+ruff>=0.3.5
+mypy>=1.9.0
 
 # File Format Support
-fastparquet
+fastparquet>=2024.2.0
 
 # Connectors
-elasticsearch
-google-cloud-storage
-azure-storage-blob
-paramiko
-kafka-python
-databricks-sql-connector
-pika
-cassandra-driver
-pyairtable
-simple-salesforce
-lxml
+elasticsearch>=8.13.0
+google-cloud-storage>=2.16.0
+azure-storage-blob>=12.19.1
+paramiko>=3.4.0
+kafka-python-ng>=2.2.2  # Replacement for unmaintained kafka-python for Py3.13+
+databricks-sql-connector>=3.1.0
+pika>=1.3.2
+cassandra-driver>=3.29.1
+pyairtable>=2.3.3
+simple-salesforce>=1.12.5
+lxml>=5.2.1

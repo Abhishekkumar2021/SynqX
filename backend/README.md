@@ -35,8 +35,8 @@ SynqX abstracts physical systems into logical **Assets** with a standardized nam
 ## 🛠️ Technical Setup
 
 ### Prerequisites
-- **Python**: 3.12+ (Optimized for 3.13)
-- **Infrastructure**: PostgreSQL 15+, Redis 7+, Celery 5+
+- **Python**: 3.13+
+- **Infrastructure**: PostgreSQL 17+, Redis 7.4+, Celery 5.3+
 
 ### Installation
 1. Initialize virtual environment:

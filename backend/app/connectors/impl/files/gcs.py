@@ -1,4 +1,5 @@
 import os
+import posixpath
 import io
 from typing import Any, Dict, Iterator, List, Optional, Union
 import pandas as pd
@@ -116,7 +117,7 @@ class GCSConnector(BaseConnector):
             if any(ig in blob.name for ig in ignored):
                 continue
 
-            ext = os.path.splitext(blob.name)[1].lower()
+            ext = posixpath.splitext(blob.name)[1].lower()
             if ext in valid_extensions:
                 asset = {
                     "name": blob.name,
@@ -182,7 +183,7 @@ class GCSConnector(BaseConnector):
         
         # For large files, we should use chunked reading if format supports it
         # CSV and JSONL support chunksize
-        ext = os.path.splitext(asset)[1].lower()
+        ext = posixpath.splitext(asset)[1].lower()
         chunksize = kwargs.get("chunksize", 10000)
         
         # Note: In a real implementation, we'd use smart streaming
@@ -287,7 +288,7 @@ class GCSConnector(BaseConnector):
         else:
             df = pd.concat(list(data))
 
-        ext = os.path.splitext(asset)[1].lower()
+        ext = posixpath.splitext(asset)[1].lower()
         with io.BytesIO() as bio:
             if ext == ".csv":
                 df.to_csv(bio, index=False)
@@ -340,7 +341,7 @@ class GCSConnector(BaseConnector):
                 if blob.name == prefix: # Skip the directory blob itself
                     continue
                 results.append({
-                    "name": os.path.basename(blob.name),
+                    "name": posixpath.basename(blob.name),
                     "path": blob.name,
                     "type": "file",
                     "size": blob.size,

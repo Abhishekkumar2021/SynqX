@@ -9,12 +9,14 @@ interface NavItemProps {
   label: string;
   collapsed?: boolean;
   onClick?: () => void;
+  end?: boolean;
 }
 
-export const NavItem: React.FC<NavItemProps> = ({ to, icon, label, collapsed, onClick }) => {
+export const NavItem: React.FC<NavItemProps> = ({ to, icon, label, collapsed, onClick, end }) => {
   return (
     <NavLink
       to={to}
+      end={end}
       onClick={onClick}
       className={({ isActive }) =>
         cn(

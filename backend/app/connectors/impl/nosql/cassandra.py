@@ -1,4 +1,5 @@
 from typing import Any, Dict, Iterator, List, Optional, Union
+import os
 import pandas as pd
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
@@ -9,9 +10,11 @@ from app.core.logging import get_logger
 try:
     from cassandra.cluster import Cluster
     from cassandra.auth import PlainTextAuthProvider
+    from cassandra.io.asynciobackend import AsyncioConnection
 except ImportError:
     Cluster = None
     PlainTextAuthProvider = None
+    AsyncioConnection = None
 
 logger = get_logger(__name__)
 
@@ -23,12 +26,18 @@ class CassandraConfig(BaseSettings):
     keyspace: str = Field(..., description="Default Keyspace")
     username: Optional[str] = Field(None, description="Username")
     password: Optional[str] = Field(None, description="Password")
+    use_asyncio: bool = Field(False, description="Whether to use AsyncioConnection (recommended True only for asyncio apps, defaults to False for sync compatibility)")
 
 class CassandraConnector(BaseConnector):
     def __init__(self, config: Dict[str, Any]):
         if Cluster is None:
             raise ConfigurationError("Cassandra driver not installed. Run 'pip install cassandra-driver'.")
         
+        # Workaround for Python 3.13 C-extension issues if they occur
+        # Some environments might have trouble with compiled extensions in 3.13
+        if os.environ.get("CASS_DRIVER_NO_EXTENSIONS") == "1":
+            logger.info("Cassandra driver: C extensions disabled via environment variable.")
+
         self._config_model: Optional[CassandraConfig] = None
         self._cluster: Optional[Cluster] = None
         self._session = None
@@ -54,13 +63,36 @@ class CassandraConnector(BaseConnector):
             )
             
         try:
-            self._cluster = Cluster(
-                contact_points=self._config_model.contact_points,
-                port=self._config_model.port,
-                auth_provider=auth_provider
-            )
+            cluster_kwargs = {
+                "contact_points": self._config_model.contact_points,
+                "port": self._config_model.port,
+                "auth_provider": auth_provider,
+            }
+
+            # For Python 3.12/3.13, AsyncioConnection can be used but requires careful loop handling in sync apps.
+            # We default to standard connection (Sync) which is safer for this Connector architecture.
+            if self._config_model.use_asyncio and AsyncioConnection:
+                cluster_kwargs["connection_class"] = AsyncioConnection
+                logger.info("Using AsyncioConnection for Cassandra")
+
+            self._cluster = Cluster(**cluster_kwargs)
             self._session = self._cluster.connect(self._config_model.keyspace)
-        except Exception as e:
+        except (Exception, RuntimeError) as e:
+            # Fallback: if AsyncioConnection failed (e.g. no running loop) or driver issue
+            if "connection_class" in cluster_kwargs:
+                logger.warning(f"Failed to connect with AsyncioConnection ({e}), retrying with default connection class")
+                try:
+                    del cluster_kwargs["connection_class"]
+                    self._cluster = Cluster(**cluster_kwargs)
+                    self._session = self._cluster.connect(self._config_model.keyspace)
+                    return
+                except Exception as e2:
+                    raise ConnectionFailedError(f"Failed to connect to Cassandra (Default Fallback): {e2}")
+            
+            # If standard connection failed, check for C-extension issues common on Windows
+            if "No module named" in str(e) or "DLL load failed" in str(e):
+                 logger.warning("Potential C-extension issue detected. Try setting CASS_DRIVER_NO_EXTENSIONS=1")
+            
             raise ConnectionFailedError(f"Failed to connect to Cassandra: {e}")
 
     def disconnect(self) -> None:

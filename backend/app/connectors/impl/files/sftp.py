@@ -1,4 +1,5 @@
 import os
+import posixpath
 import io
 import stat
 from typing import Any, Dict, Iterator, List, Optional, Union
@@ -122,7 +123,7 @@ class SFTPConnector(BaseConnector):
                     if len(assets) >= max_assets:
                         break
 
-                    remote_path = os.path.join(path, entry.filename)
+                    remote_path = posixpath.join(path, entry.filename)
                     
                     # Exclude check
                     if any(ig in remote_path for ig in ignored):
@@ -135,7 +136,7 @@ class SFTPConnector(BaseConnector):
                         if pattern and pattern not in entry.filename:
                             continue
                         
-                        ext = os.path.splitext(entry.filename)[1].lower()
+                        ext = posixpath.splitext(entry.filename)[1].lower()
                         if ext in valid_extensions:
                             asset = {
                                 "name": entry.filename,
@@ -211,7 +212,7 @@ class SFTPConnector(BaseConnector):
             # Since pandas requires a seekable stream usually, and paramiko file acts like one mostly
             # but sometimes slow.
             
-            ext = os.path.splitext(asset)[1].lower()
+            ext = posixpath.splitext(asset)[1].lower()
             chunksize = kwargs.get("chunksize", 10000)
             
             if ext == ".csv":
@@ -299,7 +300,7 @@ class SFTPConnector(BaseConnector):
         else:
             df = pd.concat(list(data))
             
-        ext = os.path.splitext(asset)[1].lower()
+        ext = posixpath.splitext(asset)[1].lower()
         bio = io.BytesIO()
         
         if ext == ".csv": df.to_csv(bio, index=False)
@@ -337,7 +338,7 @@ class SFTPConnector(BaseConnector):
             for entry in self._sftp.listdir_attr(target_path):
                 results.append({
                     "name": entry.filename,
-                    "path": os.path.join(target_path, entry.filename),
+                    "path": posixpath.join(target_path, entry.filename),
                     "type": "directory" if stat.S_ISDIR(entry.st_mode) else "file",
                     "size": entry.st_size,
                     "modified_at": entry.st_mtime
@@ -399,8 +400,8 @@ class SFTPConnector(BaseConnector):
             with zipfile.ZipFile(output_bio, "w", zipfile.ZIP_DEFLATED) as zf:
                 def _recursive_zip(remote_path, zip_path_prefix=""):
                     for entry in self._sftp.listdir_attr(remote_path):
-                        full_remote_path = os.path.join(remote_path, entry.filename)
-                        current_zip_path = os.path.join(zip_path_prefix, entry.filename)
+                        full_remote_path = posixpath.join(remote_path, entry.filename)
+                        current_zip_path = posixpath.join(zip_path_prefix, entry.filename)
                         
                         if stat.S_ISDIR(entry.st_mode):
                             _recursive_zip(full_remote_path, current_zip_path)

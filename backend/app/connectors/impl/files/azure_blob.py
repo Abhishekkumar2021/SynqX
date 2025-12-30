@@ -1,4 +1,5 @@
 import os
+import posixpath
 import io
 from typing import Any, Dict, Iterator, List, Optional, Union
 import pandas as pd
@@ -118,7 +119,7 @@ class AzureBlobConnector(BaseConnector):
                 if "/" in rel_path.lstrip("/"):
                     continue
 
-            ext = os.path.splitext(blob.name)[1].lower()
+            ext = posixpath.splitext(blob.name)[1].lower()
             if ext in valid_extensions:
                 asset = {
                     "name": blob.name,
@@ -184,7 +185,7 @@ class AzureBlobConnector(BaseConnector):
         data = download_stream.readall()
         bio = io.BytesIO(data)
         
-        ext = os.path.splitext(asset)[1].lower()
+        ext = posixpath.splitext(asset)[1].lower()
         chunksize = kwargs.get("chunksize", 10000)
         
         if ext == ".csv":
@@ -278,7 +279,7 @@ class AzureBlobConnector(BaseConnector):
         else:
             df = pd.concat(list(data))
             
-        ext = os.path.splitext(asset)[1].lower()
+        ext = posixpath.splitext(asset)[1].lower()
         bio = io.BytesIO()
         
         if ext == ".csv": df.to_csv(bio, index=False)

@@ -1,54 +1,7 @@
 import { cn } from '@/lib/utils';
-import { 
-  ChevronRight, Book, Server, Database, 
-  GitGraph, Activity, FileJson, Laptop,
-  Lock, Zap, Terminal, Bell, Workflow
-} from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { NavItem } from './NavItem';
-
-const DOCS_NAV = [
-  {
-    title: "Getting Started",
-    items: [
-      { title: "Introduction", href: "/docs/intro", icon: <Zap /> },
-      { title: "Architecture", href: "/docs/architecture", icon: <Server /> },
-    ]
-  },
-  {
-    title: "Core Concepts",
-    items: [
-      { title: "Data Models", href: "/docs/data-models", icon: <Database /> },
-      { title: "Pipelines & DAGs", href: "/docs/pipelines", icon: <GitGraph /> },
-      { title: "Connectors", href: "/docs/connectors", icon: <Zap /> },
-    ]
-  },
-  {
-    title: "Execution & Monitoring",
-    items: [
-      { title: "Runtime engine", href: "/docs/execution", icon: <Activity /> },
-      { title: "Observability", href: "/docs/observability", icon: <FileJson /> },
-      { title: "Notifications", href: "/docs/observability/notifications", icon: <Bell /> },
-      { title: "Live Forensic", href: "/docs/observability/realtime-logs", icon: <Terminal /> },
-    ]
-  },
-  {
-    title: "Guides",
-    items: [
-      { title: "Console UI", href: "/docs/frontend-ui", icon: <Laptop /> },
-      { title: "Visual Editor", href: "/docs/pipelines/editor", icon: <Book /> },
-      { title: "Navigation (⌘K)", href: "/docs/guides/navigation", icon: <ChevronRight /> },
-      { title: "Security", href: "/docs/guides/security", icon: <Lock /> },
-    ]
-  },
-  {
-    title: "Developer",
-    items: [
-      { title: "API Reference", href: "/docs/api-reference", icon: <Terminal /> },
-      { title: "Connectors", href: "/docs/connectors", icon: <Zap /> },
-      { title: "Custom Operators", href: "/docs/operators/custom", icon: <Workflow /> },
-    ]
-  }
-];
+import { DOCS_NAV } from '@/lib/docs-nav';
 
 export const DocsSidebar = ({ collapsed }: { collapsed: boolean }) => {
   return (
@@ -74,6 +27,7 @@ export const DocsSidebar = ({ collapsed }: { collapsed: boolean }) => {
                 icon={item.icon}
                 label={item.title}
                 collapsed={collapsed}
+                end={item.end}
               />
             ))}
           </div>

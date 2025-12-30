@@ -1,4 +1,5 @@
 import os
+import posixpath
 from datetime import datetime
 from typing import Any, Dict, Iterator, List, Optional, Union
 import pandas as pd
@@ -115,7 +116,7 @@ class S3Connector(BaseConnector):
                         continue
                     
                     asset = {
-                        "name": os.path.basename(rel_path),
+                        "name": posixpath.basename(rel_path),
                         "fully_qualified_name": rel_path,
                         "type": "file"
                     }
@@ -322,7 +323,7 @@ class S3Connector(BaseConnector):
 
                 for item in items:
 
-                    name = os.path.basename(item['name'])
+                    name = posixpath.basename(item['name'])
 
                     if not name: # Handle bucket root case where basename is empty
 
