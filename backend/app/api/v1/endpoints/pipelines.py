@@ -23,6 +23,7 @@ from app.schemas.pipeline import (
     PipelineDiffResponse,
 )
 from app.services.pipeline_service import PipelineService
+from app.services.audit_service import AuditService
 from app.core.errors import AppError, ConfigurationError
 from app.core.logging import get_logger
 from app.models.enums import PipelineStatus
@@ -56,11 +57,21 @@ def create_pipeline(
             workspace_id=current_user.active_workspace_id
         )
 
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="pipeline.create",
+            target_type="Pipeline",
+            target_id=pipeline.id,
+            details={"name": pipeline.name}
+        )
+
         response = PipelineDetailRead.model_validate(pipeline)
 
         if pipeline.published_version_id:
             version_detail = service.get_pipeline_version(
-                pipeline.id, pipeline.published_version_id, user_id=current_user.id
+                pipeline.id, pipeline.published_version_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id
             )
             if version_detail:
                 response.published_version = PipelineVersionRead.model_validate(
@@ -217,6 +228,17 @@ def update_pipeline(
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id
         )
+
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="pipeline.update",
+            target_type="Pipeline",
+            target_id=pipeline.id,
+            details={"updated_fields": pipeline_update.model_dump(exclude_unset=True)}
+        )
+
         return PipelineRead.model_validate(pipeline)
 
     except AppError as e:
@@ -258,12 +280,27 @@ def delete_pipeline(
 ) -> None:
     try:
         service = PipelineService(db)
+        # Fetch name before deletion for audit trail
+        pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+        pipeline_name = pipeline.name if pipeline else "Unknown"
+
         service.delete_pipeline(
             pipeline_id, 
             hard_delete=hard_delete, 
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id
         )
+
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="pipeline.delete",
+            target_type="Pipeline",
+            target_id=pipeline_id,
+            details={"name": pipeline_name, "hard_delete": hard_delete}
+        )
+
         return None
 
     except AppError as e:
@@ -312,6 +349,16 @@ def trigger_pipeline_run(
             run_params=trigger_request.run_params,
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id
+        )
+
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="pipeline.trigger",
+            target_type="Pipeline",
+            target_id=pipeline_id,
+            details={"job_id": result["job_id"], "version_id": trigger_request.version_id}
         )
 
         return PipelineTriggerResponse(
@@ -492,6 +539,16 @@ def publish_pipeline_version(
             version_id, 
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id
+        )
+
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="pipeline.publish",
+            target_type="Pipeline",
+            target_id=pipeline_id,
+            details={"version_id": version_id, "version_number": version.version}
         )
 
         return PipelinePublishResponse(

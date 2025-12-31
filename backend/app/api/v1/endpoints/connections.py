@@ -30,6 +30,7 @@ from app.schemas.connection import (
     ConnectionEnvironmentInfo,
 )
 from app.services.connection_service import ConnectionService
+from app.services.audit_service import AuditService
 from app.services.vault_service import VaultService
 from app.core.errors import AppError
 from app.core.logging import get_logger
@@ -59,10 +60,21 @@ def create_connection(
     try:
         service = ConnectionService(db)
         connection = service.create_connection(
-            connection_create, 
+            connection_create,
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id
         )
+
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="connection.create",
+            target_type="Connection",
+            target_id=connection.id,
+            details={"name": connection.name, "type": connection.connector_type.value}
+        )
+
         return ConnectionRead.model_validate(connection)
     except AppError as e:
         logger.error(f"Error creating connection: {e}")
@@ -182,6 +194,17 @@ def update_connection(
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id
         )
+
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="connection.update",
+            target_type="Connection",
+            target_id=connection.id,
+            details={"updated_fields": connection_update.model_dump(exclude_unset=True)}
+        )
+
         return ConnectionRead.model_validate(connection)
     except AppError as e:
         logger.error(f"Error updating connection {connection_id}: {e}")
@@ -222,12 +245,27 @@ def delete_connection(
 ) -> None:
     try:
         service = ConnectionService(db)
+        # Fetch name before deletion
+        connection = service.get_connection(connection_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+        connection_name = connection.name if connection else "Unknown"
+
         service.delete_connection(
             connection_id, 
             hard_delete=hard_delete, 
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id
         )
+
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="connection.delete",
+            target_type="Connection",
+            target_id=connection_id,
+            details={"name": connection_name, "hard_delete": hard_delete}
+        )
+
         return None
     except AppError as e:
         logger.error(f"Error deleting connection {connection_id}: {e}")

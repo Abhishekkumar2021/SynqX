@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app import models
 from app.schemas import alert as alert_schema
 from app.api import deps
+from app.services.audit_service import AuditService
 
 router = APIRouter()
 
@@ -28,6 +29,17 @@ def create_alert_config(
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+        event_type="alert_config.create",
+        target_type="AlertConfig",
+        target_id=db_obj.id,
+        details={"name": db_obj.name, "alert_type": db_obj.alert_type}
+    )
+
     return db_obj
 
 @router.get("/", response_model=List[alert_schema.AlertConfigRead])
@@ -63,8 +75,20 @@ def delete_alert_config(
     if not alert:
         raise HTTPException(status_code=404, detail="Alert config not found")
     
+    alert_name = alert.name
     db.delete(alert)
     db.commit()
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+        event_type="alert_config.delete",
+        target_type="AlertConfig",
+        target_id=alert_id,
+        details={"name": alert_name}
+    )
+
     return None
 
 # Alert Instance Endpoints
@@ -168,4 +192,15 @@ def update_alert_config(
     db.add(alert)
     db.commit()
     db.refresh(alert)
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+        event_type="alert_config.update",
+        target_type="AlertConfig",
+        target_id=alert_id,
+        details={"updated_fields": alert_in.model_dump(exclude_unset=True)}
+    )
+
     return alert

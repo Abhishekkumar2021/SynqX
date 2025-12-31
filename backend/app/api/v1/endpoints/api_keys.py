@@ -9,6 +9,7 @@ from app import models
 from app.schemas import api_key as api_key_schema
 from app.api import deps
 from app.core import security
+from app.services.audit_service import AuditService
 
 router = APIRouter()
 
@@ -49,6 +50,17 @@ def create_api_key(
     
     # Return with raw key (temporary attribute, not in DB)
     setattr(db_obj, "key", raw_key)
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+        event_type="api_key.create",
+        target_type="ApiKey",
+        target_id=db_obj.id,
+        details={"name": db_obj.name}
+    )
+
     return db_obj
 
 @router.get("/", response_model=List[api_key_schema.ApiKeyResponse])
@@ -84,6 +96,18 @@ def revoke_api_key(
     if not key:
         raise HTTPException(status_code=404, detail="API key not found")
     
+    key_name = key.name
     db.delete(key)
     db.commit()
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+        event_type="api_key.revoke",
+        target_type="ApiKey",
+        target_id=key_id,
+        details={"name": key_name}
+    )
+
     return key
