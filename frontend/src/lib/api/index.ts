@@ -10,3 +10,4 @@ export * from "./alerts";
 export * from "./explorer";
 export * from "./dashboard";
 export * from "./files";
+export * from "./audit";

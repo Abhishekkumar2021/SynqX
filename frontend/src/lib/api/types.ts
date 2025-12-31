@@ -5,6 +5,7 @@ import {
   JobStatus,
   RetryStrategy,
   OperatorType,
+  AuditEvent,
 } from "../enums";
 
 export interface AuthToken {
@@ -542,6 +543,26 @@ export interface PipelineTriggerResponse {
   pipeline_id: number;
   version_id: number;
 }
+
+export interface AuditLog {
+  id: number;
+  workspace_id: number;
+  user_id: number;
+  event_type: AuditEvent | string;
+  target_type?: string;
+  target_id?: number;
+  details?: Record<string, any>;
+  status: string;
+  created_at: string;
+}
+
+export interface AuditLogsResponse {
+  items: AuditLog[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 
 export interface AlertListResponse {
   items: Alert[];

@@ -30,6 +30,7 @@ const WorkspaceTeamPage = lazy(() => import('./pages/WorkspaceTeamPage').then(mo
 const AlertsPage = lazy(() => import('./pages/AlertsPage').then(module => ({ default: module.AlertsPage })));
 const OperatorsPage = lazy(() => import('./pages/OperatorsPage').then(module => ({ default: module.OperatorsPage })));
 const ExplorerPage = lazy(() => import('./pages/ExplorerPage').then(module => ({ default: module.ExplorerPage })));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage').then(module => ({ default: module.AuditLogsPage })));
 
 // React Query Configuration
 const queryClient = new QueryClient({
@@ -150,6 +151,7 @@ const AppRoutes = () => (
       <Route path="/alerts" element={<AlertsPage />} />
       <Route path="/team" element={<WorkspaceTeamPage />} />
       <Route path="/operators" element={<OperatorsPage />} />
+      <Route path="/audit-logs" element={<AuditLogsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

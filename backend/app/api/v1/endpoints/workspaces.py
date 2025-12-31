@@ -6,6 +6,9 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
+from app.models.enums import AlertLevel
+from app.services.alert_service import AlertService
+from app.services.audit_service import AuditService
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -103,6 +106,15 @@ def update_workspace(
     db.add(ws)
     db.commit()
     db.refresh(ws)
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=workspace_id,
+        event_type="workspace.update",
+        target_id=ws.id,
+        details={"name": ws.name, "description": ws.description}
+    )
     
     # Get user's role for the response
     membership = db.query(WorkspaceMember).filter(
@@ -149,6 +161,15 @@ def create_workspace(
     
     db.commit()
     db.refresh(ws)
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=ws.id,
+        event_type="workspace.create",
+        target_id=ws.id,
+        details={"name": ws.name}
+    )
     
     return {
         "id": ws.id,
@@ -179,8 +200,6 @@ def list_workspace_members(
         })
     return results
 
-from app.services.alert_service import AlertService
-from app.models.enums import AlertLevel
 @router.post("/{workspace_id}/members", response_model=WorkspaceMemberRead)
 def invite_member(
     workspace_id: int,
@@ -255,6 +274,15 @@ def update_workspace_member(
     db.commit()
     db.refresh(member)
     
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=workspace_id,
+        event_type="workspace.member.update_role",
+        target_id=user_id,
+        details={"role": request.role.value, "target_user_email": member.user.email}
+    )
+
     return {
         "user_id": member.user.id,
         "email": member.user.email,
@@ -283,8 +311,19 @@ def remove_workspace_member(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
         
+    member_email = member.user.email
     db.delete(member)
     db.commit()
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=workspace_id,
+        event_type="workspace.member.remove",
+        target_id=user_id,
+        details={"removed_user_email": member_email}
+    )
+
     return None
 
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -304,8 +343,18 @@ def delete_workspace(
         current_user.active_workspace_id = None
         db.add(current_user)
 
+    workspace_name = ws.name
     db.delete(ws)
     db.commit()
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=workspace_id, # The ID still exists before the function returns
+        event_type="workspace.delete",
+        target_id=workspace_id,
+        details={"name": workspace_name}
+    )
     return None
 
 @router.post("/{workspace_id}/switch")
@@ -333,6 +382,14 @@ def switch_active_workspace(
     current_user.active_workspace_id = workspace_id
     db.add(current_user)
     db.commit()
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=workspace_id,
+        event_type="workspace.switch_active",
+        target_id=workspace_id
+    )
     
     return {"status": "success", "workspace_id": workspace_id}
 

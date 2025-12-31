@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.user import User
 from app.schemas.auth import Token, UserCreate, UserRead, UserUpdate
+from app.services.audit_service import AuditService
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -48,8 +49,14 @@ def login_access_token(
         user.id, expires_delta=access_token_expires
     )
     
-    logger.info("login_success", user_id=user.id, email=user.email)
-    
+    AuditService.log_event(
+        db,
+        user_id=user.id,
+        workspace_id=user.active_workspace_id,
+        event_type="user.login",
+        status="success"
+    )
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -89,6 +96,16 @@ def register_user(
         db.refresh(db_user)
         
         logger.info("registration_success", user_id=db_user.id, email=db_user.email)
+        
+        AuditService.log_event(
+            db,
+            user_id=db_user.id,
+            workspace_id=db_user.active_workspace_id, # This will be set by ensure_active_workspace
+            event_type="user.create",
+            status="success",
+            target_id=db_user.id
+        )
+
         return db_user
         
     except Exception as e:
@@ -155,6 +172,17 @@ def update_users_me(
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+        event_type="user.update.profile",
+        status="success",
+        target_id=current_user.id,
+        details={"updated_fields": user_in.model_dump(exclude_unset=True, exclude={'password'})}
+    )
+
     return current_user
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
@@ -168,4 +196,14 @@ def delete_users_me(
     """
     db.delete(current_user)
     db.commit()
+
+    AuditService.log_event(
+        db,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+        event_type="user.delete",
+        status="success",
+        target_id=current_user.id
+    )
+
     return None

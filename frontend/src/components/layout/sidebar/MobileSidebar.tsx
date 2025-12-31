@@ -9,13 +9,7 @@ import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { NavItem } from '../navigation/NavItem';
 import { useAuth } from '@/hooks/useAuth';
 import { DocsSidebar } from '../navigation/DocsSidebar';
-import { MAIN_NAV, KNOWLEDGE_NAV, CONFIG_NAV } from '@/lib/main-nav';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { MAIN_NAV, CONFIG_NAV } from '@/lib/main-nav';
 
 interface MobileSidebarProps {
     isMobileMenuOpen: boolean;
@@ -116,8 +110,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isMobileMenuOpen, 
                         </div>
 
                         {/* Scrollable Navigation */}
-                        <div className="flex-1 overflow-y-auto py-4 px-4 space-y-6">
-                            
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-none">
                             {/* Context Switching for Docs */}
                             {isDocs ? (
                                 <div className="space-y-6">
@@ -133,80 +126,37 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isMobileMenuOpen, 
                                 </div>
                             ) : (
                                 <nav className="flex flex-col gap-1.5 w-full" aria-label="Main navigation">
-                                    <TooltipProvider delayDuration={0}>
-                                        {MAIN_NAV.map((item) => (
-                                            <Tooltip key={item.to}>
-                                                <TooltipTrigger asChild>
-                                                    <div className="w-full">
-                                                        <NavItem 
-                                                            to={item.to} 
-                                                            icon={item.icon} 
-                                                            label={item.label} 
-                                                            onClick={handleMobileNavClick} 
-                                                            end={item.end}
-                                                        />
-                                                    </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="right" className="z-110 font-semibold" sideOffset={10}>
-                                                    {item.label}
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        ))}
+                                    {MAIN_NAV.map((item) => (
+                                        <NavItem 
+                                            key={item.to}
+                                            to={item.to} 
+                                            icon={item.icon} 
+                                            label={item.label} 
+                                            onClick={handleMobileNavClick} 
+                                            end={item.end}
+                                        />
+                                    ))}
 
-                                        <div className="my-4 px-2">
-                                            <div className="h-px w-full bg-linear-to-r from-transparent via-border to-transparent" />
-                                        </div>
+                                    <div className="my-4 px-2">
+                                        <div className="h-px w-full bg-linear-to-r from-transparent via-border to-transparent" />
+                                    </div>
 
-                                        <div className="px-3 mb-1">
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">
-                                                Knowledge
-                                            </span>
-                                        </div>
+                                    <div className="px-3 mb-1 mt-4">
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">
+                                            Configuration
+                                        </span>
+                                    </div>
 
-                                        {KNOWLEDGE_NAV.map((item) => (
-                                            <Tooltip key={item.to}>
-                                                <TooltipTrigger asChild>
-                                                    <div className="w-full">
-                                                        <NavItem 
-                                                            to={item.to} 
-                                                            icon={item.icon} 
-                                                            label={item.label} 
-                                                            onClick={handleMobileNavClick} 
-                                                            end={item.end}
-                                                        />
-                                                    </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="right" className="z-110 font-semibold" sideOffset={10}>
-                                                    {item.label}
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        ))}
-
-                                        <div className="px-3 mb-1 mt-4">
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">
-                                                Configuration
-                                            </span>
-                                        </div>
-
-                                        {CONFIG_NAV.map((item) => (
-                                            <Tooltip key={item.to}>
-                                                <TooltipTrigger asChild>
-                                                    <div className="w-full">
-                                                        <NavItem 
-                                                            to={item.to} 
-                                                            icon={item.icon} 
-                                                            label={item.label} 
-                                                            onClick={handleMobileNavClick} 
-                                                            end={item.end}
-                                                        />
-                                                    </div>
-                                                </TooltipTrigger>
-                                                <TooltipContent side="right" className="z-110 font-semibold" sideOffset={10}>
-                                                    {item.label}
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        ))}
-                                    </TooltipProvider>
+                                    {CONFIG_NAV.map((item) => (
+                                        <NavItem 
+                                            key={item.to}
+                                            to={item.to} 
+                                            icon={item.icon} 
+                                            label={item.label} 
+                                            onClick={handleMobileNavClick} 
+                                            end={item.end}
+                                        />
+                                    ))}
                                 </nav>
                             )}
                         </div>

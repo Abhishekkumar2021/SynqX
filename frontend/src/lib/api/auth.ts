@@ -44,3 +44,4 @@ export const updateUser = async (
 export const deleteUser = async () => {
   await api.delete("/auth/me");
 };
+

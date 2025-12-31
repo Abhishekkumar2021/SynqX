@@ -173,3 +173,13 @@ export const WorkspaceRole = {
     VIEWER: "viewer"
 } as const;
 export type WorkspaceRole = typeof WorkspaceRole[keyof typeof WorkspaceRole];
+
+export const AuditEvent = {
+    CREATE: "create",
+    UPDATE: "update",
+    DELETE: "delete",
+    LOGIN: "login",
+    EXPORT: "export",
+    ACTION: "action"
+} as const;
+export type AuditEvent = typeof AuditEvent[keyof typeof AuditEvent];

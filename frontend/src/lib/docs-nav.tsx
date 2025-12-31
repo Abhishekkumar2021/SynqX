@@ -55,7 +55,6 @@ export const DOCS_NAV: NavSection[] = [
     title: "Developer",
     items: [
       { title: "API Reference", href: "/docs/api-reference", icon: <Terminal /> },
-      { title: "Connectors", href: "/docs/connectors", icon: <Zap /> },
       { title: "Custom Operators", href: "/docs/operators/custom", icon: <Workflow /> },
     ]
   }

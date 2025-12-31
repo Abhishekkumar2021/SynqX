@@ -73,10 +73,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
             breadcrumbs.push(
                 <BreadcrumbItem key={to}>
                     {isLast ? (
-                        <BreadcrumbPage className="font-semibold text-foreground">{name}</BreadcrumbPage>
+                        <BreadcrumbPage className="font-black text-foreground tracking-tight">{name}</BreadcrumbPage>
                     ) : (
                         <BreadcrumbLink asChild>
-                            <Link to={to} className="hover:text-primary transition-colors">{name}</Link>
+                            <Link to={to} className="hover:text-primary transition-colors font-bold tracking-tight">{name}</Link>
                         </BreadcrumbLink>
                     )}
                 </BreadcrumbItem>

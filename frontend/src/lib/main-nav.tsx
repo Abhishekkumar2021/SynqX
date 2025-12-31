@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     LayoutDashboard, Cable, Workflow, Activity, Settings,
-    Search, Sparkles, Book, Users
+    Search, Sparkles, Users, Logs
 } from 'lucide-react';
 
 export interface NavItemDef {
@@ -20,11 +20,8 @@ export const MAIN_NAV: NavItemDef[] = [
     { label: "Jobs & Runs", to: "/jobs", icon: <Activity /> },
 ];
 
-export const KNOWLEDGE_NAV: NavItemDef[] = [
-    { label: "Knowledge Base", to: "/docs/intro", icon: <Book />, end: true },
-];
-
 export const CONFIG_NAV: NavItemDef[] = [
     { label: "Team", to: "/team", icon: <Users /> },
+    { label: "Audit Logs", to: "/audit-logs", icon: <Logs /> },
     { label: "Settings", to: "/settings", icon: <Settings />, end: true },
 ];
