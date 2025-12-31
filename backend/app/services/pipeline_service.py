@@ -34,18 +34,10 @@ class PipelineService:
         self.pipeline_runner = PipelineRunner()
 
     def create_pipeline(
-        self, pipeline_create: PipelineCreate, validate_dag: bool = True, user_id: Optional[int] = None
+        self, pipeline_create: PipelineCreate, validate_dag: bool = True, user_id: Optional[int] = None, workspace_id: Optional[int] = None
     ) -> Pipeline:
         """
         Creates a new pipeline along with its initial version, nodes, and edges.
-
-        Args:
-            pipeline_create: Pipeline creation schema
-            validate_dag: Whether to validate DAG structure before creation
-            user_id: ID of the user creating the pipeline
-
-        Returns:
-            Created Pipeline object
         """
         try:
 
@@ -69,6 +61,7 @@ class PipelineService:
                 priority=pipeline_create.priority or 0,
                 status=PipelineStatus.DRAFT,  # Start as draft
                 user_id=user_id,
+                workspace_id=workspace_id,
                 created_by=str(user_id) if user_id else None,
             )
             self.db_session.add(db_pipeline)
@@ -137,12 +130,12 @@ class PipelineService:
             raise AppError(f"Failed to create pipeline: {e}") from e
 
     def create_pipeline_version(
-        self, pipeline_id: int, version_data: PipelineVersionCreate, user_id: Optional[int] = None
+        self, pipeline_id: int, version_data: PipelineVersionCreate, user_id: Optional[int] = None, workspace_id: Optional[int] = None
     ) -> PipelineVersion:
         """
         Creates a new version for an existing pipeline.
         """
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id)
+        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
 
@@ -201,12 +194,12 @@ class PipelineService:
             raise AppError(f"Failed to create pipeline version: {e}") from e
 
     def update_pipeline(
-        self, pipeline_id: int, pipeline_update: PipelineUpdate, user_id: Optional[int] = None
+        self, pipeline_id: int, pipeline_update: PipelineUpdate, user_id: Optional[int] = None, workspace_id: Optional[int] = None
     ) -> Pipeline:
         """
         Update pipeline metadata (not version/nodes/edges).
         """
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id)
+        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
 
@@ -251,12 +244,12 @@ class PipelineService:
             logger.error(f"Failed to update pipeline {pipeline_id}: {e}")
             raise AppError(f"Failed to update pipeline: {e}") from e
 
-    def publish_version(self, pipeline_id: int, version_id: int, user_id: Optional[int] = None) -> PipelineVersion:
+    def publish_version(self, pipeline_id: int, version_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> PipelineVersion:
         """
         Publish a specific pipeline version, making it the active version.
         Unpublishes any previously published version.
         """
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id)
+        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
 
@@ -305,15 +298,17 @@ class PipelineService:
             logger.error(f"Failed to publish version: {e}")
             raise AppError(f"Failed to publish version: {e}") from e
 
-    def get_pipeline(self, pipeline_id: int, user_id: Optional[int] = None) -> Optional[Pipeline]:
-        """Retrieves a pipeline by its ID."""
+    def get_pipeline(self, pipeline_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Optional[Pipeline]:
+        """Retrieves a pipeline by its ID, scoped by user or workspace."""
         query = self.db_session.query(Pipeline).filter(
             and_(
                 Pipeline.id == pipeline_id,
                 Pipeline.deleted_at.is_(None),
             )
         )
-        if user_id is not None:
+        if workspace_id is not None:
+            query = query.filter(Pipeline.workspace_id == workspace_id)
+        elif user_id is not None:
             query = query.filter(Pipeline.user_id == user_id)
         return query.first()
 
@@ -323,12 +318,16 @@ class PipelineService:
         limit: int = 100,
         offset: int = 0,
         user_id: Optional[int] = None,
+        workspace_id: Optional[int] = None,
     ) -> Tuple[List[Pipeline], int]:
-        """List pipelines with proper total count."""
+        """List pipelines scoped by user or workspace."""
         query = self.db_session.query(Pipeline).filter(Pipeline.deleted_at.is_(None))
         
-        if user_id is not None:
+        if workspace_id is not None:
+            query = query.filter(Pipeline.workspace_id == workspace_id)
+        elif user_id is not None:
             query = query.filter(Pipeline.user_id == user_id)
+            
         if status:
             query = query.filter(Pipeline.status == status)
         
@@ -339,7 +338,7 @@ class PipelineService:
 
 
     def get_pipeline_version(
-        self, pipeline_id: int, version_id: Optional[int] = None, user_id: Optional[int] = None
+        self, pipeline_id: int, version_id: Optional[int] = None, user_id: Optional[int] = None, workspace_id: Optional[int] = None
     ) -> Optional[PipelineVersion]:
         """
         Retrieves a specific pipeline version or the currently published one.
@@ -354,7 +353,9 @@ class PipelineService:
                 )
             )
         )
-        if user_id is not None:
+        if workspace_id is not None:
+            query = query.filter(Pipeline.workspace_id == workspace_id)
+        elif user_id is not None:
             query = query.filter(Pipeline.user_id == user_id)
 
         if version_id:
@@ -371,9 +372,10 @@ class PipelineService:
         async_execution: bool = True,
         run_params: Optional[Dict[str, Any]] = None,
         user_id: Optional[int] = None,
+        workspace_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Fixed trigger with proper field names."""
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id)
+        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
         
@@ -399,7 +401,7 @@ class PipelineService:
                     f"Currently {active_jobs_count} jobs running."
                 )
         
-        pipeline_version = self.get_pipeline_version(pipeline_id, version_id, user_id=user_id)
+        pipeline_version = self.get_pipeline_version(pipeline_id, version_id, user_id=user_id, workspace_id=workspace_id)
         if not pipeline_version:
             raise AppError(
                 f"Pipeline version not found for pipeline {pipeline_id}, version {version_id}"
@@ -409,6 +411,7 @@ class PipelineService:
             pipeline_id=pipeline_id,
             pipeline_version_id=pipeline_version.id,
             user_id=user_id or pipeline.user_id,
+            workspace_id=workspace_id or pipeline.workspace_id,
             correlation_id=str(uuid.uuid4()),
             status=JobStatus.PENDING,
             created_by=str(user_id) if user_id else None
@@ -490,11 +493,11 @@ class PipelineService:
             
             raise AppError(f"Failed to trigger pipeline run: {e}") from e
         
-    def delete_pipeline(self, pipeline_id: int, hard_delete: bool = False, user_id: Optional[int] = None) -> bool:
+    def delete_pipeline(self, pipeline_id: int, hard_delete: bool = False, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> bool:
         """
         Delete a pipeline (soft delete by default).
         """
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id)
+        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
 

@@ -45,11 +45,15 @@ def create_pipeline(
     ),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = PipelineService(db)
         pipeline = service.create_pipeline(
-            pipeline_create, validate_dag=validate_dag, user_id=current_user.id
+            pipeline_create, 
+            validate_dag=validate_dag, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
 
         response = PipelineDetailRead.model_validate(pipeline)
@@ -106,7 +110,11 @@ def list_pipelines(
     try:
         service = PipelineService(db)
         pipelines, total = service.list_pipelines(
-            status=status_filter, limit=limit, offset=offset, user_id=current_user.id
+            status=status_filter, 
+            limit=limit, 
+            offset=offset, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
 
         return PipelineListResponse(
@@ -139,7 +147,7 @@ def get_pipeline(
     current_user: models.User = Depends(deps.get_current_user),
 ):
     service = PipelineService(db)
-    pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id)
+    pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
 
     if not pipeline:
         raise HTTPException(
@@ -154,7 +162,7 @@ def get_pipeline(
 
     if pipeline.published_version_id:
         version_detail = service.get_pipeline_version(
-            pipeline.id, pipeline.published_version_id, user_id=current_user.id
+            pipeline.id, pipeline.published_version_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id
         )
         if version_detail:
             response.published_version = PipelineVersionRead.model_validate(
@@ -166,7 +174,7 @@ def get_pipeline(
         # Relationship is ordered by version desc in the model
         latest_v = pipeline.versions[0]
         latest_detail = service.get_pipeline_version(
-            pipeline.id, latest_v.id, user_id=current_user.id
+            pipeline.id, latest_v.id, user_id=current_user.id, workspace_id=current_user.active_workspace_id
         )
         if latest_detail:
             response.latest_version = PipelineVersionRead.model_validate(latest_detail)
@@ -199,10 +207,16 @@ def update_pipeline(
     pipeline_update: PipelineUpdate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = PipelineService(db)
-        pipeline = service.update_pipeline(pipeline_id, pipeline_update, user_id=current_user.id)
+        pipeline = service.update_pipeline(
+            pipeline_id, 
+            pipeline_update, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return PipelineRead.model_validate(pipeline)
 
     except AppError as e:
@@ -240,10 +254,16 @@ def delete_pipeline(
     hard_delete: bool = Query(False, description="Permanently delete from database"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ) -> None:
     try:
         service = PipelineService(db)
-        service.delete_pipeline(pipeline_id, hard_delete=hard_delete, user_id=current_user.id)
+        service.delete_pipeline(
+            pipeline_id, 
+            hard_delete=hard_delete, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return None
 
     except AppError as e:
@@ -281,6 +301,7 @@ def trigger_pipeline_run(
     trigger_request: PipelineTriggerRequest = Body(...),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = PipelineService(db)
@@ -290,6 +311,7 @@ def trigger_pipeline_run(
             async_execution=trigger_request.async_execution,
             run_params=trigger_request.run_params,
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
 
         return PipelineTriggerResponse(
@@ -337,10 +359,16 @@ def create_pipeline_version(
     version_create: PipelineVersionCreate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = PipelineService(db)
-        version = service.create_pipeline_version(pipeline_id, version_create, user_id=current_user.id)
+        version = service.create_pipeline_version(
+            pipeline_id, 
+            version_create, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return PipelineVersionRead.model_validate(version)
 
     except ConfigurationError as e:
@@ -383,7 +411,7 @@ def list_pipeline_versions(
     current_user: models.User = Depends(deps.get_current_user),
 ):
     service = PipelineService(db)
-    pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id)
+    pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
 
     if not pipeline:
         raise HTTPException(
@@ -424,7 +452,12 @@ def get_pipeline_version(
     current_user: models.User = Depends(deps.get_current_user),
 ):
     service = PipelineService(db)
-    version = service.get_pipeline_version(pipeline_id, version_id, user_id=current_user.id)
+    version = service.get_pipeline_version(
+        pipeline_id, 
+        version_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
 
     if not version:
         raise HTTPException(
@@ -450,10 +483,16 @@ def publish_pipeline_version(
     publish_request: PipelinePublishRequest = Body(...),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = PipelineService(db)
-        version = service.publish_version(pipeline_id, version_id, user_id=current_user.id)
+        version = service.publish_version(
+            pipeline_id, 
+            version_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
 
         return PipelinePublishResponse(
             message=f"Version {version.version} published successfully",
@@ -499,7 +538,11 @@ def validate_pipeline(
 ):
     try:
         service = PipelineService(db)
-        pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id)
+        pipeline = service.get_pipeline(
+            pipeline_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
 
         if not pipeline:
             raise HTTPException(
@@ -510,7 +553,12 @@ def validate_pipeline(
                 },
             )
 
-        version = service.get_pipeline_version(pipeline_id, None, user_id=current_user.id)
+        version = service.get_pipeline_version(
+            pipeline_id, 
+            None, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
 
         if not version:
             return PipelineValidationResponse(
@@ -567,7 +615,11 @@ def get_pipeline_stats(
         from app.models.enums import JobStatus
 
         service = PipelineService(db)
-        pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id)
+        pipeline = service.get_pipeline(
+            pipeline_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
 
         if not pipeline:
             raise HTTPException(
@@ -671,8 +723,18 @@ def get_pipeline_diff(
         from deepdiff import DeepDiff
         service = PipelineService(db)
         
-        v1 = service.get_pipeline_version(pipeline_id, base_v, user_id=current_user.id)
-        v2 = service.get_pipeline_version(pipeline_id, target_v, user_id=current_user.id)
+        v1 = service.get_pipeline_version(
+            pipeline_id, 
+            base_v, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
+        v2 = service.get_pipeline_version(
+            pipeline_id, 
+            target_v, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         
         if not v1 or not v2:
             raise HTTPException(status_code=404, detail="One or both versions not found")
@@ -759,7 +821,11 @@ def get_pipeline_watermark(
         from app.models.execution import Watermark
         # Verify pipeline access
         service = PipelineService(db)
-        pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id)
+        pipeline = service.get_pipeline(
+            pipeline_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         if not pipeline:
             raise HTTPException(status_code=404, detail="Pipeline not found")
 

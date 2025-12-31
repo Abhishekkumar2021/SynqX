@@ -6,9 +6,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { ModeToggle } from '../ModeToggle';
 import { NotificationsBell } from '../navigation/NotificationsBell';
+import { WorkspaceSwitcher } from '../WorkspaceSwitcher';
 import {
-    Tooltip,
-    TooltipContent,
+    Tooltip,    TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -168,6 +168,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
 
                 <div className="h-8 w-px bg-border/30 mx-1 hidden sm:block"></div>
                 
+                <WorkspaceSwitcher />
                 <ModeToggle />
                 {user && <NotificationsBell />}
             </div>

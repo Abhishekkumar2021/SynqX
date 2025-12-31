@@ -1,0 +1,60 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React from 'react';
+import { Users, Settings2, Building2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface WorkspaceHeaderProps {
+    activeWorkspace: any;
+    activeTab: string;
+    setActiveTab: (tab: string) => void;
+}
+
+export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
+    activeWorkspace,
+    activeTab,
+    setActiveTab
+}) => {
+    return (
+        <div className="p-4 md:p-5 border-b border-border/40 bg-muted/10 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4">
+            <div className="space-y-0.5">
+                <h3 className="text-base font-black flex items-center gap-3 text-foreground uppercase tracking-tight">
+                    <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                        <Building2 size={18} />
+                    </div>
+                    Workspace Control
+                </h3>
+                <p className="text-[10px] text-muted-foreground font-bold tracking-widest pl-1 uppercase opacity-60">
+                    {activeWorkspace?.name} <span className="mx-2 opacity-30">•</span> {activeWorkspace?.slug}
+                </p>
+            </div>
+
+            <div className="flex items-center gap-4 w-full md:w-auto">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
+                    <TabsList className="bg-background/50 border border-border/40 p-0.5 rounded-xl h-9 shadow-sm">
+                        <TabsTrigger 
+                            value="members" 
+                            className="rounded-lg px-4 font-bold uppercase tracking-widest text-[9px] h-8 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                        >
+                            <Users className="mr-2 h-3 w-3" />
+                            Team
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="settings" 
+                            className="rounded-lg px-4 font-bold uppercase tracking-widest text-[9px] h-8 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                        >
+                            <Settings2 className="mr-2 h-3 w-3" />
+                            Settings
+                        </TabsTrigger>
+                    </TabsList>
+                </Tabs>
+                
+                <div className="h-6 w-px bg-border/40 hidden md:block" />
+                
+                <Badge variant="outline" className="hidden md:flex bg-primary/5 text-primary border-primary/20 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-md">
+                    {activeWorkspace?.role} Access
+                </Badge>
+            </div>
+        </div>
+    );
+};

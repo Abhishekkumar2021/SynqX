@@ -147,6 +147,7 @@ export const AlertStatus = {
 export type AlertStatus = typeof AlertStatus[keyof typeof AlertStatus];
 
 export const AlertType = {
+    JOB_STARTED: "job_started",
     JOB_FAILURE: "job_failure",
     JOB_SUCCESS: "job_success",
     DATA_QUALITY_FAILURE: "data_quality_failure",
@@ -165,3 +166,10 @@ export const AlertDeliveryMethod = {
     IN_APP: "in_app"
 } as const;
 export type AlertDeliveryMethod = typeof AlertDeliveryMethod[keyof typeof AlertDeliveryMethod];
+
+export const WorkspaceRole = {
+    ADMIN: "admin",
+    EDITOR: "editor",
+    VIEWER: "viewer"
+} as const;
+export type WorkspaceRole = typeof WorkspaceRole[keyof typeof WorkspaceRole];

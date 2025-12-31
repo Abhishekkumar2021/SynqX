@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Link as LinkIcon, Plus } from 'lucide-react';
 
 interface ConnectionsHeaderProps {
-    onCreate: () => void;
+    onCreate?: () => void;
 }
 
 export const ConnectionsHeader: React.FC<ConnectionsHeaderProps> = ({ onCreate }) => {
@@ -21,13 +21,15 @@ export const ConnectionsHeader: React.FC<ConnectionsHeaderProps> = ({ onCreate }
                 </p>
             </div>
 
-            <Button
-                size="sm"
-                onClick={onCreate}
-                className="w-full md:w-auto rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-semibold"
-            >
-                <Plus className="mr-2 h-5 w-5" /> New Connection
-            </Button>
+            {onCreate && (
+                <Button
+                    size="sm"
+                    onClick={onCreate}
+                    className="w-full md:w-auto rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-semibold"
+                >
+                    <Plus className="mr-2 h-5 w-5" /> New Connection
+                </Button>
+            )}
         </div>
     );
 };

@@ -11,10 +11,12 @@ SynqX utilizes a decoupled architecture that separates the **Control Plane** (Me
 
 ### 1. Orchestration Layer (FastAPI)
 The API layer serves as the central brain of the platform. It handles:
--   **Security**: RBAC and session management via OAuth2 and JWT.
--   **Metadata Management**: Version control for pipelines and asset registries.
+-   **Multi-Tenancy & Workspaces**: Manages isolated environments (Workspaces) for teams and projects. All resources are strictly scoped to a workspace.
+-   **Security**: Enforces Role-Based Access Control (RBAC) and session management via OAuth2 and JWT.
+-   **Metadata Management**: Version control for pipelines and asset registries within each workspace.
 -   **The Vault**: An application-layer encryption service (AES-256) that secures credentials at rest.
 -   **DAG Compiler**: Translates visual graph definitions into executable logical plans.
+-   **Admin CLI**: Provides a `typer`-based command-line interface for system-wide administration.
 
 ### 2. Distributed Execution Engine (Celery)
 The execution engine consists of stateless worker nodes that perform the heavy lifting of data movement.

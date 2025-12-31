@@ -25,14 +25,28 @@ class TimestampMixin:
     )
 
 class UserTrackingMixin:
+
     """User tracking for audit trail"""
+
     created_by: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+
     updated_by: Mapped[Optional[str]] = mapped_column(String(255))
 
 
+
+
+
 class AuditMixin(TimestampMixin, UserTrackingMixin):
+
     """Complete audit trail mixin"""
-    pass
+
+    # Optional workspace scoping for all audited entities
+
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+
+
+
+
 
 class OwnerMixin:
     """Ownership mixin to scope resources to a user"""

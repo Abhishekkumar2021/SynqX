@@ -100,6 +100,7 @@ class StateManager:
                 job_id=self.job_id,
                 pipeline_id=pipeline_id,
                 user_id=job.user_id,
+                workspace_id=job.workspace_id,
                 pipeline_version_id=version_id,
                 run_number=max_run + 1,
                 status=PipelineRunStatus.RUNNING,

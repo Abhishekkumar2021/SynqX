@@ -29,6 +29,7 @@ from app.models.pipelines import Pipeline, PipelineVersion, PipelineNode, Pipeli
 from app.models.execution import Job, PipelineRun, StepRun, PipelineRunContext, Watermark
 from app.models.monitoring import SchedulerEvent, JobLog, StepLog, AlertConfig, Alert
 from app.models.user import User
+from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 from app.models.api_keys import ApiKey
 from app.models.explorer import QueryHistory
 
@@ -57,6 +58,9 @@ __all__ = [
 
     # Models
     "User",
+    "Workspace",
+    "WorkspaceMember",
+    "WorkspaceRole",
     "Connection",
     "Environment",
     "Asset",

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.models.connections import Asset
     from app.models.execution import Job, PipelineRun
     from app.models.monitoring import SchedulerEvent
+    from app.models.workspace import Workspace
 
 class Pipeline(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     __tablename__ = "pipelines"
@@ -45,8 +46,13 @@ class Pipeline(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     tags: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     priority: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
 
+    # Workspace scoping
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    # Relationships
+    workspace: Mapped[Optional["Workspace"]] = relationship("Workspace", back_populates="pipelines")
     versions: Mapped[list["PipelineVersion"]] = relationship(
-        back_populates="pipeline",
         cascade="all, delete-orphan",
         foreign_keys="PipelineVersion.pipeline_id",
         order_by="PipelineVersion.version.desc()",

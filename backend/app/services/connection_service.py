@@ -37,7 +37,7 @@ class ConnectionService:
     def __init__(self, db_session: Session):
         self.db_session = db_session
 
-    def create_connection(self, connection_create: ConnectionCreate, user_id: int) -> Connection:
+    def create_connection(self, connection_create: ConnectionCreate, user_id: int, workspace_id: Optional[int] = None) -> Connection:
         try:
             encrypted_config = VaultService.encrypt_config(connection_create.config)
             connection = Connection(
@@ -50,6 +50,7 @@ class ConnectionService:
                 connection_timeout_seconds=connection_create.connection_timeout_seconds,
                 health_status="unknown",
                 user_id=user_id,
+                workspace_id=workspace_id,
                 created_by=str(user_id)
             )
             self.db_session.add(connection)
@@ -79,36 +80,13 @@ class ConnectionService:
             self.db_session.rollback()
             raise AppError(f"Failed to create connection: {str(e)}")
 
-    def get_connection(self, connection_id: int, user_id: Optional[int] = None) -> Optional[Connection]:
-        cache_key = f"connection:{connection_id}"
-        cached_data = cache.get(cache_key)
-        
-        if cached_data:
-            # Reconstruct from cache - purely data, not attached to session
-            # Note: This returns a detached object or dict. 
-            # If the caller expects an attached object to modify, this is tricky.
-            # But usually get_connection is for Read.
-            # However, for Updates, we call get_connection then modify. 
-            # So we only return cached if it's a read-only context or we handle re-attachment.
-            # For safety in this hybrid architecture, we'll only cache read-heavy attributes or return dict
-            # For now, let's cache but knowing standard ORM usage:
-            # If we return a dict or detached object, SQLAlchemy update operations downstream might fail if they expect attached.
-            # SAFE APPROACH: Use cache only for pure read optimizations if the return type allows.
-            # Given the return type hint is Connection (SQLAlchemy model), we should be careful.
-            # If we skip caching here for safety, we miss the read benefit.
-            # Better: Invalidate on update. When fetching from cache, merge into session?
-            pass
-
-        # Since SQLAlchemy models are complex to cache/deserialize fully (with relationships),
-        # A common pattern is to cache the Pydantic/Dict representation in the API layer, not Service layer.
-        # OR: We query DB, it's fast enough by PK.
-        # Let's stick to DB for get_connection unless we need high scale.
-        # BUT user asked for Redis. Let's do it for `list_connections` which is heavier.
-        
+    def get_connection(self, connection_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Optional[Connection]:
         query = self.db_session.query(Connection).filter(
             and_(Connection.id == connection_id, Connection.deleted_at.is_(None))
         )
-        if user_id is not None:
+        if workspace_id is not None:
+            query = query.filter(Connection.workspace_id == workspace_id)
+        elif user_id is not None:
             query = query.filter(Connection.user_id == user_id)
         return query.first()
 
@@ -119,6 +97,7 @@ class ConnectionService:
         limit: int = 100,
         offset: int = 0,
         user_id: Optional[int] = None,
+        workspace_id: Optional[int] = None,
     ) -> Tuple[List[Connection], int]:
         
         # Cache Key Generation
@@ -127,8 +106,29 @@ class ConnectionService:
             f"status={health_status or 'all'}",
             f"limit={limit}",
             f"offset={offset}",
-            f"user={user_id or 'all'}"
+            f"user={user_id or 'all'}",
+            f"ws={workspace_id or 'all'}"
         ]
+        cache_key = f"connections:list:{':'.join(key_parts)}"
+        
+        # Try Cache
+        # (Skipping for now due to complex ORM objects, but key is ready)
+
+        query = self.db_session.query(Connection).filter(Connection.deleted_at.is_(None))
+        if workspace_id is not None:
+            query = query.filter(Connection.workspace_id == workspace_id)
+        elif user_id is not None:
+            query = query.filter(Connection.user_id == user_id)
+            
+        if connector_type:
+            query = query.filter(Connection.connector_type == connector_type)
+        if health_status:
+            query = query.filter(Connection.health_status == health_status)
+            
+        total = query.count()
+        items = query.order_by(Connection.created_at.desc()).limit(limit).offset(offset).all()
+        
+        return items, total
         cache_key = f"connections:list:{':'.join(key_parts)}"
         
         # Try Cache (We need to cache Pydantic-ready dicts, but this returns ORM objects)
@@ -158,9 +158,9 @@ class ConnectionService:
         return items, total
 
     def update_connection(
-        self, connection_id: int, connection_update: ConnectionUpdate, user_id: Optional[int] = None
+        self, connection_id: int, connection_update: ConnectionUpdate, user_id: Optional[int] = None, workspace_id: Optional[int] = None
     ) -> Connection:
-        connection = self.get_connection(connection_id, user_id=user_id)
+        connection = self.get_connection(connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {connection_id} not found")
 
@@ -208,8 +208,8 @@ class ConnectionService:
             self.db_session.rollback()
             raise AppError(f"Failed to update connection: {str(e)}")
 
-    def delete_connection(self, connection_id: int, hard_delete: bool = False, user_id: Optional[int] = None) -> bool:
-        connection = self.get_connection(connection_id, user_id=user_id)
+    def delete_connection(self, connection_id: int, hard_delete: bool = False, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> bool:
+        connection = self.get_connection(connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {connection_id} not found")
 
@@ -231,9 +231,9 @@ class ConnectionService:
             raise AppError(f"Failed to delete connection: {str(e)}")
 
     def test_connection(
-        self, connection_id: int, custom_config: Optional[Dict[str, Any]] = None, user_id: Optional[int] = None
+        self, connection_id: int, custom_config: Optional[Dict[str, Any]] = None, user_id: Optional[int] = None, workspace_id: Optional[int] = None
     ) -> ConnectionTestResponse:
-        connection = self.get_connection(connection_id, user_id=user_id)
+        connection = self.get_connection(connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {connection_id} not found")
 
@@ -252,8 +252,8 @@ class ConnectionService:
 
         return ConnectionTestResponse(**result)
 
-    def get_environment_info(self, connection_id: int, user_id: Optional[int] = None) -> Dict[str, Any]:
-        connection = self.get_connection(connection_id, user_id=user_id)
+    def get_environment_info(self, connection_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Dict[str, Any]:
+        connection = self.get_connection(connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {connection_id} not found")
 
@@ -363,9 +363,9 @@ class ConnectionService:
                 "details": {"error_type": type(e).__name__},
             }
 
-    def create_asset(self, asset_create: AssetCreate, user_id: Optional[int] = None) -> Asset:
+    def create_asset(self, asset_create: AssetCreate, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Asset:
         # verifying connection ownership
-        connection = self.get_connection(asset_create.connection_id, user_id=user_id)
+        connection = self.get_connection(asset_create.connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {asset_create.connection_id} not found")
 
@@ -383,6 +383,7 @@ class ConnectionService:
                 schema_metadata=asset_create.schema_metadata,
                 row_count_estimate=asset_create.row_count_estimate,
                 size_bytes_estimate=asset_create.size_bytes_estimate,
+                workspace_id=workspace_id or connection.workspace_id,
                 created_by=str(user_id) if user_id else None
             )
             self.db_session.add(asset)
@@ -398,9 +399,11 @@ class ConnectionService:
             self.db_session.rollback()
             raise AppError(f"Failed to create asset: {str(e)}")
 
-    def get_asset(self, asset_id: int, user_id: Optional[int] = None) -> Optional[Asset]:
+    def get_asset(self, asset_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Optional[Asset]:
         query = self.db_session.query(Asset).join(Connection).filter(and_(Asset.id == asset_id, Asset.deleted_at.is_(None)))
-        if user_id is not None:
+        if workspace_id is not None:
+            query = query.filter(Connection.workspace_id == workspace_id)
+        elif user_id is not None:
             query = query.filter(Connection.user_id == user_id)
         return query.first()
 
@@ -413,11 +416,14 @@ class ConnectionService:
         limit: int = 100,
         offset: int = 0,
         user_id: Optional[int] = None,
+        workspace_id: Optional[int] = None,
     ) -> Tuple[List[Asset], int]:
 
         query = self.db_session.query(Asset).join(Connection).filter(Asset.deleted_at.is_(None))
 
-        if user_id is not None:
+        if workspace_id is not None:
+            query = query.filter(Connection.workspace_id == workspace_id)
+        elif user_id is not None:
             query = query.filter(Connection.user_id == user_id)
         if connection_id:
             query = query.filter(Asset.connection_id == connection_id)
@@ -434,8 +440,8 @@ class ConnectionService:
         )
         return items, total
 
-    def update_asset(self, asset_id: int, asset_update: AssetUpdate, user_id: Optional[int] = None) -> Asset:
-        asset = self.get_asset(asset_id, user_id=user_id)
+    def update_asset(self, asset_id: int, asset_update: AssetUpdate, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Asset:
+        asset = self.get_asset(asset_id, user_id=user_id, workspace_id=workspace_id)
         if not asset:
             raise AppError(f"Asset {asset_id} not found")
 
@@ -463,8 +469,9 @@ class ConnectionService:
         connection_id: int,
         assets_to_create: List[Any], # Using Any to avoid circular import with schemas, will be AssetBulkCreateItem
         user_id: Optional[int] = None,
+        workspace_id: Optional[int] = None,
     ) -> Dict[str, Any]:
-        connection = self.get_connection(connection_id, user_id=user_id)
+        connection = self.get_connection(connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {connection_id} not found")
 
@@ -491,6 +498,7 @@ class ConnectionService:
                 asset = Asset(
                     connection_id=connection_id,
                     **asset_data.model_dump(),
+                    workspace_id=workspace_id or connection.workspace_id,
                     created_by=str(user_id) if user_id else None
                 )
                 self.db_session.add(asset)
@@ -520,8 +528,8 @@ class ConnectionService:
             "failures": failures,
         }
 
-    def delete_asset(self, asset_id: int, hard_delete: bool = False, user_id: Optional[int] = None) -> bool:
-        asset = self.get_asset(asset_id, user_id=user_id)
+    def delete_asset(self, asset_id: int, hard_delete: bool = False, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> bool:
+        asset = self.get_asset(asset_id, user_id=user_id, workspace_id=workspace_id)
         if not asset:
             raise AppError(f"Asset {asset_id} not found")
 
@@ -544,6 +552,7 @@ class ConnectionService:
         include_metadata: bool = False,
         pattern: Optional[str] = None,
         user_id: Optional[int] = None,
+        workspace_id: Optional[int] = None,
     ) -> AssetDiscoverResponse:
         
         # Check cache
@@ -552,7 +561,7 @@ class ConnectionService:
         if cached_result:
             return AssetDiscoverResponse(**cached_result)
 
-        connection = self.get_connection(connection_id, user_id=user_id)
+        connection = self.get_connection(connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {connection_id} not found")
 
@@ -585,9 +594,9 @@ class ConnectionService:
             raise AppError(f"Failed to discover assets: {str(e)}")
 
     def discover_schema(
-        self, asset_id: int, sample_size: int = 1000, force_refresh: bool = False, user_id: Optional[int] = None
+        self, asset_id: int, sample_size: int = 1000, force_refresh: bool = False, user_id: Optional[int] = None, workspace_id: Optional[int] = None
     ) -> SchemaDiscoveryResponse:
-        asset = self.get_asset(asset_id, user_id=user_id)
+        asset = self.get_asset(asset_id, user_id=user_id, workspace_id=workspace_id)
         if not asset:
             raise AppError(f"Asset {asset_id} not found")
 
@@ -654,9 +663,9 @@ class ConnectionService:
             )
 
     def get_sample_data(
-        self, asset_id: int, limit: int = 100, user_id: Optional[int] = None
+        self, asset_id: int, limit: int = 100, user_id: Optional[int] = None, workspace_id: Optional[int] = None
     ) -> Dict[str, Any]:
-        asset = self.get_asset(asset_id, user_id=user_id)
+        asset = self.get_asset(asset_id, user_id=user_id, workspace_id=workspace_id)
         if not asset:
             raise AppError(f"Asset {asset_id} not found")
 
@@ -691,9 +700,9 @@ class ConnectionService:
                 return True
         return False
 
-    def get_connection_impact(self, connection_id: int, user_id: Optional[int] = None) -> ConnectionImpactRead:
+    def get_connection_impact(self, connection_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> ConnectionImpactRead:
         # Validate connection exists and user has access
-        connection = self.get_connection(connection_id, user_id=user_id)
+        connection = self.get_connection(connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {connection_id} not found.")
 
@@ -705,16 +714,18 @@ class ConnectionService:
             join(Asset, or_(PipelineNode.source_asset_id == Asset.id, PipelineNode.destination_asset_id == Asset.id)). \
             filter(Asset.connection_id == connection_id) # Only count non-deleted pipelines
 
-        if user_id is not None:
+        if workspace_id is not None:
+            pipeline_count_query = pipeline_count_query.filter(Pipeline.workspace_id == workspace_id)
+        elif user_id is not None:
             pipeline_count_query = pipeline_count_query.filter(Pipeline.user_id == user_id)
 
         pipeline_count = pipeline_count_query.scalar()
 
         return ConnectionImpactRead(pipeline_count=int(pipeline_count or 0))
 
-    def get_connection_usage_stats(self, connection_id: int, user_id: Optional[int] = None) -> ConnectionUsageStatsRead:
+    def get_connection_usage_stats(self, connection_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> ConnectionUsageStatsRead:
         # Validate connection exists and user has access
-        connection = self.get_connection(connection_id, user_id=user_id)
+        connection = self.get_connection(connection_id, user_id=user_id, workspace_id=workspace_id)
         if not connection:
             raise AppError(f"Connection {connection_id} not found.")
 
@@ -732,7 +743,9 @@ class ConnectionService:
             join(PipelineRun, Job.id == PipelineRun.job_id). \
             filter(Asset.connection_id == connection_id)
         
-        if user_id is not None:
+        if workspace_id is not None:
+            base_job_query = base_job_query.filter(Pipeline.workspace_id == workspace_id)
+        elif user_id is not None:
             base_job_query = base_job_query.filter(Pipeline.user_id == user_id)
 
         # Filter for jobs that have actually completed (SUCCESS or FAILED)

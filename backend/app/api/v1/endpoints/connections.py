@@ -54,19 +54,16 @@ def create_connection(
     connection_create: ConnectionCreate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = ConnectionService(db)
         connection = service.create_connection(
-            connection_create, user_id=current_user.id
+            connection_create, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
-        response = ConnectionDetailRead.model_validate(connection)
-        response.asset_count = len(connection.assets) if connection.assets else 0
-        try:
-            response.config = VaultService.decrypt_config(connection.config_encrypted)
-        except Exception:
-            response.config = {"error": "Failed to decrypt configuration"}
-        return response
+        return ConnectionRead.model_validate(connection)
     except AppError as e:
         logger.error(f"Error creating connection: {e}")
         raise HTTPException(
@@ -99,6 +96,7 @@ def list_connections(
     offset: int = Query(0, ge=0),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
@@ -108,7 +106,9 @@ def list_connections(
             limit=limit,
             offset=offset,
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
+        
         return ConnectionListResponse(
             connections=[ConnectionRead.model_validate(c) for c in connections],
             total=total,
@@ -136,9 +136,14 @@ def get_connection(
     connection_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     service = ConnectionService(db)
-    connection = service.get_connection(connection_id, user_id=current_user.id)
+    connection = service.get_connection(
+        connection_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
     if not connection:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -167,11 +172,15 @@ def update_connection(
     connection_update: ConnectionUpdate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = ConnectionService(db)
         connection = service.update_connection(
-            connection_id, connection_update, user_id=current_user.id
+            connection_id, 
+            connection_update, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
         return ConnectionRead.model_validate(connection)
     except AppError as e:
@@ -209,11 +218,15 @@ def delete_connection(
     hard_delete: bool = Query(False, description="Permanently delete from database"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ) -> None:
     try:
         service = ConnectionService(db)
         service.delete_connection(
-            connection_id, hard_delete=hard_delete, user_id=current_user.id
+            connection_id, 
+            hard_delete=hard_delete, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
         return None
     except AppError as e:
@@ -251,11 +264,15 @@ def test_connection(
     test_request: ConnectionTestRequest = Body(default=ConnectionTestRequest()),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
         result = service.test_connection(
-            connection_id, custom_config=test_request.config, user_id=current_user.id
+            connection_id, 
+            custom_config=test_request.config, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
         return result
     except AppError as e:
@@ -293,6 +310,7 @@ def discover_assets(
     discover_request: AssetDiscoverRequest = Body(default=AssetDiscoverRequest()),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
@@ -301,6 +319,7 @@ def discover_assets(
             include_metadata=discover_request.include_metadata,
             pattern=discover_request.pattern,
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
         return result
     except AppError as e:
@@ -342,6 +361,7 @@ def list_connection_assets(
     offset: int = Query(0, ge=0),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
@@ -353,6 +373,7 @@ def list_connection_assets(
             limit=limit,
             offset=offset,
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
         return AssetListResponse(
             assets=[AssetRead.model_validate(a) for a in assets],
@@ -383,12 +404,17 @@ def create_asset(
     asset_create: AssetCreate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         asset_create.connection_id = connection_id
 
         service = ConnectionService(db)
-        asset = service.create_asset(asset_create, user_id=current_user.id)
+        asset = service.create_asset(
+            asset_create, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         response = AssetDetailRead.model_validate(asset)
         response.connection_name = asset.connection.name if asset.connection else None
         response.schema_version_count = (
@@ -429,6 +455,7 @@ def bulk_create_assets(
     bulk_create_request: AssetBulkCreate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = ConnectionService(db)
@@ -436,6 +463,7 @@ def bulk_create_assets(
             connection_id=connection_id,
             assets_to_create=bulk_create_request.assets,
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
         return AssetBulkCreateResponse(**result)
     except AppError as e:
@@ -466,9 +494,14 @@ def get_asset(
     asset_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     service = ConnectionService(db)
-    asset = service.get_asset(asset_id, user_id=current_user.id)
+    asset = service.get_asset(
+        asset_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
 
     if not asset:
         raise HTTPException(
@@ -511,11 +544,16 @@ def update_asset(
     asset_update: AssetUpdate,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = ConnectionService(db)
         # Check existence and permission via service
-        asset = service.get_asset(asset_id, user_id=current_user.id)
+        asset = service.get_asset(
+            asset_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
 
         if not asset:
             raise HTTPException(
@@ -532,7 +570,12 @@ def update_asset(
                 },
             )
 
-        asset = service.update_asset(asset_id, asset_update, user_id=current_user.id)
+        asset = service.update_asset(
+            asset_id, 
+            asset_update, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return AssetRead.model_validate(asset)
     except HTTPException:
         raise
@@ -570,10 +613,15 @@ def delete_asset(
     hard_delete: bool = Query(False, description="Permanently delete from database"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ) -> None:
     try:
         service = ConnectionService(db)
-        asset = service.get_asset(asset_id, user_id=current_user.id)
+        asset = service.get_asset(
+            asset_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
 
         if not asset:
             raise HTTPException(
@@ -590,7 +638,12 @@ def delete_asset(
                 },
             )
 
-        service.delete_asset(asset_id, hard_delete=hard_delete, user_id=current_user.id)
+        service.delete_asset(
+            asset_id, 
+            hard_delete=hard_delete, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return None
     except HTTPException:
         raise
@@ -628,10 +681,15 @@ def discover_schema(
     discovery_request: SchemaDiscoveryRequest = Body(default=SchemaDiscoveryRequest()),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
-        asset = service.get_asset(asset_id, user_id=current_user.id)
+        asset = service.get_asset(
+            asset_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
 
         if not asset:
             raise HTTPException(
@@ -653,6 +711,7 @@ def discover_schema(
             sample_size=discovery_request.sample_size,
             force_refresh=discovery_request.force_refresh,
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
         return result
     except HTTPException:
@@ -690,9 +749,14 @@ def list_schema_versions(
     asset_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     service = ConnectionService(db)
-    asset = service.get_asset(asset_id, user_id=current_user.id)
+    asset = service.get_asset(
+        asset_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
 
     if not asset.schema_versions:
         return []
@@ -712,10 +776,15 @@ def get_asset_sample_data(
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
-        asset = service.get_asset(asset_id, user_id=current_user.id)
+        asset = service.get_asset(
+            asset_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
 
         if not asset:
             raise HTTPException(
@@ -736,6 +805,7 @@ def get_asset_sample_data(
             asset_id=asset_id,
             limit=limit,
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
         )
         return result
     except AppError as e:
@@ -765,10 +835,15 @@ def get_connection_impact(
     connection_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
-        impact = service.get_connection_impact(connection_id, user_id=current_user.id)
+        impact = service.get_connection_impact(
+            connection_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return impact
     except AppError as e:
         logger.error(f"Error fetching connection impact for {connection_id}: {e}")
@@ -797,10 +872,15 @@ def get_connection_usage_stats(
     connection_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
-        stats = service.get_connection_usage_stats(connection_id, user_id=current_user.id)
+        stats = service.get_connection_usage_stats(
+            connection_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return stats
     except AppError as e:
         logger.error(f"Error fetching connection usage stats for {connection_id}: {e}")
@@ -829,10 +909,15 @@ def get_connection_environment(
     connection_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
-        info = service.get_environment_info(connection_id, user_id=current_user.id)
+        info = service.get_environment_info(
+            connection_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return info
     except AppError as e:
         logger.error(f"Error fetching environment info for {connection_id}: {e}")
@@ -858,6 +943,7 @@ def initialize_environment(
     language: str = Body(..., embed=True),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = DependencyService(db, connection_id, user_id=current_user.id)
@@ -872,6 +958,7 @@ def list_dependencies(
     language: str,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = DependencyService(db, connection_id, user_id=current_user.id)
@@ -886,6 +973,7 @@ def install_dependency(
     package: str = Body(..., embed=True),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = DependencyService(db, connection_id, user_id=current_user.id)
@@ -900,6 +988,7 @@ def uninstall_dependency(
     package: str = Body(..., embed=True),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = DependencyService(db, connection_id, user_id=current_user.id)

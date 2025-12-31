@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { getRemoteFileBlob, saveRemoteFile } from '@/lib/api';
+import { downloadRemoteFile, saveRemoteFile } from '@/lib/api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
@@ -60,7 +60,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ connectionId, path, fi
             }
 
             try {
-                const blob = await getRemoteFileBlob(connectionId, path);
+                const blob = await downloadRemoteFile(connectionId, path);
                 if (!isCurrent) return;
 
                 if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)) {

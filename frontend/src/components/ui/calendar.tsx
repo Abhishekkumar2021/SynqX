@@ -100,8 +100,9 @@ function CalendarDayButton({
       className={cn(
         "relative flex aspect-square size-auto w-full min-w-9 flex-col gap-1 leading-none font-bold",
         "transition-colors duration-300 ease-in-out",
-        isKnob ? "text-primary-foreground hover:text-primary-foreground" : "text-foreground/90",
-        !isAnyRange && "hover:bg-primary/10 hover:text-primary",
+        isKnob ? "text-primary-foreground" : "text-foreground/90", // Base text color
+        !isAnyRange && "hover:bg-primary/10 hover:text-primary", // Non-range hover
+        isKnob && "hover:text-primary-foreground", // Ensure knob text color stays on hover
         "select-none overflow-visible z-10 text-[12px]",
         className
       )}

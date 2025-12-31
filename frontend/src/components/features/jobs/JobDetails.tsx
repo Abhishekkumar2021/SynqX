@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { JobLogViewer } from '@/components/features/jobs/JobLogViewer';
 import { type Job, getJobRun, cancelJob, retryJob, getPipeline } from '@/lib/api';
@@ -20,6 +21,7 @@ interface JobDetailsProps {
 
 export const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
     const [view, setView] = React.useState<'summary' | 'logs' | 'graph'>('summary');
     const [elapsed, setElapsed] = React.useState<string>('-');
 

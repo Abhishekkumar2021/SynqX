@@ -33,8 +33,8 @@ import { RunPipelineDialog } from './RunPipelineDialog';
 
 interface PipelineListItemProps {
     pipeline: Pipeline & { lastJob?: Job; stats?: PipelineStatsResponse };
-    onRun: (id: number, versionId?: number) => void;
-    onOpenSettings: (pipeline: Pipeline) => void;
+    onRun?: (id: number, versionId?: number) => void;
+    onOpenSettings?: (pipeline: Pipeline) => void;
     onViewVersions: (pipeline: Pipeline) => void;
     isRunningMutation: boolean;
 }
@@ -164,8 +164,8 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                         variant="default"
                         size="sm"
                         className="h-8 rounded-xl px-4 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/10 bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 transition-all active:scale-95 shrink-0"
-                        onClick={(e) => { e.stopPropagation(); onRun(pipeline.id); }}
-                        disabled={isRunningMutation}
+                        onClick={(e) => { e.stopPropagation(); onRun?.(pipeline.id); }}
+                        disabled={isRunningMutation || !onRun}
                     >
                         {isRunningMutation ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5 fill-current" />}
                         Run
@@ -178,7 +178,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/60 shadow-xl p-1" onClick={(e) => e.stopPropagation()}>
-                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => setIsRunDialogOpen(true)}>
+                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => setIsRunDialogOpen(true)} disabled={!onRun}>
                                 <Play className="h-3.5 w-3.5 opacity-70" /> Run with Options...
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onViewVersions(pipeline)}>
@@ -188,7 +188,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => navigate(`/pipelines/${pipeline.id}`)}>
                                 <Settings className="h-3.5 w-3.5 opacity-70" /> Configure Logic
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onOpenSettings(pipeline)}>
+                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onOpenSettings?.(pipeline)} disabled={!onOpenSettings}>
                                 <Workflow className="h-3.5 w-3.5 opacity-70" /> Pipeline Settings
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border/40 my-1" />

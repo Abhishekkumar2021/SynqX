@@ -24,6 +24,7 @@ def get_dashboard_stats(
     service = DashboardService(db)
     return service.get_stats(
         user_id=current_user.id, 
+        workspace_id=current_user.active_workspace_id,
         time_range=time_range,
         start_date=start_date,
         end_date=end_date

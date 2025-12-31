@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from app.models.base import Base, TimestampMixin
 
 class User(Base, TimestampMixin):
@@ -10,3 +11,7 @@ class User(Base, TimestampMixin):
     full_name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    active_workspace_id = Column(Integer, ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True)
+
+    # Relationships
+    memberships = relationship("WorkspaceMember", back_populates="user")

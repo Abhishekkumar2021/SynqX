@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { getConnections, getConnectionAssets } from '@/lib/api';
 import { getNodeIcon, getOperatorDefinition, type OperatorField } from '@/lib/pipeline-definitions';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 interface NodePropertiesProps {
     node: Node | null;
@@ -84,6 +85,7 @@ const HelpIcon = ({ content }: { content?: string }) => {
 export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, onUpdate, onDelete, onDuplicate }) => {
     const { register, handleSubmit, watch, reset, control } = useForm<any>();
     const [activeTab, setActiveTab] = useState('settings');
+    const { isEditor, isAdmin } = useWorkspace();
 
     // Watchers
     const nodeType = (watch('operator_type') || '').toLowerCase();
@@ -106,7 +108,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
         enabled: !!selectedConnectionId && !isNaN(parseInt(selectedConnectionId)),
     });
 
-    const filteredAssets = assets?.filter(a => {
+    const filteredAssets = assets?.filter((a: { is_source: any; is_destination: any; }) => {
         if (nodeType === 'source') return a.is_source;
         if (nodeType === 'sink') return a.is_destination;
         return true;
@@ -240,7 +242,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                     <Label className="text-[10px] font-bold">{field.label}</Label>
                                     <HelpIcon content={field.tooltip} />
                                 </div>
-                                <Select onValueChange={selectField.onChange} value={selectField.value}>
+                                <Select onValueChange={selectField.onChange} value={selectField.value} disabled={!isEditor}>
                                     <SelectTrigger className="h-9 rounded-lg bg-background/50">
                                         <SelectValue placeholder={`Select ${field.label}`} />
                                     </SelectTrigger>
@@ -262,12 +264,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                             <Label className="text-[10px] font-bold">{field.label}</Label>
                             <HelpIcon content={field.tooltip} />
                         </div>
-                        <Textarea
-                            {...register(field.name)}
-                            placeholder={field.placeholder}
-                            className="font-mono text-[10px] min-h-25 bg-background/50 rounded-lg"
-                        />
-                        {field.description && <p className="text-[9px] text-muted-foreground">{field.description}</p>}
+                                                <Textarea 
+                                                    {...register(field.name)} 
+                                                    placeholder={field.placeholder}
+                                                    readOnly={!isEditor}
+                                                    className="font-mono text-[10px] min-h-25 bg-background/50 rounded-lg"
+                                                />                        {field.description && <p className="text-[9px] text-muted-foreground">{field.description}</p>}
                     </div>
                 );
             case 'boolean':
@@ -278,12 +280,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                         name={field.name}
                         render={({ field: checkboxField }) => (
                             <div className="flex items-center space-x-2 py-1">
-                                <Checkbox
-                                    id={field.name}
-                                    checked={checkboxField.value}
-                                    onCheckedChange={checkboxField.onChange}
-                                />
-                                <div className="grid gap-1.5 leading-none">
+                                                                <Checkbox 
+                                                                    id={field.name}
+                                                                    checked={checkboxField.value} 
+                                                                    onCheckedChange={checkboxField.onChange} 
+                                                                    disabled={!isEditor}
+                                                                />                                <div className="grid gap-1.5 leading-none">
                                     <label
                                         htmlFor={field.name}
                                         className="text-[10px] font-bold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center"
@@ -303,13 +305,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                             <Label className="text-[10px] font-bold">{field.label}</Label>
                             <HelpIcon content={field.tooltip} />
                         </div>
-                        <Input
-                            {...register(field.name)}
-                            type={field.type}
-                            placeholder={field.placeholder}
-                            className="h-9 bg-background/50 rounded-lg"
-                        />
-                        {field.description && <p className="text-[9px] text-muted-foreground">{field.description}</p>}
+                                                <Input 
+                                                    {...register(field.name)} 
+                                                    type={field.type} 
+                                                    placeholder={field.placeholder}
+                                                    readOnly={!isEditor}
+                                                    className="h-9 bg-background/50 rounded-lg"
+                                                />                        {field.description && <p className="text-[9px] text-muted-foreground">{field.description}</p>}
                     </div>
                 );
         }
@@ -360,6 +362,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                     <Input
                                         {...register('label', { required: true })}
                                         placeholder="Descriptive name..."
+                                        readOnly={!isEditor}
                                         className="h-10 rounded-lg bg-background/50 border-border/40 focus:ring-primary/20"
                                     />
                                 </div>
@@ -381,12 +384,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                     control={control}
                                                     name="connection_id"
                                                     render={({ field }) => (
-                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                        <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
                                                             <SelectTrigger className="h-9 rounded-lg bg-background/50">
                                                                 <SelectValue placeholder="Select connection" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                {connections?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                                                                {connections?.map((c: { id: React.Key | null | undefined; name: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; }) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                                                             </SelectContent>
                                                         </Select>
                                                     )}
@@ -401,12 +404,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                     control={control}
                                                     name="asset_id"
                                                     render={({ field }) => (
-                                                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedConnectionId}>
+                                                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedConnectionId || !isEditor}>
                                                             <SelectTrigger className="h-9 rounded-lg bg-background/50">
                                                                 <SelectValue placeholder={selectedConnectionId ? "Select asset" : "Connect first"} />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                {filteredAssets?.map(a => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
+                                                                {filteredAssets?.map((a: { id: React.Key | null | undefined; name: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; }) => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
                                                             </SelectContent>
                                                         </Select>
                                                     )}
@@ -423,7 +426,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                         control={control}
                                                         name="write_strategy"
                                                         render={({ field }) => (
-                                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
                                                                 <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20">
                                                                     <SelectValue placeholder="Select strategy" />
                                                                 </SelectTrigger>
@@ -463,66 +466,66 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                 <Label className="text-[10px] font-bold">Retry Logic</Label>
                                                 <HelpIcon content="Control how the engine behaves when this specific task fails." />
                                             </div>
-                                            <Controller
-                                                control={control}
-                                                name="retry_strategy"
-                                                render={({ field }) => (
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <SelectTrigger className="h-9 rounded-lg bg-background/50">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="none">Disabled</SelectItem>
-                                                            <SelectItem value="fixed">Fixed Delay</SelectItem>
-                                                            <SelectItem value="linear_backoff">Linear</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            />
-                                        </div>
-                                        {watch('retry_strategy') !== 'none' && (
-                                            <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                <div className="flex items-center">
-                                                    <Label className="text-[10px] font-bold">Max Retries</Label>
-                                                    <HelpIcon content="Number of times to attempt the task before marking it as FAILED." />
-                                                </div>
-                                                <Input type="number" {...register('max_retries', { valueAsNumber: true })} className="h-9 bg-background/50" />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {watch('retry_strategy') !== 'none' && (
-                                            <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                <div className="flex items-center">
-                                                    <Label className="text-[10px] font-bold">Retry Delay (sec)</Label>
-                                                    <HelpIcon content="Time to wait between retry attempts." />
-                                                </div>
-                                                <Input type="number" {...register('retry_delay_seconds', { valueAsNumber: true })} className="h-9 bg-background/50" />
-                                            </div>
-                                        )}
-                                        <div className="space-y-2">
-                                            <div className="flex items-center">
-                                                <Label className="text-[10px] font-bold">Execution TTL (sec)</Label>
-                                                <HelpIcon content="Maximum time this task is allowed to run before being killed." />
-                                            </div>
-                                            <Input type="number" {...register('timeout_seconds', { valueAsNumber: true })} placeholder="3600" className="h-9 bg-background/50" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator className="opacity-50" />
-
-                                {/* Secondary Info */}
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Documentation</Label>
-                                    <Textarea
-                                        {...register('description')}
-                                        placeholder="Optional node description or notes..."
-                                        className="min-h-20 rounded-lg bg-background/50 border-border/40 focus:ring-primary/20 text-xs resize-none"
-                                    />
-                                </div>
-
+                                                                                        <Controller
+                                                                                            control={control}
+                                                                                            name="retry_strategy"
+                                                                                            render={({ field }) => (
+                                                                                                <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                                                                                                    <SelectTrigger className="h-9 rounded-lg bg-background/50">
+                                                                                                        <SelectValue />
+                                                                                                    </SelectTrigger>
+                                                                                                    <SelectContent>
+                                                                                                        <SelectItem value="none">Disabled</SelectItem>
+                                                                                                        <SelectItem value="fixed">Fixed Delay</SelectItem>
+                                                                                                        <SelectItem value="linear_backoff">Linear</SelectItem>
+                                                                                                    </SelectContent>
+                                                                                                </Select>
+                                                                                            )}
+                                                                                        />
+                                                                                    </div>
+                                                                                    {watch('retry_strategy') !== 'none' && (
+                                                                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                                                            <div className="flex items-center">
+                                                                                                <Label className="text-[10px] font-bold">Max Retries</Label>
+                                                                                                <HelpIcon content="Number of times to attempt the task before marking it as FAILED." />
+                                                                                            </div>
+                                                                                            <Input type="number" {...register('max_retries', { valueAsNumber: true })} readOnly={!isEditor} className="h-9 bg-background/50" />
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                                
+                                                                                <div className="grid grid-cols-2 gap-4">
+                                                                                    {watch('retry_strategy') !== 'none' && (
+                                                                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                                                            <div className="flex items-center">
+                                                                                                <Label className="text-[10px] font-bold">Retry Delay (sec)</Label>
+                                                                                                <HelpIcon content="Time to wait between retry attempts." />
+                                                                                            </div>
+                                                                                            <Input type="number" {...register('retry_delay_seconds', { valueAsNumber: true })} readOnly={!isEditor} className="h-9 bg-background/50" />
+                                                                                        </div>
+                                                                                    )}
+                                                                                    <div className="space-y-2">
+                                                                                        <div className="flex items-center">
+                                                                                            <Label className="text-[10px] font-bold">Execution TTL (sec)</Label>
+                                                                                            <HelpIcon content="Maximum time this task is allowed to run before being killed." />
+                                                                                        </div>
+                                                                                        <Input type="number" {...register('timeout_seconds', { valueAsNumber: true })} readOnly={!isEditor} placeholder="3600" className="h-9 bg-background/50" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                            
+                                                                            <Separator className="opacity-50" />
+                                            
+                                                                            {/* Secondary Info */}
+                                                                            <div className="space-y-2">
+                                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Documentation</Label>
+                                                                                <Textarea
+                                                                                    {...register('description')}
+                                                                                    placeholder="Optional node description or notes..."
+                                                                                    readOnly={!isEditor}
+                                                                                    className="min-h-20 rounded-lg bg-background/50 border-border/40 focus:ring-primary/20 text-xs resize-none"
+                                                                                />
+                                                                            </div>
                                 {!opDef?.fields && nodeType !== 'source' && nodeType !== 'sink' && (
                                     <div className="flex items-center gap-3 p-4 bg-muted/20 border border-border/40 rounded-xl text-muted-foreground">
                                         <Info size={16} />
@@ -602,42 +605,47 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                         </div>
                     </ScrollArea>
 
-                    {/* Footer */}
-                    <div className="p-6 border-t border-border/40 bg-muted/20 flex items-center gap-3 backdrop-blur-md">
-                        <Button type="submit" className="flex-1 rounded-xl h-10 font-bold text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20">
-                            <Save size={14} className="mr-2" /> Save Config
-                        </Button>
-
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button type="button" variant="secondary" size="icon" onClick={() => onDuplicate(node)} className="h-10 w-10 rounded-xl hover:bg-background/80 hover:text-primary">
-                                        <Copy size={16} />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">Duplicate Node</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10">
-                                    <Trash2 size={18} />
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-2xl bg-background/95 shadow-2xl">
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">De-provision Node?</AlertDialogTitle>
-                                    <AlertDialogDescription className="font-medium text-sm">This will permanently remove the operator and all its logical connections.</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter className="gap-2 mt-6">
-                                    <AlertDialogCancel className="rounded-xl h-10 px-6 font-bold text-[10px] uppercase tracking-widest border-border/40">Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => { onDelete(node.id); onClose(); }} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-10 px-6 font-bold text-[10px] uppercase tracking-widest">Delete Operator</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
-                </form>
+                                        {/* Footer */}
+                                        <div className="p-6 border-t border-border/40 bg-muted/20 flex items-center gap-3 backdrop-blur-md">
+                                            {isEditor && (
+                                                <Button type="submit" className="flex-1 rounded-xl h-10 font-bold text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20">
+                                                    <Save size={14} className="mr-2" /> Save Config
+                                                </Button>
+                                            )}
+                                            
+                                            {isEditor && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button type="button" variant="secondary" size="icon" onClick={() => onDuplicate(node)} className="h-10 w-10 rounded-xl hover:bg-background/80 hover:text-primary">
+                                                                <Copy size={16} />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top">Duplicate Node</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
+                    
+                                            {isAdmin && (
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10">
+                                                            <Trash2 size={18} />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-2xl bg-background/95 shadow-2xl">
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">De-provision Node?</AlertDialogTitle>
+                                                            <AlertDialogDescription className="font-medium text-sm">This will permanently remove the operator and all its logical connections.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter className="gap-2 mt-6">
+                                                            <AlertDialogCancel className="rounded-xl h-10 px-6 font-bold text-[10px] uppercase tracking-widest border-border/40">Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => { onDelete(node.id); onClose(); }} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-10 px-6 font-bold text-[10px] uppercase tracking-widest">Delete Operator</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            )}
+                                        </div>                </form>
             </Tabs>
         </div>
     );

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user
+from app import models
+from app.api import deps
 from app.services.connection_service import ConnectionService
 from app.services.vault_service import VaultService
 from app.connectors.factory import ConnectorFactory
@@ -13,7 +15,11 @@ logger = get_logger(__name__)
 
 def get_connector(connection_id: int, db: Session, current_user: User):
     service = ConnectionService(db)
-    connection = service.get_connection(connection_id, user_id=current_user.id)
+    connection = service.get_connection(
+        connection_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
     if not connection:
         raise HTTPException(status_code=404, detail="Connection not found")
     
@@ -28,8 +34,9 @@ def get_connector(connection_id: int, db: Session, current_user: User):
 def list_files(
     connection_id: int,
     path: str = "",
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     """Real-time file listing for a connection."""
     connector = get_connector(connection_id, db, current_user)
@@ -46,8 +53,9 @@ def download_file(
     connection_id: int,
     path: str,
     inline: bool = False,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     """Real-time file download for a connection."""
     connector = get_connector(connection_id, db, current_user)
@@ -89,8 +97,9 @@ async def upload_file(
     connection_id: int,
     path: str = "",
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     """Real-time file upload for a connection."""
     connector = get_connector(connection_id, db, current_user)
@@ -112,7 +121,7 @@ async def upload_file(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-from pydantic import BaseModel
+
 
 class SaveFileRequest(BaseModel):
     path: str
@@ -122,8 +131,9 @@ class SaveFileRequest(BaseModel):
 def save_file(
     connection_id: int,
     request: SaveFileRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     """Save text content to a file on the remote connection."""
     connector = get_connector(connection_id, db, current_user)
@@ -141,8 +151,9 @@ def save_file(
 def delete_file(
     connection_id: int,
     path: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ):
     """Real-time file deletion for a connection."""
     connector = get_connector(connection_id, db, current_user)
@@ -158,8 +169,9 @@ def delete_file(
 def create_directory(
     connection_id: int,
     path: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     """Real-time directory creation for a connection."""
     connector = get_connector(connection_id, db, current_user)
@@ -175,8 +187,9 @@ def create_directory(
 def zip_directory(
     connection_id: int,
     path: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     """Real-time directory zipping and download for a connection."""
     connector = get_connector(connection_id, db, current_user)

@@ -23,6 +23,7 @@ class DashboardService:
     def get_stats(
         self, 
         user_id: int, 
+        workspace_id: Optional[int] = None,
         time_range: str = "24h",
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
@@ -59,26 +60,36 @@ class DashboardService:
                 else:
                     group_interval = 'day'
             
+            # Helper for workspace scoping
+            def scope_query(query, model):
+                if workspace_id:
+                    return query.filter(model.workspace_id == workspace_id)
+                return query.filter(model.user_id == user_id)
+
             # 1. Global Metrics
-            total_pipelines = self.db.query(func.count(Pipeline.id)).filter(
-                and_(Pipeline.user_id == user_id, Pipeline.deleted_at.is_(None))
+            total_pipelines = scope_query(
+                self.db.query(func.count(Pipeline.id)).filter(Pipeline.deleted_at.is_(None)),
+                Pipeline
             ).scalar() or 0
 
-            active_pipelines = self.db.query(func.count(Pipeline.id)).filter(
-                and_(Pipeline.user_id == user_id, Pipeline.status == PipelineStatus.ACTIVE, Pipeline.deleted_at.is_(None))
+            active_pipelines = scope_query(
+                self.db.query(func.count(Pipeline.id)).filter(
+                    and_(Pipeline.status == PipelineStatus.ACTIVE, Pipeline.deleted_at.is_(None))
+                ),
+                Pipeline
             ).scalar() or 0
 
-            total_connections = self.db.query(func.count(Connection.id)).filter(
-                and_(Connection.user_id == user_id, Connection.deleted_at.is_(None))
+            total_connections = scope_query(
+                self.db.query(func.count(Connection.id)).filter(Connection.deleted_at.is_(None)),
+                Connection
             ).scalar() or 0
 
             # Connector Health Distribution
             connector_health = []
             try:
-                health_query = self.db.query(
-                    Connection.health_status, func.count(Connection.id)
-                ).filter(
-                    and_(Connection.user_id == user_id, Connection.deleted_at.is_(None))
+                health_query = scope_query(
+                    self.db.query(Connection.health_status, func.count(Connection.id)).filter(Connection.deleted_at.is_(None)),
+                    Connection
                 ).group_by(Connection.health_status).all()
                 
                 connector_health = [
@@ -90,7 +101,12 @@ class DashboardService:
                 logger.error(f"Error calculating connector health: {e}")
 
             # Period Stats
-            period_filters = [Pipeline.user_id == user_id]
+            period_filters = []
+            if workspace_id:
+                period_filters.append(Pipeline.workspace_id == workspace_id)
+            else:
+                period_filters.append(Pipeline.user_id == user_id)
+                
             if actual_start_date:
                 period_filters.append(Job.created_at >= actual_start_date)
             if end_date:
@@ -116,11 +132,11 @@ class DashboardService:
             total_bytes = int(jobs_stats.total_bytes or 0)
 
             # 2. Pipeline Distribution
-            dist_query = self.db.query(
+            distribution_query = self.db.query(
                 Pipeline.status, func.count(Pipeline.id)
-            ).filter(
-                and_(Pipeline.user_id == user_id, Pipeline.deleted_at.is_(None))
-            ).group_by(Pipeline.status).all()
+            ).filter(Pipeline.deleted_at.is_(None))
+            distribution_query = scope_query(distribution_query, Pipeline)
+            dist_query = distribution_query.group_by(Pipeline.status).all()
             
             distribution = [
                 PipelineDistribution(status=status.value, count=count) 
@@ -211,9 +227,9 @@ class DashboardService:
                 current_bucket += delta
 
             # 4. Recent Activity
-            recent_jobs = self.db.query(Job).join(Pipeline).filter(
-                Pipeline.user_id == user_id
-            ).order_by(desc(Job.created_at)).limit(6).all()
+            recent_jobs_query = self.db.query(Job).join(Pipeline)
+            recent_jobs_query = scope_query(recent_jobs_query, Pipeline)
+            recent_jobs = recent_jobs_query.order_by(desc(Job.created_at)).limit(6).all()
 
             activity = []
             for job in recent_jobs:
@@ -235,23 +251,24 @@ class DashboardService:
             # 5. System Health (Simulated/Recent Aggregates)
             try:
                 # Active workers = jobs currently running
-                active_workers_count = self.db.query(func.count(Job.id)).join(Pipeline).filter(
-                    and_(Pipeline.user_id == user_id, Job.status.in_([JobStatus.RUNNING, JobStatus.PENDING]))
-                ).scalar() or 0
+                active_workers_query = self.db.query(func.count(Job.id)).join(Pipeline).filter(
+                    Job.status.in_([JobStatus.RUNNING, JobStatus.PENDING])
+                )
+                active_workers_count = scope_query(active_workers_query, Pipeline).scalar() or 0
 
                 # Average resource usage
                 # 1. Try fetching currently running steps
                 recent_window = now - timedelta(minutes=15)
-                resource_stats = self.db.query(
+                resource_query = self.db.query(
                     func.avg(StepRun.cpu_percent).label('avg_cpu'),
                     func.avg(StepRun.memory_mb).label('avg_mem')
                 ).join(PipelineRun).join(Pipeline).filter(
                     and_(
-                        Pipeline.user_id == user_id,
                         StepRun.updated_at >= recent_window,
                         StepRun.status == OperatorRunStatus.RUNNING
                     )
-                ).first()
+                )
+                resource_stats = scope_query(resource_query, Pipeline).first()
 
                 cpu_val = 0.0
                 mem_val = 0.0
@@ -263,16 +280,16 @@ class DashboardService:
                 else:
                     # 2. Fallback: Fetch last 10 successful steps to show "Last Known Capacity"
                     # Fetch raw rows and average in python to avoid GroupingError
-                    recent_steps = self.db.query(
+                    recent_steps_query = self.db.query(
                         StepRun.cpu_percent,
                         StepRun.memory_mb
                     ).join(PipelineRun).join(Pipeline).filter(
                         and_(
-                            Pipeline.user_id == user_id,
                             StepRun.status == OperatorRunStatus.SUCCESS,
                             StepRun.cpu_percent.isnot(None)
                         )
-                    ).order_by(desc(StepRun.updated_at)).limit(10).all()
+                    )
+                    recent_steps = scope_query(recent_steps_query, Pipeline).order_by(desc(StepRun.updated_at)).limit(10).all()
                     
                     if recent_steps:
                         count = len(recent_steps)
@@ -338,13 +355,23 @@ class DashboardService:
                     Pipeline, Alert.pipeline_id == Pipeline.id
                 ).outerjoin(
                     AlertConfig, Alert.alert_config_id == AlertConfig.id
-                ).filter(
-                    or_(
-                        Pipeline.user_id == user_id,
-                        AlertConfig.user_id == user_id,
+                )
+                
+                if workspace_id:
+                    alerts_query = alerts_query.filter(
+                        or_(
+                            Pipeline.workspace_id == workspace_id,
+                            AlertConfig.workspace_id == workspace_id
+                        )
                     )
-                ).order_by(desc(Alert.created_at)).limit(5)
-
+                else:
+                    alerts_query = alerts_query.filter(
+                        or_(
+                            Pipeline.user_id == user_id,
+                            AlertConfig.user_id == user_id,
+                        )
+                    )
+                    
                 recent_alerts = [
                     DashboardAlert(
                         id=a.id,

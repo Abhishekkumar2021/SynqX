@@ -23,10 +23,12 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { useZenMode } from '@/hooks/useZenMode';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { AlertListItem } from '@/components/features/alerts/AlertListItem';
 
 export const AlertsPage: React.FC = () => {
     const { isZenMode } = useZenMode();
+    const { isEditor } = useWorkspace();
     const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -88,7 +90,7 @@ export const AlertsPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {pendingCount > 0 && (
+                    {pendingCount > 0 && isEditor && (
                         <Button 
                             variant="outline" 
                             size="sm" 

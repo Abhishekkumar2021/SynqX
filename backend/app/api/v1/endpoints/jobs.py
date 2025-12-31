@@ -1,4 +1,5 @@
 from typing import Optional, List
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 
@@ -15,11 +16,11 @@ from app.schemas.job import (
     UnifiedLogRead,
 )
 from app.services.job_service import JobService, PipelineRunService
-from app.api.deps import get_db, get_current_user
+from app.api import deps
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.models.enums import JobStatus, PipelineRunStatus
-from app.models.user import User
+from app import models
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -36,13 +37,16 @@ def list_jobs(
     status: Optional[JobStatus] = Query(None, description="Filter by status"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = JobService(db)
+        # Add workspace scoping
         jobs, total = service.list_jobs(
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
             pipeline_id=pipeline_id,
             status=status,
             limit=limit,
@@ -72,11 +76,16 @@ def list_jobs(
 )
 def get_job(
     job_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     service = JobService(db)
-    job = service.get_job(job_id, user_id=current_user.id)
+    job = service.get_job(
+        job_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
     
     if not job:
         raise HTTPException(
@@ -95,8 +104,9 @@ def get_job(
 )
 def get_job_run(
     job_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     service = PipelineRunService(db)
     # Find pipeline run by job_id
@@ -104,14 +114,26 @@ def get_job_run(
     from app.schemas.pipeline import PipelineVersionRead
     
     # Check job ownership
-    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
+    job_query = db.query(Job).filter(Job.id == job_id)
+    if current_user.active_workspace_id:
+        job_query = job_query.filter(Job.workspace_id == current_user.active_workspace_id)
+    else:
+        job_query = job_query.filter(Job.user_id == current_user.id)
+    
+    job = job_query.first()
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"error": "Not found", "message": f"Job {job_id} not found"}
         )
 
-    run = db.query(PipelineRun).filter(PipelineRun.job_id == job_id, PipelineRun.user_id == current_user.id).first()
+    run_query = db.query(PipelineRun).filter(PipelineRun.job_id == job_id)
+    if current_user.active_workspace_id:
+        run_query = run_query.filter(PipelineRun.workspace_id == current_user.active_workspace_id)
+    else:
+        run_query = run_query.filter(PipelineRun.user_id == current_user.id)
+        
+    run = run_query.first()
     
     if not run:
         # If no run record yet, return a synthetic one based on the Job to allow progress display
@@ -152,7 +174,11 @@ def get_job_run(
         response.version = PipelineVersionRead.model_validate(run.version)
     
     # Include step runs
-    step_runs = service.get_run_steps(run.id, user_id=current_user.id)
+    step_runs = service.get_run_steps(
+        run.id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
     response.step_runs = [StepRunRead.model_validate(s) for s in step_runs]
     
     return response
@@ -167,12 +193,18 @@ def get_job_run(
 def cancel_job(
     job_id: int,
     cancel_request: JobCancelRequest = Body(default=JobCancelRequest()),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = JobService(db)
-        job = service.cancel_job(job_id, user_id=current_user.id, reason=cancel_request.reason)
+        job = service.cancel_job(
+            job_id, 
+            user_id=current_user.id, 
+            workspace_id=current_user.active_workspace_id,
+            reason=cancel_request.reason
+        )
         return JobRead.model_validate(job)
         
     except AppError as e:
@@ -198,12 +230,18 @@ def cancel_job(
 def retry_job(
     job_id: int,
     retry_request: JobRetryRequest = Body(default=JobRetryRequest()),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     try:
         service = JobService(db)
-        new_job = service.retry_job(job_id, user_id=current_user.id, force=retry_request.force)
+        new_job = service.retry_job(
+            job_id, 
+            user_id=current_user.id, 
+            workspace_id=current_user.active_workspace_id,
+            force=retry_request.force
+        )
         return JobRead.model_validate(new_job)
         
     except AppError as e:
@@ -229,20 +267,18 @@ def retry_job(
 def get_job_logs(
     job_id: int,
     level: Optional[str] = Query(None, description="Filter by log level"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = JobService(db)
-        job = service.get_job(job_id, user_id=current_user.id)
-        
-        if not job:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={"error": "Not found", "message": f"Job {job_id} not found"}
-            )
-        
-        logs = service.get_job_logs(job_id, level=level)
+        logs = service.get_job_logs(
+            job_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            level=level
+        )
         return [UnifiedLogRead.model_validate(log) for log in logs]
         
     except HTTPException:
@@ -266,13 +302,15 @@ def list_runs(
     status: Optional[PipelineRunStatus] = Query(None, description="Filter by status"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = PipelineRunService(db)
         runs, total = service.list_runs(
             user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
             pipeline_id=pipeline_id,
             status=status,
             limit=limit,
@@ -302,11 +340,15 @@ def list_runs(
 )
 def get_run(
     run_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
 ):
     service = PipelineRunService(db)
-    run = service.get_run(run_id, user_id=current_user.id)
+    run = service.get_run(
+        run_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
     
     if not run:
         raise HTTPException(
@@ -316,10 +358,82 @@ def get_run(
     
     response = PipelineRunDetailRead.model_validate(run)
     
-    step_runs = service.get_run_steps(run_id, user_id=current_user.id)
+    step_runs = service.get_run_steps(
+        run_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
     response.step_runs = [StepRunRead.model_validate(s) for s in step_runs]
     
     return response
+
+
+@router.get(
+    "/runs/{run_id}/export",
+    summary="Export Pipeline Run",
+    description="Download complete pipeline run details including context and steps as JSON"
+)
+def export_run(
+    run_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+):
+    from fastapi.responses import JSONResponse
+    
+    service = PipelineRunService(db)
+    run = service.get_run(
+        run_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
+    
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+        
+    step_runs = service.get_run_steps(run_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+    
+    # Build complete export bundle
+    export_data = {
+        "run_id": run.id,
+        "pipeline_id": run.pipeline_id,
+        "status": run.status.value,
+        "started_at": run.started_at.isoformat() if run.started_at else None,
+        "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+        "metrics": {
+            "total_extracted": run.total_extracted,
+            "total_loaded": run.total_loaded,
+            "total_failed": run.total_failed,
+            "bytes_processed": run.bytes_processed,
+            "duration_seconds": run.duration_seconds
+        },
+        "context": {
+            "parameters": run.context.parameters if run.context else {},
+            "environment": run.context.environment if run.context else {},
+            "runtime_metadata": run.context.context if run.context else {}
+        },
+        "steps": [
+            {
+                "id": s.id,
+                "node_id": s.node_id,
+                "operator_type": s.operator_type.value,
+                "status": s.status.value,
+                "metrics": {
+                    "records_in": s.records_in,
+                    "records_out": s.records_out,
+                    "records_error": s.records_error
+                }
+            } for s in step_runs
+        ]
+    }
+    
+    filename = f"synqx_run_{run_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    
+    return JSONResponse(
+        content=export_data,
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
 
 
 @router.get(
@@ -330,12 +444,16 @@ def get_run(
 )
 def get_run_steps(
     run_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
 ):
     try:
         service = PipelineRunService(db)
-        steps = service.get_run_steps(run_id, user_id=current_user.id)
+        steps = service.get_run_steps(
+            run_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return [StepRunRead.model_validate(s) for s in steps]
         
     except AppError as e:
@@ -361,12 +479,17 @@ def get_step_logs(
     run_id: int,
     step_id: int,
     level: Optional[str] = Query(None, description="Filter by log level"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
 ):
     try:
         service = PipelineRunService(db)
-        logs = service.get_step_logs(step_id, user_id=current_user.id, level=level)
+        logs = service.get_step_logs(
+            step_id, 
+            user_id=current_user.id, 
+            workspace_id=current_user.active_workspace_id,
+            level=level
+        )
         return [StepLogRead.model_validate(log) for log in logs]
         
     except Exception as e:
@@ -388,18 +511,21 @@ def get_step_data(
     direction: str = Query("out", pattern="^(in|out)$"),
     limit: int = Query(10, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
 ):
     try:
         from app.models.execution import StepRun, PipelineRun
         from app.engine.runner_core.forensics import ForensicSniffer
         
         # Ownership check
-        step = db.query(StepRun).join(PipelineRun).filter(
-            StepRun.id == step_id, 
-            PipelineRun.user_id == current_user.id
-        ).first()
+        query = db.query(StepRun).join(PipelineRun).filter(StepRun.id == step_id)
+        if current_user.active_workspace_id:
+            query = query.filter(PipelineRun.workspace_id == current_user.active_workspace_id)
+        else:
+            query = query.filter(PipelineRun.user_id == current_user.id)
+            
+        step = query.first()
         
         if not step:
             logger.error(f"Step run {step_id} not found or access denied")
@@ -435,7 +561,8 @@ def get_step_data(
     description="Manually purge all cached forensic Parquet files."
 )
 def clear_forensic_cache(
-    current_user: User = Depends(get_current_user),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ):
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Only superusers can clear forensic cache")
@@ -456,12 +583,16 @@ def clear_forensic_cache(
 )
 def get_pipeline_metrics(
     pipeline_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
 ):
     try:
         service = PipelineRunService(db)
-        metrics = service.get_run_metrics(pipeline_id, user_id=current_user.id)
+        metrics = service.get_run_metrics(
+            pipeline_id, 
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id
+        )
         return metrics
         
     except AppError as e:

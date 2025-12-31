@@ -116,6 +116,10 @@ class AlertConfig(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     cooldown_minutes: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
     last_triggered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
+    # Workspace scoping
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
     alerts: Mapped[list["Alert"]] = relationship("Alert", back_populates="config")
 
     __table_args__ = (
@@ -149,6 +153,10 @@ class Alert(Base, AuditMixin, OwnerMixin):
 
     delivery_error: Mapped[Optional[str]] = mapped_column(Text)
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Workspace scoping
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     config: Mapped[Optional["AlertConfig"]] = relationship("AlertConfig", back_populates="alerts")
     pipeline: Mapped[Optional["Pipeline"]] = relationship("Pipeline")

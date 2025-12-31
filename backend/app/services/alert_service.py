@@ -35,7 +35,7 @@ class AlertService:
             configs = db.query(models.AlertConfig).filter(
                 models.AlertConfig.enabled == True,
                 models.AlertConfig.alert_type == alert_type,
-                models.AlertConfig.user_id == pipeline.user_id
+                models.AlertConfig.workspace_id == pipeline.workspace_id
             ).all()
 
             alerts = []
@@ -61,6 +61,7 @@ class AlertService:
                     pipeline_id=pipeline_id,
                     job_id=job_id,
                     user_id=pipeline.user_id,
+                    workspace_id=pipeline.workspace_id,
                     message=alert_msg,
                     level=level,
                     status=AlertStatus.PENDING,
@@ -82,7 +83,7 @@ class AlertService:
                     except Exception as task_err:
                         logger.error(f"Failed to dispatch alert task: {task_err}")
 
-                # Broadcast to WebSocket
+                # Broadcast to WebSocket (scoped to workspace or user? usually workspace)
                 try:
                     notification_payload = {
                         "id": alert.id,
@@ -91,8 +92,12 @@ class AlertService:
                         "level": alert.level.value,
                         "job_id": alert.job_id,
                         "pipeline_id": alert.pipeline_id,
+                        "workspace_id": alert.workspace_id,
                         "created_at": datetime.now(timezone.utc).isoformat()
                     }
+                    # Broadcast to everyone in the workspace
+                    redis_client.publish(f"workspace_notifications:{pipeline.workspace_id}", json.dumps(notification_payload))
+                    # Also keep user channel for backward compatibility or direct mentions
                     redis_client.publish(f"user_notifications:{pipeline.user_id}", json.dumps(notification_payload))
                 except Exception as broadcast_err:
                     logger.error(f"Failed to broadcast notification: {broadcast_err}")
@@ -114,6 +119,7 @@ class AlertService:
                     pipeline_id=pipeline_id,
                     job_id=job_id,
                     user_id=pipeline.user_id,
+                    workspace_id=pipeline.workspace_id,
                     message=default_msg,
                     level=level,
                     status=AlertStatus.PENDING,
@@ -133,8 +139,10 @@ class AlertService:
                         "level": alert.level.value,
                         "job_id": alert.job_id,
                         "pipeline_id": alert.pipeline_id,
+                        "workspace_id": alert.workspace_id,
                         "created_at": datetime.now(timezone.utc).isoformat()
                     }
+                    redis_client.publish(f"workspace_notifications:{pipeline.workspace_id}", json.dumps(notification_payload))
                     redis_client.publish(f"user_notifications:{pipeline.user_id}", json.dumps(notification_payload))
                 except Exception as broadcast_err:
                     logger.error(f"Failed to broadcast default notification: {broadcast_err}")
@@ -144,3 +152,41 @@ class AlertService:
         except Exception as e:
             logger.error(f"Error triggering alerts: {e}", exc_info=True)
             return []
+
+    @staticmethod
+    def create_system_alert(
+        db: Session,
+        workspace_id: int,
+        message: str,
+        level: AlertLevel = AlertLevel.INFO,
+        user_id: Optional[int] = None,
+    ):
+        """
+        Creates a simple In-App system alert and broadcasts it.
+        """
+        try:
+            redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+            alert = models.Alert(
+                workspace_id=workspace_id,
+                message=message,
+                level=level,
+                status=AlertStatus.PENDING,
+                delivery_method=AlertDeliveryMethod.IN_APP,
+                user_id=user_id
+            )
+            db.add(alert)
+            db.commit()
+            db.refresh(alert)
+            
+            notification_payload = {
+                "id": alert.id,
+                "type": "system_notification",
+                "message": alert.message,
+                "level": alert.level.value,
+                "workspace_id": alert.workspace_id,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            redis_client.publish(f"workspace_notifications:{workspace_id}", json.dumps(notification_payload))
+            
+        except Exception as e:
+            logger.error(f"Error creating system alert: {e}", exc_info=True)

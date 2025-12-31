@@ -32,14 +32,25 @@ SynqX handles sensitive information (DB passwords, API keys) using a specialized
 
 ---
 
-## 3. User Isolation
+## 3. Workspaces & RBAC (Role-Based Access Control)
 
-SynqX is built for shared environments, using a strict ownership model to prevent data leakage.
+SynqX uses a powerful multi-tenancy model centered around **Workspaces** to provide strict data isolation and granular access control.
 
-### The Ownership Pattern
-Almost every model in the backend (Pipelines, Connections, Assets, Alerts) is tied to a specific user.
--   **Scope**: Every record is tied to a specific `user_id`.
--   **Enforcement**: The backend automatically filters all database queries based on the authenticated user's ID. You can only see or modify resources that you own.
+### The Multi-Tenancy Model
+-   **Workspaces**: The top-level container for all resources. Every pipeline, connection, asset, and alert belongs to a single workspace.
+-   **Strict Scoping**: All API requests are automatically scoped to the user's currently active workspace. It is impossible for a user in "Workspace A" to see or interact with data in "Workspace B" unless they are explicitly a member of both.
+-   **User Membership**: Users are invited to workspaces and assigned a specific role, which dictates their permissions within that scope.
+
+### Role-Based Access Control (RBAC)
+SynqX defines three distinct roles to enforce the principle of least privilege:
+
+| Role | Permissions | Description |
+| :--- | :--- | :--- |
+| 👁️ **Viewer** | `Read-Only` | Can view all pipelines, connections, assets, and execution history within the workspace. Cannot make any changes. |
+| ✍️ **Editor** | `Read & Write` | Has all Viewer permissions, plus the ability to create, update, and trigger pipelines, connections, and assets. |
+| 👑 **Admin** | `Full Control` | Has all Editor permissions, plus the ability to manage workspace settings, invite or remove members, and delete resources. |
+
+**Enforcement**: These roles are checked by the API gateway for every incoming request, ensuring that no user can perform an action they are not authorized for.
 
 ---
 
@@ -47,10 +58,12 @@ Almost every model in the backend (Pipelines, Connections, Assets, Alerts) is ti
 
 ### API Key Management
 For external programmatic access, users can generate **Scoped API Keys**.
--   **Prefixing**: Keys are prefixed (e.g., `sqx_...`) for easy identification by security scanners.
--   **Least Privilege**: Keys can be restricted to specific scopes (e.g., `read:pipelines`, `trigger:runs`).
+-   **Workspace Scoping**: Each API key is tied to a specific user *and* a specific workspace, inheriting the user's role within that workspace.
+-   **Prefixing**: Keys are prefixed (e.g., `sk_...`) for easy identification by security scanners.
+-   **Least Privilege**: Future versions will allow keys to be restricted to even more granular scopes (e.g., `read:pipelines`, `trigger:runs`).
 
 ### Audit Logging
 The `AuditMixin` tracks exactly who performed what action and when. This provides a clear trail for security audits and troubleshooting.
 -   `created_at`: Creation timestamp.
 -   `updated_at`: Last update timestamp.
+-   `created_by`: The email of the user who created the record.

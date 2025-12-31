@@ -33,8 +33,8 @@ import { RunPipelineDialog } from './RunPipelineDialog';
 
 interface PipelineGridItemProps {
     pipeline: Pipeline & { lastJob?: Job };
-    onRun: (id: number, versionId?: number) => void;
-    onOpenSettings: (pipeline: Pipeline) => void;
+    onRun?: (id: number, versionId?: number) => void;
+    onOpenSettings?: (pipeline: Pipeline) => void;
     onViewVersions: (pipeline: Pipeline) => void;
 }
 
@@ -110,7 +110,7 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/60 shadow-lg p-1">
-                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => setIsRunDialogOpen(true)}>
+                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => setIsRunDialogOpen(true)} disabled={!onRun}>
                                 <Play className="h-3.5 w-3.5 opacity-70" /> Run with Options...
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onViewVersions(pipeline)}>
@@ -120,7 +120,7 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => navigate(`/pipelines/${pipeline.id}`)}>
                                 <Settings className="h-3.5 w-3.5 opacity-70" /> Configure Logic
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onOpenSettings(pipeline)}>
+                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onOpenSettings?.(pipeline)} disabled={!onOpenSettings}>
                                 <Workflow className="h-3.5 w-3.5 opacity-70" /> Pipeline Settings
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border/40 my-1" />
@@ -207,7 +207,8 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                         <Button 
                             size="sm" 
                             className="h-9 rounded-xl pl-4 pr-3 text-xs font-bold shadow-lg shadow-primary/10 hover:shadow-primary/20 hover:-translate-y-px transition-all bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-                            onClick={() => onRun(pipeline.id)}
+                            onClick={() => onRun?.(pipeline.id)}
+                            disabled={!onRun}
                         >
                             <Zap className="h-3.5 w-3.5 fill-current" />
                             Run

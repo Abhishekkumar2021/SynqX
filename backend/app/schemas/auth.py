@@ -49,11 +49,21 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
 
 class UserRead(BaseModel):
+
     id: int
+
     email: EmailStr
+
     full_name: Optional[str] = None
+
     is_active: bool = True
+
     is_superuser: bool = False
+
+    active_workspace_id: Optional[int] = None
+
     
+
     class Config:
+
         from_attributes = True

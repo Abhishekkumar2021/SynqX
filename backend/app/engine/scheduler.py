@@ -331,6 +331,7 @@ class Scheduler:
             # 1. Create Scheduler Event
             event = SchedulerEvent(
                 pipeline_id=pipeline.id,
+                workspace_id=pipeline.workspace_id,
                 event_type="TRIGGER",
                 timestamp=now,  # Use actual trigger time to prevent drift
                 cron_expression=pipeline.schedule_cron,
@@ -341,6 +342,7 @@ class Scheduler:
             # 2. Create Job
             job = Job(
                 pipeline_id=pipeline.id,
+                workspace_id=pipeline.workspace_id,
                 pipeline_version_id=pipeline.published_version_id,
                 correlation_id=str(uuid.uuid4()),
                 status=JobStatus.PENDING,

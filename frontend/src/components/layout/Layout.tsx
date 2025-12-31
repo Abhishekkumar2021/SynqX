@@ -18,14 +18,14 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = () => {
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const { isZenMode, setIsZenMode } = useZenMode();
 
     // Global CMD+K Shortcut
     useEffect(() => {
         const down = (e: KeyboardEvent) => {
-            if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
+            if (e.key && e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 setIsSearchOpen((open) => !open);
             }

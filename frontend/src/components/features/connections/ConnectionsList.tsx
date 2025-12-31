@@ -30,9 +30,9 @@ interface ConnectionsListProps {
     isLoading: boolean;
     viewMode: 'grid' | 'list';
     testingId: number | null;
-    onTest: (id: number) => void;
-    onEdit: (connection: Connection) => void;
-    onDelete: (connection: Connection) => void;
+    onTest?: (id: number) => void;
+    onEdit?: (connection: Connection) => void;
+    onDelete?: (connection: Connection) => void;
 }
 
 const ConnectionCard = ({
@@ -44,9 +44,9 @@ const ConnectionCard = ({
 }: {
     connection: Connection;
     testingId: number | null;
-    onTest: (id: number) => void;
-    onEdit: (connection: Connection) => void;
-    onDelete: (connection: Connection) => void;
+    onTest?: (id: number) => void;
+    onEdit?: (connection: Connection) => void;
+    onDelete?: (connection: Connection) => void;
 }) => {
     const navigate = useNavigate();
     const isTesting = testingId === connection.id;
@@ -112,16 +112,16 @@ const ConnectionCard = ({
                                 <DropdownMenuItem onClick={() => navigate(`/connections/${connection.id}`)} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     <ArrowRight className="mr-2 h-3.5 w-3.5 opacity-70" /> View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onTest(connection.id)} disabled={isTesting} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
+                                <DropdownMenuItem onClick={() => onTest?.(connection.id)} disabled={isTesting || !onTest} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     {isTesting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-2 h-3.5 w-3.5 opacity-70" />}
                                     Test Connection
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-border/40 my-1" />
-                                <DropdownMenuItem onClick={() => onEdit(connection)} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
+                                <DropdownMenuItem onClick={() => onEdit?.(connection)} disabled={!onEdit} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     <Pencil className="mr-2 h-3.5 w-3.5 opacity-70" /> Edit Configuration
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-border/40 my-1" />
-                                <DropdownMenuItem onClick={() => onDelete(connection)} className="rounded-lg font-medium text-xs py-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
+                                <DropdownMenuItem onClick={() => onDelete?.(connection)} disabled={!onDelete} className="rounded-lg font-medium text-xs py-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
                                     <Trash2 className="mr-2 h-3.5 w-3.5 opacity-70" /> Delete
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -164,9 +164,9 @@ const ConnectionRow = ({
 }: {
     connection: Connection;
     testingId: number | null;
-    onTest: (id: number) => void;
-    onEdit: (connection: Connection) => void;
-    onDelete: (connection: Connection) => void;
+    onTest?: (id: number) => void;
+    onEdit?: (connection: Connection) => void;
+    onDelete?: (connection: Connection) => void;
 }) => {
     const navigate = useNavigate();
     const isTesting = testingId === connection.id;
@@ -236,9 +236,9 @@ const ConnectionRow = ({
                             size="icon"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onTest(connection.id);
+                                onTest?.(connection.id);
                             }}
-                            disabled={isTesting}
+                            disabled={isTesting || !onTest}
                             className="h-8 w-8 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600 transition-all"
                             title="Test Connection"
                         >
@@ -255,16 +255,16 @@ const ConnectionRow = ({
                                 <DropdownMenuItem onClick={() => navigate(`/connections/${connection.id}`)} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     <ArrowRight className="mr-2 h-3.5 w-3.5 opacity-70" /> View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onTest(connection.id)} disabled={isTesting} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
+                                <DropdownMenuItem onClick={() => onTest?.(connection.id)} disabled={isTesting || !onTest} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     {isTesting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-2 h-3.5 w-3.5 opacity-70" />}
                                     Test Connection
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-border/40 my-1" />
-                                <DropdownMenuItem onClick={() => onEdit(connection)} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
+                                <DropdownMenuItem onClick={() => onEdit?.(connection)} disabled={!onEdit} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     <Pencil className="mr-2 h-3.5 w-3.5 opacity-70" /> Edit Configuration
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator className="bg-border/40 my-1" />
-                                <DropdownMenuItem onClick={() => onDelete(connection)} className="rounded-lg font-medium text-xs py-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
+                                <DropdownMenuItem onClick={() => onDelete?.(connection)} disabled={!onDelete} className="rounded-lg font-medium text-xs py-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer">
                                     <Trash2 className="mr-2 h-3.5 w-3.5 opacity-70" /> Delete
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

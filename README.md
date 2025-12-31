@@ -59,9 +59,11 @@ graph TD
     *   **APIs**: Generic REST connectors with adaptive pagination.
     *   **NoSQL**: MongoDB, Redis.
 
-### 🛡️ Enterprise-Grade Security
-*   **The Vault**: Application-layer AES-256 encryption ensures credentials never leak, even if the underlying database is compromised.
-*   **Zero-Exposure**: Decryption occurs only in volatile memory within the worker process during active execution.
+### 🛡️ Enterprise-Grade Security & Governance
+*   **The Vault**: Application-layer AES-256 encryption ensures credentials never leak, even if the underlying database is compromised. Decryption occurs only in volatile memory.
+*   **Multi-Tenancy**: Isolate teams, projects, and environments with secure, self-contained Workspaces.
+*   **Role-Based Access Control (RBAC)**: Fine-grained permissions (Admin, Editor, Viewer) for every action, from pipeline creation to workspace administration.
+*   **Admin CLI**: A powerful, feature-rich CLI (`synqx-admin`) for user management, system diagnostics, and administrative tasks.
 
 ---
 
@@ -74,6 +76,7 @@ graph TD
 | **Broker/Cache** | Redis | Message broker for task queues and real-time pub/sub. |
 | **Database** | PostgreSQL | Primary persistent store for metadata and execution history. |
 | **Frontend** | React, Vite | Modern SPA with TypeScript and Tailwind CSS. |
+| **Admin CLI** | Typer, Rich | Feature-rich command-line interface for system administration. |
 | **Visualization** | React Flow | Interactive node-based graph editor. |
 
 ---
@@ -109,10 +112,15 @@ If you prefer running services directly on your machine:
 **1. Backend**
 ```bash
 cd backend
+# Create a virtual environment
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+# Install dependencies using uv
+pip install uv
+uv pip install -r requirements.txt
+# Copy and configure environment variables
 cp .env.example .env
 # Update .env with your local DB credentials
+# Run the API server
 uvicorn main:app --reload
 ```
 
@@ -125,8 +133,17 @@ npm run dev
 
 **3. Workers**
 ```bash
-# In a new terminal (from backend dir)
+# In a new terminal (from backend dir with venv activated)
 celery -A app.core.celery_app worker --loglevel=info
+```
+
+### Using the Admin CLI
+Once the backend is running, you can use the admin CLI for administrative tasks:
+```bash
+# Make sure you are in the backend directory with the venv activated
+python -m scripts.synqx_admin --help
+# Example: Create a new superuser
+python -m scripts.synqx_admin users create --superuser
 ```
 
 ---
@@ -135,10 +152,11 @@ celery -A app.core.celery_app worker --loglevel=info
 
 | Module | Description | Path |
 | :--- | :--- | :--- |
-| **Backend** | Python/FastAPI engine, Celery worker cluster, and Vault security service. | [`/backend`](./backend) |
-| **Frontend** | Premium React-based Console UI with a visual DAG editor. | [`/frontend`](./frontend) |
+| **Backend** | Python/FastAPI engine, Celery worker cluster, Vault security, and Admin CLI. | [`/backend`](./backend) |
+| **Frontend** | Premium React-based Console UI with a visual DAG editor and documentation. | [`/frontend`](./frontend) |
 | **Helm Charts** | Kubernetes deployment manifests for production. | [`/helm`](./helm) |
 | **Scripts** | Unified lifecycle management scripts for local development. | [`/scripts`](./scripts) |
+| **Admin CLI** | The `synqx_admin.py` CLI tool for system administration. | [`/backend/scripts`](./backend/scripts) |
 
 ---
 

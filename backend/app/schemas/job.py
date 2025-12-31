@@ -119,9 +119,18 @@ class PipelineRunRead(PipelineRunBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PipelineRunContextRead(BaseModel):
+    context: Dict[str, Any]
+    parameters: Dict[str, Any]
+    environment: Dict[str, Any]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PipelineRunDetailRead(PipelineRunRead):
     version: Optional[PipelineVersionRead] = None # Will contain version nodes and edges
     step_runs: List[StepRunRead] = Field(default_factory=list)
+    context: Optional[PipelineRunContextRead] = None
 
 
 class PipelineRunListResponse(BaseModel):

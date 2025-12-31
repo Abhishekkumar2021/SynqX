@@ -99,6 +99,25 @@ def register_user(
             detail="Failed to create user. Please try again.",
         )
 
+@router.get("/users/search", response_model=list[UserRead])
+def search_users(
+    q: str,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Search users by email for autocomplete.
+    """
+    if len(q) < 3:
+        return []
+    
+    users = db.query(User).filter(
+        User.email.ilike(f"%{q}%"),
+        User.is_active == True
+    ).limit(10).all()
+    
+    return users
+
 @router.get("/me", response_model=UserRead)
 def read_users_me(
     current_user: User = Depends(deps.get_current_user),

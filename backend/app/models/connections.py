@@ -13,6 +13,7 @@ from app.models.enums import ConnectorType, AssetType
 if TYPE_CHECKING:
     from app.models.execution import Watermark
     from app.models.environment import Environment
+    from app.models.workspace import Workspace
 
 class Connection(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     __tablename__ = "connections"
@@ -37,6 +38,12 @@ class Connection(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     description: Mapped[Optional[str]] = mapped_column(Text)
     tags: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
 
+    # Workspace scoping
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    # Relationships
+    workspace: Mapped[Optional["Workspace"]] = relationship("Workspace", back_populates="connections")
     assets: Mapped[list["Asset"]] = relationship(
         back_populates="connection", cascade="all, delete-orphan", lazy="selectin"
     )

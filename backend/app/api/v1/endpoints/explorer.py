@@ -4,7 +4,8 @@ import time
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from app.api.deps import get_db, get_current_user
+from app import models
+from app.api import deps
 from app.services import connection_service
 from app.services.vault_service import VaultService
 from app.connectors.factory import ConnectorFactory
@@ -38,18 +39,24 @@ class HistoryItem(BaseModel):
     class Config:
         from_attributes = True
 
+@router.post("/{connection_id}/execute", response_model=QueryResponse)
 def execute_connection_query(
     connection_id: int,
     request: QueryRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     """
     Execute a raw query against a connection.
     Supports SQL and NoSQL depending on the connector type.
     """
     service = connection_service.ConnectionService(db)
-    connection = service.get_connection(connection_id, user_id=current_user.id)
+    connection = service.get_connection(
+        connection_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
     if not connection:
         raise HTTPException(status_code=404, detail="Connection not found")
     
@@ -109,6 +116,7 @@ def execute_connection_query(
         execution_time_ms = int((time.time() - start_time) * 1000)
         history_item = QueryHistory(
             connection_id=connection_id,
+            workspace_id=current_user.active_workspace_id,
             query=request.query,
             status=status,
             execution_time_ms=execution_time_ms,
@@ -123,55 +131,59 @@ def execute_connection_query(
 def get_query_history(
     limit: int = 50,
     offset: int = 0,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     """
-    Get execution history for the current user.
+    Get execution history for the active workspace.
     """
-    history = db.query(QueryHistory)\
-        .filter(QueryHistory.created_by == current_user.email)\
+    history = db.query(QueryHistory, models.connections.Connection.name.label("connection_name"))\
+        .join(models.connections.Connection, QueryHistory.connection_id == models.connections.Connection.id)\
+        .filter(QueryHistory.workspace_id == current_user.active_workspace_id)\
         .order_by(desc(QueryHistory.created_at))\
         .limit(limit)\
         .offset(offset)\
         .all()
     
-    response = []
-    for h in history:
-        response.append({
-            "id": h.id,
-            "query": h.query,
-            "status": h.status,
-            "execution_time_ms": h.execution_time_ms,
-            "row_count": h.row_count,
-            "created_at": h.created_at,
-            "connection_name": h.connection.name if h.connection else "Unknown",
-            "created_by": h.created_by
-        })
-    return response
+    results = []
+    for item, connection_name in history:
+        history_data = item.__dict__
+        history_data["connection_name"] = connection_name
+        res = HistoryItem.model_validate(history_data)
+        results.append(res)
+        
+    return results
 
 @router.delete("/history")
 def clear_query_history(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ):
     """
-    Clear execution history for the current user.
+    Clear execution history for the active workspace.
     """
-    db.query(QueryHistory).filter(QueryHistory.created_by == current_user.email).delete()
+    db.query(QueryHistory).filter(QueryHistory.workspace_id == current_user.active_workspace_id).delete()
     db.commit()
     return {"status": "success"}
 
+@router.get("/{connection_id}/schema-metadata")
 def get_connection_schema_metadata(
     connection_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     """
     Get full schema metadata for autocompletion.
     """
     service = connection_service.ConnectionService(db)
-    connection = service.get_connection(connection_id, user_id=current_user.id)
+    connection = service.get_connection(
+        connection_id, 
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id
+    )
     if not connection:
         raise HTTPException(status_code=404, detail="Connection not found")
     

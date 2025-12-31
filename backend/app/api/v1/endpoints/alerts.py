@@ -14,13 +14,15 @@ def create_alert_config(
     db: Session = Depends(deps.get_db),
     alert_in: alert_schema.AlertConfigCreate,
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ) -> Any:
     """
-    Create a new alert configuration.
+    Create a new alert configuration for the workspace.
     """
     db_obj = models.AlertConfig(
         **alert_in.model_dump(),
         user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
         created_by=str(current_user.id)
     )
     db.add(db_obj)
@@ -32,14 +34,15 @@ def create_alert_config(
 def list_alert_configs(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
     """
-    List alert configurations.
+    List alert configurations for the active workspace.
     """
     return db.query(models.AlertConfig).filter(
-        models.AlertConfig.user_id == current_user.id
+        models.AlertConfig.workspace_id == current_user.active_workspace_id
     ).offset(skip).limit(limit).all()
 
 @router.delete("/{alert_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -48,13 +51,14 @@ def delete_alert_config(
     db: Session = Depends(deps.get_db),
     alert_id: int,
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ) -> None:
     """
     Delete alert configuration.
     """
     alert = db.query(models.AlertConfig).filter(
         models.AlertConfig.id == alert_id,
-        models.AlertConfig.user_id == current_user.id
+        models.AlertConfig.workspace_id == current_user.active_workspace_id
     ).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert config not found")
@@ -69,14 +73,15 @@ def delete_alert_config(
 def list_alerts(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
     """
-    List individual alerts with pagination.
+    List individual alerts for the workspace.
     """
     query = db.query(models.Alert).filter(
-        models.Alert.user_id == current_user.id
+        models.Alert.workspace_id == current_user.active_workspace_id
     )
     
     total = query.count()
@@ -96,13 +101,14 @@ def update_alert_status(
     alert_id: int,
     alert_in: alert_schema.AlertUpdate,
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ) -> Any:
     """
     Update alert status (e.g., acknowledge).
     """
     alert = db.query(models.Alert).filter(
         models.Alert.id == alert_id,
-        models.Alert.user_id == current_user.id
+        models.Alert.workspace_id == current_user.active_workspace_id
     ).first()
     
     if not alert:
@@ -117,38 +123,40 @@ def update_alert_status(
     db.refresh(alert)
     return alert
 
-@router.get("/{alert_id}", response_model=alert_schema.AlertConfigRead)
+@router.get("/configs/{alert_id}", response_model=alert_schema.AlertConfigRead)
 def get_alert_config(
     *,
     db: Session = Depends(deps.get_db),
     alert_id: int,
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
 ) -> Any:
     """
     Get alert configuration by ID.
     """
     alert = db.query(models.AlertConfig).filter(
         models.AlertConfig.id == alert_id,
-        models.AlertConfig.user_id == current_user.id
+        models.AlertConfig.workspace_id == current_user.active_workspace_id
     ).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert config not found")
     return alert
 
-@router.patch("/{alert_id}", response_model=alert_schema.AlertConfigRead)
+@router.patch("/configs/{alert_id}", response_model=alert_schema.AlertConfigRead)
 def update_alert_config(
     *,
     db: Session = Depends(deps.get_db),
     alert_id: int,
     alert_in: alert_schema.AlertConfigUpdate,
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ) -> Any:
     """
     Update alert configuration.
     """
     alert = db.query(models.AlertConfig).filter(
         models.AlertConfig.id == alert_id,
-        models.AlertConfig.user_id == current_user.id
+        models.AlertConfig.workspace_id == current_user.active_workspace_id
     ).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert config not found")

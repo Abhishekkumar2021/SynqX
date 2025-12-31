@@ -14,6 +14,7 @@ import {
 import { PageMeta } from '@/components/common/PageMeta';
 import { motion } from 'framer-motion';
 import { useZenMode } from '@/hooks/useZenMode';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { cn } from '@/lib/utils';
 
 import { ConnectionsHeader } from '@/components/features/connections/ConnectionsHeader';
@@ -32,6 +33,7 @@ export const ConnectionsPage: React.FC = () => {
     const [filter, setFilter] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const { isZenMode } = useZenMode();
+    const { isAdmin, isEditor } = useWorkspace();
 
     const { data: connections, isLoading, error } = useQuery({
         queryKey: ['connections'],
@@ -109,7 +111,7 @@ export const ConnectionsPage: React.FC = () => {
 
     const filteredConnections = useMemo(() => {
         if (!connections) return [];
-        return connections.filter(c =>
+        return connections.filter((c: { name: string; connector_type: string; }) =>
             c.name.toLowerCase().includes(filter.toLowerCase()) ||
             c.connector_type.toLowerCase().includes(filter.toLowerCase())
         );
@@ -158,7 +160,7 @@ export const ConnectionsPage: React.FC = () => {
         >
             <PageMeta title="Connections" description="Manage data sources and destinations." />
 
-            <ConnectionsHeader onCreate={handleCreate} />
+            <ConnectionsHeader onCreate={isEditor ? handleCreate : undefined} />
 
             <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
                 <ConnectionsToolbar 
@@ -174,14 +176,14 @@ export const ConnectionsPage: React.FC = () => {
                     isLoading={isLoading}
                     viewMode={viewMode}
                     testingId={testingId}
-                    onTest={handleTest}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
+                    onTest={isEditor ? handleTest : undefined}
+                    onEdit={isEditor ? handleEdit : undefined}
+                    onDelete={isAdmin ? handleDelete : undefined}
                 />
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-5xl h-[700px] flex flex-col p-0 gap-0 overflow-hidden rounded-3xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
+                <DialogContent className="max-w-5xl h-175 flex flex-col p-0 gap-0 overflow-hidden rounded-3xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
                     <CreateConnectionDialog
                         initialData={editingConnection}
                         onClose={() => setIsDialogOpen(false)}

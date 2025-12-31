@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     LayoutDashboard, Cable, Workflow, Activity, Settings,
-    Search, Sparkles, Book
+    Search, Sparkles, Book, Users
 } from 'lucide-react';
 
 export interface NavItemDef {
@@ -25,5 +25,6 @@ export const KNOWLEDGE_NAV: NavItemDef[] = [
 ];
 
 export const CONFIG_NAV: NavItemDef[] = [
+    { label: "Team", to: "/team", icon: <Users /> },
     { label: "Settings", to: "/settings", icon: <Settings />, end: true },
 ];

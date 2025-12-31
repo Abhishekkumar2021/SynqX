@@ -9,6 +9,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { Layout } from './components/layout/Layout';
 import { ThemeProvider } from './components/providers/ThemeProvider';
 import { AuthProvider } from './components/providers/AuthProvider';
+import { WorkspaceProvider } from './components/providers/WorkspaceProvider';
 import { ZenProvider } from '@/components/providers/ZenProvider';
 import { useAuth } from './hooks/useAuth';
 import { Toaster } from './components/ui/sonner';
@@ -25,6 +26,7 @@ const PipelineEditorPage = lazy(() => import('./pages/PipelineEditorPage').then(
 const JobsPage = lazy(() => import('./pages/JobsPage').then(module => ({ default: module.JobsPage })));
 const DocsPage = lazy(() => import('./pages/DocsPage').then(module => ({ default: module.DocsPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
+const WorkspaceTeamPage = lazy(() => import('./pages/WorkspaceTeamPage').then(module => ({ default: module.WorkspaceTeamPage })));
 const AlertsPage = lazy(() => import('./pages/AlertsPage').then(module => ({ default: module.AlertsPage })));
 const OperatorsPage = lazy(() => import('./pages/OperatorsPage').then(module => ({ default: module.OperatorsPage })));
 const ExplorerPage = lazy(() => import('./pages/ExplorerPage').then(module => ({ default: module.ExplorerPage })));
@@ -133,7 +135,7 @@ const AppRoutes = () => (
       <Route path="/docs/*" element={<DocsPage />} />
     </Route>
 
-    {/* Secured Application Area */}
+// Secured Application Area
     <Route element={<ProtectedRoute />}>
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/explorer" element={<ExplorerPage />} />
@@ -146,6 +148,7 @@ const AppRoutes = () => (
 
       <Route path="/jobs/:id?" element={<JobsPage />} />
       <Route path="/alerts" element={<AlertsPage />} />
+      <Route path="/team" element={<WorkspaceTeamPage />} />
       <Route path="/operators" element={<OperatorsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
 
@@ -161,10 +164,12 @@ function App() {
         <ZenProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <BrowserRouter>
-                <AppRoutes />
-                <Toaster position='top-right' closeButton />
-              </BrowserRouter>
+              <WorkspaceProvider>
+                <BrowserRouter>
+                  <AppRoutes />
+                  <Toaster position='top-right' closeButton />
+                </BrowserRouter>
+              </WorkspaceProvider>
             </AuthProvider>
           </QueryClientProvider>
         </ZenProvider>

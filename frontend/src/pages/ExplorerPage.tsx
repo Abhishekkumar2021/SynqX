@@ -31,6 +31,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTheme } from '@/hooks/useTheme';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { cn } from '@/lib/utils';
 
 const MaximizePortal = ({ children }: { children: React.ReactNode }) => {
@@ -51,6 +52,7 @@ const MaximizePortal = ({ children }: { children: React.ReactNode }) => {
 
 export const ExplorerPage: React.FC = () => {
     const { theme } = useTheme();
+    const { isEditor, isAdmin } = useWorkspace();
     const monaco = useMonaco();
     const editorRef = useRef<any>(null);
 
@@ -479,52 +481,54 @@ export const ExplorerPage: React.FC = () => {
 
                     <div className="h-6 w-px bg-border/40 mx-2" />
 
-                    <div className="flex items-center bg-background/50 rounded-xl p-0.5 border border-border/40 shadow-sm">
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => runQuery('all')}
-                                    disabled={isExecuting || !selectedConnectionId || !isSupported}
-                                    className="h-7 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wider gap-2 hover:bg-primary/10 hover:text-primary transition-all"
-                                >
-                                    {isExecuting ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} fill="currentColor" />}
-                                    Run
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Run All (or Active Script)</TooltipContent>
-                        </Tooltip>
-                        <div className="w-px h-4 bg-border/40 mx-1" />
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => runQuery('selection')}
-                                    disabled={isExecuting || !selectedConnectionId || !isSupported}
-                                    className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
-                                >
-                                    <TextSelect size={14} />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Run Selection</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => runQuery('cursor')}
-                                    disabled={isExecuting || !selectedConnectionId || !isSupported}
-                                    className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
-                                >
-                                    <SquareTerminal size={14} />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Run Current Statement</TooltipContent>
-                        </Tooltip>
-                    </div>
+                    {isEditor && (
+                        <div className="flex items-center bg-background/50 rounded-xl p-0.5 border border-border/40 shadow-sm">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => runQuery('all')}
+                                        disabled={isExecuting || !selectedConnectionId || !isSupported}
+                                        className="h-7 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wider gap-2 hover:bg-primary/10 hover:text-primary transition-all"
+                                    >
+                                        {isExecuting ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} fill="currentColor" />}
+                                        Run
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Run All (or Active Script)</TooltipContent>
+                            </Tooltip>
+                            <div className="w-px h-4 bg-border/40 mx-1" />
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => runQuery('selection')}
+                                        disabled={isExecuting || !selectedConnectionId || !isSupported}
+                                        className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
+                                    >
+                                        <TextSelect size={14} />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Run Selection</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => runQuery('cursor')}
+                                        disabled={isExecuting || !selectedConnectionId || !isSupported}
+                                        className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
+                                    >
+                                        <SquareTerminal size={14} />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Run Current Statement</TooltipContent>
+                            </Tooltip>
+                        </div>
+                    )}
 
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -752,7 +756,7 @@ export const ExplorerPage: React.FC = () => {
                                     setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, query: q } : t));
                                     setShowHistory(false);
                                 }}
-                                onClear={() => clearHistoryMutation.mutate()}
+                                onClear={isAdmin ? () => clearHistoryMutation.mutate() : undefined}
                             />
                         </>
                     )}

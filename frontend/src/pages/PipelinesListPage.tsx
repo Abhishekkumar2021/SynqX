@@ -20,10 +20,12 @@ import { LoadingSkeleton, EmptyState } from '@/components/features/pipelines/Pip
 import { PageMeta } from '@/components/common/PageMeta';
 import { useJobsListTelemetry } from '@/hooks/useJobsListTelemetry';
 import { useZenMode } from '@/hooks/useZenMode';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 export const PipelinesListPage: React.FC = () => {
     const { isZenMode } = useZenMode();
-    // Enable real-time updates for pipeline status via global jobs telemetry
+    const { isEditor } = useWorkspace();
+    
     useJobsListTelemetry();
 
     const queryClient = useQueryClient();
@@ -117,11 +119,13 @@ export const PipelinesListPage: React.FC = () => {
                         Orchestrate and monitor your data workflows.
                     </p>
                 </div>
-                <Link to="/pipelines/new" className="w-full md:w-auto">
-                    <Button size="sm" className="w-full md:w-auto rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-semibold">
-                        <Plus className="mr-2 h-5 w-5" /> Create Pipeline
-                    </Button>
-                </Link>
+                {isEditor && (
+                    <Link to="/pipelines/new" className="w-full md:w-auto">
+                        <Button size="sm" className="w-full md:w-auto rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-semibold">
+                            <Plus className="mr-2 h-5 w-5" /> Create Pipeline
+                        </Button>
+                    </Link>
+                )}
             </div>
 
             {/* --- Content Pane (Glass) --- */}
@@ -180,8 +184,8 @@ export const PipelinesListPage: React.FC = () => {
                                     <PipelineGridItem
                                         key={pipeline.id}
                                         pipeline={pipeline}
-                                        onRun={(id, versionId) => runMutation.mutate({ id, versionId })}
-                                        onOpenSettings={openSettings}
+                                        onRun={isEditor ? (id, versionId) => runMutation.mutate({ id, versionId }) : undefined}
+                                        onOpenSettings={isEditor ? openSettings : undefined}
                                         onViewVersions={openVersions}
                                     />
                                 ))}
@@ -208,8 +212,8 @@ export const PipelinesListPage: React.FC = () => {
                                     <PipelineListItem
                                         key={pipeline.id}
                                         pipeline={pipeline}
-                                        onRun={(id, versionId) => runMutation.mutate({ id, versionId })}
-                                        onOpenSettings={openSettings}
+                                        onRun={isEditor ? (id, versionId) => runMutation.mutate({ id, versionId }) : undefined}
+                                        onOpenSettings={isEditor ? openSettings : undefined}
                                         onViewVersions={openVersions}
                                         isRunningMutation={runMutation.isPending}
                                     />

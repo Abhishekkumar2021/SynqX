@@ -3,47 +3,69 @@ title: "Data Models: Core & Physical"
 description: "Deep dive into Connections, Assets, and Schema Intelligence."
 ---
 
-# Core Entities & Physical Layer
+# Core Data Models
 
-These models define where data lives and how SynqX interacts with external systems.
+These models define the core entities of SynqX, including how data is organized, secured, and accessed.
 
-## Base Mixins
+## Base Mixins & Scoping
 
-SynqX enforces consistent metadata across all tables using specialized mixins.
+SynqX enforces consistent metadata and security across all tables using specialized mixins.
 
 ### `AuditMixin`
 Every primary entity tracks its lifecycle:
 -   `created_at`: Set on insert (UTC).
 -   `updated_at`: Updated automatically on every save.
--   `created_by`: User ID of the creator.
--   `updated_by`: User ID of the last modifier.
+-   `created_by`: User's email of the creator.
+-   `workspace_id`: Foreign key to the `Workspace` model. This is the primary mechanism for multi-tenancy.
 
 ### `OwnerMixin`
-Enforces user-level scoping:
--   `user_id`: Foreign key to the `User` model. All queries are automatically filtered by this ID to ensure security.
+Some resources are still directly tied to a user, especially in personal or legacy contexts.
+-   `user_id`: Foreign key to the `User` model.
+
+---
+
+## Workspace & Multi-Tenancy
+
+Workspaces are the top-level containers for all resources, providing strict isolation between teams and projects.
+
+### `workspaces` table
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `Integer` | Primary Key. |
+| `name` | `String` | Human-readable name of the workspace. |
+| `slug` | `String` | Unique, URL-friendly identifier. |
+| `description` | `Text` | Optional description of the workspace's purpose. |
+
+### `workspace_members` table
+This table links users to workspaces and defines their permissions.
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `workspace_id` | `FK` | Link to the `workspaces` table. |
+| `user_id` | `FK` | Link to the `users` table. |
+| `role` | `Enum` | The user's role: `admin`, `editor`, or `viewer`. |
 
 ---
 
 ## Connection Management
 
-The `Connection` model abstracts authentication and connectivity.
+The `Connection` model abstracts authentication and connectivity. All connections are scoped to a workspace.
 
 ### `connections` table
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `id` | `Integer` | Primary Key. |
+| `workspace_id` | `FK` | The workspace this connection belongs to. |
 | `name` | `String` | Friendly identifier. |
 | `connector_type` | `Enum` | `postgresql`, `mysql`, `snowflake`, `s3`, etc. |
 | `config_encrypted` | `Text` | The most sensitive field. Contains encrypted JSON credentials. |
 | `health_status` | `String` | Cached result of the last connectivity test. |
 | `last_test_at` | `DateTime` | When the connection was last validated. |
-| `asset_count` | `Integer` | Computed field for quick UI overview. |
 
 ---
 
 ## Asset Discovery & Lifecycle
 
-An `Asset` is a logical dataset within a `Connection`. The physical layer is responsible for translating abstract assets into specific system calls (e.g., SQL queries or API requests).
+An `Asset` is a logical dataset within a `Connection`. All assets are implicitly scoped to a workspace via their parent connection.
 
 ### `assets` table
 | Field | Type | Description |
@@ -55,7 +77,6 @@ An `Asset` is a logical dataset within a `Connection`. The physical layer is res
 | `is_source` | `Boolean` | Can be read from? |
 | `is_destination` | `Boolean` | Can be written to? |
 | `is_incremental_capable` | `Boolean` | Flag indicating if this asset supports watermarking. |
-| `row_count_estimate` | `Integer` | Cached metadata for planning. |
 
 ### Automated Discovery Mechanism
 When a user clicks "Scan for Assets", the backend:

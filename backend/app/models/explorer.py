@@ -12,6 +12,9 @@ class QueryHistory(Base, AuditMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     connection_id: Mapped[int] = mapped_column(ForeignKey("connections.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Workspace scoping
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    
     query: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False) # 'success', 'failed'
     execution_time_ms: Mapped[int] = mapped_column(Integer, nullable=False)

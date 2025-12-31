@@ -18,9 +18,10 @@ def create_api_key(
     db: Session = Depends(deps.get_db),
     api_key_in: api_key_schema.ApiKeyCreate,
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ) -> Any:
     """
-    Create a new API key.
+    Create a new API key for the workspace.
     """
     # Generate key with "sk_" prefix for easy identification
     raw_key = f"sk_{secrets.token_urlsafe(32)}"
@@ -39,6 +40,7 @@ def create_api_key(
         scopes=api_key_in.scopes,
         expires_at=expires_at,
         user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
         created_by=str(current_user.id), # AuditMixin
     )
     db.add(db_obj)
@@ -53,13 +55,14 @@ def create_api_key(
 def list_api_keys(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
     pagination: deps.PaginationParams = Depends(deps.get_pagination_params),
 ) -> Any:
     """
-    List API keys for current user.
+    List API keys for the active workspace.
     """
     keys = db.query(models.ApiKey).filter(
-        models.ApiKey.user_id == current_user.id
+        models.ApiKey.workspace_id == current_user.active_workspace_id
     ).offset(pagination.offset).limit(pagination.limit).all()
     return keys
 
@@ -69,13 +72,14 @@ def revoke_api_key(
     db: Session = Depends(deps.get_db),
     key_id: int,
     current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_admin),
 ) -> Any:
     """
-    Revoke (delete) an API key.
+    Revoke (delete) an API key from the active workspace.
     """
     key = db.query(models.ApiKey).filter(
         models.ApiKey.id == key_id,
-        models.ApiKey.user_id == current_user.id
+        models.ApiKey.workspace_id == current_user.active_workspace_id
     ).first()
     if not key:
         raise HTTPException(status_code=404, detail="API key not found")

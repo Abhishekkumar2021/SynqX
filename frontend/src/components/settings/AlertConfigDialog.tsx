@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import React from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -95,7 +96,7 @@ export const AlertConfigDialog: React.FC = () => {
                     <PlusCircle className="h-4 w-4" /> Add Alert Rule
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>
                     <DialogTitle>New Alert Rule</DialogTitle>
                     <DialogDescription>

@@ -35,6 +35,7 @@ import dagre from 'dagre';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 import { 
     DropdownMenu, 
@@ -123,6 +124,7 @@ export const PipelineCanvas: React.FC = () => {
   const queryClient = useQueryClient();
   const { fitView } = useReactFlow();
   const { theme } = useTheme();
+  const { isAdmin, isEditor } = useWorkspace();
   
   // State
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -269,13 +271,15 @@ export const PipelineCanvas: React.FC = () => {
                     type: 'glow', 
                     animated: isAdded,
                     style: { 
-                        strokeWidth: 3,
-                        stroke: isAdded ? '#10b981' : undefined
+                        strokeWidth: isAdded ? 4 : 2,
+                        stroke: isAdded ? '#10b981' : undefined,
+                        opacity: isAdded ? 1 : 0.6
                     },
+                    data: { diffStatus: isAdded ? 'added' : 'none' }
                 };
             });
 
-            // Add removed edges as dashed red lines
+            // Add removed edges as high-visibility dashed red lines
             diffData.edges.removed.forEach((edgeKey: string) => {
                 const [source, target] = edgeKey.split('->');
                 flowEdges.push({
@@ -283,8 +287,14 @@ export const PipelineCanvas: React.FC = () => {
                     source,
                     target,
                     type: 'glow',
-                    style: { stroke: '#ef4444', strokeDasharray: '5,5', opacity: 0.5 },
-                    animated: false
+                    style: { 
+                        stroke: '#ef4444', 
+                        strokeDasharray: '8,8', 
+                        opacity: 0.6,
+                        strokeWidth: 3 
+                    },
+                    animated: false,
+                    data: { diffStatus: 'removed' }
                 });
             });
 
@@ -652,22 +662,24 @@ export const PipelineCanvas: React.FC = () => {
           <div className="flex items-center gap-3">
             {!isNew && (
                 <AnimatePresence mode="wait">
-                    {!isDiffMode && (
+                    {!isDiffMode && isEditor && (
                         <motion.div 
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -10 }}
                             className="flex items-center gap-2"
                         >
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                onClick={() => setIsDeleteDialogOpen(true)}
-                                disabled={deleteMutation.isPending}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {isAdmin && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                    onClick={() => setIsDeleteDialogOpen(true)}
+                                    disabled={deleteMutation.isPending}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
                             <div className="w-px h-4 bg-border/40 mx-1" />
                             {isRunning ? (
                                 <motion.div
@@ -712,7 +724,7 @@ export const PipelineCanvas: React.FC = () => {
              
             <div className="flex items-center gap-2">
                  <AnimatePresence mode="wait">
-                    {!isDiffMode && (
+                    {!isDiffMode && isEditor && (
                         <motion.div 
                             initial={{ x: 20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
@@ -850,7 +862,7 @@ export const PipelineCanvas: React.FC = () => {
                         />
             {/* FLOATING TOOLBOX PANEL */}
             <AnimatePresence>
-                {!isDiffMode && !versionIdParam && (
+                {!isDiffMode && !versionIdParam && isEditor && (
                     <Panel position="top-center" className="mt-4 pointer-events-none">
                         <motion.div 
                             initial={{ y: -20, opacity: 0 }}

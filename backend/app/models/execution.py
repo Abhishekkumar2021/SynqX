@@ -52,6 +52,10 @@ class Job(Base, AuditMixin, OwnerMixin):
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
+    # Workspace scoping
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
     pipeline: Mapped["Pipeline"] = relationship("Pipeline", back_populates="jobs")
     version: Mapped["PipelineVersion"] = relationship("PipelineVersion")
     run: Mapped[Optional["PipelineRun"]] = relationship(
@@ -96,6 +100,10 @@ class PipelineRun(Base, AuditMixin, OwnerMixin):
     total_loaded: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     total_failed: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     bytes_processed: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+
+    # Workspace scoping
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     error_message: Mapped[Optional[str]] = mapped_column(Text)
     failed_step_id: Mapped[Optional[int]] = mapped_column(Integer)

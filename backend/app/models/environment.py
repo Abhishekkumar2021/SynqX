@@ -17,6 +17,9 @@ class Environment(Base, AuditMixin):
     connection_id: Mapped[int] = mapped_column(
         ForeignKey("connections.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # Workspace scoping
+    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    
     language: Mapped[str] = mapped_column(String(50), nullable=False) # python, node, ruby, etc.
     path: Mapped[str] = mapped_column(String(1024), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False) # pending, ready, error
