@@ -695,3 +695,61 @@ export interface UnifiedLogRead {
   step_run_id?: number;
   type: string;
 }
+
+export interface LineageNode {
+  id: string;
+  type: string;
+  label: string;
+  data: {
+    asset_id: number;
+    type: string;
+    connection_type: string;
+    row_count?: number;
+    size_bytes?: number;
+    fqn?: string;
+    schema_version?: number;
+    last_updated?: string;
+  };
+}
+
+export interface LineageEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+  data: {
+    pipeline_id: number;
+    pipeline_name: string;
+    status: string;
+    stats?: {
+      total_runs: number;
+      avg_duration: number;
+      last_run_at: string | null;
+      success_rate: number;
+    };
+  };
+}
+
+export interface LineageGraph {
+  nodes: LineageNode[];
+  edges: LineageEdge[];
+  stats: {
+    total_nodes: number;
+    total_edges: number;
+    orphaned_assets: number;
+  };
+}
+
+export interface ImpactAnalysis {
+  asset_id: number;
+  downstream_pipelines: Array<{
+    id: number;
+    name: string;
+    status: string;
+  }>;
+  downstream_assets: Array<{
+    id: number;
+    name: string;
+    type: string;
+  }>;
+}

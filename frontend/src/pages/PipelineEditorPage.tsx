@@ -5,7 +5,7 @@ import { PageMeta } from '@/components/common/PageMeta';
 
 export const PipelineEditorPage: React.FC = () => {
     return (
-        <div className="h-full w-full bg-background relative glass-panel overflow-hidden shadow-2xl">
+        <div className="h-full w-full relative overflow-hidden">
             <PageMeta title="Editor" description="Visual pipeline editor." />
             <ReactFlowProvider>
                 <PipelineCanvas />

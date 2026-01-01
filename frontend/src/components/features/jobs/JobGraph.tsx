@@ -217,7 +217,7 @@ export const JobGraph: React.FC<JobGraphProps> = ({ run }) => {
                     maxZoom={4}
                 >
                     <Background 
-                        variant={BackgroundVariant.Dots} 
+                        variant={BackgroundVariant.Lines} 
                         gap={20} 
                         size={1} 
                         color={theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}
