@@ -248,7 +248,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                 pipeline={pipeline} 
                 open={isRunDialogOpen} 
                 onOpenChange={setIsRunDialogOpen} 
-                onRun={onRun} 
+                onRun={onRun ?? (() => {})} 
             />
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

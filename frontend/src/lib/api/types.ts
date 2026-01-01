@@ -616,6 +616,7 @@ export interface PipelineStatsResponse {
   successful_runs: number;
   failed_runs: number;
   total_quarantined: number;
+  total_records_processed: number;
   average_duration_seconds?: number;
   last_run_at?: string;
   next_scheduled_run?: string;

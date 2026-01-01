@@ -10,7 +10,12 @@ import {
     Settings,
     ShieldAlert,
     Zap,
-    Database
+    Database,
+    Workflow,
+    Loader2,
+    Calendar,
+    History,
+    XCircle
 } from 'lucide-react';import {
   DropdownMenu,
   DropdownMenuContent,
@@ -290,7 +295,7 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                 pipeline={pipeline} 
                 open={isRunDialogOpen} 
                 onOpenChange={setIsRunDialogOpen} 
-                onRun={onRun} 
+                onRun={onRun ?? (() => {})} 
             />
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
