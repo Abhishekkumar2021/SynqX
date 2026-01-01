@@ -105,7 +105,7 @@ class ForensicSniffer:
                     chunk_to_write, 
                     append=file_exists, 
                     compression=self.COMPRESSION,
-                    index=False
+                    write_index=False
                 )
                 
                 new_count = current_rows + rows_to_add
