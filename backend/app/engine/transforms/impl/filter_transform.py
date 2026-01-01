@@ -23,7 +23,14 @@ class FilterTransform(BaseTransform):
                 continue
             try:
                 # Pandas query method is relatively safe for simple expressions
-                yield df.query(condition)
+                filtered_df = df.query(condition)
+                
+                if self.on_chunk:
+                    filtered_count = len(df) - len(filtered_df)
+                    if filtered_count > 0:
+                        self.on_chunk(pd.DataFrame(), direction="intermediate", filtered_count=filtered_count)
+                
+                yield filtered_df
             except UndefinedVariableError as e:
                 raise TransformationError(f"Filter condition '{condition}' uses an undefined column: {e}. "
                                         "Please check if the column exists in the input data.") from e

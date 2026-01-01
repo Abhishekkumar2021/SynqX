@@ -66,6 +66,7 @@ export const ExplorerPage: React.FC = () => {
     const [maximizedView, setMaximizedView] = useState<'none' | 'editor' | 'results'>('none');
     const [showHistory, setShowHistory] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);
+    const [queryLimit, setQueryLimit] = useState(100);
 
     // History Persistence (Backend)
     const { data: historyData, refetch: refetchHistory } = useQuery({
@@ -276,7 +277,7 @@ export const ExplorerPage: React.FC = () => {
         for (const stmt of statements) {
             try {
                 const start = performance.now();
-                const data = await executeRawQuery(parseInt(selectedConnectionId), stmt);
+                const data = await executeRawQuery(parseInt(selectedConnectionId), stmt, queryLimit);
                 const duration = Math.round(performance.now() - start);
 
                 const resultId = Math.random().toString(36).substr(2, 9);
@@ -322,7 +323,7 @@ export const ExplorerPage: React.FC = () => {
             editor.focus();
         } else if (type === 'run') {
             setIsExecuting(true);
-            executeRawQuery(parseInt(selectedConnectionId!), sql)
+            executeRawQuery(parseInt(selectedConnectionId!), sql, queryLimit)
                 .then(data => {
                     const resultId = Math.random().toString(36).substr(2, 9);
                     const newResult: ResultItem = {
@@ -529,6 +530,22 @@ export const ExplorerPage: React.FC = () => {
                             </Tooltip>
                         </div>
                     )}
+
+                    <div className="flex items-center gap-1.5 ml-1">
+                        <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/60 ml-1">Limit</span>
+                        <Select value={String(queryLimit)} onValueChange={(val) => setQueryLimit(parseInt(val))}>
+                            <SelectTrigger className="h-7 w-20 glass-input rounded-lg text-[10px] font-bold shadow-none border-border/20">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="glass border-border/40 rounded-xl">
+                                {[100, 500, 1000, 5000, 10000].map(l => (
+                                    <SelectItem key={l} value={String(l)} className="text-[10px] font-bold">
+                                        {l.toLocaleString()}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     <Tooltip>
                         <TooltipTrigger asChild>

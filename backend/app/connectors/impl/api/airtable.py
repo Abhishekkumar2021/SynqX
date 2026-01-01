@@ -91,9 +91,12 @@ class AirtableConnector(BaseConnector):
             for name, val in fields.items():
                 py_type = type(val).__name__
                 synqx_type = "string"
-                if py_type == "int": synqx_type = "integer"
-                elif py_type == "float": synqx_type = "float"
-                elif py_type == "bool": synqx_type = "boolean"
+                if py_type == "int":
+                    synqx_type = "integer"
+                elif py_type == "float":
+                    synqx_type = "float"
+                elif py_type == "bool":
+                    synqx_type = "boolean"
                 
                 columns.append({"name": name, "type": synqx_type, "native_type": py_type})
             
@@ -116,10 +119,8 @@ class AirtableConnector(BaseConnector):
         table = self._api.table(self._config_model.base_id, asset)
         
         # Airtable pagination is handled by pyairtable iterate()
-        rows = []
         batch_size = kwargs.get("batch_size", 100)
         
-        count = 0
         for record_batch in table.iterate(page_size=batch_size, max_records=limit):
             batch_data = []
             for record in record_batch:
@@ -150,7 +151,8 @@ class AirtableConnector(BaseConnector):
             # Airtable expects list of dicts for batch_create
             records = df.replace({pd.NA: None, float('nan'): None}).to_dict(orient='records')
             # Remove _airtable_id if present to avoid errors on create
-            for r in records: r.pop("_airtable_id", None)
+            for r in records:
+                r.pop("_airtable_id", None)
             
             table.batch_create(records)
             total += len(records)

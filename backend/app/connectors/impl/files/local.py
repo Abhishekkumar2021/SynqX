@@ -165,10 +165,14 @@ class LocalFileConnector(BaseConnector):
                 col_type = "string"
                 dtype_str = str(dtype).lower()
                 
-                if "int" in dtype_str: col_type = "integer"
-                elif "float" in dtype_str or "double" in dtype_str: col_type = "float"
-                elif "bool" in dtype_str: col_type = "boolean"
-                elif "datetime" in dtype_str: col_type = "datetime"
+                if "int" in dtype_str:
+                    col_type = "integer"
+                elif "float" in dtype_str or "double" in dtype_str:
+                    col_type = "float"
+                elif "bool" in dtype_str:
+                    col_type = "boolean"
+                elif "datetime" in dtype_str:
+                    col_type = "datetime"
                 elif "object" in dtype_str:
                     first_val = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
                     if isinstance(first_val, (dict, list)):
@@ -209,15 +213,15 @@ class LocalFileConnector(BaseConnector):
         try:
             df_iter: Iterator[pd.DataFrame]
             if fmt == 'csv':
-                chunksize = kwargs.get("chunksize", 10000)
+                chunksize = kwargs.get("chunksize", kwargs.get("batch_size", 10000))
                 skip_rows = range(1, offset + 1) if offset > 0 else None
                 df_iter = pd.read_csv(path, chunksize=chunksize, skiprows=skip_rows)
             elif fmt == 'tsv':
-                chunksize = kwargs.get("chunksize", 10000)
+                chunksize = kwargs.get("chunksize", kwargs.get("batch_size", 10000))
                 skip_rows = range(1, offset + 1) if offset > 0 else None
                 df_iter = pd.read_csv(path, sep='\t', chunksize=chunksize, skiprows=skip_rows)
             elif fmt == 'txt':
-                chunksize = kwargs.get("chunksize", 10000)
+                chunksize = kwargs.get("chunksize", kwargs.get("batch_size", 10000))
                 skip_rows = range(offset) if offset > 0 else None
                 df_iter = pd.read_csv(path, sep='\n', header=None, names=['line'], chunksize=chunksize, skiprows=skip_rows)
             elif fmt == 'xml':
@@ -269,7 +273,8 @@ class LocalFileConnector(BaseConnector):
         fmt = asset.split('.')[-1].lower()
         
         clean_mode = mode.lower()
-        if clean_mode == "replace": clean_mode = "overwrite"
+        if clean_mode == "replace":
+            clean_mode = "overwrite"
         
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
@@ -282,7 +287,8 @@ class LocalFileConnector(BaseConnector):
         try:
             first = True
             for df in data_iter:
-                if df.empty: continue
+                if df.empty:
+                    continue
                 
                 write_mode = 'w' if (first and clean_mode == 'overwrite') or not os.path.exists(path) else 'a'
                 header = True if write_mode == 'w' or not os.path.exists(path) else False

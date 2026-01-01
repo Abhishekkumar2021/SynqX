@@ -361,7 +361,7 @@ class PipelineService:
         if version_id:
             query = query.filter(PipelineVersion.id == version_id)
         else:
-            query = query.filter(PipelineVersion.is_published == True)
+            query = query.filter(PipelineVersion.is_published)
 
         return query.first()
 

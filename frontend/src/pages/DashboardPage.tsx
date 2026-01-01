@@ -4,11 +4,12 @@ import { getDashboardStats } from '@/lib/api';
 import { format, parseISO } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-    Activity, CheckCircle2,
+    CheckCircle2,
     PlayCircle, Zap,
     Workflow, CalendarDays,
-    Network
-} from 'lucide-react';
+    Network,
+    ShieldCheck,
+    ShieldAlert} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -34,6 +35,8 @@ import { motion, type Variants } from 'framer-motion';
 import { DateRangePicker } from '@/components/features/dashboard/DateRangePicker';
 import type { DateRange } from 'react-day-picker';
 import { subDays } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { Badge } from '@/components/ui/badge';
 
 const formatBytes = (bytes: number, decimals = 2) => {
     if (!+bytes) return '0 Bytes'
@@ -44,12 +47,11 @@ const formatBytes = (bytes: number, decimals = 2) => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`
 }
 
-
-
 export const DashboardPage: React.FC = () => {
     // Enable real-time dashboard updates via WebSockets
     useDashboardTelemetry();
     const { isZenMode } = useZenMode();
+    const { user } = useAuth();
 
     const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
     const [timeRange, setTimeRange] = useState('24h');
@@ -58,7 +60,6 @@ export const DashboardPage: React.FC = () => {
         to: new Date(),
     });
 
-    // 1. Single API Call
     const { data: stats, isLoading } = useQuery({ 
         queryKey: ['dashboard', timeRange, customRange?.from?.toISOString(), customRange?.to?.toISOString()], 
         queryFn: () => getDashboardStats(
@@ -68,7 +69,6 @@ export const DashboardPage: React.FC = () => {
         ),
     });
 
-    // 2. Chart Data Transformation
     const throughputData = React.useMemo(() => {
         if (!stats?.throughput) return [];
         return stats.throughput.map(p => ({
@@ -94,11 +94,11 @@ export const DashboardPage: React.FC = () => {
         })).filter(i => i.value > 0);
     }, [stats]);
 
-    // 3. Activity Data Transformation (Matching Table expectations)
     const recentJobs = React.useMemo(() => {
         if (!stats?.recent_activity) return [];
         return stats.recent_activity.map(a => ({
             id: a.id,
+            pipeline_id: a.pipeline_id,
             pipeline_name: a.pipeline_name,
             status: a.status,
             started_at: a.started_at,
@@ -137,22 +137,22 @@ export const DashboardPage: React.FC = () => {
         show: {
             opacity: 1,
             transition: {
-                staggerChildren: 0.1,
-                delayChildren: 0.2
+                staggerChildren: 0.05,
+                delayChildren: 0.1
             }
         }
     };
 
     const item: Variants = {
-        hidden: { y: 20, opacity: 0 },
-        show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 50 } }
+        hidden: { y: 15, opacity: 0 },
+        show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 60, damping: 15 } }
     };
 
     return (
         <motion.div 
             className={cn(
-                "flex flex-col gap-8 pb-10",
-                isZenMode && "pt-2"
+                "flex flex-col gap-8 pb-20",
+                isZenMode && "pt-4"
             )}
             initial="hidden"
             animate="show"
@@ -160,62 +160,74 @@ export const DashboardPage: React.FC = () => {
         >
             <PageMeta title="Dashboard" description="System overview and health metrics." />
 
-            {/* --- Header & Navigation --- */}
-            <motion.div variants={item} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 px-1">
-                <div className="space-y-1.5">
-                    <h2 className="text-3xl md:text-4xl font-bold tracking-tighter text-foreground flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20 backdrop-blur-md shadow-sm">
-                            <Activity className="h-5 w-5 text-primary" />
-                        </div>
-                        Control Center
-                    </h2>
-                    <p className="text-base text-muted-foreground font-medium pl-1">
-                        Real-time intelligence for your data mesh.
-                    </p>
+            {/* --- Premium Production Header --- */}
+            <motion.div variants={item} className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 px-1">
+                <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm">
+                        <ShieldCheck className="h-3 w-3" />
+                        Live System Operational
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-foreground flex items-center gap-4">
+                            Control Center
+                            {user?.is_superuser && (
+                                <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-black text-[10px] tracking-widest px-3 py-1 rounded-lg shadow-sm ml-2">
+                                    SUPERUSER
+                                </Badge>
+                            )}
+                        </h2>
+                        <p className="text-lg text-muted-foreground/70 font-medium max-w-2xl leading-relaxed">
+                            {user?.is_superuser 
+                                ? "Global infrastructure intelligence. Orchestrating data streams with unified visibility." 
+                                : "Real-time intelligence and monitoring for your data infrastructure."}
+                        </p>
+                    </div>
                 </div>
-                <div className="flex items-center gap-4">
-                    <Select value={timeRange} onValueChange={setTimeRange}>
-                        <SelectTrigger className={cn(
-                            "rounded-xl h-10 font-medium w-48"
-                        )}>
-                            <CalendarDays className="mr-2 h-4 w-4 opacity-50" />
-                            <SelectValue placeholder="Select Range" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                            <SelectItem value="24h">Last 24 Hours</SelectItem>
-                            <SelectItem value="7d">Last 7 Days</SelectItem>
-                            <SelectItem value="30d">Last 30 Days</SelectItem>
-                            <SelectItem value="all">All Time</SelectItem>
-                            <SelectItem value="custom">Custom Range</SelectItem>
-                        </SelectContent>
-                    </Select>
 
-                    {timeRange === 'custom' && (
-                        <DateRangePicker 
-                            date={customRange}
-                            setDate={setCustomRange}
-                        />
-                    )}
+                <div className="flex items-center gap-3 w-full lg:w-auto">
+                    <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-2xl border border-border/40 shadow-inner">
+                        <Select value={timeRange} onValueChange={setTimeRange}>
+                            <SelectTrigger className="rounded-xl h-10 border-0 bg-background shadow-sm font-bold text-xs w-44 hover:bg-muted/50 transition-colors">
+                                <CalendarDays className="mr-2 h-3.5 w-3.5 text-primary" />
+                                <SelectValue placeholder="Select Range" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-border/40 shadow-2xl">
+                                <SelectItem value="24h" className="rounded-lg font-medium">Last 24 Hours</SelectItem>
+                                <SelectItem value="7d" className="rounded-lg font-medium">Last 7 Days</SelectItem>
+                                <SelectItem value="30d" className="rounded-lg font-medium">Last 30 Days</SelectItem>
+                                <SelectItem value="all" className="rounded-lg font-medium">All Time</SelectItem>
+                                <SelectItem value="custom" className="rounded-lg font-medium">Custom Range</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        {timeRange === 'custom' && (
+                            <DateRangePicker 
+                                date={customRange}
+                                setDate={setCustomRange}
+                            />
+                        )}
+                    </div>
 
                     <Button 
                         size="lg" 
-                        className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95"
+                        className="rounded-2xl h-12 px-6 shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-black uppercase text-[11px] tracking-widest gap-2"
                         onClick={() => setIsRunDialogOpen(true)}
                     >
-                        <PlayCircle className="mr-2 h-5 w-5" />
-                        Trigger Pipeline
+                        <PlayCircle className="h-4 w-4" />
+                        Run Pipeline
                     </Button>
                 </div>
             </motion.div>
 
-            {/* --- Stats Cards Grid --- */}
-            <motion.div variants={item} className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+            {/* --- Stats Cards Grid (Optimized 5 Columns) --- */}
+            <motion.div variants={item} className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {isLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[140px] w-full rounded-[2.5rem]" />)
+                    Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-[2.5rem] bg-muted/20" />)
                 ) : (
                     <>
                         <StatsCard
-                            title="Operational Success"
+                            title="Success Rate"
                             value={`${stats?.success_rate}%`}
                             trend={getTimeRangeLabel(timeRange)}
                             trendUp={!!(stats?.success_rate && stats.success_rate > 95)}
@@ -224,77 +236,81 @@ export const DashboardPage: React.FC = () => {
                             variant="success"
                         />
                         <StatsCard
-                            title="Data Volume"
+                            title="Data Processed"
                             value={formatBytes(stats?.total_bytes || 0)}
                             subtext={`${formatNumber(stats?.total_rows)} Rows processed`}
-                            subtextSize="text-[12px]"
                             icon={Zap}
                             variant="info"
+                        />
+                        <StatsCard
+                            title="Active Flows"
+                            value={stats?.active_pipelines || 0}
+                            subtext={`${stats?.total_pipelines} total nodes`}
+                            icon={Workflow}
+                            variant="primary"
                         />
                         <StatsCard
                             title="Connectivity"
                             value={stats?.total_connections || 0}
                             subtext={connectionSubtext}
-                            subtextSize="text-[12px]"
                             icon={Network}
                             variant="warning"
                         />
                         <StatsCard
-                            title="Pipeline Status"
-                            value={stats?.active_pipelines || 0}
-                            subtext={`From ${stats?.total_pipelines} total pipelines`}
-                            subtextSize="text-[12px]"
-                            icon={Workflow}
-                            variant="primary"
+                            title="Quarantined"
+                            value={formatNumber(stats?.total_rejected_rows || 0)}
+                            subtext="Records pending"
+                            icon={ShieldAlert}
+                            variant="destructive"
                         />
                     </>
                 )}
             </motion.div>
 
-            {/* --- Main Dashboard Grid --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* --- Main Dashboard Content --- */}
+            <div className="flex flex-col gap-8 px-1">
                 
-                {/* --- Left Column (Charts & Data) --- */}
-                <div className="lg:col-span-8 space-y-8">
-                    {/* Throughput Chart */}
-                    <motion.div variants={item} className="h-[450px] metric-card p-0! overflow-hidden border-border/40">
-                        <ExecutionThroughputChart data={throughputData} />
-                    </motion.div>
-
-                    {/* Performance Widgets Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <motion.div variants={item} className="metric-card p-0! overflow-hidden border-border/40">
-                            <TopFailingPipelines pipelines={stats?.top_failing_pipelines || []} />
-                        </motion.div>
-                        <motion.div variants={item} className="metric-card p-0! overflow-hidden border-border/40">
-                            <SlowestPipelines pipelines={stats?.slowest_pipelines || []} />
+                {/* PRIMARY ROW: Performance & Distribution */}
+                <div className="grid gap-8 lg:grid-cols-12">
+                    <div className="lg:col-span-8">
+                        <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-112.5">
+                            <ExecutionThroughputChart data={throughputData} />
                         </motion.div>
                     </div>
-
-                    {/* Recent Activity Table */}
-                    <motion.div variants={item} className="metric-card p-0! overflow-hidden border-border/40">
-                        <RecentActivityTable jobs={recentJobs} />
-                    </motion.div>
+                    <div className="lg:col-span-4">
+                        <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-112.5">
+                            <PipelineHealthChart 
+                                data={distributionData} 
+                                totalPipelines={stats?.total_pipelines || 0}
+                            />
+                        </motion.div>
+                    </div>
                 </div>
 
-                {/* --- Right Column (Sidebar Widgets) --- */}
-                <div className="lg:col-span-4 space-y-8">
-                    {/* System Health */}
-                    <motion.div variants={item} className="h-[450px] metric-card p-0! overflow-hidden border-border/40">
+                {/* SECONDARY ROW: Infrastructure & Security Feed */}
+                <div className="grid gap-8 lg:grid-cols-2">
+                    <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-87.5">
                         <SystemHealthMonitor data={stats?.system_health} />
                     </motion.div>
 
-                    {/* Pipeline Health Pie */}
-                    <motion.div variants={item} className="h-[500px] metric-card p-0! overflow-hidden border-border/40">
-                        <PipelineHealthChart
-                            data={distributionData}
-                            totalPipelines={stats?.total_pipelines || 0}
-                        />
+                    <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-87.5">
+                        <DashboardAlertsFeed alerts={stats?.recent_alerts || []} />
+                    </motion.div>
+                </div>
+
+                {/* TERTIARY ROW: Full Width Activity Log */}
+                <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-125">
+                    <RecentActivityTable jobs={recentJobs} />
+                </motion.div>
+
+                {/* QUATERNARY ROW: Risks & Bottlenecks */}
+                <div className="grid gap-8 md:grid-cols-2">
+                    <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-95">
+                        <TopFailingPipelines pipelines={stats?.top_failing_pipelines || []} />
                     </motion.div>
 
-                    {/* Alerts Feed */}
-                    <motion.div variants={item} className="h-[500px] flex flex-col metric-card p-0! overflow-hidden border-border/40">
-                        <DashboardAlertsFeed alerts={stats?.recent_alerts || []} />
+                    <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-95">
+                        <SlowestPipelines pipelines={stats?.slowest_pipelines || []} />
                     </motion.div>
                 </div>
             </div>

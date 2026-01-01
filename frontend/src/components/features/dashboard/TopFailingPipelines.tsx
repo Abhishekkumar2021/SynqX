@@ -1,7 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-// UI Imports
-import { AlertTriangle, TrendingDown } from 'lucide-react';
+import { ShieldAlert, TrendingDown } from 'lucide-react';
 import type { FailingPipeline } from '@/lib/api';
 
 interface TopFailingPipelinesProps {
@@ -10,39 +8,42 @@ interface TopFailingPipelinesProps {
 
 export const TopFailingPipelines: React.FC<TopFailingPipelinesProps> = ({ pipelines }) => {
     return (
-        <Card className="h-full border-none bg-transparent shadow-none rounded-none overflow-hidden">
-            <CardHeader className="pb-4 border-b border-border/40 bg-muted/20 px-6 pt-6">
-                <CardTitle className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-destructive" />
-                    Top Failing Pipelines
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
+        <div className="h-full flex flex-col overflow-hidden">
+            <div className="pb-6 shrink-0 px-8 pt-8">
+                <h3 className="text-xl font-black tracking-tighter uppercase text-destructive flex items-center gap-2">
+                    <ShieldAlert className="h-5 w-5" />
+                    Reliability Risks
+                </h3>
+                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">
+                    Top failing pipelines requiring attention
+                </p>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar border-t border-border/20">
                 {pipelines.length === 0 ? (
-                    <div className="p-6 text-center text-sm text-muted-foreground">
-                        No failed pipelines in this period.
+                    <div className="h-full flex flex-col items-center justify-center p-12 text-center opacity-40 italic">
+                        <span className="text-xs font-black uppercase tracking-widest">System stabilized. No failures detected.</span>
                     </div>
                 ) : (
-                    <div className="divide-y divide-border/40">
+                    <div className="divide-y divide-border/10">
                         {pipelines.map((pipeline, i) => (
-                            <div key={pipeline.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+                            <div key={pipeline.id} className="flex items-center justify-between p-5 hover:bg-destructive/5 transition-colors group">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10 border border-destructive/20 text-[10px] font-black text-destructive shadow-sm group-hover:scale-110 transition-transform will-change-transform">
                                         {i + 1}
                                     </span>
-                                    <div className="truncate text-sm font-medium">
+                                    <div className="truncate text-sm font-black text-foreground/80 group-hover:text-destructive transition-colors">
                                         {pipeline.name}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 text-xs font-bold text-destructive">
+                                <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-1.5 text-[10px] font-black text-destructive shadow-xs">
                                     <TrendingDown className="h-3 w-3" />
-                                    {pipeline.failure_count}
+                                    {pipeline.failure_count} FAILURES
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     );
 };

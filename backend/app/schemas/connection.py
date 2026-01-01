@@ -1,7 +1,20 @@
+from __future__ import annotations
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, ConfigDict, model_validator
 from app.models.enums import ConnectorType, AssetType
+
+
+class ConnectionImpactRead(BaseModel):
+    pipeline_count: int
+
+
+class ConnectionUsageStatsRead(BaseModel):
+    sync_success_rate: float
+    average_latency_ms: Optional[float]
+    data_extracted_gb_24h: Optional[float]
+    last_24h_runs: int
+    last_7d_runs: int
 
 
 class ConnectionBase(BaseModel):
@@ -66,6 +79,10 @@ class ConnectionRead(ConnectionBase):
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None
+    
+    # Optional integrated metrics
+    usage_stats: Optional[ConnectionUsageStatsRead] = None
+    impact: Optional[ConnectionImpactRead] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -237,18 +254,6 @@ class AssetSampleRead(BaseModel):
     count: int
 
 
-class ConnectionImpactRead(BaseModel):
-    pipeline_count: int
-
-
-class ConnectionUsageStatsRead(BaseModel):
-    sync_success_rate: float
-    average_latency_ms: Optional[float]
-    data_extracted_gb_24h: Optional[float]
-    last_24h_runs: int
-    last_7d_runs: int
-
-
 class ConnectionEnvironmentInfo(BaseModel):
     python_version: Optional[str] = None
     platform: Optional[str] = None
@@ -260,8 +265,4 @@ class ConnectionEnvironmentInfo(BaseModel):
     node_version: Optional[str] = None
     npm_packages: Dict[str, str] = Field(default_factory=dict)
     initialized_languages: List[str] = Field(default_factory=list)
-    ruby_version: Optional[str] = None
-    powershell_version: Optional[str] = None
-    perl_version: Optional[str] = None
-    gcc_version: Optional[str] = None
     details: Dict[str, Any] = Field(default_factory=dict)

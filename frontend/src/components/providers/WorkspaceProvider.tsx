@@ -11,7 +11,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
-    const { data: workspaces = [], isLoading } = useQuery({
+    // Re-fetch workspaces whenever the user identity changes (login/workspace switch)
+    React.useEffect(() => {
+        if (user) {
+            queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+        }
+    }, [user, queryClient]);
+
+    const { data: workspaces = [], isLoading, refetch } = useQuery({
         queryKey: ['workspaces'],
         queryFn: getWorkspaces,
         enabled: !!user,
@@ -75,6 +82,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isSwitching: switchMutation.isPending,
         switchActiveWorkspace: (id: number) => switchMutation.mutate(id),
         downloadWorkspaceContext,
+        refreshWorkspaces: () => refetch(),
         isLoading
     };
 

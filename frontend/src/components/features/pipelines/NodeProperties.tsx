@@ -8,7 +8,8 @@ import {
     X, Trash2, Save, Code, Sliders,
     Database,
     Info, HelpCircle, Copy,
-    Plus
+    Plus,
+    ShieldCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,22 @@ interface NodePropertiesProps {
     onDuplicate: (node: Node) => void;
 }
 
+const VALIDATION_CHECKS = [
+    { label: 'Not Null', value: 'not_null' },
+    { label: 'Unique', value: 'unique' },
+    { label: 'Regex Match', value: 'regex' },
+    { label: 'Min Value', value: 'min_value' },
+    { label: 'Max Value', value: 'max_value' },
+    { label: 'In List', value: 'in_list' },
+    { label: 'Data Type', value: 'data_type' },
+];
+
+const DATA_TYPES = [
+    { label: 'String', value: 'string' },
+    { label: 'Integer', value: 'int' },
+    { label: 'Float', value: 'float' },
+];
+
 const HelpIcon = ({ content }: { content?: string }) => {
     if (!content) return null;
     return (
@@ -82,9 +99,141 @@ const HelpIcon = ({ content }: { content?: string }) => {
     );
 };
 
+const RuleBuilder = ({ watch, setValue }: any) => {
+    const rules = watch('schema_rules') || [];
+
+    const addRule = () => {
+        setValue('schema_rules', [...rules, { column: '', check: 'not_null' }]);
+    };
+
+    const removeRule = (index: number) => {
+        const newRules = [...rules];
+        newRules.splice(index, 1);
+        setValue('schema_rules', newRules);
+    };
+
+    const updateRule = (index: number, field: string, value: any) => {
+        const newRules = [...rules];
+        newRules[index] = { ...newRules[index], [field]: value };
+        setValue('schema_rules', newRules);
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Validation Rules</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addRule} className="h-7 text-[9px] font-bold uppercase tracking-wider rounded-lg border-primary/20 hover:bg-primary/5">
+                    <Plus className="h-3 w-3 mr-1" /> Add Rule
+                </Button>
+            </div>
+
+            <div className="space-y-3">
+                {rules.map((rule: any, index: number) => (
+                    <div key={index} className="p-4 rounded-xl border border-border/40 bg-background/40 space-y-3 relative group/rule">
+                        <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => removeRule(index)}
+                            className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover/rule:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                        >
+                            <Trash2 size={12} />
+                        </Button>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Column</Label>
+                                <Input 
+                                    placeholder="e.g. email" 
+                                    value={rule.column} 
+                                    onChange={(e) => updateRule(index, 'column', e.target.value)}
+                                    className="h-8 text-xs bg-muted/20"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Check</Label>
+                                <Select value={rule.check} onValueChange={(val) => updateRule(index, 'check', val)}>
+                                    <SelectTrigger className="h-8 text-xs bg-muted/20">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {VALIDATION_CHECKS.map(c => (
+                                            <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                            {rule.check === 'regex' && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Pattern</Label>
+                                    <Input 
+                                        placeholder="^[\\w-\.]+@([\\w-]+\.)+[\\w-]{2,4}$" 
+                                        value={rule.pattern || ''} 
+                                        onChange={(e) => updateRule(index, 'pattern', e.target.value)}
+                                        className="h-8 text-xs font-mono bg-muted/20"
+                                    />
+                                </div>
+                            )}
+                            {(rule.check === 'min_value' || rule.check === 'max_value') && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Threshold Value</Label>
+                                    <Input 
+                                        type="number"
+                                        value={rule.value || 0} 
+                                        onChange={(e) => updateRule(index, 'value', Number(e.target.value))}
+                                        className="h-8 text-xs bg-muted/20"
+                                    />
+                                </div>
+                            )}
+                            {rule.check === 'in_list' && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Allowed Values (Comma Separated)</Label>
+                                    <Input 
+                                        placeholder="active, pending, deleted" 
+                                        value={rule.values?.join(', ') || ''} 
+                                        onChange={(e) => updateRule(index, 'values', e.target.value.split(',').map(s => s.trim()))}
+                                        className="h-8 text-xs bg-muted/20"
+                                    />
+                                </div>
+                            )}
+                            {rule.check === 'data_type' && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Expected Type</Label>
+                                    <Select value={rule.type || 'string'} onValueChange={(val) => updateRule(index, 'type', val)}>
+                                        <SelectTrigger className="h-8 text-xs bg-muted/20">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {DATA_TYPES.map(t => (
+                                                <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+
+                {rules.length === 0 && (
+                    <div className="p-8 text-center border-2 border-dashed border-border/40 rounded-xl bg-muted/5">
+                        <ShieldCheck className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">No validation rules defined</p>
+                        <Button type="button" variant="link" size="sm" onClick={addRule} className="text-[10px] text-primary h-auto p-0 mt-1">Create First Rule</Button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, onUpdate, onDelete, onDuplicate }) => {
-    const { register, handleSubmit, watch, reset, control } = useForm<any>();
+    const { register, handleSubmit, watch, reset, control, setValue } = useForm<any>();
     const [activeTab, setActiveTab] = useState('settings');
+    const [schemaMode, setSchemaMode] = useState<'visual' | 'manual'>('visual');
     const { isEditor, isAdmin } = useWorkspace();
 
     // Watchers
@@ -141,7 +290,9 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 max_retries: node.data.max_retries ?? 3,
                 retry_strategy: (node.data as any).retry_strategy || 'fixed',
                 retry_delay_seconds: node.data.retry_delay_seconds ?? 60,
-                timeout_seconds: node.data.timeout_seconds ?? 3600
+                timeout_seconds: node.data.timeout_seconds ?? 3600,
+                schema_rules: currentOpClass === 'validate' ? (config.schema || []) : [],
+                schema_json_manual: currentOpClass === 'validate' ? JSON.stringify(config.schema || [], null, 2) : ''
             };
 
             // Dynamic hydration based on definition fields
@@ -178,11 +329,19 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
             // Map dynamic fields back to config
             if (opDef?.fields) {
                 opDef.fields.forEach(field => {
-                    const val = data[field.name]; // Retrieve from form using field.name
+                    let val = data[field.name]; // Retrieve from form using field.name
+                    
+                    // Special handling for schema rules in visual builder
+                    if (field.name === 'schema' && data.operator_class === 'validate') {
+                        val = schemaMode === 'visual' ? data.schema_rules : data.schema_json_manual;
+                    }
+
                     if (field.type === 'json') {
                         try {
-                            if (val && val.trim()) {
+                            if (typeof val === 'string' && val.trim()) {
                                 dynamicConfig[field.configKey] = JSON.parse(val);
+                            } else if (typeof val === 'object') {
+                                dynamicConfig[field.configKey] = val;
                             }
                         } catch (e) {
                             console.error(`Failed to parse JSON for field ${field.name}`, e);
@@ -229,6 +388,51 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
     };
 
     const renderField = (field: OperatorField) => {
+        if (field.name === 'schema' && operatorClass === 'validate') {
+            return (
+                <div key={field.name} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <Label className="text-[10px] font-bold">{field.label}</Label>
+                            <HelpIcon content={field.tooltip} />
+                        </div>
+                        <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-border/40">
+                            <Button 
+                                type="button" 
+                                variant={schemaMode === 'visual' ? "secondary" : "ghost"} 
+                                size="sm" 
+                                className="h-6 px-2 text-[9px] font-bold rounded-md"
+                                onClick={() => setSchemaMode('visual')}
+                            >
+                                Visual
+                            </Button>
+                            <Button 
+                                type="button" 
+                                variant={schemaMode === 'manual' ? "secondary" : "ghost"} 
+                                size="sm" 
+                                className="h-6 px-2 text-[9px] font-bold rounded-md"
+                                onClick={() => setSchemaMode('manual')}
+                            >
+                                JSON
+                            </Button>
+                        </div>
+                    </div>
+                    {schemaMode === 'visual' ? (
+                        <RuleBuilder watch={watch} setValue={setValue} register={register} />
+                    ) : (
+                        <div className="space-y-2">
+                            <Textarea 
+                                {...register('schema_json_manual')} 
+                                placeholder={field.placeholder}
+                                readOnly={!isEditor}
+                                className="font-mono text-[10px] min-h-40 bg-[#0a0a0a]/80 text-emerald-500 border-white/5 rounded-lg p-3"
+                            />
+                            <p className="text-[9px] text-muted-foreground">Manual JSON override. Use with caution.</p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
         switch (field.type) {
             case 'select':
                 return (

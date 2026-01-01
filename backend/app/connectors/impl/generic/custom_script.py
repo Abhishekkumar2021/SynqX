@@ -103,7 +103,7 @@ class CustomScriptConnector(BaseConnector):
         common_tools = [
             "jq", "curl", "wget", "aws", "gcloud", "psql", "mysql", 
             "git", "docker", "kubectl", "grep", "sed", "awk", "tar", 
-            "zip", "unzip", "node", "npm", "java", "go", "python3", "pip", "make"
+            "zip", "unzip", "node", "npm", "python3", "pip", "make"
         ]
         if self.config.get("required_tools"):
             common_tools.extend(self.config["required_tools"])
@@ -122,12 +122,13 @@ class CustomScriptConnector(BaseConnector):
                 # Check execution context for isolated npm packages
                 cwd = self.execution_context.get("node_cwd")
                 if cwd and os.path.exists(os.path.join(cwd, "package.json")):
-                     try:
+                    try:
                         npm_list = subprocess.check_output(["npm", "list", "--depth=0", "--json"], cwd=cwd, text=True)
                         npm_data = json.loads(npm_list)
                         if "dependencies" in npm_data:
                             info["npm_packages"] = {k: v.get("version", "unknown") for k, v in npm_data["dependencies"].items()}
-                     except: pass
+                    except Exception:
+                        pass
                 elif "npm" in info["available_tools"]:
                     try:
                         npm_list = subprocess.check_output(["npm", "list", "-g", "--depth=0", "--json"], text=True)
@@ -252,10 +253,14 @@ class CustomScriptConnector(BaseConnector):
 
     def _map_dtype(self, dtype: Any) -> str:
         s = str(dtype).lower()
-        if "int" in s: return "integer"
-        if "float" in s or "double" in s: return "float"
-        if "bool" in s: return "boolean"
-        if "datetime" in s: return "datetime"
+        if "int" in s:
+            return "integer"
+        if "float" in s or "double" in s:
+            return "float"
+        if "bool" in s:
+            return "boolean"
+        if "datetime" in s:
+            return "datetime"
         return "string"
 
     def read_batch(
@@ -272,9 +277,12 @@ class CustomScriptConnector(BaseConnector):
         if not code:
             possible_path = os.path.join(self.base_path, asset)
             if os.path.exists(possible_path):
-                if possible_path.endswith(".py"): language = "python"
-                elif possible_path.endswith(".sh"): language = "shell"
-                elif possible_path.endswith(".js"): language = "javascript"
+                if possible_path.endswith(".py"):
+                    language = "python"
+                elif possible_path.endswith(".sh"):
+                    language = "shell"
+                elif possible_path.endswith(".js"):
+                    language = "javascript"
                 code = possible_path
             else:
                 raise DataTransferError(f"No code provided and file not found: {asset}")
@@ -332,7 +340,8 @@ class CustomScriptConnector(BaseConnector):
 
         # Normalize mode
         clean_mode = mode.lower()
-        if clean_mode == "replace": clean_mode = "overwrite"
+        if clean_mode == "replace":
+            clean_mode = "overwrite"
 
         is_file = os.path.exists(code) and os.path.isfile(code)
         script_path = code if is_file else None
@@ -395,7 +404,7 @@ class CustomScriptConnector(BaseConnector):
         # If isolated environment is configured
         if "python_executable" in self.execution_context:
             python_exe = self.execution_context["python_executable"]
-            return self._execute_external_process([python_exe], asset_name, code, limit, offset, incremental_filter, ".py")
+            return self._execute_external_process([python_exe], asset_name, code, limit, offset, incremental_filter, ".py", **kwargs)
 
         # Pre-check dependencies
         missing_deps = self._check_python_dependencies(code)
@@ -449,12 +458,16 @@ class CustomScriptConnector(BaseConnector):
             try:
                 sig = inspect.signature(func)
                 call_args = {}
-                if 'limit' in sig.parameters: call_args['limit'] = limit
-                if 'offset' in sig.parameters: call_args['offset'] = offset
-                if 'incremental_filter' in sig.parameters: call_args['incremental_filter'] = incremental_filter
+                if 'limit' in sig.parameters:
+                    call_args['limit'] = limit
+                if 'offset' in sig.parameters:
+                    call_args['offset'] = offset
+                if 'incremental_filter' in sig.parameters:
+                    call_args['incremental_filter'] = incremental_filter
                 
                 for k,v in kwargs.items():
-                    if k in sig.parameters: call_args[k] = v
+                    if k in sig.parameters:
+                        call_args[k] = v
 
                 filter_consumed = 'incremental_filter' in call_args
 
@@ -514,9 +527,12 @@ class CustomScriptConnector(BaseConnector):
         cmd_env = os.environ.copy()
         cmd_env.update(self.env_vars)
         
-        if limit: cmd_env['LIMIT'] = str(limit)
-        if offset: cmd_env['OFFSET'] = str(offset)
-        if incremental_filter: cmd_env['INCREMENTAL_FILTER'] = json.dumps(incremental_filter)
+        if limit:
+            cmd_env['LIMIT'] = str(limit)
+        if offset:
+            cmd_env['OFFSET'] = str(offset)
+        if incremental_filter:
+            cmd_env['INCREMENTAL_FILTER'] = json.dumps(incremental_filter)
 
         if is_file:
             script_path = code
@@ -537,18 +553,21 @@ class CustomScriptConnector(BaseConnector):
             )
             
             batch = []
-            chunk_size = 5000
+            chunk_size = int(kwargs.get("batch_size") or self.config.get("batch_size") or 5000)
             for line in process.stdout:
-                if not line.strip(): continue
+                if not line.strip():
+                    continue
                 try:
                     batch.append(json.loads(line))
-                except json.JSONDecodeError: pass
+                except json.JSONDecodeError:
+                    pass
                 
                 if len(batch) >= chunk_size:
                     yield pd.DataFrame(batch)
                     batch = []
             
-            if batch: yield pd.DataFrame(batch)
+            if batch:
+                yield pd.DataFrame(batch)
             
             process.wait()
             if process.returncode != 0:
@@ -558,7 +577,8 @@ class CustomScriptConnector(BaseConnector):
                     msg += " (Command not found - check if the required tools are installed in the environment)"
                 raise DataTransferError(msg)
         except Exception as e:
-            if isinstance(e, DataTransferError): raise
+            if isinstance(e, DataTransferError):
+                raise
             raise DataTransferError(f"Shell execution error: {e}")
         finally:
             if not is_file and os.path.exists(script_path):
@@ -573,9 +593,9 @@ class CustomScriptConnector(BaseConnector):
             raise ConfigurationError("Node.js runtime not found. Please install node.")
         
         cmd = ["node"]
-        return self._execute_external_process(cmd, asset_name, code, limit, offset, incremental_filter, ".js", cwd=self.execution_context.get("node_cwd"))
+        return self._execute_external_process(cmd, asset_name, code, limit, offset, incremental_filter, ".js", cwd=self.execution_context.get("node_cwd"), **kwargs)
 
-    def _execute_external_process(self, base_cmd: List[str], asset_name: str, code: str, limit: int, offset: int, incremental_filter: Optional[Dict], file_ext: str, cwd: Optional[str] = None, is_binary: bool = False) -> Iterator[pd.DataFrame]:
+    def _execute_external_process(self, base_cmd: List[str], asset_name: str, code: str, limit: int, offset: int, incremental_filter: Optional[Dict], file_ext: str, cwd: Optional[str] = None, is_binary: bool = False, **kwargs) -> Iterator[pd.DataFrame]:
         """
         Generic helper for running external scripts.
         """
@@ -584,9 +604,12 @@ class CustomScriptConnector(BaseConnector):
         # Prepare Env
         cmd_env = os.environ.copy()
         cmd_env.update(self.env_vars)
-        if limit: cmd_env['LIMIT'] = str(limit)
-        if offset: cmd_env['OFFSET'] = str(offset)
-        if incremental_filter: cmd_env['INCREMENTAL_FILTER'] = json.dumps(incremental_filter)
+        if limit:
+            cmd_env['LIMIT'] = str(limit)
+        if offset:
+            cmd_env['OFFSET'] = str(offset)
+        if incremental_filter:
+            cmd_env['INCREMENTAL_FILTER'] = json.dumps(incremental_filter)
         
         script_path = None
         if is_binary:
@@ -612,7 +635,7 @@ class CustomScriptConnector(BaseConnector):
             )
             
             batch = []
-            chunk_size = 5000
+            chunk_size = int(kwargs.get("batch_size") or self.config.get("batch_size") or 5000)
             start_time = time.time()
             
             while True:
@@ -624,7 +647,8 @@ class CustomScriptConnector(BaseConnector):
                     process.kill()
                     raise DataTransferError(f"Script timed out after {self.timeout}s")
 
-                if not line.strip(): continue
+                if not line.strip():
+                    continue
                 try:
                     data = json.loads(line)
                     if isinstance(data, list):
@@ -639,14 +663,16 @@ class CustomScriptConnector(BaseConnector):
                     yield pd.DataFrame(batch)
                     batch = []
             
-            if batch: yield pd.DataFrame(batch)
+            if batch:
+                yield pd.DataFrame(batch)
             
             process.wait()
             if process.returncode != 0:
                 stderr = process.stderr.read()
                 raise DataTransferError(f"Script failed (Exit {process.returncode}): {stderr}")
         except Exception as e:
-            if isinstance(e, DataTransferError): raise
+            if isinstance(e, DataTransferError):
+                raise
             raise DataTransferError(f"Execution error: {e}")
         finally:
             if not is_binary and script_path and not (os.path.exists(code) and os.path.isfile(code)) and os.path.exists(script_path):
@@ -664,7 +690,8 @@ class CustomScriptConnector(BaseConnector):
             results = []
             for df in df_iter:
                 results.extend(df.to_dict(orient="records"))
-                if limit and len(results) >= limit: break
+                if limit and len(results) >= limit:
+                    break
             return results[:limit] if limit else results
         except Exception as e:
             raise DataTransferError(f"Script query execution failed: {e}")

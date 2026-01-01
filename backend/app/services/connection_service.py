@@ -109,7 +109,7 @@ class ConnectionService:
             f"user={user_id or 'all'}",
             f"ws={workspace_id or 'all'}"
         ]
-        cache_key = f"connections:list:{':'.join(key_parts)}"
+        f"connections:list:{':'.join(key_parts)}"
         
         # Try Cache
         # (Skipping for now due to complex ORM objects, but key is ready)
@@ -129,7 +129,7 @@ class ConnectionService:
         items = query.order_by(Connection.created_at.desc()).limit(limit).offset(offset).all()
         
         return items, total
-        cache_key = f"connections:list:{':'.join(key_parts)}"
+        f"connections:list:{':'.join(key_parts)}"
         
         # Try Cache (We need to cache Pydantic-ready dicts, but this returns ORM objects)
         # This is the friction point. Service returns ORM objects. 
@@ -266,7 +266,7 @@ class ConnectionService:
             
             # We can't easily inject execution_context into config passed to Factory 
             # because Factory instantiates the class. We can update config dict.
-            # But wait, CustomScriptConnector's get_environment_info logic for node/ruby 
+            # But wait, CustomScriptConnector's get_environment_info logic for node 
             # relies on execution_context being set in __init__.
             
             # Let's get generic system info
@@ -280,7 +280,7 @@ class ConnectionService:
                 sys_info = connector.get_environment_info()
 
             # 2. Get Managed Environment Info from DependencyService
-            # This covers isolated environments for Python, Node, Ruby, etc.
+            # This covers isolated environments for Python, Node, etc.
             
             env_info = {
                 "base_path": sys_info.get("base_path"),

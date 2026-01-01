@@ -4,9 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { type Pipeline, type Job, type PipelineStatsResponse, deletePipeline } from '@/lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { 
-    Workflow, Play, MoreVertical, Settings, History, 
-    Trash2, CheckCircle2, XCircle, Loader2, Zap
+import {
+    Workflow, Play, MoreVertical, Settings, History,
+    Trash2, CheckCircle2, XCircle, Loader2, Zap, ShieldAlert,
+    Database, Clock
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -26,8 +27,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { cn, formatNumber } from '@/lib/utils';import { formatDistanceToNow } from 'date-fns';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { RunPipelineDialog } from './RunPipelineDialog';
 
@@ -58,6 +58,10 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
     const isSuccess = lastJob?.status === 'success';
     const isFailed = lastJob?.status === 'failed';
     const isRunning = lastJob?.status === 'running' || lastJob?.status === 'pending';
+
+    const successRate = pipeline.stats && pipeline.stats.total_runs > 0 
+        ? Math.round((pipeline.stats.successful_runs / pipeline.stats.total_runs) * 100) 
+        : null;
 
     const deleteMutation = useMutation({
         mutationFn: () => deletePipeline(pipeline.id),
@@ -112,53 +116,90 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                     <PipelineStatusBadge status={pipeline.status} />
                 </div>
 
-                {/* --- Column 3: Performance/Stats --- */}
-                <div className="col-span-6 md:col-span-2 flex flex-col justify-center">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-foreground">
-                        <span className="text-muted-foreground font-black text-[9px] uppercase">{pipeline.stats?.total_runs ?? '0'}</span>
-                        <span className="text-muted-foreground/40 font-medium lowercase">runs</span>
+                {/* --- Column 3: Performance & Stability --- */}
+                <div className="col-span-6 md:col-span-2 flex flex-col justify-center gap-1">
+                    <div className="flex items-center gap-2">
+                        {successRate !== null ? (
+                            <span className={cn(
+                                "text-xs font-black tabular-nums",
+                                successRate > 90 ? "text-emerald-500" : successRate > 70 ? "text-amber-500" : "text-destructive"
+                            )}>{successRate}%</span>
+                        ) : (
+                            <span className="text-[10px] text-muted-foreground/40 font-bold uppercase tracking-widest">No Data</span>
+                        )}
+                        <div className="flex items-center gap-1 border-l border-border/20 pl-2">
+                            <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500/60" />
+                            <span className="text-[9px] font-bold tabular-nums text-foreground/60">{pipeline.stats?.successful_runs ?? 0}</span>
+                            <XCircle className="h-2.5 w-2.5 text-destructive/60 ml-0.5" />
+                            <span className="text-[9px] font-bold tabular-nums text-foreground/60">{pipeline.stats?.failed_runs ?? 0}</span>
+                        </div>
                     </div>
-                    <div className="text-[9px] font-mono text-muted-foreground font-bold">
-                        {formatDuration(pipeline.stats?.average_duration_seconds)} avg
+                    <div className="flex items-center gap-1.5">
+                        <ShieldAlert className="h-2.5 w-2.5 text-amber-500/60" />
+                        <span className={cn(
+                            "text-[9px] font-black uppercase tracking-tighter",
+                            pipeline.stats?.total_quarantined === 0 ? "text-emerald-500/60" : "text-amber-600/80"
+                        )}>
+                            {pipeline.stats ? formatNumber(pipeline.stats.total_quarantined) : 0} rejected
+                        </span>
                     </div>
                 </div>
 
-                {/* --- Column 4: Last Activity --- */}
-                <div className="col-span-6 md:col-span-2 flex flex-col justify-center gap-2">
+                {/* --- Column 4: Data Volume & Duration --- */}
+                <div className="col-span-6 md:col-span-2 flex flex-col justify-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                        <Database className="h-2.5 w-2.5 text-blue-500/60" />
+                        <span className="text-[10px] font-black text-foreground/80 tabular-nums">
+                            {pipeline.stats ? formatNumber(pipeline.stats.total_records_processed) : '—'}
+                        </span>
+                        <span className="text-[8px] text-muted-foreground font-black uppercase tracking-tighter opacity-40">rows</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground/60">
+                        <Clock className="h-2.5 w-2.5" />
+                        <span className="text-[9px] font-mono font-bold tracking-tighter">
+                            {formatDuration(pipeline.stats?.average_duration_seconds)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* --- Column 5: Last Sync / Schedule --- */}
+                <div className="col-span-12 md:col-span-2 flex flex-col justify-center gap-1.5">
                     {/* Last Run Info */}
                     {pipeline.stats?.last_run_at ? (
-                        <div className="flex flex-col gap-0.5">
-                            <div className={cn(
-                                "flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tighter",
-                                isSuccess ? "text-emerald-500" :
-                                isFailed ? "text-destructive" :
-                                isRunning ? "text-blue-500" : "text-muted-foreground"
-                            )}>
-                                {isSuccess ? <CheckCircle2 className="h-2.5 w-2.5" /> :
-                                 isFailed ? <XCircle className="h-2.5 w-2.5" /> :
-                                 isRunning ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : null}
-                                <span>{lastJob?.status || 'done'}</span>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                                <div className={cn(
+                                    "flex items-center gap-1 text-[8px] font-black uppercase tracking-widest",
+                                    isSuccess ? "text-emerald-500" :
+                                    isFailed ? "text-destructive" :
+                                    isRunning ? "text-blue-500" : "text-amber-500"
+                                )}>
+                                    {isSuccess ? <CheckCircle2 className="h-2 w-2" /> :
+                                     isFailed ? <XCircle className="h-2 w-2" /> : null}
+                                    <span>{lastJob?.status || 'done'}</span>
+                                </div>
+                                <span className="h-0.5 w-0.5 rounded-full bg-border" />
+                                <span className="text-[10px] font-bold text-foreground/70 uppercase tracking-tighter tabular-nums">
+                                    {formatDistanceToNow(new Date(pipeline.stats.last_run_at), { addSuffix: true })}
+                                </span>
                             </div>
-                            <span className="text-[9px] text-muted-foreground/60 font-black uppercase tracking-widest whitespace-nowrap">
-                                {formatDistanceToNow(new Date(pipeline.stats.last_run_at), { addSuffix: true })}
-                            </span>
                         </div>
                     ) : (
-                        <span className="text-[10px] text-muted-foreground/40 font-black uppercase tracking-widest">Never Run</span>
+                        <span className="text-[9px] text-muted-foreground/40 font-black uppercase tracking-widest italic">Never Sync'd</span>
                     )}
 
-                    {/* Next Run Info (Subtle) */}
+                    {/* Next Run Info (Prominent) */}
                     {pipeline.schedule_enabled && pipeline.stats?.next_scheduled_run && (
-                        <div className="flex items-center gap-1.5 pt-1.5 border-t border-border/20">
-                            <Zap className="h-2.5 w-2.5 text-primary fill-current" />
-                            <span className="text-[9px] font-black text-primary/80 uppercase tracking-tighter">
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/5 border border-primary/10 w-fit">
+                            <Zap className="h-2 w-2 text-primary fill-current" />
+                            <span className="text-[8px] font-black text-primary uppercase tracking-tighter">
                                 Next {formatDistanceToNow(new Date(pipeline.stats.next_scheduled_run), { addSuffix: true })}
                             </span>
                         </div>
                     )}
                 </div>
 
-                {/* --- Column 5: Actions --- */}
+                {/* --- Column 6: Operations --- */}
                 <div className="col-span-12 md:col-span-2 flex items-center justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all pr-4">
                     <Button
                         variant="default"

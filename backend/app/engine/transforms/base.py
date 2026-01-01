@@ -13,6 +13,7 @@ class BaseTransform(ABC):
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
+        self.on_chunk = config.get("_on_chunk")
         self.validate_config()
 
     @abstractmethod

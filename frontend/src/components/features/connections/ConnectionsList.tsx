@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
     Database, MoreVertical, Pencil, Trash2,
-    Activity, Loader2, ArrowRight, Play
+    Activity, Loader2, ArrowRight, Play,
+    Clock,
+    Workflow,
+    Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +26,16 @@ interface Connection {
     connector_type: string;
     health_status?: string;
     description?: string;
+    usage_stats?: {
+        sync_success_rate: number;
+        average_latency_ms?: number;
+        data_extracted_gb_24h?: number;
+        last_24h_runs: number;
+        last_7d_runs: number;
+    };
+    impact?: {
+        pipeline_count: number;
+    };
 }
 
 interface ConnectionsListProps {
@@ -50,6 +63,8 @@ const ConnectionCard = ({
 }) => {
     const navigate = useNavigate();
     const isTesting = testingId === connection.id;
+    const stats = connection.usage_stats;
+    const impact = connection.impact;
 
     return (
         <motion.div
@@ -135,9 +150,48 @@ const ConnectionCard = ({
                         {connection.description || 'No description provided.'}
                     </p>
                     
-                    <div className="mt-auto pt-4 border-t border-border/40 flex items-center justify-between">
+                    <div className="flex flex-col gap-3 p-3.5 rounded-2xl bg-muted/30 border border-border/20">
+                        <div className="grid grid-cols-3 gap-2">
+                            {/* Sync Success */}
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                    <Zap className="h-2 w-2 text-amber-500" /> Success
+                                </span>
+                                <span className={cn(
+                                    "text-xs font-black tabular-nums",
+                                    stats?.sync_success_rate !== undefined 
+                                        ? stats.sync_success_rate > 90 ? "text-emerald-500" : stats.sync_success_rate > 70 ? "text-amber-500" : "text-destructive"
+                                        : "text-muted-foreground/40"
+                                )}>
+                                    {stats?.sync_success_rate !== undefined ? `${stats.sync_success_rate}%` : "—"}
+                                </span>
+                            </div>
+
+                            {/* Latency */}
+                            <div className="flex flex-col gap-1 border-l border-border/20 pl-2">
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                    <Clock className="h-2 w-2 text-blue-500" /> Latency
+                                </span>
+                                <span className="text-xs font-black tabular-nums truncate">
+                                    {stats?.average_latency_ms !== undefined ? `${Math.round(stats.average_latency_ms)}ms` : "—"}
+                                </span>
+                            </div>
+
+                            {/* Impact */}
+                            <div className="flex flex-col gap-1 border-l border-border/20 pl-2">
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                    <Workflow className="h-2 w-2 text-purple-500" /> Impact
+                                </span>
+                                <span className="text-xs font-black tabular-nums">
+                                    {impact?.pipeline_count ?? 0} <span className="text-[8px] opacity-40 uppercase font-black">flows</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-auto pt-2 border-t border-border/40 flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-lg border border-border/20">
-                            <span className="uppercase tracking-wider">{connection.connector_type}</span>
+                            <span className="uppercase tracking-wider font-bold">{connection.connector_type}</span>
                         </div>
                         
                         <Button
@@ -170,6 +224,8 @@ const ConnectionRow = ({
 }) => {
     const navigate = useNavigate();
     const isTesting = testingId === connection.id;
+    const stats = connection.usage_stats;
+    const impact = connection.impact;
 
     return (
         <motion.div
@@ -181,7 +237,7 @@ const ConnectionRow = ({
         >
             <div
                 className={cn(
-                    "relative grid grid-cols-12 gap-4 items-center px-6 py-3.5 transition-all duration-200 cursor-pointer",
+                    "relative grid grid-cols-12 gap-4 items-center px-6 py-3 transition-all duration-200 cursor-pointer",
                     "border-b border-border/30 last:border-0 hover:bg-muted/40",
                     "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1",
                     "before:bg-primary before:scale-y-0 before:transition-transform before:duration-200",
@@ -190,7 +246,7 @@ const ConnectionRow = ({
                 onClick={() => navigate(`/connections/${connection.id}`)}
             >
                 {/* Identity */}
-                <div className="col-span-12 md:col-span-6 flex items-center gap-4 min-w-0">
+                <div className="col-span-12 md:col-span-4 flex items-center gap-4 min-w-0">
                     <div className={cn(
                         "h-10 w-10 rounded-xl border flex items-center justify-center transition-all duration-300 shadow-xs shrink-0",
                         "bg-muted/40 border-border/40 text-muted-foreground group-hover:text-primary group-hover:border-primary/20 group-hover:bg-primary/5"
@@ -201,36 +257,62 @@ const ConnectionRow = ({
                         <h3 className="font-bold text-sm text-foreground tracking-tight truncate mb-0.5">
                             {connection.name}
                         </h3>
-                        <p className="text-[11px] text-muted-foreground truncate font-medium">
-                            {connection.description || <span className="italic opacity-50">No description</span>}
-                        </p>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">{connection.connector_type}</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Type */}
-                <div className="col-span-3 hidden md:block">
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-lg border border-border/20 w-fit">
-                        <span className="uppercase tracking-wider">{connection.connector_type}</span>
-                    </div>
-                </div>
-
-                {/* Status / Actions */}
-                <div className="col-span-3 hidden md:flex items-center justify-end gap-4 pr-2">
-                    <Badge
-                        variant="outline"
-                        className={cn(
-                            "text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md border",
-                            connection.health_status === 'healthy'
-                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                : connection.health_status === 'unhealthy' 
-                                    ? "bg-destructive/10 text-destructive border-destructive/20"
-                                    : "bg-muted/50 text-muted-foreground border-border/50"
+                {/* Health & Sync */}
+                <div className="col-span-2 hidden md:flex flex-col justify-center gap-1">
+                    <div className="flex items-center gap-2">
+                        <Badge
+                            variant="outline"
+                            className={cn(
+                                "text-[8px] font-black uppercase tracking-widest px-1.5 py-0 rounded border",
+                                connection.health_status === 'healthy' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-destructive/10 text-destructive border-destructive/20"
+                            )}
+                        >
+                            {connection.health_status}
+                        </Badge>
+                        {stats?.sync_success_rate !== undefined && (
+                            <span className={cn(
+                                "text-[10px] font-black tabular-nums",
+                                stats.sync_success_rate > 90 ? "text-emerald-500" : stats.sync_success_rate > 70 ? "text-amber-500" : "text-destructive"
+                            )}>{stats.sync_success_rate}%</span>
                         )}
-                    >
-                        {connection.health_status || 'Unknown'}
-                    </Badge>
+                    </div>
+                </div>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200" onClick={(e) => e.stopPropagation()}>
+                {/* Performance */}
+                <div className="col-span-2 hidden md:flex flex-col justify-center gap-1 border-l border-border/20 pl-4">
+                    <div className="flex items-center gap-1.5">
+                        <Clock className="h-2.5 w-2.5 text-blue-500/60" />
+                        <span className="text-[10px] font-bold text-foreground/70">
+                            {stats?.average_latency_ms !== undefined ? `${Math.round(stats.average_latency_ms)}ms` : '—'}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <Activity className="h-2.5 w-2.5 text-muted-foreground/40" />
+                        <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/60">
+                            {stats?.last_24h_runs ?? 0} runs <span className="opacity-40">/ 24h</span>
+                        </span>
+                    </div>
+                </div>
+
+                {/* Impact */}
+                <div className="col-span-2 hidden md:flex flex-col justify-center gap-1 border-l border-border/20 pl-4">
+                    <div className="flex items-center gap-1.5">
+                        <Workflow className="h-2.5 w-2.5 text-purple-500/60" />
+                        <span className="text-[10px] font-bold text-foreground/70">
+                            {impact?.pipeline_count ?? 0} <span className="text-[8px] opacity-40 font-black uppercase">flows</span>
+                        </span>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="col-span-12 md:col-span-2 flex items-center justify-end gap-2 pr-2">
+                    <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-200" onClick={(e) => e.stopPropagation()}>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -242,7 +324,7 @@ const ConnectionRow = ({
                             className="h-8 w-8 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-600 transition-all"
                             title="Test Connection"
                         >
-                            {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+                            {isTesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5 opacity-60" />}
                         </Button>
                         
                         <DropdownMenu>
@@ -351,10 +433,12 @@ export const ConnectionsList: React.FC<ConnectionsListProps> = ({
     return (
         <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-border/50 hover:scrollbar-thumb-border/80 scrollbar-track-transparent">
             {viewMode === 'list' && (
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-xs font-bold text-muted-foreground uppercase tracking-widest shrink-0 sticky top-0 z-20 shadow-sm">
-                    <div className="col-span-12 md:col-span-6">Connection</div>
-                    <div className="col-span-3 hidden md:block">Type</div>
-                    <div className="col-span-3 hidden md:block text-right">Status / Actions</div>
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
+                    <div className="col-span-12 md:col-span-4">Connection</div>
+                    <div className="col-span-2 hidden md:block">Health & Sync</div>
+                    <div className="col-span-2 hidden md:block">Performance</div>
+                    <div className="col-span-2 hidden md:block">Impact</div>
+                    <div className="col-span-2 hidden md:block text-right pr-4">Operations</div>
                 </div>
             )}
             

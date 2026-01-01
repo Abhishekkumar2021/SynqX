@@ -4,10 +4,10 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, BarChart, Bar
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/hooks/useTheme';
 import { cn, formatNumber } from '@/lib/utils';
+import { TrendingUp } from 'lucide-react';
 
 interface ExecutionThroughputChartProps {
     data: any[];
@@ -72,18 +72,21 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
     const colors = useMemo(() => getThemeColors(theme), [theme]);
 
     return (
-        <Card className="flex flex-col h-full border border-border/40 bg-card/30 backdrop-blur-xl shadow-2xl overflow-hidden rounded-[2.5rem]">
-            <CardHeader className="px-8 pt-8 pb-4 relative z-10 flex flex-row items-center justify-between space-y-0">
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="px-8 pt-8 pb-4 flex flex-row items-center justify-between shrink-0">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-xl font-black tracking-tight text-foreground">Performance Metrics</CardTitle>
+                        <h3 className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
+                            <TrendingUp className="h-5 w-5 text-primary" />
+                            Execution Throughput
+                        </h3>
                         <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest text-emerald-500 border-emerald-500/20 bg-emerald-500/5 animate-pulse px-2 py-0.5 rounded-full">
                             Live
                         </Badge>
                     </div>
-                    <CardDescription className="text-sm font-medium text-muted-foreground/60">
-                        Real-time system throughput & latency analysis
-                    </CardDescription>
+                    <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
+                        Processing performance across temporal buckets
+                    </p>
                 </div>
 
                 <div className="flex bg-muted/30 p-1 rounded-xl border border-border/40">
@@ -102,9 +105,9 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
                         </button>
                     ))}
                 </div>
-            </CardHeader>
+            </div>
 
-            <CardContent className="flex-1 px-6 pt-4 pb-8 min-h-87.5">
+            <div className="flex-1 px-6 pt-4 pb-8 min-h-87.5">
                 <ResponsiveContainer width="100%" height="100%" key={`${theme}-${view}`}>
                     {view === 'jobs' ? (
                         <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
@@ -157,7 +160,7 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
                         </BarChart>
                     )}
                 </ResponsiveContainer>
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     );
 };

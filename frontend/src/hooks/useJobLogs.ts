@@ -57,8 +57,8 @@ export function useJobLogs(jobId: number | null) {
       try {
         const data = JSON.parse(event.data);
         setLogs((prev) => {
-            // Avoid duplicates if message ID exists
-            if (prev.some(l => l.id === data.id)) return prev;
+            // Avoid duplicates if message ID and type exists
+            if (prev.some(l => l.id === data.id && l.type === data.type)) return prev;
             return [...prev, data];
         });
       } catch (err) {

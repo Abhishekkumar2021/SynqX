@@ -24,6 +24,7 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     results: List[Dict[str, Any]]
     count: int
+    total_count: Optional[int] = None
     columns: List[str]
 
 class HistoryItem(BaseModel):
@@ -89,6 +90,7 @@ def execute_connection_query(
                 offset=request.offset,
                 **(request.params or {})
             )
+            total_count = connector.get_total_count(request.query, is_query=True, **(request.params or {}))
         except NotImplementedError:
             # Fallback for file-based connectors where "query" is the file path/asset name
             results = connector.fetch_sample(
@@ -97,6 +99,7 @@ def execute_connection_query(
                 offset=request.offset,
                 **(request.params or {})
             )
+            total_count = connector.get_total_count(request.query, is_query=False, **(request.params or {}))
         
         columns = []
         if results and len(results) > 0:
@@ -106,6 +109,7 @@ def execute_connection_query(
         return {
             "results": results,
             "count": row_count,
+            "total_count": total_count,
             "columns": columns
         }
     except Exception as e:
@@ -213,7 +217,7 @@ def get_connection_schema_metadata(
             try:
                 schema = connector.infer_schema(asset_name)
                 metadata[asset_name] = [col["name"] for col in schema.get("columns", [])]
-            except:
+            except Exception:
                 metadata[asset_name] = []
                 
         return {

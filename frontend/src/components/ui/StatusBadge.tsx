@@ -5,7 +5,9 @@ import {
     Clock,
     XCircle,
     Loader2,
-    PlayCircle
+    PlayCircle,
+    Info,
+    Terminal
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -66,6 +68,20 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
                     variant: "info",
                     icon: Loader2,
                     animate: true
+                };
+
+            case 'info':
+                return {
+                    variant: "info",
+                    icon: Info,
+                    animate: false
+                };
+
+            case 'debug':
+                return {
+                    variant: "outline",
+                    icon: Terminal,
+                    animate: false
                 };
 
             case 'paused':

@@ -19,7 +19,7 @@ class TransformFactory:
         # Auto-discover if registry is empty (resiliency for worker processes)
         if not cls._registry:
             try:
-                import app.engine.transforms.impl
+                import app.engine.transforms.impl # noqa: F401
             except ImportError:
                 pass
 

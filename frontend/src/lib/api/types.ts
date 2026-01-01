@@ -21,6 +21,8 @@ export interface User {
   is_superuser: boolean;
   active_workspace_id?: number;
   created_at: string;
+  updated_at: string;
+  last_login?: string;
 }
 
 export interface LoginRequest {
@@ -40,6 +42,8 @@ export interface WorkspaceRead {
   slug: string;
   description?: string;
   role: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface WorkspaceMember {
@@ -56,14 +60,16 @@ export interface Connection {
   connector_type: ConnectorType;
   description?: string;
   config_schema?: Record<string, any>;
-  health_status?: string;
+  health_status: string;
   last_test_at?: string;
-  created_at?: string;
-  updated_at?: string;
+  last_schema_discovery_at?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
   asset_count?: number;
-  max_concurrent_connections?: number;
-  connection_timeout_seconds?: number;
-  tags?: Record<string, any>;
+  max_concurrent_connections: number;
+  connection_timeout_seconds: number;
+  tags: Record<string, any>;
 }
 
 export interface ConnectionCreate {
@@ -76,21 +82,32 @@ export interface ConnectionCreate {
   connection_timeout_seconds?: number;
 }
 
+export interface ConnectionUpdate {
+  name?: string;
+  description?: string;
+  config?: Record<string, any>;
+  tags?: Record<string, any>;
+  max_concurrent_connections?: number;
+  connection_timeout_seconds?: number;
+}
+
 export interface Pipeline {
   id: number;
   name: string;
   description?: string;
   schedule_cron?: string;
-  schedule_enabled?: boolean;
-  schedule_timezone?: string;
+  schedule_enabled: boolean;
+  schedule_timezone: string;
   status: PipelineStatus;
   current_version?: number;
   published_version_id?: number;
-  max_parallel_runs?: number;
-  max_retries?: number;
+  max_parallel_runs: number;
+  max_retries: number;
+  retry_strategy: RetryStrategy;
+  retry_delay_seconds: number;
   execution_timeout_seconds?: number;
-  tags?: Record<string, any>;
-  priority?: number;
+  tags: Record<string, any>;
+  priority: number;
   created_at: string;
   updated_at: string;
 }
@@ -111,6 +128,8 @@ export interface PipelineCreate {
   schedule_timezone?: string;
   max_parallel_runs?: number;
   max_retries?: number;
+  retry_strategy?: RetryStrategy;
+  retry_delay_seconds?: number;
   execution_timeout_seconds?: number;
   tags?: Record<string, any>;
   priority?: number;
@@ -126,6 +145,8 @@ export interface PipelineUpdate {
   status?: PipelineStatus;
   max_parallel_runs?: number;
   max_retries?: number;
+  retry_strategy?: RetryStrategy;
+  retry_delay_seconds?: number;
   execution_timeout_seconds?: number;
   tags?: Record<string, any>;
   priority?: number;
@@ -136,10 +157,10 @@ export interface Job {
   pipeline_id: number;
   pipeline_version_id: number;
   status: JobStatus;
-  retry_count?: number;
-  max_retries?: number;
-  retry_strategy?: RetryStrategy;
-  retry_delay_seconds?: number;
+  retry_count: number;
+  max_retries: number;
+  retry_strategy: RetryStrategy;
+  retry_delay_seconds: number;
   infra_error?: string;
   worker_id?: string;
   queue_name?: string;
@@ -149,14 +170,14 @@ export interface Job {
   created_at: string;
   updated_at: string;
   celery_task_id?: string;
-  correlation_id?: string;
+  correlation_id: string;
 }
 
 export interface StepRunRead {
   id: number;
   pipeline_run_id: number;
   node_id: number;
-  operator_type: string;
+  operator_type: OperatorType | string;
   status: "pending" | "running" | "success" | "failed" | "skipped" | "warning";
   order_index: number;
   retry_count: number;
@@ -174,30 +195,55 @@ export interface StepRunRead {
   started_at?: string;
   completed_at?: string;
   created_at: string;
+  source_asset_id?: number;
+  destination_asset_id?: number;
 }
 
-export interface PipelineRunDetailRead {
+export interface PipelineRunRead {
   id: number;
   job_id: number;
+  pipeline_id: number;
+  pipeline_version_id: number;
+  run_number: number;
   status: string;
-  version?: PipelineVersionRead;
-  step_runs: StepRunRead[];
   total_nodes: number;
   total_extracted: number;
   total_loaded: number;
   total_failed: number;
   bytes_processed: number;
+  error_message?: string;
+  failed_step_id?: number;
   started_at?: string;
   completed_at?: string;
   duration_seconds?: number;
+  created_at: string;
+}
+
+export interface PipelineRunContextRead {
+  context: Record<string, any>;
+  parameters: Record<string, any>;
+  environment: Record<string, any>;
+}
+
+export interface PipelineRunDetailRead extends PipelineRunRead {
+  version?: PipelineVersionRead;
+  step_runs: StepRunRead[];
+  context?: PipelineRunContextRead;
 }
 
 export interface PipelineVersionRead {
   id: number;
   pipeline_id: number;
   version: number;
+  is_published: boolean;
+  published_at?: string;
+  config_snapshot: Record<string, any>;
+  change_summary?: Record<string, any>;
+  version_notes?: string;
   nodes: PipelineNode[];
   edges: PipelineEdge[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface PipelineNode {
@@ -212,7 +258,9 @@ export interface PipelineNode {
   source_asset_id?: number;
   destination_asset_id?: number;
   connection_id?: number;
-  max_retries?: number;
+  max_retries: number;
+  retry_strategy?: RetryStrategy;
+  retry_delay_seconds?: number;
   timeout_seconds?: number;
   position?: { x: number; y: number };
 }
@@ -221,11 +269,12 @@ export interface PipelineEdge {
   id?: number;
   from_node_id: string;
   to_node_id: string;
-  edge_type?: string;
+  edge_type: string;
 }
 
 export interface Asset {
   id: number;
+  connection_id: number;
   name: string;
   asset_type: string;
   fully_qualified_name?: string;
@@ -236,7 +285,7 @@ export interface Asset {
   current_schema_version?: number;
   description?: string;
   config?: Record<string, any>;
-  tags?: Record<string, any>;
+  tags: Record<string, any>;
   row_count_estimate?: number;
   size_bytes_estimate?: number;
   updated_at: string;
@@ -274,6 +323,7 @@ export interface AssetUpdate {
 
 export interface SchemaVersion {
   id: number;
+  asset_id: number;
   version: number;
   json_schema: any;
   discovered_at: string;
@@ -303,7 +353,14 @@ export interface AlertConfig {
   delivery_method: string;
   recipient: string;
   enabled: boolean;
+  threshold_value: number;
+  threshold_window_minutes: number;
+  cooldown_minutes: number;
+  pipeline_filter?: Record<string, any>;
+  severity_filter?: Record<string, any>;
+  last_triggered_at?: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface AlertConfigUpdate {
@@ -313,6 +370,11 @@ export interface AlertConfigUpdate {
   delivery_method?: string;
   recipient?: string;
   enabled?: boolean;
+  threshold_value?: number;
+  threshold_window_minutes?: number;
+  cooldown_minutes?: number;
+  pipeline_filter?: Record<string, any>;
+  severity_filter?: Record<string, any>;
 }
 
 export interface ApiKey {
@@ -346,7 +408,8 @@ export interface ConnectionListResponse {
 export interface ConnectionTestResult {
   success: boolean;
   message: string;
-  error_details?: string;
+  latency_ms?: number;
+  details?: Record<string, any>;
 }
 
 export interface AssetListResponse {
@@ -361,43 +424,50 @@ export interface AssetBulkCreate {
 }
 
 export interface AssetBulkCreateResponse {
-  created: number;
-  skipped: number;
-  errors: string[];
+  successful_creates: number;
+  failed_creates: number;
+  total_requested: number;
+  failures: any[];
 }
 
 export interface SchemaDiscoveryResponse {
-  asset_id: number;
-  schema_version: number;
-  is_new_version: boolean;
+  success: boolean;
+  schema_version?: number;
   is_breaking_change: boolean;
-  diff?: Record<string, any>;
+  message: string;
+  discovered_schema?: Record<string, any>;
 }
 
 export interface AssetSampleData {
   asset_id: number;
-  row_count: number;
-  columns: string[];
-  data: Record<string, any>[];
+  count: number;
+  rows: Record<string, any>[];
 }
 
 export interface ConnectionImpact {
-  connection_id: number;
   pipeline_count: number;
-  asset_count: number;
 }
 
 export interface ConnectionUsageStats {
-  connection_id: number;
-  total_runs: number;
-  bytes_processed: number;
-  avg_duration_seconds?: number;
+  sync_success_rate: number;
+  average_latency_ms?: number;
+  data_extracted_gb_24h?: number;
+  last_24h_runs: number;
+  last_7d_runs: number;
 }
 
 export interface ConnectionEnvironmentInfo {
-  connection_id: number;
-  connector_type: string;
-  environment: Record<string, any>;
+  python_version?: string;
+  platform?: string;
+  pandas_version?: string;
+  numpy_version?: string;
+  base_path?: string;
+  available_tools: Record<string, string>;
+  installed_packages: Record<string, string>;
+  node_version?: string;
+  npm_packages: Record<string, string>;
+  initialized_languages: string[];
+  details?: Record<string, any>;
 }
 
 export interface QueryResponse {
@@ -480,19 +550,34 @@ export interface ConnectorHealth {
 
 export interface DashboardStats {
   total_pipelines: number;
+  active_pipelines: number;
   total_connections: number;
-  total_assets: number;
-  total_jobs: number;
-  runs_24h: number;
-  failed_runs_24h: number;
-  throughput: ThroughputDataPoint[];
+  connector_health: ConnectorHealth[];
+  
+      total_jobs: number;
+  
+      success_rate: number;
+  
+      avg_duration: number;
+  
+          total_rows: number;
+  
+          total_rejected_rows: number;
+  
+          active_issues: number;
+  
+          resolution_rate: number;
+  
+          total_bytes: number;
+  
+          throughput: ThroughputDataPoint[];
   pipeline_distribution: PipelineDistribution[];
   recent_activity: RecentActivity[];
-  system_health?: SystemHealth;
-  failing_pipelines: FailingPipeline[];
+  
+  system_health: SystemHealth;
+  top_failing_pipelines: FailingPipeline[];
   slowest_pipelines: SlowestPipeline[];
-  alerts: DashboardAlert[];
-  connector_health: ConnectorHealth[];
+  recent_alerts: DashboardAlert[];
 }
 
 export interface JobListResponse {
@@ -522,7 +607,7 @@ export interface PipelineVersionSummary {
 export interface PipelineDetailRead extends Pipeline {
   latest_version?: PipelineVersionRead;
   published_version?: PipelineVersionRead;
-  versions?: PipelineVersionSummary[];
+  versions: PipelineVersionSummary[];
 }
 
 export interface PipelineStatsResponse {
@@ -530,9 +615,16 @@ export interface PipelineStatsResponse {
   total_runs: number;
   successful_runs: number;
   failed_runs: number;
+  total_quarantined: number;
   average_duration_seconds?: number;
   last_run_at?: string;
   next_scheduled_run?: string;
+}
+
+export interface PipelineTriggerRequest {
+  version_id?: number;
+  run_params?: Record<string, any>;
+  async_execution?: boolean;
 }
 
 export interface PipelineTriggerResponse {
@@ -569,4 +661,36 @@ export interface AlertListResponse {
   total: number;
   limit: number;
   offset: number;
+}
+
+export interface JobLogRead {
+  id: number;
+  job_id: number;
+  level: string;
+  message: string;
+  metadata_payload?: Record<string, any>;
+  timestamp: string;
+  source?: string;
+}
+
+export interface StepLogRead {
+  id: number;
+  step_run_id: number;
+  level: string;
+  message: string;
+  metadata_payload?: Record<string, any>;
+  timestamp: string;
+  source?: string;
+}
+
+export interface UnifiedLogRead {
+  id: number;
+  level: string;
+  message: string;
+  metadata_payload?: Record<string, any>;
+  timestamp: string;
+  source?: string;
+  job_id?: number;
+  step_run_id?: number;
+  type: string;
 }

@@ -25,19 +25,20 @@ class ForensicSniffer:
     Features:
     - Thread-safe chunk capture
     - Configurable row limits per node
-    - Efficient Parquet storage with compression
+    - Efficient Parquet storage with appends (fastparquet)
     - Pagination support for data inspection
     - Automatic cleanup and management
     """
 
-    MAX_ROWS_PER_FILE = 50000  # Maximum rows to store per node/direction
-    COMPRESSION = "snappy"  # Fast compression
+    MAX_ROWS_PER_FILE = 5000000  # Increased to 5M for better data capture coverage
+    COMPRESSION = "SNAPPY"  # fastparquet uses uppercase
 
     def __init__(self, run_id: int):
         self.run_id = run_id
         # Use absolute path to ensure consistency across different processes/workers
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Assuming app/engine/runner_core/forensics.py, we go up 3 levels to reach backend root
+        # current_dir is backend/app/engine/runner_core
+        # We need to go up 3 levels to reach 'backend'
         project_root = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
         self.base_dir = os.path.join(project_root, "data", "forensics", f"run_{run_id}")
         os.makedirs(self.base_dir, exist_ok=True)
@@ -57,12 +58,13 @@ class ForensicSniffer:
         metadata: Optional[Dict] = None,
     ):
         """
-        Thread-safe chunk capture with optimized batching.
+        Thread-safe chunk capture with optimized batching using fastparquet appends.
         """
         if chunk.empty:
             return
 
         try:
+            import fastparquet
             file_path = os.path.join(
                 self.base_dir, f"node_{node_id}_{direction}.parquet"
             )
@@ -70,6 +72,15 @@ class ForensicSniffer:
 
             with self._write_lock:
                 current_rows = self._row_counts.get(file_key, 0)
+
+                # Initialize row count from file if not in memory (e.g. distributed workers)
+                if current_rows == 0 and os.path.exists(file_path):
+                    try:
+                        import pyarrow.parquet as pq
+                        current_rows = pq.read_metadata(file_path).num_rows
+                        self._row_counts[file_key] = current_rows
+                    except Exception:
+                        pass
 
                 if current_rows >= self.MAX_ROWS_PER_FILE:
                     return
@@ -80,24 +91,24 @@ class ForensicSniffer:
                     if len(chunk) > available_space
                     else chunk
                 )
+                
+                rows_to_add = len(chunk_to_write)
+                if rows_to_add == 0:
+                    return
 
-                if not os.path.exists(file_path):
-                    chunk_to_write.to_parquet(
-                        file_path, index=False, compression=self.COMPRESSION, engine="pyarrow"
-                    )
-                    new_count = len(chunk_to_write)
-                else:
-                    existing = pd.read_parquet(file_path, engine="pyarrow")
-                    combined = pd.concat([existing, chunk_to_write], ignore_index=True)
-
-                    if len(combined) > self.MAX_ROWS_PER_FILE:
-                        combined = combined.head(self.MAX_ROWS_PER_FILE)
-
-                    combined.to_parquet(
-                        file_path, index=False, compression=self.COMPRESSION, engine="pyarrow"
-                    )
-                    new_count = len(combined)
-
+                file_exists = os.path.exists(file_path)
+                
+                # Use fastparquet for efficient appends
+                # Note: fastparquet requires 'append' to be True for subsequent writes
+                fastparquet.write(
+                    file_path, 
+                    chunk_to_write, 
+                    append=file_exists, 
+                    compression=self.COMPRESSION,
+                    index=False
+                )
+                
+                new_count = current_rows + rows_to_add
                 self._row_counts[file_key] = new_count
 
                 if file_key not in self._metadata:

@@ -708,6 +708,23 @@ def get_pipeline_stats(
             or 0
         )
 
+        # Calculate total quarantined rows across all runs
+        from app.models.execution import PipelineRun
+        total_quarantined = (
+            db.query(func.coalesce(func.sum(PipelineRun.total_failed), 0))
+            .filter(PipelineRun.pipeline_id == pipeline_id)
+            .scalar()
+            or 0
+        )
+
+        # Calculate total records processed
+        total_records = (
+            db.query(func.coalesce(func.sum(PipelineRun.total_loaded), 0))
+            .filter(PipelineRun.pipeline_id == pipeline_id)
+            .scalar()
+            or 0
+        )
+
         # Calculate average duration with fallback for historical data
         # Using PostgreSQL specific EXTRACT(EPOCH FROM ...)
         avg_duration_query = db.query(
@@ -743,6 +760,8 @@ def get_pipeline_stats(
             total_runs=total_runs,
             successful_runs=successful_runs,
             failed_runs=failed_runs,
+            total_quarantined=int(total_quarantined),
+            total_records_processed=int(total_records),
             average_duration_seconds=avg_duration_seconds,
             last_run_at=last_run[0] if last_run else None,
             next_scheduled_run=next_scheduled_run,

@@ -83,7 +83,7 @@ class Scheduler:
             self.db_session.query(Pipeline)
             .filter(
                 and_(
-                    Pipeline.schedule_enabled == True,
+                    Pipeline.schedule_enabled,
                     Pipeline.schedule_cron.isnot(None),
                     Pipeline.published_version_id.isnot(
                         None

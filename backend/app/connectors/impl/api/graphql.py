@@ -146,5 +146,6 @@ class GraphQLConnector(BaseConnector):
         data = resp.get("data", {})
         # Return the first list found or the root object
         for v in data.values():
-            if isinstance(v, list): return v
+            if isinstance(v, list):
+                return v
         return [data]

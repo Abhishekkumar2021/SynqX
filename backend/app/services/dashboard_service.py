@@ -7,7 +7,7 @@ from app.models.pipelines import Pipeline
 from app.models.execution import Job, PipelineRun, StepRun
 from app.models.monitoring import Alert, AlertConfig
 from app.models.connections import Connection
-from app.models.enums import PipelineStatus, JobStatus, OperatorRunStatus
+from app.models.enums import PipelineStatus, JobStatus, OperatorRunStatus, AlertStatus
 from app.schemas.dashboard import (
     DashboardStats, ThroughputDataPoint, PipelineDistribution, RecentActivity,
     SystemHealth, FailingPipeline, SlowestPipeline, DashboardAlert, ConnectorHealth
@@ -117,8 +117,9 @@ class DashboardService:
                 func.sum(case((Job.status == JobStatus.SUCCESS, 1), else_=0)).label("success"),
                 func.avg(Job.execution_time_ms).label("avg_duration"),
                 func.sum(PipelineRun.total_loaded).label("total_rows"),
+                func.sum(StepRun.records_error).label("total_rejected_rows"),
                 func.sum(PipelineRun.bytes_processed).label("total_bytes")
-            ).select_from(Job).join(Pipeline, Job.pipeline_id == Pipeline.id).outerjoin(PipelineRun, Job.id == PipelineRun.job_id).filter(
+            ).select_from(Job).join(Pipeline, Job.pipeline_id == Pipeline.id).outerjoin(PipelineRun, Job.id == PipelineRun.job_id).outerjoin(StepRun, PipelineRun.id == StepRun.pipeline_run_id).filter(
                 and_(*period_filters)
             )
             
@@ -129,6 +130,7 @@ class DashboardService:
             avg_duration_ms = float(jobs_stats.avg_duration or 0)
             avg_duration = avg_duration_ms / 1000.0
             total_rows = int(jobs_stats.total_rows or 0)
+            total_rejected_rows = int(jobs_stats.total_rejected_rows or 0)
             total_bytes = int(jobs_stats.total_bytes or 0)
 
             # 2. Pipeline Distribution
@@ -229,7 +231,7 @@ class DashboardService:
             # 4. Recent Activity
             recent_jobs_query = self.db.query(Job).join(Pipeline)
             recent_jobs_query = scope_query(recent_jobs_query, Pipeline)
-            recent_jobs = recent_jobs_query.order_by(desc(Job.created_at)).limit(6).all()
+            recent_jobs = recent_jobs_query.order_by(desc(Job.created_at)).limit(10).all()
 
             activity = []
             for job in recent_jobs:
@@ -386,6 +388,40 @@ class DashboardService:
                 logger.error(f"Error fetching recent alerts: {e}")
                 recent_alerts = []
 
+            # 9. Issues and Resolution
+            try:
+                active_issues_query = self.db.query(func.count(Alert.id)).filter(
+                    Alert.status == AlertStatus.PENDING
+                )
+                if workspace_id:
+                    active_issues_query = active_issues_query.filter(Alert.workspace_id == workspace_id)
+                else:
+                    active_issues_query = active_issues_query.filter(Alert.user_id == user_id)
+                
+                active_issues = active_issues_query.scalar() or 0
+
+                total_alerts_query = self.db.query(func.count(Alert.id))
+                resolved_alerts_query = self.db.query(func.count(Alert.id)).filter(
+                    Alert.status == AlertStatus.ACKNOWLEDGED
+                )
+                
+                if workspace_id:
+                    total_alerts_query = total_alerts_query.filter(Alert.workspace_id == workspace_id)
+                    resolved_alerts_query = resolved_alerts_query.filter(Alert.workspace_id == workspace_id)
+                else:
+                    total_alerts_query = total_alerts_query.filter(Alert.user_id == user_id)
+                    resolved_alerts_query = resolved_alerts_query.filter(Alert.user_id == user_id)
+                
+                total_alerts = total_alerts_query.scalar() or 0
+                resolved_alerts = resolved_alerts_query.scalar() or 0
+                
+                resolution_rate = (resolved_alerts / total_alerts * 100) if total_alerts > 0 else 0.0
+            except Exception as e:
+                self.db.rollback()
+                logger.error(f"Error calculating resolution rate: {e}")
+                active_issues = 0
+                resolution_rate = 0.0
+
             return DashboardStats(
                 total_pipelines=total_pipelines,
                 active_pipelines=active_pipelines,
@@ -396,6 +432,9 @@ class DashboardService:
                 success_rate=round(success_rate, 1),
                 avg_duration=round(avg_duration, 2),
                 total_rows=total_rows,
+                total_rejected_rows=total_rejected_rows,
+                active_issues=active_issues,
+                resolution_rate=round(resolution_rate, 1),
                 total_bytes=total_bytes,
                 
                 throughput=throughput,

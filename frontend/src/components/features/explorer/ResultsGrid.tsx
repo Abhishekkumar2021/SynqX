@@ -115,8 +115,9 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
 
     // --- Data Preparation ---
     const tableData = useMemo(() => {
-        if (!data?.results) return [];
-        return data.results.map((row, idx) => ({ ...row, __idx: idx }));
+        const results = data?.results || (data as any)?.rows;
+        if (!results) return [];
+        return results.map((row: any, idx: number) => ({ ...row, __idx: idx }));
     }, [data]);
 
     const columns = useMemo<ColumnDef<any>[]>(() => {
@@ -204,7 +205,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
         getRowId: row => String(row.__idx), // Use stable index as ID
         initialState: {
             pagination: {
-                pageSize: 50,
+                pageSize: 100,
             },
             columnPinning: {
                 left: ['select', 'index'],
@@ -264,7 +265,10 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     if (isLoading) return <LoadingSkeleton />;
     if (!data) return <EmptyState />;
 
-    if (tableData.length === 0 && data.results.length === 0 && data.columns.length === 0) {
+    const results = data.results || (data as any).rows || [];
+    const columnsData = data.columns || [];
+
+    if (tableData.length === 0 && results.length === 0 && columnsData.length === 0) {
         return (
              <div className="flex-1 h-full flex flex-col items-center justify-center text-muted-foreground gap-4 bg-card/5 animate-in fade-in duration-500">
                 <div className="p-4 rounded-full bg-success/10 text-success">
@@ -313,6 +317,9 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                          <div className="flex items-center gap-1.5 shrink-0">
                              <Badge variant="outline" className="h-5 px-2 rounded-full border-border/50 text-[9px] font-black uppercase tracking-tight text-muted-foreground/60 bg-muted/20 whitespace-nowrap">
                                 {formatNumber(table.getFilteredRowModel().rows.length)}
+                                {data.total_count !== undefined && data.total_count !== null && (
+                                    <span className="ml-1 opacity-40">/ {formatNumber(data.total_count)}</span>
+                                )}
                             </Badge>
                             {activeFilterCount > 0 && (
                                 <Tooltip>

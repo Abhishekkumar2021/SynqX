@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { 
-    MoreHorizontal, Play, Settings, 
-    Workflow, Calendar, CheckCircle2, XCircle, Loader2,
-    History, Trash2, Zap
-} from 'lucide-react';
 import {
+    Clock, 
+    MoreHorizontal, 
+    Play, 
+    Trash2,
+    CheckCircle2,
+    Settings,
+    ShieldAlert,
+    Zap,
+    Database
+} from 'lucide-react';import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -24,7 +29,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatNumber } from '@/lib/utils';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { type Pipeline, type Job, getPipelineStats, deletePipeline } from '@/lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -36,6 +41,15 @@ interface PipelineGridItemProps {
     onRun?: (id: number, versionId?: number) => void;
     onOpenSettings?: (pipeline: Pipeline) => void;
     onViewVersions: (pipeline: Pipeline) => void;
+}
+
+const formatDuration = (seconds?: number) => {
+    if (seconds === undefined || seconds === null) return '—';
+    if (seconds < 1) return `${(seconds * 1000).toFixed(0)}ms`;
+    if (seconds < 60) return `${seconds.toFixed(1)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = (seconds % 60).toFixed(0);
+    return `${minutes}m ${remainingSeconds}s`;
 }
 
 export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, onRun, onOpenSettings, onViewVersions }) => {
@@ -141,56 +155,111 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                     </p>
                     
                     <div className="flex flex-col gap-3 p-3.5 rounded-2xl bg-muted/30 border border-border/20">
-                        {/* Row 1: Success Rate & Last Run */}
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="flex flex-col gap-0.5">
-                                <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider">Success Rate</span>
+                        {/* Row 1: Primary Metrics */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {/* Success Rate */}
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                    <Zap className="h-2 w-2 text-amber-500" /> Success
+                                </span>
                                 <div className="flex items-center gap-1.5">
                                     {successRate !== null ? (
-                                        <>
-                                            <div className={cn("h-1.5 w-1.5 rounded-full", 
-                                                successRate > 90 ? "bg-emerald-500" : successRate > 70 ? "bg-amber-500" : "bg-destructive"
-                                            )} />
-                                            <span className="text-xs font-bold tabular-nums">{successRate}%</span>
-                                        </>
+                                        <span className={cn(
+                                            "text-xs font-black tabular-nums",
+                                            successRate > 90 ? "text-emerald-500" : successRate > 70 ? "text-amber-500" : "text-destructive"
+                                        )}>{successRate}%</span>
                                     ) : (
                                         <span className="text-xs text-muted-foreground/60 font-medium">—</span>
                                     )}
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-0.5 border-l border-border/20 pl-3">
-                                <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider">Last Run</span>
-                                <div className="flex items-center gap-1.5 truncate">
-                                    {lastJob ? (
-                                        <>
-                                            {isSuccess && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
-                                            {isFailed && <XCircle className="h-3 w-3 text-destructive" />}
-                                            {isRunning && <Loader2 className="h-3 w-3 text-blue-500 animate-spin" />}
-                                            <span className="text-xs font-medium truncate">
-                                                {formatDistanceToNow(new Date(lastJob.started_at!), { addSuffix: true })}
-                                            </span>
-                                        </>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground/60 font-medium">Never</span>
-                                    )}
-                                </div>
+
+                            {/* Total Volume */}
+                            <div className="flex flex-col gap-1 border-l border-border/20 pl-2">
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                    <Database className="h-2 w-2 text-blue-500" /> Volume
+                                </span>
+                                <span className="text-xs font-black tabular-nums truncate">
+                                    {stats ? formatNumber(stats.total_records_processed) : "—"}
+                                </span>
+                            </div>
+
+                            {/* Stability / Rejections */}
+                            <div className="flex flex-col gap-1 border-l border-border/20 pl-2">
+                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                    <ShieldAlert className="h-2 w-2 text-amber-500" /> Stability
+                                </span>
+                                <span className={cn(
+                                    "text-xs font-black tabular-nums",
+                                    stats?.total_quarantined === 0 ? "text-emerald-500" : "text-amber-500"
+                                )}>
+                                    {stats ? formatNumber(stats.total_quarantined) : "—"}
+                                </span>
                             </div>
                         </div>
 
-                        {/* Row 2: Next Scheduled Run (if enabled) */}
-                        {pipeline.schedule_enabled && stats?.next_scheduled_run && (
-                            <div className="pt-2.5 border-t border-border/10 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="p-1 rounded-md bg-primary/10 text-primary">
-                                        <Calendar className="h-3 w-3" />
-                                    </div>
-                                    <span className="text-[9px] text-muted-foreground font-black uppercase tracking-wider">Next Sync</span>
+                        {/* Row 2: Secondary Counters */}
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/10">
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                    <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
+                                    <span className="text-[9px] font-bold tabular-nums text-foreground/80">{stats?.successful_runs ?? 0}</span>
                                 </div>
-                                <span className="text-xs font-black text-primary animate-pulse-slow">
-                                    {formatDistanceToNow(new Date(stats.next_scheduled_run), { addSuffix: true })}
+                                <div className="flex items-center gap-1">
+                                    <XCircle className="h-2.5 w-2.5 text-destructive" />
+                                    <span className="text-[9px] font-bold tabular-nums text-foreground/80">{stats?.failed_runs ?? 0}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-end gap-1.5 text-muted-foreground/60">
+                                <Clock className="h-2.5 w-2.5" />
+                                <span className="text-[9px] font-mono font-bold tracking-tighter">
+                                    {formatDuration(stats?.average_duration_seconds)}
                                 </span>
                             </div>
-                        )}
+                        </div>
+
+                        {/* Row 3: Timeline & Schedule */}
+                        <div className="pt-2.5 border-t border-border/10 space-y-2.5">
+                            {/* Last Run Info */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1 rounded-md bg-muted/50 text-muted-foreground/60">
+                                        <History className="h-2.5 w-2.5" />
+                                    </div>
+                                    <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider">Last Sync</span>
+                                </div>
+                                {stats?.last_run_at ? (
+                                    <div className="flex items-center gap-1.5">
+                                        <div className={cn(
+                                            "text-[9px] font-black uppercase tracking-tighter flex items-center gap-1",
+                                            isSuccess ? "text-emerald-500" : isFailed ? "text-destructive" : "text-amber-500"
+                                        )}>
+                                            {isSuccess && <CheckCircle2 className="h-2 w-2" />}
+                                            {isFailed && <XCircle className="h-2 w-2" />}
+                                            {lastJob?.status}
+                                        </div>
+                                        <span className="text-[10px] font-bold text-foreground/60 tabular-nums">
+                                            {formatDistanceToNow(new Date(stats.last_run_at), { addSuffix: true })}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-[9px] font-black text-muted-foreground/30 uppercase">Never</span>
+                                )}
+                            </div>
+
+                            {/* Next Scheduled Run */}
+                            {pipeline.schedule_enabled && stats?.next_scheduled_run && (
+                                <div className="flex items-center justify-between bg-primary/5 p-2 rounded-xl border border-primary/10">
+                                    <div className="flex items-center gap-2">
+                                        <Calendar className="h-2.5 w-2.5 text-primary" />
+                                        <span className="text-[8px] text-primary/70 font-black uppercase tracking-wider">Next Sync</span>
+                                    </div>
+                                    <span className="text-[9px] font-black text-primary animate-pulse-slow">
+                                        {formatDistanceToNow(new Date(stats.next_scheduled_run), { addSuffix: true })}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

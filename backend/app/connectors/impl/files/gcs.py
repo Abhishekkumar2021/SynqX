@@ -144,10 +144,14 @@ class GCSConnector(BaseConnector):
                 col_type = "string"
                 dtype_str = str(dtype).lower()
                 
-                if "int" in dtype_str: col_type = "integer"
-                elif "float" in dtype_str or "double" in dtype_str: col_type = "float"
-                elif "bool" in dtype_str: col_type = "boolean"
-                elif "datetime" in dtype_str: col_type = "datetime"
+                if "int" in dtype_str:
+                    col_type = "integer"
+                elif "float" in dtype_str or "double" in dtype_str:
+                    col_type = "float"
+                elif "bool" in dtype_str:
+                    col_type = "boolean"
+                elif "datetime" in dtype_str:
+                    col_type = "datetime"
                 elif "object" in dtype_str:
                     first_val = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
                     if isinstance(first_val, (dict, list)):
@@ -204,7 +208,8 @@ class GCSConnector(BaseConnector):
                     
                     yield df
                     rows_yielded += len(df)
-                    if limit is not None and rows_yielded >= limit: break
+                    if limit is not None and rows_yielded >= limit:
+                        break
             
             elif ext == ".tsv":
                 reader = pd.read_csv(bio, sep='\t', chunksize=chunksize)
@@ -218,7 +223,8 @@ class GCSConnector(BaseConnector):
                             df = df.iloc[:int(remaining)]
                     yield df
                     rows_yielded += len(df)
-                    if limit is not None and rows_yielded >= limit: break
+                    if limit is not None and rows_yielded >= limit:
+                        break
 
             elif ext == ".txt":
                 reader = pd.read_csv(bio, sep='\n', header=None, names=['line'], chunksize=chunksize)
@@ -232,7 +238,8 @@ class GCSConnector(BaseConnector):
                             df = df.iloc[:int(remaining)]
                     yield df
                     rows_yielded += len(df)
-                    if limit is not None and rows_yielded >= limit: break
+                    if limit is not None and rows_yielded >= limit:
+                        break
 
             elif ext == ".xml":
                 df = pd.read_xml(bio)
@@ -261,7 +268,8 @@ class GCSConnector(BaseConnector):
                             df = df.iloc[:int(remaining)]
                     yield df
                     rows_yielded += len(df)
-                    if limit is not None and rows_yielded >= limit: break
+                    if limit is not None and rows_yielded >= limit:
+                        break
             
             elif ext == ".json":
                 df = pd.read_json(bio)
@@ -304,10 +312,14 @@ class GCSConnector(BaseConnector):
         return len(df)
 
     def _get_content_type(self, ext: str) -> str:
-        if ext == ".csv": return "text/csv"
-        if ext == ".parquet": return "application/octet-stream"
-        if ext == ".json": return "application/json"
-        if ext == ".jsonl": return "application/x-ndjson"
+        if ext == ".csv":
+            return "text/csv"
+        if ext == ".parquet":
+            return "application/octet-stream"
+        if ext == ".json":
+            return "application/json"
+        if ext == ".jsonl":
+            return "application/x-ndjson"
         return "application/octet-stream"
 
     def execute_query(

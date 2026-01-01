@@ -1,9 +1,9 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-    Table as TableIcon, Eye, MoreHorizontal, RefreshCw, FileJson, Terminal,
-    FileText, Database, Code, FileCode, Workflow, Layers, 
-    Calendar, HardDrive, Shield, Activity, Copy, Check, Maximize2, Minimize2
+import { 
+    Table, Layers, FileText, FileCode, Activity,
+    MoreHorizontal, Table as TableIcon, Eye, RefreshCw, Terminal,
+    Shield, HardDrive, FileJson, Check, Copy, Minimize2, Maximize2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +25,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -47,15 +47,11 @@ interface AssetGridItemProps {
 
 const getAssetIcon = (type: string) => {
     const t = type.toLowerCase();
-    if (t.includes('table')) return <TableIcon className="h-5 w-5" />;
-    if (t.includes('view')) return <Eye className="h-5 w-5" />;
+    if (t.includes('table') || t.includes('view')) return <Table className="h-5 w-5" />;
     if (t.includes('collection')) return <Layers className="h-5 w-5" />;
-    if (t.includes('file') || t.includes('csv') || t.includes('json')) return <FileText className="h-5 w-5" />;
-    if (t.includes('query')) return <Code className="h-5 w-5" />;
-    if (t.includes('script') || t.includes('python') || t.includes('javascript') || t.includes('ruby') || t.includes('perl')) return <FileCode className="h-5 w-5" />;
-    if (t.includes('powershell')) return <Terminal className="h-5 w-5" />;
-    if (t.includes('stream') || t.includes('kafka') || t.includes('rabbitmq')) return <Workflow className="h-5 w-5" />;
-    return <Database className="h-5 w-5" />;
+    if (t.includes('file')) return <FileText className="h-5 w-5" />;
+    if (t.includes('script') || t.includes('python') || t.includes('javascript')) return <FileCode className="h-5 w-5" />;
+    return <Activity className="h-5 w-5" />;
 };
 
 // Helper Icon for History Sidebar
@@ -206,21 +202,29 @@ export const AssetGridItem: React.FC<AssetGridItemProps> = ({
                 </DropdownMenu>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mt-auto">
+            <div className="grid grid-cols-3 gap-2 mt-auto">
                 <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-muted/30 border border-border/20">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight flex items-center gap-1">
-                        <Shield className="h-2.5 w-2.5" /> Schema
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <Shield className="h-2 w-2" /> Schema
                     </span>
-                    <span className="text-[10px] font-bold text-foreground">
-                        {asset.current_schema_version ? `Version ${asset.current_schema_version}` : 'v0.0.1'}
+                    <span className="text-[10px] font-black text-foreground tabular-nums">
+                        v{asset.current_schema_version || '1'}
                     </span>
                 </div>
                 <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-muted/30 border border-border/20">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight flex items-center gap-1">
-                        <Calendar className="h-2.5 w-2.5" /> Updated
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <Zap className="h-2 w-2 text-amber-500" /> Volume
                     </span>
-                    <span className="text-[10px] font-bold text-foreground">
-                        {asset.updated_at ? formatDistanceToNow(new Date(asset.updated_at), { addSuffix: true }) : '-'}
+                    <span className="text-[10px] font-black text-foreground tabular-nums truncate">
+                        {asset.row_count_estimate ? formatNumber(asset.row_count_estimate) : '—'}
+                    </span>
+                </div>
+                <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-muted/30 border border-border/20">
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <HardDrive className="h-2 w-2 text-blue-500" /> Size
+                    </span>
+                    <span className="text-[10px] font-black text-foreground tabular-nums truncate">
+                        {asset.size_bytes_estimate ? (asset.size_bytes_estimate / 1024).toFixed(1) + ' KB' : '—'}
                     </span>
                 </div>
             </div>

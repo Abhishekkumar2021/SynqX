@@ -1,9 +1,8 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Table as TableIcon, Eye, MoreHorizontal, RefreshCw, FileJson, Terminal,
-    FileText, Database, Copy, Check, Maximize2, Minimize2, 
-    Code, FileCode, Workflow, Layers
+    Table, Layers, FileText, FileCode, Activity,
+    MoreHorizontal, Table as TableIcon, Eye, RefreshCw, FileJson, Terminal, Check, Copy, Minimize2, Maximize2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,15 +49,11 @@ interface AssetTableRowProps {
 // Helper to choose icon based on asset type
 const getAssetIcon = (type: string) => {
     const t = type.toLowerCase();
-    if (t.includes('table')) return <TableIcon className="h-4 w-4" />;
-    if (t.includes('view')) return <Eye className="h-4 w-4" />;
+    if (t.includes('table') || t.includes('view')) return <Table className="h-4 w-4" />;
     if (t.includes('collection')) return <Layers className="h-4 w-4" />;
-    if (t.includes('file') || t.includes('csv') || t.includes('json')) return <FileText className="h-4 w-4" />;
-    if (t.includes('query')) return <Code className="h-4 w-4" />;
-    if (t.includes('script') || t.includes('python') || t.includes('javascript') || t.includes('ruby') || t.includes('perl')) return <FileCode className="h-4 w-4" />;
-    if (t.includes('powershell')) return <Terminal className="h-4 w-4" />;
-    if (t.includes('stream') || t.includes('kafka') || t.includes('rabbitmq')) return <Workflow className="h-4 w-4" />;
-    return <Database className="h-4 w-4" />;
+    if (t.includes('file')) return <FileText className="h-4 w-4" />;
+    if (t.includes('script') || t.includes('python') || t.includes('javascript')) return <FileCode className="h-4 w-4" />;
+    return <Activity className="h-4 w-4" />;
 };
 
 export const AssetTableRow: React.FC<AssetTableRowProps> = ({ asset, connectionId }) => {
@@ -163,7 +158,13 @@ export const AssetTableRow: React.FC<AssetTableRowProps> = ({ asset, connectionI
                     </span>
                 )}
             </TableCell>
-            <TableCell className="px-6 py-2.5 text-muted-foreground text-xs font-mono">
+            <TableCell className="px-6 py-2.5 text-foreground font-bold text-xs tabular-nums">
+                {asset.row_count_estimate ? formatNumber(asset.row_count_estimate) : '—'}
+            </TableCell>
+            <TableCell className="px-6 py-2.5 text-muted-foreground text-xs tabular-nums">
+                {asset.size_bytes_estimate ? (asset.size_bytes_estimate / 1024).toFixed(1) + ' KB' : '—'}
+            </TableCell>
+            <TableCell className="px-6 py-2.5 text-muted-foreground text-[10px] font-mono uppercase tracking-tighter">
                 {asset.updated_at ? formatDistanceToNow(new Date(asset.updated_at), { addSuffix: true }) : '-'}
             </TableCell>
             <TableCell className="text-right pr-6 py-2.5">

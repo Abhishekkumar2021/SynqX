@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import {
-    Table as TableIcon, Eye, FileText, Database, Code, FileCode, Workflow, Layers, Terminal, Sparkles
+    Table, Layers, FileText, FileCode, Activity, Sparkles
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,18 +15,13 @@ interface DiscoveredAssetCardProps {
 }
 
 const getAssetIcon = (type: string) => {
-    const t = (type || 'table').toLowerCase();
-    if (t.includes('table')) return <TableIcon className="h-5 w-5" />;
-    if (t.includes('view')) return <Eye className="h-5 w-5" />;
+    const t = type.toLowerCase();
+    if (t.includes('table') || t.includes('view')) return <Table className="h-5 w-5" />;
     if (t.includes('collection')) return <Layers className="h-5 w-5" />;
-    if (t.includes('file') || t.includes('csv') || t.includes('json')) return <FileText className="h-5 w-5" />;
-    if (t.includes('query')) return <Code className="h-5 w-5" />;
-    if (t.includes('script') || t.includes('python') || t.includes('javascript') || t.includes('ruby') || t.includes('perl')) return <FileCode className="h-5 w-5" />;
-    if (t.includes('powershell')) return <Terminal className="h-5 w-5" />;
-    if (t.includes('stream') || t.includes('kafka') || t.includes('rabbitmq')) return <Workflow className="h-5 w-5" />;
-    return <Database className="h-5 w-5" />;
+    if (t.includes('file')) return <FileText className="h-5 w-5" />;
+    if (t.includes('script') || t.includes('python') || t.includes('javascript')) return <FileCode className="h-5 w-5" />;
+    return <Activity className="h-5 w-5" />;
 };
-
 export const DiscoveredAssetCard: React.FC<DiscoveredAssetCardProps> = ({ 
     asset, 
     selected,

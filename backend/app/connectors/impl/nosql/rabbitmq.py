@@ -117,10 +117,11 @@ class RabbitMQConnector(BaseConnector):
                     # Try json?
                     try:
                         content = json.loads(content)
-                        if isinstance(content, dict): content = json.dumps(content)
-                    except:
+                        if isinstance(content, dict):
+                            content = json.dumps(content)
+                    except json.JSONDecodeError:
                         pass
-                except:
+                except (AttributeError, UnicodeDecodeError):
                     content = str(body)
 
                 messages.append({

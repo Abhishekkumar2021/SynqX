@@ -48,18 +48,20 @@ class ParallelExecutionLayer:
         if len(nodes) == 1:
             # Single node - execute directly without threading overhead
             node = nodes[0]
+            DBLogger.log_job(state_manager.db, job_id, "DEBUG", f"Executing node '{node.name}' sequentially.")
             try:
                 result = self._execute_single_node(
                     node, pipeline_run, data_cache, dag, state_manager, job_id
                 )
                 results[node.node_id] = result
-                logger.info(f"✓ Node '{node.node_id}' completed ({len(result)} chunks)")
+                logger.info(f"✓ Node '{node.name}' completed ({len(result)} chunks)")
             except Exception as e:
-                errors.append((node.node_id, e))
-                logger.error(f"✗ Node '{node.node_id}' failed: {e}", exc_info=True)
+                errors.append((node.name, e))
+                logger.error(f"✗ Node '{node.name}' failed: {e}", exc_info=True)
         else:
             # Multiple nodes - parallel execution
             actual_workers = min(self.max_workers, len(nodes))
+            DBLogger.log_job(state_manager.db, job_id, "INFO", f"Executing {len(nodes)} nodes in parallel using {actual_workers} worker threads.")
             logger.info(
                 f"Parallel execution: {len(nodes)} nodes with {actual_workers} workers"
             )
@@ -88,22 +90,22 @@ class ParallelExecutionLayer:
                         result = future.result(timeout=timeout)
                         results[node.node_id] = result
                         logger.info(
-                            f"✓ Node '{node.node_id}' completed ({len(result)} chunks)"
+                            f"✓ Node '{node.name}' completed ({len(result)} chunks)"
                         )
                     except concurrent.futures.TimeoutError:
                         errors.append(
-                            (node.node_id, Exception(f"Execution timeout ({timeout}s)"))
+                            (node.name, Exception(f"Execution timeout ({timeout}s)"))
                         )
-                        logger.error(f"✗ Node '{node.node_id}' timed out after {timeout}s")
+                        logger.error(f"✗ Node '{node.name}' timed out after {timeout}s")
                     except Exception as e:
-                        errors.append((node.node_id, e))
+                        errors.append((node.name, e))
                         logger.error(
-                            f"✗ Node '{node.node_id}' failed: {e}", exc_info=True
+                            f"✗ Node '{node.name}' failed: {e}", exc_info=True
                         )
 
         if errors:
-            error_summary = "; ".join([f"{nid}: {str(e)}" for nid, e in errors])
-            raise PipelineExecutionError(f"Layer execution failed: {error_summary}")
+            error_summary = "; ".join([f"Node '{name}': {str(e)}" for name, e in errors])
+            raise PipelineExecutionError(error_summary)
 
         return results
 
@@ -136,8 +138,9 @@ class ParallelExecutionLayer:
                     )
 
                     if not t_pipeline_run or not t_node:
+                        from app.core.errors import PipelineExecutionError
                         raise PipelineExecutionError(
-                            f"Failed to load pipeline run or node {node.node_id} in thread"
+                            f"Failed to load pipeline run or node '{node.name}' in thread"
                         )
 
                     # Create thread-local state manager and executor
@@ -152,18 +155,18 @@ class ParallelExecutionLayer:
                         chunks = data_cache.retrieve(uid)
                         input_data[uid] = chunks
                         logger.debug(
-                            f"Node '{node.node_id}' loaded {len(chunks)} chunks from '{uid}'"
+                            f"Node '{node.name}' loaded {len(chunks)} chunks from '{uid}'"
                         )
 
                     # Execute node
                     logger.info(
-                        f"→ Executing node '{node.node_id}' (type: {node.operator_type.value}, attempt: {attempt + 1}/{max_retries + 1})"
+                        f"→ Executing node '{node.name}' (type: {node.operator_type.value}, attempt: {attempt + 1}/{max_retries + 1})"
                     )
                     
                     if attempt > 0:
                         DBLogger.log_job(
                             session, job_id, "WARNING", 
-                            f"Retrying node '{node.node_id}' (Attempt {attempt + 1}/{max_retries + 1})"
+                            f"Retrying node '{node.name}' (Attempt {attempt + 1}/{max_retries + 1})"
                         )
 
                     results = t_node_executor.execute(t_pipeline_run, t_node, input_data)
@@ -171,7 +174,7 @@ class ParallelExecutionLayer:
                     node_duration = time.time() - node_start
                     total_rows = sum(len(df) for df in results)
                     logger.info(
-                        f"← Node '{node.node_id}' completed: {total_rows:,} rows, "
+                        f"← Node '{node.name}' completed: {total_rows:,} rows, "
                         f"{len(results)} chunks in {node_duration:.2f}s"
                     )
 
@@ -179,14 +182,20 @@ class ParallelExecutionLayer:
 
             except Exception as e:
                 attempt += 1
+                
+                # Check for non-retryable error types
+                if isinstance(e, (ConfigurationError, ValueError, PipelineExecutionError)):
+                    logger.error(f"Node '{node.name}' failed with non-retryable error: {e}")
+                    raise e
+
                 if attempt > max_retries:
-                    logger.error(f"Node '{node.node_id}' failed after {attempt} attempts: {e}")
+                    logger.error(f"Node '{node.name}' failed after {attempt} attempts: {e}")
                     raise e
                 
                 # Calculate delay
                 delay = self._calculate_retry_delay(node, attempt)
                 logger.warning(
-                    f"Node '{node.node_id}' failed (attempt {attempt}/{max_retries + 1}). "
+                    f"Node '{node.name}' failed (attempt {attempt}/{max_retries + 1}). "
                     f"Retrying in {delay}s... Error: {e}"
                 )
                 time.sleep(delay)
@@ -357,19 +366,24 @@ class PipelineRunner:
             db,
             job_id,
             "INFO",
-            f"Orchestration started: {len(pipeline_version.nodes)} nodes identified (Parallelism: {self.max_parallel_nodes})",
+            f"Orchestration initiated. Identified {len(pipeline_version.nodes)} logical processing nodes. "
+            f"Maximum engine parallelism set to {self.max_parallel_nodes} concurrent threads.",
         )
 
         try:
             # Build and validate DAG
+            DBLogger.log_job(db, job_id, "DEBUG", "Parsing pipeline topology and generating Directed Acyclic Graph (DAG)...")
             dag = self._build_dag(pipeline_version)
             node_map = {n.node_id: n for n in pipeline_version.nodes}
 
             # Compute execution layers
+            DBLogger.log_job(db, job_id, "DEBUG", "Resolving execution dependencies and calculating optimal parallel layers...")
             layers = self._compute_execution_layers(dag, node_map)
 
             DBLogger.log_job(
-                db, job_id, "INFO", f"Execution plan finalized: {len(layers)} sequential stages calculated"
+                db, job_id, "INFO", 
+                f"Static analysis complete. Execution plan finalized with {len(layers)} sequential stages. "
+                f"Starting execution lifecycle."
             )
 
             # Execute layers sequentially, nodes within layer in parallel
@@ -388,19 +402,12 @@ class PipelineRunner:
                         logger.error(timeout_msg)
                         raise PipelineExecutionError(timeout_msg)
 
-                logger.info("")
-                logger.info(f"{'='*80}")
-                logger.info(
-                    f"LAYER {layer_idx}/{len(layers)}: {len(layer_nodes)} node(s)"
-                )
-                logger.info(f"Nodes: {', '.join(n.node_id for n in layer_nodes)}")
-                logger.info(f"{'='*80}")
-
+                node_ids = [n.node_id for n in layer_nodes]
                 DBLogger.log_job(
                     db,
                     job_id,
                     "INFO",
-                    f"Stage {layer_idx}/{len(layers)}: Processing {len(layer_nodes)} parallel tasks...",
+                    f"Stage {layer_idx}/{len(layers)}: Initiating processing for nodes: [{', '.join(node_ids)}].",
                 )
 
                 # Execute layer
@@ -425,51 +432,22 @@ class PipelineRunner:
                 layer_duration = time.time() - layer_start
                 cache_stats = data_cache.get_stats()
 
-                logger.info(f"{'='*80}")
-                logger.info(
-                    f"LAYER {layer_idx} COMPLETED: {layer_duration:.2f}s, "
-                    f"{total_layer_records:,} records"
-                )
-                logger.info(
-                    f"Cache: {cache_stats['cached_nodes']} nodes, "
-                    f"{cache_stats['memory_mb']:.2f}MB "
-                    f"({cache_stats['utilization_pct']:.1f}%)"
-                )
-                logger.info(
-                    f"Progress: {self.metrics.completed_nodes}/{self.metrics.total_nodes} nodes"
-                )
-                logger.info(f"{'='*80}")
-
                 DBLogger.log_job(
                     db,
                     job_id,
                     "INFO",
-                    f"Stage {layer_idx} completed: {total_layer_records:,} records processed in {layer_duration:.2f}s",
+                    f"Stage {layer_idx} completed successfully. Processed {total_layer_records:,} records in {layer_duration:.2f}s. "
+                    f"Engine memory utilization: {cache_stats['utilization_pct']:.1f}%.",
                 )
 
             # Finalize execution
             self.metrics.execution_end = datetime.now(timezone.utc)
             state_manager.complete_run(pipeline_run)
 
-            # Log final summary
-            logger.info("")
-            logger.info("=" * 80)
-            logger.info("PIPELINE EXECUTION COMPLETED SUCCESSFULLY")
-            logger.info(f"Duration: {self.metrics.duration_seconds:.2f}s")
-            logger.info(
-                f"Nodes Completed: {self.metrics.completed_nodes}/{self.metrics.total_nodes}"
-            )
-            logger.info(f"Records Processed: {self.metrics.total_records_processed:,}")
-            logger.info(
-                f"Throughput: {self.metrics.throughput_records_per_sec:.2f} records/sec"
-            )
-            logger.info("=" * 80)
-
             summary = (
-                f"Pipeline finalized successfully. "
-                f"Total Duration: {self.metrics.duration_seconds:.2f}s, "
-                f"Nodes: {self.metrics.completed_nodes}/{self.metrics.total_nodes}, "
-                f"Throughput: {self.metrics.throughput_records_per_sec:.2f} rec/s"
+                f"Pipeline execution finalized successfully. "
+                f"Total Duration: {self.metrics.duration_seconds:.2f}s. "
+                f"Completed {self.metrics.completed_nodes} nodes with a global throughput of {self.metrics.throughput_records_per_sec:.2f} rec/s."
             )
             DBLogger.log_job(db, job_id, "SUCCESS", summary)
 
@@ -478,15 +456,10 @@ class PipelineRunner:
             self.metrics.failed_nodes += 1
 
             error_msg = (
-                f"Pipeline execution FAILED after {self.metrics.duration_seconds:.2f}s. "
-                f"Completed: {self.metrics.completed_nodes}/{self.metrics.total_nodes} nodes. "
-                f"Error: {str(e)}"
+                f"Execution aborted after {self.metrics.duration_seconds:.2f}s "
+                f"({self.metrics.completed_nodes}/{self.metrics.total_nodes} nodes completed). "
+                f"Reason: {str(e)}"
             )
-
-            logger.error("=" * 80)
-            logger.error("PIPELINE EXECUTION FAILED")
-            logger.error(error_msg)
-            logger.error("=" * 80, exc_info=True)
 
             DBLogger.log_job(db, job_id, "ERROR", error_msg)
             state_manager.fail_run(pipeline_run, e)

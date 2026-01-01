@@ -166,10 +166,14 @@ class SFTPConnector(BaseConnector):
                 col_type = "string"
                 dtype_str = str(dtype).lower()
                 
-                if "int" in dtype_str: col_type = "integer"
-                elif "float" in dtype_str or "double" in dtype_str: col_type = "float"
-                elif "bool" in dtype_str: col_type = "boolean"
-                elif "datetime" in dtype_str: col_type = "datetime"
+                if "int" in dtype_str:
+                    col_type = "integer"
+                elif "float" in dtype_str or "double" in dtype_str:
+                    col_type = "float"
+                elif "bool" in dtype_str:
+                    col_type = "boolean"
+                elif "datetime" in dtype_str:
+                    col_type = "datetime"
                 elif "object" in dtype_str:
                     first_val = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
                     if isinstance(first_val, (dict, list)):
@@ -226,7 +230,8 @@ class SFTPConnector(BaseConnector):
                             df = df.iloc[:int(remaining)]
                     yield df
                     rows += len(df)
-                    if limit is not None and rows >= limit: break
+                    if limit is not None and rows >= limit:
+                        break
             
             elif ext == ".tsv":
                 reader = pd.read_csv(f, sep='\t', chunksize=chunksize)
@@ -240,7 +245,8 @@ class SFTPConnector(BaseConnector):
                             df = df.iloc[:int(remaining)]
                     yield df
                     rows += len(df)
-                    if limit is not None and rows >= limit: break
+                    if limit is not None and rows >= limit:
+                        break
 
             elif ext == ".txt":
                 reader = pd.read_csv(f, sep='\n', header=None, names=['line'], chunksize=chunksize)
@@ -254,7 +260,8 @@ class SFTPConnector(BaseConnector):
                             df = df.iloc[:int(remaining)]
                     yield df
                     rows += len(df)
-                    if limit is not None and rows >= limit: break
+                    if limit is not None and rows >= limit:
+                        break
 
             elif ext in (".xml", ".xls", ".xlsx", ".parquet", ".json"):
                 # These formats usually require a seekable stream or full file
@@ -283,7 +290,8 @@ class SFTPConnector(BaseConnector):
                             df = df.iloc[:int(remaining)]
                     yield df
                     rows += len(df)
-                    if limit and rows >= limit: break
+                    if limit and rows >= limit:
+                        break
 
     def write_batch(
         self,
@@ -302,10 +310,14 @@ class SFTPConnector(BaseConnector):
         ext = posixpath.splitext(asset)[1].lower()
         bio = io.BytesIO()
         
-        if ext == ".csv": df.to_csv(bio, index=False)
-        elif ext == ".parquet": df.to_parquet(bio, index=False)
-        elif ext == ".json": df.to_json(bio, orient="records")
-        elif ext == ".jsonl": df.to_json(bio, orient="records", lines=True)
+        if ext == ".csv":
+            df.to_csv(bio, index=False)
+        elif ext == ".parquet":
+            df.to_parquet(bio, index=False)
+        elif ext == ".json":
+            df.to_json(bio, orient="records")
+        elif ext == ".jsonl":
+            df.to_json(bio, orient="records", lines=True)
         
         bio.seek(0)
         

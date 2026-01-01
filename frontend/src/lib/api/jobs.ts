@@ -31,12 +31,19 @@ export const getRunSteps = async (runId: number) => {
 export const getStepData = async (
   runId: number,
   stepId: number,
-  direction: "in" | "out" = "out",
+  direction: "in" | "out" | "quarantine" = "out",
   limit: number = 100,
   offset: number = 0
 ) => {
   const { data } = await api.get<any>(`/runs/${runId}/steps/${stepId}/data`, {
     params: { direction, limit, offset },
+  });
+  return data;
+};
+
+export const getQuarantineList = async (limit: number = 50, offset: number = 0) => {
+  const { data } = await api.get<any[]>("/quarantine", {
+    params: { limit, offset },
   });
   return data;
 };

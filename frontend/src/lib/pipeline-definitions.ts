@@ -204,11 +204,11 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     {
                         name: 'schema', label: 'Validation Rules', type: 'json', configKey: 'schema', 
                         placeholder: '[ { "column": "id", "check": "not_null" } ]',
-                        tooltip: 'List of validation rules to apply. Ensures data integrity before reaching downstream sinks.'
+                        tooltip: 'List of validation rules to apply. Each rule target a column and performs a check (not_null, unique, regex, min_value, max_value, in_list, data_type).'
                     },
                     {
                         name: 'strict', label: 'Strict Mode', type: 'boolean', configKey: 'strict',
-                        tooltip: 'If enabled, the entire pipeline will fail if any row fails validation.'
+                        tooltip: 'If enabled, the entire pipeline will fail if any row fails validation. If disabled, invalid rows are dropped (and optionally quarantined).'
                     },
                     {
                         name: 'quarantine', label: 'Quarantine', type: 'boolean', configKey: 'quarantine',

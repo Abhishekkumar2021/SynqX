@@ -330,6 +330,8 @@ class PipelineStatsResponse(BaseModel):
     total_runs: int
     successful_runs: int
     failed_runs: int
+    total_quarantined: int = 0
+    total_records_processed: int = 0
     average_duration_seconds: Optional[float]
     last_run_at: Optional[datetime]
     next_scheduled_run: Optional[datetime]

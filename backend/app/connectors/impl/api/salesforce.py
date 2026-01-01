@@ -92,17 +92,21 @@ class SalesforceConnector(BaseConnector):
             obj_desc = getattr(self._sf, asset).describe()
             columns = []
             for field in obj_desc['fields']:
-                f_type = field['type']
+                py_type = field['type']
                 synqx_type = "string"
-                if f_type in ["int", "long"]: synqx_type = "integer"
-                elif f_type in ["double", "currency", "percent"]: synqx_type = "float"
-                elif f_type == "boolean": synqx_type = "boolean"
-                elif f_type in ["date", "datetime"]: synqx_type = "datetime"
+                if py_type in ["int", "long"]:
+                    synqx_type = "integer"
+                elif py_type in ["double", "currency", "percent"]:
+                    synqx_type = "float"
+                elif py_type == "boolean":
+                    synqx_type = "boolean"
+                elif py_type in ["date", "datetime"]:
+                    synqx_type = "datetime"
                 
                 columns.append({
                     "name": field['name'],
                     "type": synqx_type,
-                    "native_type": f_type,
+                    "native_type": py_type,
                     "label": field['label']
                 })
             return {"asset": asset, "columns": columns, "type": "sobject"}
@@ -136,7 +140,8 @@ class SalesforceConnector(BaseConnector):
         
         if records:
             # Remove 'attributes' key from each record
-            for r in records: r.pop('attributes', None)
+            for r in records:
+                r.pop('attributes', None)
             yield pd.DataFrame(records)
 
     def write_batch(
@@ -172,5 +177,6 @@ class SalesforceConnector(BaseConnector):
         self.connect()
         results = self._sf.query_all(query)
         records = results.get('records', [])
-        for r in records: r.pop('attributes', None)
+        for r in records:
+            r.pop('attributes', None)
         return records

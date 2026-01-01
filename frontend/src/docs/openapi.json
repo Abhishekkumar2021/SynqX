@@ -7451,50 +7451,7 @@
                         "type": "array",
                         "title": "Initialized Languages"
                     },
-                    "ruby_version": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Ruby Version"
-                    },
-                    "powershell_version": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Powershell Version"
-                    },
-                    "perl_version": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Perl Version"
-                    },
-                    "gcc_version": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Gcc Version"
-                    },
+
                     "details": {
                         "additionalProperties": true,
                         "type": "object",

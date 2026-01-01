@@ -8,7 +8,7 @@ from app.models.enums import JobStatus, PipelineRunStatus
 from app.models.pipelines import PipelineVersion
 from app.engine.runner import PipelineRunner
 from app.core.db_logging import DBLogger
-from app.core.errors import ConfigurationError
+from app.core.errors import ConfigurationError, PipelineExecutionError
 import httpx
 
 logger = get_logger(__name__)
@@ -250,6 +250,7 @@ def execute_pipeline_task(self, job_id: int) -> str:
                 f"Job execution initiated (Attempt {total_attempts})",
                 source="worker",
             )
+            DBLogger.log_job(session, job.id, "DEBUG", f"Loading pipeline version {job.pipeline_version_id}...", source="worker")
 
             # Trigger Job Started Alert
             try:
@@ -262,7 +263,7 @@ def execute_pipeline_task(self, job_id: int) -> str:
                         alert_type=AlertType.JOB_STARTED,
                         pipeline_id=job.pipeline_id,
                         job_id=job.id,
-                        message=f"Pipeline execution started (Attempt {self.request.retries + 1})",
+                        message=f"Pipeline '{job.pipeline.name if job.pipeline else 'Unknown'}' started (Attempt {total_attempts})",
                         level=AlertLevel.INFO
                     )
             except Exception as alert_err:
@@ -346,7 +347,7 @@ def execute_pipeline_task(self, job_id: int) -> str:
                             alert_type=AlertType.JOB_SUCCESS,
                             pipeline_id=job.pipeline_id,
                             job_id=job.id,
-                            message="Pipeline execution completed successfully",
+                            message=f"Pipeline '{pipeline.name}' completed successfully",
                             level=AlertLevel.SUCCESS
                         )
                     DBLogger.log_job(session, job.id, "INFO", "Job processing finalized successfully", source="worker")
@@ -374,6 +375,7 @@ def execute_pipeline_task(self, job_id: int) -> str:
 
                 if should_retry and self.request.retries < self.max_retries:
                     _mark_job_retrying(session, job, str(e))
+                    DBLogger.log_job(session, job.id, "WARNING", f"Pipeline failed: {str(e)}. Retrying... ({self.request.retries + 1}/{self.max_retries})", source="worker")
                     raise self.retry(exc=e, countdown=_calculate_retry_delay(job, self.request.retries))
                 else:
                     _mark_job_failed(session, job, str(e), is_infra_error=False)
@@ -597,6 +599,7 @@ def _should_retry_job(job: Job, error: Exception, retry_count: int) -> bool:
     non_retryable_errors = (
         ConfigurationError,  # Configuration issues won't be fixed by retrying
         ValueError,  # Invalid data won't be fixed by retrying
+        PipelineExecutionError, # Strict validation failures should not be retried
     )
 
     if isinstance(error, non_retryable_errors):
@@ -621,12 +624,26 @@ def _should_retry_job(job: Job, error: Exception, retry_count: int) -> bool:
 
 def _calculate_retry_delay(job: Job, retry_count: int) -> int:
     """
-    Calculate retry delay based on the job's retry strategy.
+    Calculate retry delay based on the job's pipeline configuration.
     Returns delay in seconds.
     """
-    # Exponential backoff: 60s, 120s, 240s, etc.
-    base_delay = 60
-    max_delay = 600  # 10 minutes max
+    from app.models.enums import RetryStrategy
+    
+    # Default values
+    base_delay = job.retry_delay_seconds if job.retry_delay_seconds is not None else 60
+    strategy = job.retry_strategy if job.retry_strategy is not None else RetryStrategy.FIXED
+    
+    # If pipeline is loaded, override with its specific config
+    if job.pipeline:
+        base_delay = job.pipeline.retry_delay_seconds if job.pipeline.retry_delay_seconds is not None else base_delay
+        strategy = job.pipeline.retry_strategy if job.pipeline.retry_strategy is not None else strategy
 
-    delay = min(base_delay * (2**retry_count), max_delay)
-    return delay
+    if strategy == RetryStrategy.FIXED:
+        return base_delay
+    elif strategy == RetryStrategy.EXPONENTIAL_BACKOFF:
+        # 2^retry_count * base_delay, capped at 1 hour
+        return min(base_delay * (2 ** retry_count), 3600)
+    elif strategy == RetryStrategy.LINEAR_BACKOFF:
+        return base_delay * (retry_count + 1)
+    
+    return base_delay

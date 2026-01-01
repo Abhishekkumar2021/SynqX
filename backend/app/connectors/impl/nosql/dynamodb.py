@@ -122,9 +122,12 @@ class DynamoDBConnector(BaseConnector):
                     # Simple type inference
                     py_type = type(v).__name__
                     col_type = "string"
-                    if py_type == "Decimal": col_type = "float" # Boto3 uses Decimal
-                    elif py_type == "int": col_type = "integer"
-                    elif py_type == "bool": col_type = "boolean"
+                    if py_type == "Decimal":
+                        col_type = "float" # Boto3 uses Decimal
+                    elif py_type == "int":
+                        col_type = "integer"
+                    elif py_type == "bool":
+                        col_type = "boolean"
                     
                     schema_map[k] = {"name": k, "type": col_type, "native_type": py_type}
         

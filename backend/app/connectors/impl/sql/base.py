@@ -181,26 +181,30 @@ class SQLConnector(BaseConnector):
         
         custom_query = kwargs.get("query")
         incremental_filter = kwargs.get("incremental_filter")
+        params = kwargs.pop("params", {}) or {}
 
         if custom_query:
             clean_query = custom_query.strip().rstrip(';')
             
             if incremental_filter and isinstance(incremental_filter, dict):
                 where_clauses = []
-                for col, val in incremental_filter.items():
-                    if isinstance(val, (int, float)):
-                        where_clauses.append(f"{col} > {val}")
-                    else:
-                        where_clauses.append(f"{col} > '{val}'")
+                for i, (col, val) in enumerate(incremental_filter.items()):
+                    param_name = f"inc_{i}"
+                    where_clauses.append(f"{col} > :{param_name}")
+                    params[param_name] = val
                 
                 if where_clauses:
-                    clean_query = f"SELECT * FROM ({clean_query}) AS subq WHERE {' AND '.join(where_clauses)}"
+                    clean_query = f"SELECT * FROM ({clean_query}) AS inc_subq WHERE {' AND '.join(where_clauses)}"
 
-            if limit and "limit" not in clean_query.lower():
-                clean_query += f" LIMIT {limit}"
-            if offset and "offset" not in clean_query.lower():
-                clean_query += f" OFFSET {offset}"
-            query = clean_query
+            # Safely apply limit and offset using a subquery wrap
+            if limit or offset:
+                query = f"SELECT * FROM ({clean_query}) AS batch_subq"
+                if limit:
+                    query += f" LIMIT {limit}"
+                if offset:
+                    query += f" OFFSET {offset}"
+            else:
+                query = clean_query
         else:
             name, schema = self.normalize_asset_identifier(asset)
             table_ref = f"{schema}.{name}" if schema else name
@@ -209,26 +213,43 @@ class SQLConnector(BaseConnector):
             # Apply Incremental Logic
             if incremental_filter and isinstance(incremental_filter, dict):
                 where_clauses = []
-                for col, val in incremental_filter.items():
-                    if isinstance(val, (int, float)):
-                        where_clauses.append(f"{col} > {val}")
-                    else:
-                        where_clauses.append(f"{col} > '{val}'")
+                for i, (col, val) in enumerate(incremental_filter.items()):
+                    param_name = f"inc_{i}"
+                    where_clauses.append(f"{col} > :{param_name}")
+                    params[param_name] = val
                 
                 if where_clauses:
                     query += f" WHERE {' AND '.join(where_clauses)}"
 
-            if limit: query += f" LIMIT {limit}"
-            if offset: query += f" OFFSET {offset}"
+            if limit:
+                query += f" LIMIT {limit}"
+            if offset:
+                query += f" OFFSET {offset}"
         
-        chunksize = kwargs.pop("chunksize", 10000)
-        params = kwargs.pop("params", None)
+        # UI uses 'batch_size', SQLAlchemy uses 'chunksize'
+        chunksize = kwargs.pop("chunksize", kwargs.pop("batch_size", 10000))
         try:
             for chunk in pd.read_sql_query(text(query), con=self._connection, chunksize=chunksize, params=params, **kwargs):
                 yield chunk
         except Exception as e:
             raise DataTransferError(f"Read failed for {asset}: {e}")
 
+    def get_total_count(self, query_or_asset: str, is_query: bool = False, **kwargs) -> Optional[int]:
+        self.connect()
+        try:
+            if is_query:
+                clean_query = query_or_asset.strip().rstrip(';')
+                count_query = f"SELECT COUNT(*) FROM ({clean_query}) AS total_count_subq"
+            else:
+                name, schema = self.normalize_asset_identifier(query_or_asset)
+                table_ref = f"{schema}.{name}" if schema else name
+                count_query = f"SELECT COUNT(*) FROM {table_ref}"
+            
+            result = self._connection.execute(text(count_query)).scalar()
+            return int(result) if result is not None else None
+        except Exception as e:
+            logger.warning(f"Failed to get total count for {query_or_asset}: {e}")
+            return None
     def execute_query(
         self,
         query: str,
@@ -240,11 +261,15 @@ class SQLConnector(BaseConnector):
         try:
             clean_query = query.strip().rstrip(';')
             
-            final_query = clean_query
-            if limit and "limit" not in clean_query.lower():
-                final_query += f" LIMIT {limit}"
-            if offset and "offset" not in clean_query.lower():
-                final_query += f" OFFSET {offset}"
+            # Safely apply limit and offset using a subquery wrap
+            if limit or offset:
+                final_query = f"SELECT * FROM ({clean_query}) AS query_subq"
+                if limit:
+                    final_query += f" LIMIT {limit}"
+                if offset:
+                    final_query += f" OFFSET {offset}"
+            else:
+                final_query = clean_query
             
             df = pd.read_sql_query(text(final_query), con=self._connection, **kwargs)
             return df.replace({np.nan: None}).to_dict(orient="records")
@@ -259,7 +284,8 @@ class SQLConnector(BaseConnector):
         
         # Normalize mode
         clean_mode = mode.lower()
-        if clean_mode == "replace": clean_mode = "overwrite"
+        if clean_mode == "replace":
+            clean_mode = "overwrite"
 
         # Discover target columns to prevent errors from extra columns (e.g. joined results)
         try:

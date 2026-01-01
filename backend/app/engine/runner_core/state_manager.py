@@ -184,6 +184,7 @@ class StateManager:
         Update step run status with comprehensive metrics.
         """
         try:
+            logger.debug(f"Updating step {step_run.id}: IN={records_in}, OUT={records_out}, ERR={records_error}")
             # Re-fetch to ensure we are in the current session
             t_step_run = self.db.query(StepRun).filter(
                 StepRun.id == step_run.id
@@ -240,13 +241,17 @@ class StateManager:
             ).first()
             
             if t_pipeline_run:
+                # Force refresh of step_runs relationship to get latest records_error
                 self.db.refresh(t_pipeline_run)
                 
+                # Fetch fresh step runs to avoid stale relationship data
+                fresh_steps = self.db.query(StepRun).filter(StepRun.pipeline_run_id == t_pipeline_run.id).all()
+                
                 # Aggregate metrics
-                total_extracted = sum(s.records_out for s in t_pipeline_run.step_runs if s.operator_type == OperatorType.EXTRACT)
-                total_loaded = sum(s.records_out for s in t_pipeline_run.step_runs if s.operator_type == OperatorType.LOAD)
-                total_failed = sum(s.records_error for s in t_pipeline_run.step_runs)
-                total_bytes = sum(s.bytes_processed for s in t_pipeline_run.step_runs)
+                total_extracted = sum(s.records_out for s in fresh_steps if s.operator_type == OperatorType.EXTRACT)
+                total_loaded = sum(s.records_out for s in fresh_steps if s.operator_type == OperatorType.LOAD)
+                total_failed = sum(s.records_error for s in fresh_steps)
+                total_bytes = sum(s.bytes_processed for s in fresh_steps)
                 
                 completed_steps = len([s for s in t_pipeline_run.step_runs if s.status == OperatorRunStatus.SUCCESS])
                 failed_steps = len([s for s in t_pipeline_run.step_runs if s.status == OperatorRunStatus.FAILED])

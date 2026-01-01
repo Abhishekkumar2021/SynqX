@@ -27,7 +27,7 @@ class ConnectorFactory:
         # Auto-discover if registry is empty
         if not cls._registry:
             try:
-                import app.connectors.impl
+                import app.connectors.impl # noqa: F401
             except ImportError:
                 pass
 

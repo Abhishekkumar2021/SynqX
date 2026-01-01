@@ -1,15 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-    ChevronsUpDown, 
-    Check, 
-    PlusCircle, 
+import {
+    ChevronsUpDown,
+    Check,
+    PlusCircle,
     Building2,
     Settings2,
     Loader2,
     Download,
     Search,
-    ArrowRight
+    ArrowRight,
+    RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -24,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { CreateWorkspaceDialog } from './CreateWorkspaceDialog';
 import { AnimatePresence } from 'framer-motion';
+import { Button } from '../ui/button';
 
 interface WorkspaceSwitcherProps {
     variant?: 'header' | 'sidebar';
@@ -32,7 +34,7 @@ interface WorkspaceSwitcherProps {
 
 export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ variant = 'header', isCollapsed = false }) => {
     const navigate = useNavigate();
-    const { workspaces, activeWorkspace, switchActiveWorkspace, downloadWorkspaceContext, isSwitching, isLoading } = useWorkspace();
+    const { workspaces, activeWorkspace, switchActiveWorkspace, downloadWorkspaceContext, refreshWorkspaces, isSwitching, isLoading } = useWorkspace();
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [search, setSearch] = useState('');
 
@@ -106,9 +108,24 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ variant = 
                         </div>
                     </div>
 
-                    <DropdownMenuLabel className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-                        {search ? 'Search Results' : 'My Workspaces'}
-                    </DropdownMenuLabel>
+                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/10 mb-1">
+                        <DropdownMenuLabel className="p-0 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+                            {search ? 'Search Results' : 'My Workspaces'}
+                        </DropdownMenuLabel>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5 rounded-md hover:bg-primary/10 hover:text-primary transition-all"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                refreshWorkspaces();
+                            }}
+                            title="Refresh Workspace List"
+                        >
+                            <RotateCcw className={cn("h-3 w-3", isLoading && "animate-spin")} />
+                        </Button>
+                    </div>
                     
                     <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-1 py-1">
                         <AnimatePresence mode="popLayout">

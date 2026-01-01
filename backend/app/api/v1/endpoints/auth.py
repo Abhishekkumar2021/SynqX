@@ -130,7 +130,7 @@ def search_users(
     
     users = db.query(User).filter(
         User.email.ilike(f"%{q}%"),
-        User.is_active == True
+        User.is_active
     ).limit(10).all()
     
     return users

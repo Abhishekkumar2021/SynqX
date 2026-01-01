@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Iterator, Union
 import pandas as pd
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from app.connectors.base import BaseConnector
 from app.core.errors import (
     ConfigurationError, 
@@ -171,11 +171,15 @@ class MongoDBConnector(BaseConnector):
                 collection = self._db[collection_name]
                 cursor = collection.find(query_filter, q_obj.get("projection"))
                 
-                if offset: cursor = cursor.skip(offset)
-                elif q_obj.get("offset"): cursor = cursor.skip(q_obj.get("offset"))
+                if offset:
+                    cursor = cursor.skip(offset)
+                elif q_obj.get("offset"):
+                    cursor = cursor.skip(q_obj.get("offset"))
                 
-                if limit: cursor = cursor.limit(limit)
-                elif q_obj.get("limit"): cursor = cursor.limit(q_obj.get("limit"))
+                if limit:
+                    cursor = cursor.limit(limit)
+                elif q_obj.get("limit"):
+                    cursor = cursor.limit(q_obj.get("limit"))
             except Exception as e:
                 raise DataTransferError(f"Invalid MongoDB query: {e}")
         else:
@@ -187,13 +191,16 @@ class MongoDBConnector(BaseConnector):
                     query_filter[col] = {"$gt": val}
 
             cursor = collection.find(query_filter, kwargs.get("projection"))
-            if offset: cursor = cursor.skip(offset)
-            if limit: cursor = cursor.limit(limit)
+            if offset:
+                cursor = cursor.skip(offset)
+            if limit:
+                cursor = cursor.limit(limit)
 
-        chunksize = kwargs.get("chunksize", 5000)
+        chunksize = kwargs.get("chunksize", kwargs.get("batch_size", 5000))
         batch = []
         for doc in cursor:
-            if '_id' in doc: doc['_id'] = str(doc['_id'])
+            if '_id' in doc:
+                doc['_id'] = str(doc['_id'])
             batch.append(doc)
             if len(batch) >= chunksize:
                 yield pd.DataFrame(batch)
@@ -221,15 +228,20 @@ class MongoDBConnector(BaseConnector):
             collection = self._db[collection_name]
             cursor = collection.find(q_obj.get("filter", {}), q_obj.get("projection"))
             
-            if offset: cursor = cursor.skip(offset)
-            elif q_obj.get("offset"): cursor = cursor.skip(q_obj.get("offset"))
+            if offset:
+                cursor = cursor.skip(offset)
+            elif q_obj.get("offset"):
+                cursor = cursor.skip(q_obj.get("offset"))
             
-            if limit: cursor = cursor.limit(limit)
-            elif q_obj.get("limit"): cursor = cursor.limit(q_obj.get("limit"))
+            if limit:
+                cursor = cursor.limit(limit)
+            elif q_obj.get("limit"):
+                cursor = cursor.limit(q_obj.get("limit"))
             
             results = []
             for doc in cursor:
-                if '_id' in doc: doc['_id'] = str(doc['_id'])
+                if '_id' in doc:
+                    doc['_id'] = str(doc['_id'])
                 results.append(doc)
             return results
         except Exception as e:
@@ -243,7 +255,8 @@ class MongoDBConnector(BaseConnector):
         
         # Normalize mode
         clean_mode = mode.lower()
-        if clean_mode == "replace": clean_mode = "overwrite"
+        if clean_mode == "replace":
+            clean_mode = "overwrite"
 
         if clean_mode == "overwrite":
              collection.drop()
@@ -256,20 +269,28 @@ class MongoDBConnector(BaseConnector):
         total = 0
         try:
             for df in data_iter:
-                if df.empty: continue
+                if df.empty:
+                    continue
                 records = df.to_dict(orient="records")
                 
                 if clean_mode == "upsert":
                     # Get primary key for upsert logic
                     pk = kwargs.get("primary_key") or self.config.get("primary_key") or "_id"
+                    
+                    bulk_ops = []
                     for record in records:
                         if pk in record:
-                            collection.update_one({pk: record[pk]}, {"$set": record}, upsert=True)
-                            total += 1
+                            bulk_ops.append(
+                                UpdateOne({pk: record[pk]}, {"$set": record}, upsert=True)
+                            )
                         else:
-                            # Fallback to insert if PK missing in record
+                            # Fallback to insert if PK missing in record (less ideal for bulk)
                             collection.insert_one(record)
                             total += 1
+                    
+                    if bulk_ops:
+                        result = collection.bulk_write(bulk_ops, ordered=False)
+                        total += (result.upserted_count + result.modified_count + result.matched_count)
                 else:
                     # Default append
                     result = collection.insert_many(records)

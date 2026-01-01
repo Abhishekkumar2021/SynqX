@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, List, Iterator, Union, Generator
 from contextlib import contextmanager
 import pandas as pd
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class BaseConnector(ABC):
@@ -94,15 +97,29 @@ class BaseConnector(ABC):
     ) -> List[Dict[str, Any]]:
         """
         Fetch a sample of rows from the asset for preview purposes.
+        Collects all chunks from read_batch until the limit is reached.
         """
         try:
-            df = next(self.read_batch(asset, limit=limit, **kwargs))
+            chunks = []
+            rows_collected = 0
+            
+            for df in self.read_batch(asset, limit=limit, **kwargs):
+                chunks.append(df)
+                rows_collected += len(df)
+                if rows_collected >= limit:
+                    break
+            
+            if not chunks:
+                return []
+                
+            full_df = pd.concat(chunks, ignore_index=True)
+            if len(full_df) > limit:
+                full_df = full_df.iloc[:limit]
+                
             # Convert NaN to None for JSON serialization
-            return df.where(pd.notnull(df), None).to_dict(orient="records")
-        except StopIteration:
-            return []
-        except Exception:
-            # If read_batch fails, we return an empty list or re-raise if it's a critical error
+            return full_df.where(pd.notnull(full_df), None).to_dict(orient="records")
+        except Exception as e:
+            logger.error(f"Error fetching sample for {asset}: {e}")
             # For sample data, returning empty list is often safer for UI
             return []
 
@@ -115,6 +132,12 @@ class BaseConnector(ABC):
         **kwargs,
     ) -> List[Dict[str, Any]]:
         pass
+
+    def get_total_count(self, query_or_asset: str, is_query: bool = False, **kwargs) -> Optional[int]:
+        """
+        Get the total number of rows for a query or asset.
+        """
+        return None
 
     # --- Live File Management (WinSCP-like features) ---
     

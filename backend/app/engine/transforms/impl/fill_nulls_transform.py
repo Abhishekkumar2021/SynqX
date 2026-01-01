@@ -28,30 +28,42 @@ class FillNullsTransform(BaseTransform):
         strategy = self.config.get("strategy")
         subset_cols = self.config.get("subset")
 
-        for df in data:
-            if df.empty:
+        if value is not None:
+            # Streaming fill
+            for df in data:
+                if df.empty:
+                    yield df
+                    continue
+                target_cols = [col for col in subset_cols if col in df.columns] if subset_cols else df.columns
+                df[target_cols] = df[target_cols].fillna(value=value)
                 yield df
-                continue
-                
-            target_cols = [col for col in subset_cols if col in df.columns] if subset_cols else df.columns
-
-            try:
-                if value is not None:
-                    df[target_cols] = df[target_cols].fillna(value=value)
-                elif strategy:
-                    if strategy == 'mean':
-                        df[target_cols] = df[target_cols].fillna(df[target_cols].mean(numeric_only=True))
-                    elif strategy == 'median':
-                        df[target_cols] = df[target_cols].fillna(df[target_cols].median(numeric_only=True))
-                    elif strategy == 'mode':
-                        mode_res = df[target_cols].mode()
-                        if not mode_res.empty:
-                            df[target_cols] = df[target_cols].fillna(mode_res.iloc[0])
-                    elif strategy == 'ffill':
-                        df[target_cols] = df[target_cols].ffill()
-                    elif strategy == 'bfill':
-                        df[target_cols] = df[target_cols].bfill()
-            except Exception as e:
-                logger.warning(f"Fill nulls failed for chunk: {e}")
-                
-            yield df
+        elif strategy in ['mean', 'median', 'mode']:
+            # Blocking fill for statistical strategies
+            all_chunks = list(data)
+            if not all_chunks:
+                return
+            full_df = pd.concat(all_chunks, ignore_index=True)
+            target_cols = [col for col in subset_cols if col in full_df.columns] if subset_cols else full_df.columns
+            
+            if strategy == 'mean':
+                full_df[target_cols] = full_df[target_cols].fillna(full_df[target_cols].mean(numeric_only=True))
+            elif strategy == 'median':
+                full_df[target_cols] = full_df[target_cols].fillna(full_df[target_cols].median(numeric_only=True))
+            elif strategy == 'mode':
+                mode_res = full_df[target_cols].mode()
+                if not mode_res.empty:
+                    full_df[target_cols] = full_df[target_cols].fillna(mode_res.iloc[0])
+            
+            yield full_df
+        else:
+            # Streaming for ffill/bfill (local to chunk)
+            for df in data:
+                if df.empty:
+                    yield df
+                    continue
+                target_cols = [col for col in subset_cols if col in df.columns] if subset_cols else df.columns
+                if strategy == 'ffill':
+                    df[target_cols] = df[target_cols].ffill()
+                elif strategy == 'bfill':
+                    df[target_cols] = df[target_cols].bfill()
+                yield df

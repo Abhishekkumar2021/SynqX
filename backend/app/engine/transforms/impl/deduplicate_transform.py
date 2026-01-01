@@ -23,16 +23,23 @@ class DeduplicateTransform(BaseTransform):
         subset = self.config.get("subset")
         keep = self.config.get("keep", "first")
 
-        for df in data:
-            if df.empty:
-                yield df
-                continue
-                
-            # Filter subset columns that actually exist
-            valid_subset = [col for col in subset if col in df.columns] if subset else None
+        # Blocking: Accumulate everything for global deduplication
+        all_chunks = list(data)
+        if not all_chunks:
+            return
             
-            try:
-                yield df.drop_duplicates(subset=valid_subset, keep=keep)
-            except Exception as e:
-                logger.warning(f"Deduplication failed for chunk: {e}")
-                yield df
+        full_df = pd.concat(all_chunks, ignore_index=True)
+        
+        # Filter subset columns that actually exist
+        valid_subset = [col for col in subset if col in full_df.columns] if subset else None
+        
+        try:
+            dedup_df = full_df.drop_duplicates(subset=valid_subset, keep=keep)
+            if self.on_chunk:
+                filtered_count = len(full_df) - len(dedup_df)
+                if filtered_count > 0:
+                    self.on_chunk(pd.DataFrame(), direction="intermediate", filtered_count=filtered_count)
+            yield dedup_df
+        except Exception as e:
+            logger.warning(f"Deduplication failed: {e}")
+            yield full_df

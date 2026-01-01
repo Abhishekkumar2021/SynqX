@@ -1,5 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
+import os
+import pyarrow.parquet as pq
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 
@@ -508,7 +510,7 @@ def get_step_logs(
 def get_step_data(
     run_id: int,
     step_id: int,
-    direction: str = Query("out", pattern="^(in|out)$"),
+    direction: str = Query("out", pattern="^(in|out|quarantine)$"),
     limit: int = Query(10, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(deps.get_db),
@@ -535,7 +537,14 @@ def get_step_data(
             logger.error(f"Step run {step_id} does not belong to run {run_id}")
             raise HTTPException(status_code=400, detail="Step run / Run ID mismatch")
         
+        # Use consistent absolute path logic for ForensicSniffer
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(current_dir, "..", "..", "..", ".."))
+        
         sniffer = ForensicSniffer(run_id)
+        # Manually override base_dir to ensure consistency with project root
+        sniffer.base_dir = os.path.join(project_root, "data", "forensics", f"run_{run_id}")
+        
         # We use node.id (the integer from pipeline_nodes) which is stored in step.node_id
         logger.debug(f"Fetching forensic data for node {step.node_id}, run {run_id}, direction {direction}")
         data_slice = sniffer.fetch_slice(step.node_id, direction=direction, limit=limit, offset=offset)
@@ -575,6 +584,104 @@ def clear_forensic_cache(
         logger.error(f"Error clearing forensic cache: {e}")
         raise HTTPException(status_code=500, detail="Failed to clear forensic cache")
 
+
+@router.get(
+    "/quarantine",
+    summary="List Quarantined Data",
+    description="List all steps that have quarantined data in the active workspace."
+)
+def list_quarantine(
+    limit: int = Query(50, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
+):
+    try:
+        from app.models.execution import StepRun, PipelineRun
+        
+        # Use consistent absolute path logic
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up 4 levels to reach backend root from app/api/v1/endpoints/
+        project_root = os.path.abspath(os.path.join(current_dir, "..", "..", "..", ".."))
+        forensics_dir = os.path.join(project_root, "data", "forensics")
+        
+        if not os.path.exists(forensics_dir):
+            return []
+            
+        quarantine_candidates = []
+        # Scan disk for potential quarantine files
+        for run_dir in os.listdir(forensics_dir):
+            if not run_dir.startswith("run_"):
+                continue
+            
+            run_id_str = run_dir.replace("run_", "")
+            if not run_id_str.isdigit():
+                continue
+            run_id = int(run_id_str)
+            
+            run_path = os.path.join(forensics_dir, run_dir)
+            if not os.path.isdir(run_path):
+                continue
+
+            for filename in os.listdir(run_path):
+                if filename.endswith("_quarantine.parquet"):
+                    try:
+                        node_id = int(filename.split("_")[1])
+                        quarantine_candidates.append((run_id, node_id, os.path.join(run_path, filename)))
+                    except (IndexError, ValueError):
+                        continue
+        
+        if not quarantine_candidates:
+            return []
+            
+        # Sort by run_id desc to process recent ones first
+        quarantine_candidates.sort(key=lambda x: x[0], reverse=True)
+        
+        results = []
+        for run_id, node_id, file_path in quarantine_candidates:
+            # Check if this run belongs to active workspace and get step details
+            step = db.query(StepRun).join(PipelineRun).filter(
+                PipelineRun.id == run_id,
+                StepRun.node_id == node_id,
+                PipelineRun.workspace_id == current_user.active_workspace_id
+            ).first()
+            
+            if step:
+                # Prioritize database records_error count for consistency with aggregate stats
+                row_count = step.records_error
+                
+                # If database shows 0 but we found a file, try metadata as fallback
+                if row_count == 0:
+                    try:
+                        # Efficient row count using metadata
+                        metadata = pq.read_metadata(file_path)
+                        row_count = metadata.num_rows
+                    except Exception as e:
+                        logger.warning(f"Failed to read metadata for {file_path}: {e}")
+                        row_count = 0
+                    
+                results.append({
+                    "step_id": step.id,
+                    "run_id": run_id,
+                    "pipeline_id": step.pipeline_run.pipeline_id,
+                    "pipeline_name": step.pipeline_run.pipeline.name if step.pipeline_run.pipeline else "Unknown",
+                    "node_id": node_id,
+                    "node_name": step.node.name if step.node else f"Node {node_id}",
+                    "created_at": step.created_at,
+                    "row_count": row_count
+                })
+                
+                # We collect a few extra to handle offset correctly in memory if needed, 
+                # but results list is already filtered by workspace.
+                if len(results) >= limit + offset:
+                    break
+                    
+        return results[offset:offset+limit]
+        
+    except Exception as e:
+        logger.error(f"Error listing quarantine: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get(
     "/pipelines/{pipeline_id}/metrics",

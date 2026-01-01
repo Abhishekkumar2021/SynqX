@@ -115,10 +115,14 @@ class ElasticsearchConnector(BaseConnector):
                 es_type = field_info.get("type", "object")
                 # Map ES types to basic SynqX types
                 col_type = "string"
-                if es_type in ["integer", "long", "short"]: col_type = "integer"
-                elif es_type in ["float", "double", "half_float"]: col_type = "float"
-                elif es_type == "boolean": col_type = "boolean"
-                elif es_type == "date": col_type = "datetime"
+                if es_type in ["integer", "long", "short"]:
+                    col_type = "integer"
+                elif es_type in ["float", "double", "half_float"]:
+                    col_type = "float"
+                elif es_type == "boolean":
+                    col_type = "boolean"
+                elif es_type == "date":
+                    col_type = "datetime"
                 
                 columns.append({"name": field_name, "type": col_type, "native_type": es_type})
             

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/rea
 import { getPipelines, getJobs, triggerPipeline, getPipelineStats, type Pipeline } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
     Plus, Workflow, Activity, Search,
     LayoutGrid, List as ListIcon
@@ -21,10 +22,12 @@ import { PageMeta } from '@/components/common/PageMeta';
 import { useJobsListTelemetry } from '@/hooks/useJobsListTelemetry';
 import { useZenMode } from '@/hooks/useZenMode';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useAuth } from '@/hooks/useAuth';
 
 export const PipelinesListPage: React.FC = () => {
     const { isZenMode } = useZenMode();
     const { isEditor } = useWorkspace();
+    const { user } = useAuth();
     
     useJobsListTelemetry();
 
@@ -114,9 +117,16 @@ export const PipelinesListPage: React.FC = () => {
                             <Workflow className="h-6 w-6 text-primary" />
                         </div>
                         Pipelines
+                        {user?.is_superuser && (
+                            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-black text-[10px] ml-2 tracking-widest px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(245,158,11,0.1)] transition-all duration-300 hover:bg-amber-500/20 hover:border-amber-500/40 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:scale-105 cursor-default select-none">
+                                SUPERUSER MODE
+                            </Badge>
+                        )}
                     </h2>
                     <p className="text-sm md:text-base text-muted-foreground font-medium pl-1">
-                        Orchestrate and monitor your data workflows.
+                        {user?.is_superuser 
+                            ? "Omnipotent access enabled. Viewing all data across all workspaces." 
+                            : "Orchestrate and monitor your data workflows."}
                     </p>
                 </div>
                 {isEditor && (
@@ -201,8 +211,8 @@ export const PipelinesListPage: React.FC = () => {
                         <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
                             <div className="col-span-12 md:col-span-4">Pipeline</div>
                             <div className="col-span-2 hidden md:block pl-2">Status</div>
-                            <div className="col-span-2 hidden md:block">Performance</div>
-                            <div className="col-span-2 hidden md:block">Activity / Schedule</div>
+                            <div className="col-span-2 hidden md:block">Performance & Stability</div>
+                            <div className="col-span-2 hidden md:block">Data Volume</div>
                             <div className="col-span-2 hidden md:block text-right pr-4">Operations</div>
                         </div>
 

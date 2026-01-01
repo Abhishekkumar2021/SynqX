@@ -19,5 +19,10 @@ class SortTransform(BaseTransform):
         columns = self.config["columns"]
         ascending = self.config.get("ascending", True)
         
-        for df in data:
-            yield df.sort_values(by=columns, ascending=ascending)
+        # Blocking: Accumulate everything then sort
+        all_chunks = list(data)
+        if not all_chunks:
+            return
+            
+        full_df = pd.concat(all_chunks, ignore_index=True)
+        yield full_df.sort_values(by=columns, ascending=ascending)

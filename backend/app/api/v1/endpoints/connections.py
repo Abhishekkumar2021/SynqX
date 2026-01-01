@@ -121,8 +121,20 @@ def list_connections(
             workspace_id=current_user.active_workspace_id
         )
         
+        results = []
+        for c in connections:
+            conn_read = ConnectionRead.model_validate(c)
+            # Efficiently fetch stats for each connection in the list
+            try:
+                conn_read.usage_stats = service.get_connection_usage_stats(c.id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+                conn_read.impact = service.get_connection_impact(c.id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+            except Exception as e:
+                logger.warning(f"Failed to fetch stats for connection {c.id}: {e}")
+            
+            results.append(conn_read)
+        
         return ConnectionListResponse(
-            connections=[ConnectionRead.model_validate(c) for c in connections],
+            connections=results,
             total=total,
             limit=limit,
             offset=offset,
@@ -166,6 +178,14 @@ def get_connection(
         )
     response = ConnectionDetailRead.model_validate(connection)
     response.asset_count = len(connection.assets) if connection.assets else 0
+    
+    # Populate detailed stats and impact
+    try:
+        response.usage_stats = service.get_connection_usage_stats(connection.id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+        response.impact = service.get_connection_impact(connection.id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+    except Exception as e:
+        logger.warning(f"Failed to fetch detailed stats for connection {connection.id}: {e}")
+
     try:
         response.config = VaultService.decrypt_config(connection.config_encrypted)
     except Exception:

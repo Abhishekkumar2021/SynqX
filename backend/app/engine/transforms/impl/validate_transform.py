@@ -1,9 +1,8 @@
-from typing import Iterator, Optional
+from typing import Iterator
 import pandas as pd
 from app.engine.transforms.base import BaseTransform
 from app.core.errors import ConfigurationError, PipelineExecutionError
 from app.core.logging import get_logger
-from app.engine.runner_core.forensics import ForensicSniffer
 from app.services.alert_service import AlertService
 from app.models.enums import AlertType, AlertLevel
 from app.db.session import session_scope
@@ -19,6 +18,7 @@ class ValidateTransform(BaseTransform):
     - Strict Mode: Fails the pipeline if any row fails validation.
     - Quarantine: Captures invalid rows for forensic analysis.
     - Alerting: Triggers Data Quality alerts on failure.
+    - Extensive Checks: nulls, uniqueness, ranges, regex, types, etc.
     """
 
     def validate_config(self) -> None:
@@ -32,21 +32,23 @@ class ValidateTransform(BaseTransform):
     def transform(self, data: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
         rules = self.config.get("schema", [])
         strict = self.config.get("strict", False)
-        quarantine = self.config.get("quarantine", False)
+        self.config.get("quarantine", False)
         
-        run_id = self.config.get("_run_id")
+        self.config.get("_run_id")
+        job_id = self.config.get("_job_id")
         node_id = self.config.get("_node_id")
         pipeline_id = self.config.get("_pipeline_id")
         
-        sniffer: Optional[ForensicSniffer] = None
-        if quarantine and run_id:
-            sniffer = ForensicSniffer(run_id)
-
+        on_chunk_cb = self.config.get("_on_chunk")
+        
         for df in data:
             if df.empty:
                 yield df
                 continue
-                
+            
+            # Ensure unique index to prevent accidental over-dropping
+            df = df.reset_index(drop=True)
+            
             # Track failed rows for this chunk
             failed_indices = pd.Index([])
             chunk_errors = []
@@ -63,36 +65,53 @@ class ValidateTransform(BaseTransform):
                     continue
                 
                 # Validation Logic - returns a boolean Series where True = Invalid
-                invalid_mask = pd.Series(False, index=df.index)
+                rule_invalid_mask = pd.Series(False, index=df.index)
                 
                 if check == "not_null":
-                    invalid_mask = df[col].isna()
+                    rule_invalid_mask = df[col].isna()
                 
                 elif check == "unique":
-                    invalid_mask = df.duplicated(subset=[col], keep='first')
+                    rule_invalid_mask = df.duplicated(subset=[col], keep='first')
                 
                 elif check == "min_value":
                     min_val = rule.get("value")
                     if min_val is not None:
-                        invalid_mask = df[col] < min_val
+                        rule_invalid_mask = pd.to_numeric(df[col], errors='coerce') < min_val
 
                 elif check == "max_value":
                     max_val = rule.get("value")
                     if max_val is not None:
-                        invalid_mask = df[col] > max_val
+                        rule_invalid_mask = pd.to_numeric(df[col], errors='coerce') > max_val
                 
                 elif check == "regex":
                     pattern = rule.get("pattern")
                     if pattern:
-                        invalid_mask = ~df[col].astype(str).str.match(pattern, na=False)
+                        rule_invalid_mask = ~df[col].astype(str).str.match(pattern, na=False)
+                
+                elif check == "in_list":
+                    allowed = rule.get("values")
+                    if isinstance(allowed, list):
+                        rule_invalid_mask = ~df[col].isin(allowed)
+                
+                elif check == "data_type":
+                    expected = rule.get("type") # int, float, string, date
+                    if expected == "int":
+                        rule_invalid_mask = ~df[col].apply(lambda x: isinstance(x, (int, complex)) or (isinstance(x, float) and x.is_integer()))
+                    elif expected == "float":
+                        rule_invalid_mask = ~df[col].apply(lambda x: isinstance(x, (int, float, complex)))
+                    elif expected == "string":
+                        rule_invalid_mask = ~df[col].apply(lambda x: isinstance(x, str))
 
                 # Collect failed indices for this rule
-                rule_failed_indices = df.index[invalid_mask]
+                rule_failed_indices = df.index[rule_invalid_mask]
                 if not rule_failed_indices.empty:
                     failed_indices = failed_indices.union(rule_failed_indices)
                     msg = f"Rule '{check}' failed for {len(rule_failed_indices)} rows in column '{col}'"
                     chunk_errors.append(msg)
                     logger.warning(f"Validation failed: {msg}")
+
+            if not failed_indices.empty:
+                logger.info(f"Node {node_id} found {len(failed_indices)} total invalid rows in chunk")
 
             # Trigger Alerts if there are failures
             if not failed_indices.empty and pipeline_id:
@@ -103,7 +122,7 @@ class ValidateTransform(BaseTransform):
                             session,
                             alert_type=AlertType.DATA_QUALITY_FAILURE,
                             pipeline_id=pipeline_id,
-                            job_id=run_id, # run_id matches job_id in SynqX
+                            job_id=job_id,
                             message=alert_msg,
                             level=AlertLevel.WARNING
                         )
@@ -111,9 +130,13 @@ class ValidateTransform(BaseTransform):
                     logger.error(f"Failed to trigger DQ alert: {alert_err}")
 
             # Handle Quarantine
-            if quarantine and sniffer and not failed_indices.empty and node_id:
+            if not failed_indices.empty:
+                error_count = len(failed_indices)
                 quarantine_df = df.loc[failed_indices]
-                sniffer.capture_chunk(node_id, quarantine_df, direction="quarantine")
+                
+                # Report metrics and sniff back to executor
+                if on_chunk_cb:
+                    on_chunk_cb(quarantine_df, direction="quarantine", error_count=error_count)
             
             # Handle Strict Mode
             if strict and not failed_indices.empty:
@@ -123,4 +146,7 @@ class ValidateTransform(BaseTransform):
                 raise PipelineExecutionError(f"Strict validation failed: {error_summary}")
 
             # Return valid rows
-            yield df
+            if not failed_indices.empty:
+                yield df.drop(index=failed_indices)
+            else:
+                yield df

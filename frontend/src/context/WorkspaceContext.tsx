@@ -9,6 +9,7 @@ export interface WorkspaceContextType {
     isSwitching: boolean;
     switchActiveWorkspace: (id: number) => void;
     downloadWorkspaceContext: () => Promise<void>;
+    refreshWorkspaces: () => void;
     isLoading: boolean;
 }
 

@@ -31,7 +31,8 @@ class BigQueryConnector(BaseConnector):
             raise ConfigurationError(f"Invalid BigQuery config: {e}")
 
     def connect(self) -> None:
-        if self._client: return
+        if self._client:
+            return
         try:
             if self._config_model.credentials_json:
                 import json

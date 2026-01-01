@@ -275,7 +275,7 @@ def show_statistics():
     """Displays an overview of database statistics."""
     with get_db_session() as db:
         user_count = db.query(func.count(User.id)).scalar()
-        superuser_count = db.query(func.count(User.id)).filter(User.is_superuser == True).scalar()
+        superuser_count = db.query(func.count(User.id)).filter(User.is_superuser).scalar()
         workspace_count = db.query(func.count(Workspace.id)).scalar()
 
         stats = Table.grid(padding=(0, 4))

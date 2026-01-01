@@ -18,7 +18,7 @@ interface ExecutionHistoryProps {
     history: HistoryItem[];
     onClose: () => void;
     onRestore: (query: string) => void;
-    onClear: () => void;
+    onClear?: () => void;
 }
 
 export const ExecutionHistory: React.FC<ExecutionHistoryProps> = ({ history, onClose, onRestore, onClear }) => {
@@ -182,22 +182,24 @@ export const ExecutionHistory: React.FC<ExecutionHistoryProps> = ({ history, onC
             </ScrollArea>
 
             {/* Footer */}
-            <footer className="p-5 shrink-0 border-t border-border/40 bg-background/50 backdrop-blur-xl">
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="outline"
-                            disabled={history.length === 0}
-                            onClick={onClear}
-                            className="w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20 transition-all"
-                        >
-                            <Trash2 size={12} />
-                            Clear History
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Purge all execution logs</TooltipContent>
-                </Tooltip>
-            </footer>
+            {onClear && (
+                <footer className="p-5 shrink-0 border-t border-border/40 bg-background/50 backdrop-blur-xl">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="outline"
+                                disabled={history.length === 0}
+                                onClick={onClear}
+                                className="w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20 transition-all"
+                            >
+                                <Trash2 size={12} />
+                                Clear History
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Purge all execution logs</TooltipContent>
+                    </Tooltip>
+                </footer>
+            )}
         </motion.div>
     );
 };

@@ -31,6 +31,7 @@ const AlertsPage = lazy(() => import('./pages/AlertsPage').then(module => ({ def
 const OperatorsPage = lazy(() => import('./pages/OperatorsPage').then(module => ({ default: module.OperatorsPage })));
 const ExplorerPage = lazy(() => import('./pages/ExplorerPage').then(module => ({ default: module.ExplorerPage })));
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage').then(module => ({ default: module.AuditLogsPage })));
+const QuarantinePage = lazy(() => import('./pages/QuarantinePage').then(module => ({ default: module.QuarantinePage })));
 
 // React Query Configuration
 const queryClient = new QueryClient({
@@ -150,6 +151,7 @@ const AppRoutes = () => (
       <Route path="/jobs/:id?" element={<JobsPage />} />
       <Route path="/alerts" element={<AlertsPage />} />
       <Route path="/team" element={<WorkspaceTeamPage />} />
+      <Route path="/quarantine" element={<QuarantinePage />} />
       <Route path="/operators" element={<OperatorsPage />} />
       <Route path="/audit-logs" element={<AuditLogsPage />} />
       <Route path="/settings" element={<SettingsPage />} />

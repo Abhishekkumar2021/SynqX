@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Cpu, Server, Zap } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import type { SystemHealth } from '@/lib/api';
@@ -23,24 +22,27 @@ export const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ data }
     };
 
     return (
-        <Card className="h-full border-none bg-transparent shadow-none rounded-none flex flex-col">
-            <CardHeader className="pb-4 shrink-0 px-6 pt-6">
-                <CardTitle className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" />
-                    System Health
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-around gap-6 pt-4 pb-6">
+        <div className="h-full flex flex-col overflow-hidden">
+            <div className="pb-4 shrink-0 px-8 pt-8">
+                <h3 className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-primary" />
+                    System Infrastructure
+                </h3>
+                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">
+                    Real-time resource utilization
+                </p>
+            </div>
+            <div className="flex-1 flex flex-col justify-around gap-6 px-8 pt-4 pb-10">
                 {/* CPU Usage */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                             <Cpu className="h-4 w-4 text-primary" />
-                            <span className="font-medium">CPU Load</span>
+                            <span className="font-bold text-muted-foreground/80 uppercase text-[10px] tracking-widest">CPU Load</span>
                         </div>
-                        <span className="font-bold">{cpu}%</span>
+                        <span className="font-black tabular-nums">{cpu}%</span>
                     </div>
-                    <Progress value={cpu} className="h-2.5" indicatorClassName={getStatusColor(cpu)} />
+                    <Progress value={cpu} className="h-2.5 bg-muted/30" indicatorClassName={getStatusColor(cpu)} />
                 </div>
 
                 {/* Memory Usage */}
@@ -48,34 +50,34 @@ export const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ data }
                     <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                             <Server className="h-4 w-4 text-primary" />
-                            <span className="font-medium">Memory Usage</span>
+                            <span className="font-bold text-muted-foreground/80 uppercase text-[10px] tracking-widest">Memory</span>
                         </div>
-                        <span className="font-bold">{Math.round(memory)} MB</span>
+                        <span className="font-black tabular-nums">{Math.round(memory)} MB</span>
                     </div>
-                    <Progress value={(memory / 8192) * 100} className="h-2.5" indicatorClassName="bg-blue-500" />
+                    <Progress value={(memory / 8192) * 100} className="h-2.5 bg-muted/30" indicatorClassName="bg-blue-500" />
                 </div>
 
                 {/* Active Workers */}
-                <div className="pt-2 flex items-center justify-between bg-muted/20 p-4 rounded-xl border border-border/40">
+                <div className="pt-2 flex items-center justify-between bg-primary/5 p-5 rounded-2xl border border-primary/10">
                     <div className="flex items-center gap-3 text-sm">
-                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
-                            <Zap className="h-4 w-4" />
+                        <div className="p-2.5 bg-primary/10 rounded-xl text-primary shadow-sm">
+                            <Zap className="h-5 w-5" />
                         </div>
-                        <div className="flex flex-col">
-                            <span className="font-bold text-foreground">Active Workers</span>
-                            <span className="text-[10px] text-muted-foreground">Processing jobs</span>
+                        <div className="flex flex-col -space-y-0.5">
+                            <span className="font-black text-foreground uppercase text-xs tracking-tight">Engine Load</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Threads</span>
                         </div>
                     </div>
                     <motion.div 
                         key={activeWorkers}
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="text-3xl font-black font-mono tracking-tighter text-foreground"
+                        className="text-4xl font-black font-mono tracking-tighter text-primary"
                     >
                         {activeWorkers}
                     </motion.div>
                 </div>
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     );
 };

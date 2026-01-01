@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useJobLogs } from '@/hooks/useJobLogs';
 import {
-    Terminal, Play, Pause, 
+    Terminal, Play, Pause,
     ArrowDown, Search, WrapText, CalendarCheck,
     ListFilter, Activity,
-    Settings2, MoreVertical, FileDown, ClipboardCopy
+    Settings2, MoreVertical, FileDown, ClipboardCopy, Trash2,
+    Maximize2, Minimize2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuLabel,
     DropdownMenuItem,
+    DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
     Tooltip,
@@ -31,12 +33,36 @@ interface JobLogViewerProps {
     jobId: number | null;
 }
 
+const LogLevelBadge: React.FC<{ level: string }> = ({ level }) => {
+    const l = level?.toUpperCase() || 'INFO';
+    const configs: Record<string, string> = {
+        INFO: "bg-info text-info-foreground border-info/30",
+        SUCCESS: "bg-success text-success-foreground border-success/30",
+        WARNING: "bg-warning text-warning-foreground border-warning/30",
+        ERROR: "bg-destructive text-destructive-foreground border-destructive/30",
+        DEBUG: "bg-secondary text-secondary-foreground border-secondary/30",
+    };
+
+    const style = configs[l] || configs.INFO;
+
+    return (
+        <span className={cn(
+            "w-16 inline-flex items-center justify-center py-0.5 rounded-full text-[7px] font-black border uppercase tracking-[0.12em] shadow-sm shrink-0 select-none",
+            style
+        )}>
+            {l}
+        </span>
+    );
+};
+
 export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
     const [isAutoScroll, setIsAutoScroll] = useState(true);
     const [wordWrap, setWordWrap] = useState(false);
     const [showTimestamps, setShowTimestamps] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [levelFilter, setLevelFilter] = useState<string[]>(['INFO', 'ERROR', 'WARNING', 'DEBUG', 'SUCCESS']);
+    const [lastClearedTime, setLastClearedTime] = useState<number>(0);
+    const [isFullScreen, setIsFullScreen] = useState(false);
     const [, setCopied] = useState(false);
 
     const { logs, isConnected } = useJobLogs(jobId);
@@ -45,12 +71,14 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
     // Filtered logs
     const filteredLogs = useMemo(() => {
         return logs.filter((log: any) => {
+            if (log.timestamp && new Date(log.timestamp).getTime() <= lastClearedTime) return false;
+
             const levelMatch = levelFilter.includes(log.level || 'INFO');
-            const searchMatch = !searchQuery || 
+            const searchMatch = !searchQuery ||
                 (log.message && log.message.toLowerCase().includes(searchQuery.toLowerCase()));
             return levelMatch && searchMatch;
         });
-    }, [logs, levelFilter, searchQuery]);
+    }, [logs, levelFilter, searchQuery, lastClearedTime]);
 
     useEffect(() => {
         if (isAutoScroll && scrollViewportRef.current) {
@@ -64,6 +92,11 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
         const { scrollTop, scrollHeight, clientHeight } = target;
         const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
         if (isAtBottom !== isAutoScroll) setIsAutoScroll(isAtBottom);
+    };
+
+    const handleClearView = () => {
+        setLastClearedTime(Date.now());
+        toast.info("Terminal view cleared", { description: "New incoming logs will still be displayed." });
     };
 
     const handleDownload = () => {
@@ -90,39 +123,55 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
     };
 
     const getLevelConfig = (level: string) => {
-        switch (level?.toUpperCase()) {
-            case 'ERROR': return { 
-                badge: "text-destructive bg-destructive/10 border-destructive/20", 
-                line: "bg-destructive/5", 
-                accent: "bg-destructive",
-                text: "text-destructive/90 dark:text-red-400/90"
+        const l = level?.toUpperCase();
+        switch (l) {
+            case 'ERROR': return {
+                badge: "text-destructive bg-destructive/10 border-destructive/30",
+                line: "bg-transparent",
+                accent: "bg-destructive shadow-[0_0_12px_rgba(var(--color-destructive),0.6)]",
+                text: "text-destructive/90"
             };
-            case 'WARNING': return { 
-                badge: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20", 
-                line: "bg-amber-500/5", 
-                accent: "bg-amber-500",
-                text: "text-amber-700 dark:text-amber-200/80"
+            case 'WARNING': return {
+                badge: "text-warning bg-warning/10 border-warning/30",
+                line: "bg-transparent",
+                accent: "bg-warning shadow-[0_0_12px_rgba(var(--color-warning),0.6)]",
+                text: "text-warning/90"
             };
-            case 'SUCCESS': return { 
-                badge: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20", 
-                line: "bg-emerald-500/5", 
-                accent: "bg-emerald-500",
-                text: "text-emerald-700 dark:text-emerald-200/80"
+            case 'SUCCESS': return {
+                badge: "text-success bg-success/10 border-success/30",
+                line: "bg-transparent",
+                accent: "bg-success shadow-[0_0_12px_rgba(var(--color-success),0.6)]",
+                text: "text-success/90"
             };
-            default: return { 
-                badge: "text-primary bg-primary/10 border-primary/20", 
-                line: "", 
-                accent: "bg-primary",
-                text: "text-foreground/80 dark:text-blue-50/70"
+            case 'DEBUG': return {
+                badge: "text-muted-foreground bg-muted border-border/40",
+                line: "bg-transparent",
+                accent: "bg-muted-foreground shadow-[0_0_12px_rgba(var(--color-muted-foreground),0.6)]",
+                text: "text-muted-foreground/90"
+            };
+            case 'INFO': return {
+                badge: "text-info bg-info/10 border-info/30",
+                line: "bg-transparent",
+                accent: "bg-info shadow-[0_0_12px_rgba(var(--color-info),0.6)]",
+                text: "text-info/90"
+            };
+            default: return {
+                badge: "text-muted-foreground bg-muted border-border/40",
+                line: "bg-transparent",
+                accent: "bg-border",
+                text: "text-foreground/80"
             };
         }
     };
 
     return (
         <TooltipProvider>
-            <div className="flex flex-col h-full bg-background text-foreground font-mono text-xs overflow-hidden transition-colors duration-300">
+            <div className={cn(
+                "flex flex-col h-full bg-background text-foreground font-mono text-xs overflow-hidden transition-colors duration-300",
+                isFullScreen && "fixed inset-0 z-10000 bg-background"
+            )}>
                 {/* --- Optimized Production Toolbar --- */}
-                <div className="flex items-center justify-between px-5 py-2.5 bg-muted/30 border-b border-border/40 backdrop-blur-md shrink-0">
+                <div className="flex items-center justify-between px-5 py-2.5 bg-muted/20 border-b border-border/40 backdrop-blur-md shrink-0">
                     <div className="flex items-center gap-5">
                         <div className={cn(
                             "flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all duration-500",
@@ -175,16 +224,32 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
 
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => setIsAutoScroll(!isAutoScroll)} 
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsAutoScroll(!isAutoScroll)}
                                         className={cn("h-7 w-7 rounded-md transition-all", isAutoScroll ? "text-primary bg-primary/10" : "text-muted-foreground/60")}
                                     >
                                         {isAutoScroll ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent className="text-[10px] font-black uppercase tracking-widest">{isAutoScroll ? 'Lock Scroll' : 'Follow'}</TooltipContent>
+                            </Tooltip>
+
+                            <div className="w-px h-3 bg-border/40 mx-0.5" />
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsFullScreen(!isFullScreen)}
+                                        className="h-7 w-7 rounded-md text-muted-foreground/60 hover:text-primary hover:bg-background"
+                                    >
+                                        {isFullScreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-[10px] font-black uppercase tracking-widest">{isFullScreen ? 'Exit Full Screen' : 'Full Screen'}</TooltipContent>
                             </Tooltip>
                         </div>
 
@@ -224,6 +289,10 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                                 <TooltipContent className="text-[10px] font-black uppercase tracking-widest">Actions</TooltipContent>
                             </Tooltip>
                             <DropdownMenuContent align="end" className="w-56 glass-card border-white/10 rounded-xl p-1 shadow-2xl">
+                                <DropdownMenuItem onClick={handleClearView} className="text-[10px] font-bold uppercase rounded-lg py-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/5">
+                                    <Trash2 className="h-3.5 w-3.5 mr-2 opacity-60" /> Clear Terminal View
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator className="bg-white/5" />
                                 <DropdownMenuItem onClick={handleCopy} className="text-[10px] font-bold uppercase rounded-lg py-2 cursor-pointer">
                                     <ClipboardCopy className="h-3.5 w-3.5 mr-2 opacity-60" /> Copy All Logs
                                 </DropdownMenuItem>
@@ -236,11 +305,11 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                 </div>
 
                 {/* --- Log Stream with Enhanced Interaction --- */}
-                <div 
+                <div
                     ref={scrollViewportRef}
                     onScroll={handleScroll}
                     className={cn(
-                        "flex-1 overflow-auto custom-scrollbar select-text bg-card/10",
+                        "flex-1 overflow-auto custom-scrollbar select-text bg-background",
                         wordWrap ? "whitespace-pre-wrap" : "whitespace-pre"
                     )}
                 >
@@ -253,36 +322,40 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                         <div className="min-w-full py-3">
                             {filteredLogs.map((log: any, idx: number) => {
                                 const cfg = getLevelConfig(log.level);
+                                const uniqueKey = log.type && log.id ? `${log.type}-${log.id}` : (log.id || idx);
                                 return (
-                                    <div 
-                                        key={log.id || idx} 
+                                    <div
+                                        key={uniqueKey}
                                         className={cn(
-                                            "flex group relative min-h-5.5 transition-all duration-75 border-l-2 border-transparent hover:border-primary/50 hover:bg-muted/30",
+                                            "flex group relative min-h-5.5 transition-all duration-75 border-l-2 border-transparent hover:border-primary/50 hover:bg-muted/20",
                                             cfg.line
                                         )}
                                     >
                                         {/* Row Accent */}
                                         <div className={cn("absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity", cfg.accent)} />
-                                        
+
                                         {/* Gutter */}
                                         <div className="w-12 shrink-0 text-right pr-4 text-[9px] font-bold text-muted-foreground/20 select-none border-r border-border/40 pt-1 group-hover:text-primary/40">
                                             {idx + 1}
                                         </div>
-                                        
-                                        <div className="flex gap-4 items-start flex-1 min-w-0 pl-4 py-0.5 group-hover:translate-x-0.5 transition-transform">
+
+                                        <div className="flex gap-4 items-start flex-1 min-w-0 pl-4 py-0.5 transition-colors">
                                             {showTimestamps && (
                                                 <span className="text-[9px] font-black text-muted-foreground/30 shrink-0 select-none uppercase tracking-tighter w-24 pt-0.5">
                                                     {log.timestamp ? format(new Date(log.timestamp), 'HH:mm:ss.SSS') : '00:00:00.000'}
                                                 </span>
                                             )}
-                                            
-                                            <span className={cn(
-                                                "shrink-0 uppercase text-[8px] px-1.5 py-0.5 rounded-sm font-black border tracking-widest transition-all w-16 text-center select-none mt-0.5",
-                                                cfg.badge
-                                            )}>
-                                                {log.level || 'INFO'}
-                                            </span>
-                                            
+
+                                            <div className="shrink-0 w-16 flex justify-center mt-0.5">
+                                                <LogLevelBadge level={log.level} />
+                                            </div>
+
+                                            {log.source && (
+                                                <span className="shrink-0 text-[8px] font-bold text-muted-foreground/40 uppercase tracking-tighter w-14 truncate pt-1">
+                                                    {log.source}
+                                                </span>
+                                            )}
+
                                             <span className={cn(
                                                 "leading-relaxed font-medium selection:bg-primary/30 transition-colors",
                                                 cfg.text

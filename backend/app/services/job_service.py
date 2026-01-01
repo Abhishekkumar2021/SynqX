@@ -376,6 +376,13 @@ class PipelineRunService:
             or 0
         )
 
+        total_quarantined = (
+            self.db_session.query(func.sum(StepRun.records_error))
+            .filter(StepRun.pipeline_run_id.in_(base_run_query.with_entities(PipelineRun.id)))
+            .scalar()
+            or 0
+        )
+
         return {
             "total_runs": total_runs,
             "successful_runs": successful_runs,
@@ -385,4 +392,5 @@ class PipelineRunService:
             ),
             "average_duration_seconds": float(avg_duration) if avg_duration else None,
             "total_records_processed": total_records,
+            "total_quarantined": int(total_quarantined)
         }

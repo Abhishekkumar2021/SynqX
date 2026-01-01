@@ -87,7 +87,6 @@ class RedisConnector(BaseConnector):
         pattern = asset if asset != "*" else "*"
         incremental_filter = kwargs.get("incremental_filter")
         
-        cursor = 0
         count = limit if limit else 1000 
         
         keys_batch = []
@@ -109,14 +108,17 @@ class RedisConnector(BaseConnector):
                     # Apply limit if needed (simplistic)
                     if limit:
                         remaining = limit - rows_yielded
-                        if remaining <= 0: break
-                        if len(df) > remaining: df = df.iloc[:remaining]
+                        if remaining <= 0:
+                            break
+                        if len(df) > remaining:
+                            df = df.iloc[:remaining]
                     
                     rows_yielded += len(df)
                     yield df
                 
                 keys_batch = []
-                if limit and rows_yielded >= limit: break
+                if limit and rows_yielded >= limit:
+                    break
         
         if keys_batch:
             values = self._client.mget(keys_batch)
@@ -146,7 +148,8 @@ class RedisConnector(BaseConnector):
         
         # Normalize mode
         clean_mode = mode.lower()
-        if clean_mode == "replace": clean_mode = "overwrite"
+        if clean_mode == "replace":
+            clean_mode = "overwrite"
 
         if clean_mode == "overwrite":
             # Warning: This clears the entire Redis database. 

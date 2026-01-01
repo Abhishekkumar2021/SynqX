@@ -62,6 +62,9 @@ class DashboardStats(BaseModel):
     success_rate: float
     avg_duration: float
     total_rows: int = 0
+    total_rejected_rows: int = 0
+    active_issues: int = 0
+    resolution_rate: float = 0.0
     total_bytes: int = 0
     
     throughput: List[ThroughputDataPoint]

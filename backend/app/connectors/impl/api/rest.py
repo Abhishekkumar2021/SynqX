@@ -327,7 +327,8 @@ class RestApiConnector(BaseConnector):
         
         # Normalize mode
         clean_mode = mode.lower()
-        if clean_mode == "replace": clean_mode = "overwrite"
+        if clean_mode == "replace":
+            clean_mode = "overwrite"
 
         data_iter = [data] if isinstance(data, pd.DataFrame) else data
         
@@ -391,8 +392,10 @@ class RestApiConnector(BaseConnector):
         self.connect()
         try:
             params = kwargs.get("params", {}).copy()
-            if limit: params[self._config_model.limit_param] = limit
-            if offset: params[self._config_model.offset_param] = offset
+            if limit:
+                params[self._config_model.limit_param] = limit
+            if offset:
+                params[self._config_model.offset_param] = offset
             
             res = self.client.get(query, params=params)
             res.raise_for_status()
@@ -444,8 +447,12 @@ class RestApiConnector(BaseConnector):
 
     def _map_dtype(self, dtype: Any) -> str:
         s = str(dtype).lower()
-        if "int" in s: return "integer"
-        if "float" in s or "double" in s: return "float"
-        if "bool" in s: return "boolean"
-        if "datetime" in s: return "datetime"
+        if "int" in s:
+            return "integer"
+        if "float" in s or "double" in s:
+            return "float"
+        if "bool" in s:
+            return "boolean"
+        if "datetime" in s:
+            return "datetime"
         return "string"

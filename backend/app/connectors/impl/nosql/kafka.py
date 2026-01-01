@@ -166,10 +166,10 @@ class KafkaConnector(BaseConnector):
                         # Flatten if needed? For now keep as object/string
                         if isinstance(row["value"], dict):
                             row["value"] = json.dumps(row["value"]) # keep as string for dataframe consistency
-                    except:
+                    except (json.JSONDecodeError, UnicodeDecodeError):
                         try:
                             row["value"] = msg.value.decode('utf-8')
-                        except:
+                        except UnicodeDecodeError:
                             row["value"] = str(msg.value) # binary representation
                 
                 messages.append(row)
@@ -214,16 +214,20 @@ class KafkaConnector(BaseConnector):
                 key = None
                 value = None
                 
-                if "key" in row: key = str(row["key"]).encode('utf-8')
+                if "key" in row:
+                    key = str(row["key"]).encode('utf-8')
                 if "value" in row: 
                     value = row["value"]
                 else:
                     # Treat whole row as value (JSON)
                     value = row.to_json()
                 
-                if isinstance(value, str): value = value.encode('utf-8')
-                elif isinstance(value, dict): value = json.dumps(value).encode('utf-8')
-                elif value is None: pass # send None?
+                if isinstance(value, str):
+                    value = value.encode('utf-8')
+                elif isinstance(value, dict):
+                    value = json.dumps(value).encode('utf-8')
+                elif value is None:
+                    pass # send None?
                 
                 self._producer.send(asset, key=key, value=value)
                 total += 1

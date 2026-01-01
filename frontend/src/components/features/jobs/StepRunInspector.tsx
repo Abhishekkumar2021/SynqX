@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
     X, Database, Zap, ArrowRight, Activity, 
     Clock, Cpu, AlertCircle, RefreshCcw,
     Table, Filter, AlertTriangle, ArrowDownToLine, ArrowUpFromLine,
-    Maximize2, Minimize2
+    Maximize2, Minimize2, ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import {
 
 interface StepRunInspectorProps {
     step: any;
+    run?: any;
     nodeLabel: string;
     onClose: () => void;
 }
@@ -80,18 +81,28 @@ const MaximizePortal = ({ children, onClose, title, subtitle }: { children: Reac
 };
 
 export const StepRunInspector: React.FC<StepRunInspectorProps> = ({ 
-    step, nodeLabel, onClose
+    step: initialStep, run, nodeLabel, onClose
 }) => {
     const [activeTab, setActiveTab] = useState('telemetry');
-    const [maximizedDirection, setMaximizedDirection] = useState<'in' | 'out' | null>(null);
+    const [maximizedDirection, setMaximizedDirection] = useState<'in' | 'out' | 'quarantine' | null>(null);
+
+    // Sync with latest step data from parent run if available
+    const step = useMemo(() => {
+        const stepRuns = run?.step_runs;
+        if (!stepRuns || !initialStep) return initialStep;
+        return stepRuns.find((s: any) => s.id === initialStep.id) || initialStep;
+    }, [run, initialStep]);
 
     const isSource = step?.operator_type?.toLowerCase() === 'extract';
+    const hasQuarantine = step?.records_error > 0 || step?.operator_class === 'validate' || !!step?.sample_data?.quarantine;
+
+    const runId = run?.id || step?.pipeline_run_id;
 
     // Query for Ingress Data
     const { data: inData, isLoading: isLoadingIn } = useQuery({
-        queryKey: ['step-data', step?.pipeline_run_id, step?.id, 'in'],
+        queryKey: ['step-data', runId, step?.id, 'in'],
         queryFn: async () => {
-            const resp = await getStepData(step.pipeline_run_id, step.id, 'in', 100, 0);
+            const resp = await getStepData(runId, step.id, 'in', 100, 0);
             return {
                 results: resp.data.rows,
                 columns: resp.data.columns,
@@ -99,15 +110,15 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                 found: resp.data.found
             };
         },
-        enabled: !!step && activeTab === 'data' && !isSource,
+        enabled: !!runId && !!step?.id && !isSource,
         retry: false
     });
 
     // Query for Egress Data
     const { data: outData, isLoading: isLoadingOut } = useQuery({
-        queryKey: ['step-data', step?.pipeline_run_id, step?.id, 'out'],
+        queryKey: ['step-data', runId, step?.id, 'out'],
         queryFn: async () => {
-            const resp = await getStepData(step.pipeline_run_id, step.id, 'out', 100, 0);
+            const resp = await getStepData(runId, step.id, 'out', 100, 0);
             return {
                 results: resp.data.rows,
                 columns: resp.data.columns,
@@ -115,24 +126,63 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                 found: resp.data.found
             };
         },
-        enabled: !!step && activeTab === 'data',
+        enabled: !!runId && !!step?.id,
         retry: false
     });
 
-    if (!step) return null;
+    // Query for Quarantine Data
+    const { data: quarantineData, isLoading: isLoadingQuarantine } = useQuery({
+        queryKey: ['step-data', runId, step?.id, 'quarantine'],
+        queryFn: async () => {
+            const resp = await getStepData(runId, step.id, 'quarantine', 100, 0);
+            return {
+                results: resp.data.rows,
+                columns: resp.data.columns,
+                count: resp.data.total_cached,
+                found: resp.data.found
+            };
+        },
+        enabled: !!runId && !!step?.id && hasQuarantine,
+        retry: false
+    });
 
     // Advanced Data Fallback Logic
     // 1. Prefer Buffer (Parquet) if it was found (even if 0 rows)
     // 2. Fall back to Sample (JSON in DB) if buffer is missing
-    const displayOutData = (outData?.found) 
-        ? outData 
-        : (step.sample_data ? {
-            results: step.sample_data.rows || [],
-            columns: step.sample_data.columns || [],
-            count: step.sample_data.total_rows || 0
-        } : null);
+    const displayOutData = useMemo(() => {
+        if (outData?.found) return outData;
+        const sample = step?.sample_data?.out || (Array.isArray(step?.sample_data) ? { rows: step.sample_data, columns: step.sample_data[0] ? Object.keys(step.sample_data[0]) : [], total_rows: step.sample_data.length } : null);
+        if (!sample) return null;
+        return {
+            results: sample.rows || [],
+            columns: sample.columns || [],
+            count: sample.total_rows || 0
+        };
+    }, [outData, step]);
 
-    const displayInData = inData?.found ? inData : null;
+    const displayInData = useMemo(() => {
+        if (inData?.found) return inData;
+        const sample = step?.sample_data?.in;
+        if (!sample) return null;
+        return {
+            results: sample.rows || [],
+            columns: sample.columns || [],
+            count: sample.total_rows || 0
+        };
+    }, [inData, step]);
+
+    const displayQuarantineData = useMemo(() => {
+        if (quarantineData?.found) return quarantineData;
+        const sample = step?.sample_data?.quarantine;
+        if (!sample) return null;
+        return {
+            results: sample.rows || [],
+            columns: sample.columns || [],
+            count: sample.total_rows || 0
+        };
+    }, [quarantineData, step]);
+
+    if (!step) return null;
 
     const isSuccess = step.status === 'success' || step.status === 'completed';
     const isFailed = step.status === 'failed';
@@ -143,7 +193,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
 
     return (
         <TooltipProvider>
-            <div className="h-full flex flex-col bg-background/95 backdrop-blur-3xl border-l border-border/40 shadow-2xl animate-in slide-in-from-right duration-500 cubic-bezier(0.32, 0.72, 0, 1) overflow-hidden isolate">
+            <div className="h-full w-full flex flex-col bg-background/95 backdrop-blur-3xl border-l border-border/40 shadow-2xl animate-in slide-in-from-right duration-500 cubic-bezier(0.32, 0.72, 0, 1) overflow-hidden isolate">
                 {/* --- Header --- */}
                 <div className="p-6 border-b border-border/10 bg-muted/5 relative overflow-hidden shrink-0">
                     <div className={cn(
@@ -163,6 +213,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 {isSource ? <Database size={28} strokeWidth={1.5} /> :
                                 step.operator_type?.toLowerCase() === 'transform' ? <Zap size={28} strokeWidth={1.5} /> :
                                 step.operator_type?.toLowerCase() === 'load' ? <ArrowRight size={28} strokeWidth={1.5} /> :
+                                step.operator_type?.toLowerCase() === 'validate' ? <ShieldAlert size={28} strokeWidth={1.5} /> :
                                 <Activity size={28} strokeWidth={1.5} />}
                             </div>
                             <div className="space-y-1">
@@ -243,7 +294,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                             <div className="px-5 py-3 rounded-2xl bg-destructive/5 border border-destructive/10 flex items-center justify-between">
                                                 <div className="flex items-center gap-2 text-destructive/60">
                                                     <AlertTriangle size={12} />
-                                                    <span className="text-[9px] font-black uppercase tracking-widest">Errors</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest">Quarantine</span>
                                                 </div>
                                                 <span className="text-sm font-black font-mono text-destructive">{formatNumber(recordsError)}</span>
                                             </div>
@@ -331,6 +382,11 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                     <TabsTrigger value="egress" className="text-[9px] h-8 px-4 gap-2">
                                         <ArrowUpFromLine size={12} /> Egress
                                     </TabsTrigger>
+                                    {hasQuarantine && (
+                                        <TabsTrigger value="quarantine" className="text-[9px] h-8 px-4 gap-2 data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground transition-all duration-300">
+                                            <ShieldAlert size={12} /> Rejected
+                                        </TabsTrigger>
+                                    )}
                                 </TabsList>
 
                                 <div className="flex items-center gap-2">
@@ -354,6 +410,16 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                             <Maximize2 size={12} /> Maximize
                                         </Button>
                                     </TabsContent>
+                                    <TabsContent value="quarantine" className="m-0 p-0 border-0 shadow-none bg-transparent">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-8 rounded-lg gap-2 text-[10px] font-black uppercase tracking-widest text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all" 
+                                            onClick={() => setMaximizedDirection('quarantine')}
+                                        >
+                                            <Maximize2 size={12} /> Maximize
+                                        </Button>
+                                    </TabsContent>
                                 </div>
                             </div>
 
@@ -362,7 +428,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                     <div className="flex-1 min-h-0 relative overflow-hidden">
                                         <ResultsGrid 
                                             data={displayInData} 
-                                            isLoading={isLoadingIn} 
+                                            isLoading={isLoadingIn && !step?.sample_data?.in} 
                                             title="Ingress Buffer"
                                             description="First 100 records retrieved from source"
                                         />
@@ -373,9 +439,20 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                     <div className="flex-1 min-h-0 relative overflow-hidden">
                                         <ResultsGrid 
                                             data={displayOutData} 
-                                            isLoading={isLoadingOut && !step.sample_data} 
+                                            isLoading={isLoadingOut && !(step?.sample_data?.out || Array.isArray(step?.sample_data))} 
                                             title="Egress Buffer"
                                             description="First 100 records emitted to downstream"
+                                        />
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="quarantine" className="absolute inset-0 m-0 flex flex-col overflow-hidden">
+                                    <div className="flex-1 min-h-0 relative overflow-hidden">
+                                        <ResultsGrid 
+                                            data={displayQuarantineData} 
+                                            isLoading={isLoadingQuarantine && !step?.sample_data?.quarantine} 
+                                            title="Quarantine Buffer"
+                                            description="Violations captured during validation"
                                         />
                                     </div>
                                 </TabsContent>
@@ -388,14 +465,18 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                 {maximizedDirection && (
                     <MaximizePortal 
                         title={nodeLabel} 
-                        subtitle={maximizedDirection === 'in' ? 'Ingress Stream' : 'Egress Stream'}
+                        subtitle={maximizedDirection === 'in' ? 'Ingress Stream' : maximizedDirection === 'out' ? 'Egress Stream' : 'Quarantine Buffer'}
                         onClose={() => setMaximizedDirection(null)}
                     >
                         <ResultsGrid 
-                            data={maximizedDirection === 'in' ? displayInData : displayOutData} 
-                            isLoading={maximizedDirection === 'in' ? isLoadingIn : (isLoadingOut && !step.sample_data)} 
-                            title={maximizedDirection === 'in' ? "Ingress Data Stream" : "Egress Data Stream"}
-                            description={`Full buffer inspection for ${nodeLabel}`}
+                            data={maximizedDirection === 'in' ? displayInData : maximizedDirection === 'out' ? displayOutData : displayQuarantineData} 
+                            isLoading={
+                                maximizedDirection === 'in' ? (isLoadingIn && !step.sample_data?.in) : 
+                                maximizedDirection === 'out' ? (isLoadingOut && !step.sample_data?.out) : 
+                                (isLoadingQuarantine && !step.sample_data?.quarantine)
+                            } 
+                            title={maximizedDirection === 'in' ? "Ingress Data Stream" : maximizedDirection === 'out' ? "Egress Data Stream" : "Quarantine Data Stream"}
+                            description={maximizedDirection === 'quarantine' ? "Violations captured during validation" : `Full buffer inspection for ${nodeLabel}`}
                         />
                     </MaximizePortal>
                 )}

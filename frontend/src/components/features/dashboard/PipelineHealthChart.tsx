@@ -3,7 +3,6 @@ import React, { useMemo } from 'react';
 import {
     PieChart, Pie, Cell, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AlertTriangle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
@@ -54,172 +53,83 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, totalPipelines }) => {
-
     const { theme } = useTheme();
-
     const colors = useMemo(() => getChartColors(theme), [theme]);
 
-
-
     const dataWithTotal = useMemo(() => {
-
         return data.map(d => ({
-
             ...d,
-
             total: totalPipelines,
-
             fill: colors[d.name as keyof typeof colors] || colors.Draft
-
         }));
-
     }, [data, totalPipelines, colors]);
 
-
-
-    // Calculate health percentage (Active / Total)
-
     const activeCount = data.find(d => d.name === 'Active')?.value || 0;
-
     const healthScore = totalPipelines > 0 ? Math.round((activeCount / totalPipelines) * 100) : 0;
 
-
-
     return (
-
-        <Card className="flex flex-col h-full border-none bg-transparent shadow-none overflow-hidden rounded-none">
-
-            <CardHeader className="px-8 pt-8 pb-2 relative z-10">
-
-                <div className="flex items-center justify-between">
-
-                    <div className="space-y-1">
-
-                        <div className="flex items-center gap-2">
-
-                            <CardTitle className="text-xl font-black tracking-tight text-foreground">Operational Health</CardTitle>
-
-                            <div className={cn(
-
-                                "h-2 w-2 rounded-full animate-pulse",
-
-                                healthScore > 90 ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : 
-
-                                healthScore > 70 ? "bg-amber-500 shadow-[0_0_8px_#f59e0b]" : 
-
-                                "bg-destructive shadow-[0_0_8px_#f43f5e]"
-
-                            )} />
-
-                        </div>
-
-                        <CardDescription className="text-sm font-medium text-muted-foreground/60">
-
-                            Real-time fleet status distribution
-
-                        </CardDescription>
-
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="px-8 pt-8 pb-2 flex items-center justify-between shrink-0">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-black tracking-tighter uppercase mb-1">Status Distribution</h3>
+                        <div className={cn(
+                            "h-2 w-2 rounded-full animate-pulse",
+                            healthScore > 90 ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : 
+                            healthScore > 70 ? "bg-amber-500 shadow-[0_0_8px_#f59e0b]" : 
+                            "bg-destructive shadow-[0_0_8px_#f43f5e]"
+                        )} />
                     </div>
-
-                    <div className="text-right">
-
-                        <span className="text-2xl font-black tracking-tighter text-foreground">{healthScore}%</span>
-
-                        <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Health Score</p>
-
-                    </div>
-
+                    <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">Global pipeline health topology</p>
                 </div>
 
-            </CardHeader>
-
+                <div className="text-right">
+                    <span className="text-2xl font-black tracking-tighter text-foreground">{healthScore}%</span>
+                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Health Score</p>
+                </div>
+            </div>
             
-
-            <CardContent className="flex-1 flex flex-col items-center justify-center relative px-6 pb-8 pt-0">
-
+            <div className="flex-1 flex flex-col items-center justify-center relative px-6 pb-8 pt-0">
                 {data.length > 0 && totalPipelines > 0 ? (
-
                     <>
-
                         <div className="w-full h-full min-h-[260px] relative">
-
                             <ResponsiveContainer width="100%" height="100%" key={theme}>
-
                                 <PieChart>
-
                                     <Pie
-
                                         data={dataWithTotal}
-
                                         cx="50%"
-
                                         cy="50%"
-
                                         innerRadius={75}
-
                                         outerRadius={100}
-
                                         paddingAngle={8}
-
                                         cornerRadius={12}
-
                                         dataKey="value"
-
                                         stroke="transparent"
-
                                     >
-
                                         {dataWithTotal.map((entry, index) => (
-
                                             <Cell
-
                                                 key={`cell-${index}`}
-
                                                 fill={entry.fill}
-
                                                 className="hover:opacity-80 transition-all duration-500 outline-none"
-
                                             />
-
                                         ))}
-
                                     </Pie>
-
                                     <Tooltip content={<CustomTooltip colors={colors} />} />
-
                                 </PieChart>
-
                             </ResponsiveContainer>
 
-
-
-                            {/* Center Text */}
-
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-2">
-
                                 <div className="flex flex-col items-center justify-center bg-background/40 backdrop-blur-md h-24 w-24 rounded-full border border-white/5 shadow-2xl ring-1 ring-white/10">
-
                                     <span className="text-4xl font-black tabular-nums text-foreground tracking-tighter">
-
                                         {totalPipelines}
-
                                     </span>
-
                                     <span className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-
                                         Total
-
                                     </span>
-
                                 </div>
-
                             </div>
-
                         </div>
 
-
-
-                        {/* Status Breakdown Legend - Grid Style */}
                         <div className="grid grid-cols-2 gap-3 w-full mt-4 px-2">
                             {dataWithTotal.map((item) => (
                                 <div 
@@ -237,29 +147,16 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
                                 </div>
                             ))}
                         </div>
-
                     </>
-
                 ) : (
-
                     <div className="flex flex-col items-center justify-center text-muted-foreground h-full gap-4 opacity-40">
-
                         <div className="p-6 bg-muted/20 rounded-[2rem] border border-border/50">
-
                             <AlertTriangle className="h-8 w-8 opacity-20" />
-
                         </div>
-
                         <span className="text-xs font-black uppercase tracking-widest">No Active Entities</span>
-
                     </div>
-
                 )}
-
-            </CardContent>
-
-        </Card>
-
+            </div>
+        </div>
     );
-
 };

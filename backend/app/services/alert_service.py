@@ -33,7 +33,7 @@ class AlertService:
 
             # Find matching configurations
             configs = db.query(models.AlertConfig).filter(
-                models.AlertConfig.enabled == True,
+                models.AlertConfig.enabled,
                 models.AlertConfig.alert_type == alert_type,
                 models.AlertConfig.workspace_id == pipeline.workspace_id
             ).all()
@@ -54,7 +54,7 @@ class AlertService:
                 if config.delivery_method == AlertDeliveryMethod.IN_APP:
                     generated_in_app = True
 
-                alert_msg = message or f"Alert triggered for pipeline {pipeline.name}"
+                alert_msg = message or f"Issue detected in pipeline '{pipeline.name}'"
                 
                 alert = models.Alert(
                     alert_config_id=config.id,
@@ -112,7 +112,7 @@ class AlertService:
                         status_str = "succeeded"
                     else:
                         status_str = "failed"
-                    default_msg = f"Pipeline '{pipeline.name}' execution {status_str}."
+                    default_msg = f"Pipeline '{pipeline.name}' {status_str}."
 
                 alert = models.Alert(
                     alert_config_id=None,

@@ -259,6 +259,7 @@ export const JobGraph: React.FC<JobGraphProps> = ({ run }) => {
             )}>
                 <StepRunInspector 
                     step={selectedStepRun} 
+                    run={run}
                     nodeLabel={selectedNodeLabel}
                     onClose={() => setSelectedNodeId(null)} 
                 />

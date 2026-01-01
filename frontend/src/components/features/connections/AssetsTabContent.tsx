@@ -400,7 +400,9 @@ export const AssetsTabContent = ({
                                         <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Asset</TableHead>
                                         <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Type</TableHead>
                                         <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Schema</TableHead>
-                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Sync Status</TableHead>
+                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Volume</TableHead>
+                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Size</TableHead>
+                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Last Update</TableHead>
                                         <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>

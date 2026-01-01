@@ -372,57 +372,57 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                 </div>
                                             </div>
 
-                                            {/* Advanced Config Section */}
-                                            <AnimatePresence>
-                                                {(isIncremental || isQuery) && (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, height: 0 }}
-                                                        animate={{ opacity: 1, height: 'auto' }}
-                                                        exit={{ opacity: 0, height: 0 }}
-                                                        className="overflow-hidden border-t border-border/20 bg-primary/5"
-                                                    >
-                                                        <div className="p-4 space-y-4">
-                                                            {isIncremental && (
-                                                                <div className="flex items-center gap-4 bg-background/60 border border-primary/20 rounded-2xl p-3 shadow-inner">
-                                                                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                                                                        <TrendingUp className="h-4 w-4" />
-                                                                    </div>
-                                                                    <div className="flex-1 flex items-center gap-3">
-                                                                        <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70">Watermark Column</Label>
-                                                                        <Input 
-                                                                            {...register(`assets.${index}.watermark_column`, { required: isIncremental })} 
-                                                                            placeholder="e.g. updated_at or id" 
-                                                                            className="h-8 text-xs bg-transparent border-none shadow-none focus-visible:ring-0 px-0 font-mono" 
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            {isQuery && (
-                                                                <div className="space-y-2">
-                                                                    <div className="flex items-center justify-between px-1">
-                                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                                                                            <Code className="h-3 w-3 text-primary" /> Logic Definition
-                                                                        </Label>
-                                                                        <span className="text-[9px] font-bold text-primary/60 bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">
-                                                                            {getQueryHelp(assetType)}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="relative group">
-                                                                        <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-xl group-focus-within:bg-primary/10 transition-all" />
-                                                                        <Textarea 
-                                                                            {...register(`assets.${index}.query`, { required: isQuery })} 
-                                                                            placeholder={getPlaceholder(assetType)} 
-                                                                            className="min-h-32 font-mono text-[11px] leading-relaxed p-4 rounded-2xl bg-background/80 border-border/40 focus:border-primary/30 relative z-10 shadow-sm" 
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </motion.div>
+                                                                                        {/* Advanced Config Section */}
+                                                                                        <AnimatePresence>
+                                                                                            {(isIncremental || isQuery) && (
+                                                                                                <motion.div
+                                                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                                                                    exit={{ opacity: 0, height: 0 }}
+                                                                                                    className="overflow-hidden border-t border-border/20 bg-muted/5"
+                                                                                                >
+                                                                                                    <div className="p-4">
+                                                                                                        <div className="bg-primary/5 border border-primary/10 rounded-[1.5rem] p-5 space-y-5 shadow-inner">
+                                                                                                            {isIncremental && (
+                                                                                                                <div className="flex items-center gap-4 bg-background/60 border border-primary/20 rounded-2xl p-3 shadow-sm">
+                                                                                                                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                                                                                                                        <TrendingUp className="h-4 w-4" />
+                                                                                                                    </div>
+                                                                                                                    <div className="flex-1 flex items-center gap-3">
+                                                                                                                                                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70">Watermark Column</Label>
+                                                                                                                                                                                                <Input 
+                                                                                                                                                                                                    {...register(`assets.${index}.watermark_column`, { required: isIncremental })} 
+                                                                                                                                                                                                    placeholder="e.g. updated_at or id" 
+                                                                                                                                                                                                    className="h-8 text-xs bg-transparent border-none shadow-none focus-visible:ring-0 px-3 font-mono" 
+                                                                                                                                                                                                />                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            )}
+                                            
+                                                                                                            {isQuery && (
+                                                                                                                <div className="space-y-3">
+                                                                                                                    <div className="flex items-center justify-between px-1">
+                                                                                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                                                                                                                            <Code className="h-3 w-3 text-primary" /> Logic Definition
+                                                                                                                        </Label>
+                                                                                                                        <span className="text-[9px] font-bold text-primary/60 bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">
+                                                                                                                            {getQueryHelp(assetType)}
+                                                                                                                        </span>
+                                                                                                                    </div>
+                                                                                                                    <div className="relative group">
+                                                                                                                        <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-xl group-focus-within:bg-primary/10 transition-all" />
+                                                                                                                        <Textarea 
+                                                                                                                            {...register(`assets.${index}.query`, { required: isQuery })} 
+                                                                                                                            placeholder={getPlaceholder(assetType)} 
+                                                                                                                            className="min-h-32 font-mono text-[11px] leading-relaxed p-4 rounded-2xl bg-background/80 border-border/40 focus:border-primary/30 relative z-10 shadow-sm" 
+                                                                                                                        />
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            )}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </motion.div>
+                                                                                            )}
+                                                                                        </AnimatePresence>                                        </motion.div>
                                     );
                                 })}
                             </AnimatePresence>

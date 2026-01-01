@@ -146,10 +146,14 @@ class CassandraConnector(BaseConnector):
             c_type = str(col_meta.cql_type).lower()
             # Basic mapping
             synqx_type = "string"
-            if "int" in c_type: synqx_type = "integer"
-            elif "float" in c_type or "decimal" in c_type or "double" in c_type: synqx_type = "float"
-            elif "boolean" in c_type: synqx_type = "boolean"
-            elif "timestamp" in c_type: synqx_type = "datetime"
+            if "int" in c_type:
+                synqx_type = "integer"
+            elif "float" in c_type or "decimal" in c_type or "double" in c_type:
+                synqx_type = "float"
+            elif "boolean" in c_type:
+                synqx_type = "boolean"
+            elif "timestamp" in c_type:
+                synqx_type = "datetime"
             
             columns.append({
                 "name": col_name,
