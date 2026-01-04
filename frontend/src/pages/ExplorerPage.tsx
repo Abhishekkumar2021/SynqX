@@ -33,6 +33,7 @@ import {
 import { useTheme } from '@/hooks/useTheme';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { cn } from '@/lib/utils';
+import { executeQuery, getEphemeralJob } from '@/lib/api/ephemeral';
 
 const MaximizePortal = ({ children }: { children: React.ReactNode }) => {
     return createPortal(
@@ -52,7 +53,7 @@ const MaximizePortal = ({ children }: { children: React.ReactNode }) => {
 
 export const ExplorerPage: React.FC = () => {
     const { theme } = useTheme();
-    const { isEditor, isAdmin } = useWorkspace();
+    const { isEditor, isAdmin, activeWorkspace } = useWorkspace();
     const monaco = useMonaco();
     const editorRef = useRef<any>(null);
 
@@ -66,6 +67,7 @@ export const ExplorerPage: React.FC = () => {
     const [maximizedView, setMaximizedView] = useState<'none' | 'editor' | 'results'>('none');
     const [showHistory, setShowHistory] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);
+    const [executionMessage, setExecutionMessage] = useState<string | null>(null);
     const [queryLimit, setQueryLimit] = useState(100);
 
     // History Persistence (Backend)
@@ -78,7 +80,7 @@ export const ExplorerPage: React.FC = () => {
     const clearHistoryMutation = useMutation({
         mutationFn: clearHistory,
         onSuccess: () => {
-            toast.success("History Cleared");
+            toast.success("History Clear batch complete");
             refetchHistory();
         }
     });
@@ -205,6 +207,12 @@ export const ExplorerPage: React.FC = () => {
                 i++;
                 continue;
             }
+            if (char === '/' && nextChar === '/') {
+                inLineComment = true;
+                buffer += '//';
+                i++;
+                continue;
+            }
             if (char === '-' && nextChar === '-') {
                 inLineComment = true;
                 buffer += '--';
@@ -241,6 +249,22 @@ export const ExplorerPage: React.FC = () => {
         return text.substring(start, end).trim();
     };
 
+    const pollJob = async (jobId: number): Promise<any> => {
+        // Wait for a few seconds max for interactive results
+        for (let i = 0; i < 60; i++) {
+            const job = await getEphemeralJob(jobId);
+            if (job.status === 'success') return job;
+            if (job.status === 'failed') throw new Error(job.error_message || "Execution failed on agent");
+            
+            // Update message based on status
+            if (job.status === 'queued') setExecutionMessage(`Queued for Agent Group: ${job.agent_group}`);
+            if (job.status === 'running') setExecutionMessage(`Executing on Agent: ${job.worker_id}`);
+            
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        throw new Error("Query timed out. Check agent status.");
+    };
+
     const runQuery = async (mode: 'all' | 'selection' | 'cursor') => {
         if (!selectedConnectionId) {
             toast.error("Please select a data source first");
@@ -273,20 +297,37 @@ export const ExplorerPage: React.FC = () => {
         if (statements.length === 0) return;
 
         setIsExecuting(true);
+        setExecutionMessage("Initializing...");
 
         for (const stmt of statements) {
             try {
-                const start = performance.now();
-                const data = await executeRawQuery(parseInt(selectedConnectionId), stmt, queryLimit);
-                const duration = Math.round(performance.now() - start);
+                const isRemote = activeWorkspace?.default_agent_group && activeWorkspace.default_agent_group !== 'internal';
+                if (isRemote) setExecutionMessage(`Routing to Remote Agent...`);
+                
+                const job = await executeQuery(parseInt(selectedConnectionId), {
+                    query: stmt,
+                    limit: queryLimit
+                });
+
+                let finalJob = job;
+                if (job.status === 'queued' || job.status === 'running') {
+                    finalJob = await pollJob(job.id);
+                }
 
                 const resultId = Math.random().toString(36).substr(2, 9);
                 const newResult: ResultItem = {
                     id: resultId,
                     timestamp: Date.now(),
                     statement: stmt,
-                    data,
-                    duration
+                    data: {
+                        results: finalJob.result_sample?.rows || [],
+                        count: finalJob.result_sample?.is_truncated 
+                            ? finalJob.result_summary?.count 
+                            : (finalJob.result_sample?.rows?.length || 0),
+                        total_count: finalJob.result_summary?.total_count,
+                        columns: finalJob.result_summary?.columns || []
+                    },
+                    duration: finalJob.execution_time_ms || 0
                 };
 
                 setTabs(prev => prev.map(t => {
@@ -301,12 +342,12 @@ export const ExplorerPage: React.FC = () => {
                 }));
                 refetchHistory();
             } catch (err: any) {
-                toast.error("Query Failed", { description: `Statement: ${stmt.substring(0, 30)}...\nError: ${err.message}` });
+                toast.error("Execution Failed", { description: err.message });
                 break;
             }
         }
         setIsExecuting(false);
-        toast.success("Execution Batch Complete");
+        setExecutionMessage(null);
     };
 
     const handleSchemaAction = (type: 'run' | 'insert', sql: string) => {
@@ -727,6 +768,7 @@ export const ExplorerPage: React.FC = () => {
                 <ResultsGrid
                     data={activeResult ? activeResult.data : null}
                     isLoading={isExecuting}
+                    loadingMessage={executionMessage}
                     title={activeIndex ? `Result #${activeIndex}` : undefined}
                     description={activeResult ? activeResult.statement.substring(0, 60) + '...' : undefined}
                 />

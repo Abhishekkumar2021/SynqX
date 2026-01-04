@@ -33,5 +33,23 @@ class PipelineExecutionError(AppError):
     pass
 
 class TransformationError(AppError):
+
     """Raised during data transformation operations."""
+
+    pass
+
+
+
+class NotFoundError(AppError):
+
+    """Raised when a requested resource is not found."""
+
+    pass
+
+
+
+class ForbiddenError(AppError):
+
+    """Raised when a user lacks permission to access a resource."""
+
     pass

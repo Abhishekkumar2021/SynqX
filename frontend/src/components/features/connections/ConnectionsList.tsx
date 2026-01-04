@@ -26,6 +26,7 @@ interface Connection {
     connector_type: string;
     health_status?: string;
     description?: string;
+    default_agent_group?: string;
     usage_stats?: {
         sync_success_rate: number;
         average_latency_ms?: number;
@@ -108,6 +109,11 @@ const ConnectionCard = ({
                                 >
                                     {connection.health_status || 'Unknown'}
                                 </Badge>
+                                {connection.default_agent_group && connection.default_agent_group !== 'internal' && (
+                                    <Badge variant="outline" className="text-[8px] font-black uppercase bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-1 py-0 rounded flex items-center gap-1">
+                                        <Cpu size={8} /> {connection.default_agent_group}
+                                    </Badge>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -259,6 +265,11 @@ const ConnectionRow = ({
                         </h3>
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">{connection.connector_type}</span>
+                            {connection.default_agent_group && connection.default_agent_group !== 'internal' && (
+                                <Badge variant="outline" className="text-[7px] font-black uppercase bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-1 py-0 rounded flex items-center gap-1 leading-none">
+                                    <Cpu size={7} /> {connection.default_agent_group}
+                                </Badge>
+                            )}
                         </div>
                     </div>
                 </div>

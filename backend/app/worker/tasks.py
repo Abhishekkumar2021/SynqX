@@ -6,7 +6,7 @@ from app.db.session import session_scope
 from app.models.execution import Job, PipelineRun
 from app.models.enums import JobStatus, PipelineRunStatus
 from app.models.pipelines import PipelineVersion
-from app.engine.runner import PipelineRunner
+from app.engine.agent_engine import PipelineAgent as PipelineRunner
 from app.core.db_logging import DBLogger
 from app.core.errors import ConfigurationError, PipelineExecutionError
 import httpx

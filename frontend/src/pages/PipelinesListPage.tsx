@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
     Plus, Workflow, Activity, Search,
-    LayoutGrid, List as ListIcon
+    LayoutGrid, List as ListIcon, Laptop
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -26,7 +26,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export const PipelinesListPage: React.FC = () => {
     const { isZenMode } = useZenMode();
-    const { isEditor } = useWorkspace();
+    const { isEditor, activeWorkspace } = useWorkspace();
     const { user } = useAuth();
     
     useJobsListTelemetry();
@@ -117,6 +117,12 @@ export const PipelinesListPage: React.FC = () => {
                             <Workflow className="h-6 w-6 text-primary" />
                         </div>
                         Pipelines
+                        {activeWorkspace?.default_runner_group && (
+                            <Badge variant="outline" className="h-7 px-3 rounded-xl bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-black uppercase tracking-widest text-[9px] gap-1.5 hidden sm:flex">
+                                <Laptop className="h-3 w-3" />
+                                Agent: {activeWorkspace.default_runner_group}
+                            </Badge>
+                        )}
                         {user?.is_superuser && (
                             <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-black text-[10px] ml-2 tracking-widest px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(245,158,11,0.1)] transition-all duration-300 hover:bg-amber-500/20 hover:border-amber-500/40 hover:shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:scale-105 cursor-default select-none">
                                 SUPERUSER MODE

@@ -20,17 +20,7 @@ export const DashboardAlertsFeed: React.FC<DashboardAlertsFeedProps> = ({ alerts
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
-            <div className="py-6 px-8 shrink-0">
-                <h3 className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-primary" />
-                    Security & Health
-                </h3>
-                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">
-                    Automated system notification stream
-                </p>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto custom-scrollbar border-t border-border/20">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
                 {alerts.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center p-12 text-center opacity-40">
                         <div className="p-6 bg-muted/20 rounded-[2rem] border border-border/50 mb-4">

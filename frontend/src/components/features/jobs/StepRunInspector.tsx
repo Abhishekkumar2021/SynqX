@@ -182,7 +182,32 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
         };
     }, [quarantineData, step]);
 
-    if (!step) return null;
+    if (!step) {
+        return (
+            <div className="h-full w-full flex flex-col bg-background/95 backdrop-blur-3xl border-l border-border/40 shadow-2xl animate-in slide-in-from-right duration-500 overflow-hidden">
+                <div className="p-6 border-b border-border/10 flex items-center justify-between">
+                    <h3 className="font-black text-xl tracking-tighter uppercase">{nodeLabel}</h3>
+                    <Button variant="ghost" size="icon" onClick={onClose} className="rounded-2xl h-10 w-10">
+                        <X size={20} />
+                    </Button>
+                </div>
+                <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
+                        <div className="relative h-20 w-20 rounded-3xl glass-card flex items-center justify-center mx-auto border-2 border-primary/20 shadow-xl">
+                            <Clock className="h-10 w-10 text-primary animate-pulse" />
+                        </div>
+                    </div>
+                    <div className="space-y-2 max-w-xs">
+                        <h4 className="text-lg font-bold text-foreground">Awaiting Execution</h4>
+                        <p className="text-sm text-muted-foreground font-medium leading-relaxed">
+                            This node is standing by. Telemetry and buffer sniffing will be available once the agent begins processing.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const isSuccess = step.status === 'success' || step.status === 'completed';
     const isFailed = step.status === 'failed';

@@ -119,7 +119,11 @@ export const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
                                 <JobSummary job={job} run={run} />
                             )
                         ) : view === 'logs' ? (
-                            <JobLogViewer jobId={job.id} />
+                            <JobLogViewer 
+                                jobId={job.id} 
+                                status={job.status} 
+                                queueName={job.queue_name} 
+                            />
                         ) : (
                             run && (
                                 <ReactFlowProvider>

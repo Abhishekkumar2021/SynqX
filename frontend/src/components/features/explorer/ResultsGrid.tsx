@@ -36,6 +36,8 @@ import { cn, formatNumber } from '@/lib/utils';
 import { CodeBlock } from '@/components/ui/docs/CodeBlock';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info as InfoIcon } from 'lucide-react';
 
 import {
     useReactTable,
@@ -57,6 +59,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 interface ResultsGridProps {
     data: QueryResponse | null;
     isLoading: boolean;
+    loadingMessage?: string | null;
     isMaximized?: boolean;
     title?: string;
     description?: string;
@@ -70,6 +73,7 @@ type Density = 'compact' | 'standard' | 'comfortable';
 export const ResultsGrid: React.FC<ResultsGridProps> = ({ 
     data, 
     isLoading, 
+    loadingMessage,
     title, 
     description,
     onSelectRows,
@@ -262,11 +266,12 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
         comfortable: { cell: "px-6 py-4 text-sm", header: "px-6 py-4 h-12" }
     };
 
-    if (isLoading) return <LoadingSkeleton />;
+    if (isLoading) return <LoadingSkeleton message={loadingMessage} />;
     if (!data) return <EmptyState />;
 
     const results = data.results || (data as any).rows || [];
     const columnsData = data.columns || [];
+    const isTruncated = (data as any).is_truncated;
 
     if (tableData.length === 0 && results.length === 0 && columnsData.length === 0) {
         return (
@@ -405,6 +410,17 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
+                </div>
+            )}
+
+            {isTruncated && (
+                <div className="px-4 py-2 bg-amber-500/5 border-b border-amber-500/20">
+                    <Alert className="rounded-xl bg-transparent border-none py-1 h-auto shadow-none">
+                        <InfoIcon className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500" />
+                        <AlertDescription className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-tight ml-2">
+                            Dataset truncated for performance. Showing the first 1,000 records.
+                        </AlertDescription>
+                    </Alert>
                 </div>
             )}
 
@@ -718,18 +734,23 @@ const getCommonPinningStyles = (column: Column<any>): React.CSSProperties => {
   };
 };
 
-const LoadingSkeleton = () => (
-    <div className="flex-1 h-full flex flex-col p-6 gap-6 bg-background/50 animate-pulse overflow-hidden">
-        <div className="flex gap-4 border-b border-border pb-6 shrink-0">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-32 rounded-xl bg-muted/40" />)}
+const LoadingSkeleton = ({ message }: { message?: string | null }) => (
+    <div className="flex-1 h-full flex flex-col items-center justify-center p-6 gap-6 bg-background/50 animate-pulse overflow-hidden">
+        <div className="relative mb-4">
+            <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full animate-pulse" />
+            <Loader2 className="h-12 w-12 text-primary animate-spin relative z-10" />
         </div>
-        <div className="space-y-4 flex-1 overflow-hidden">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="flex gap-4">
-                    <Skeleton className="h-12 flex-1 rounded-2xl bg-muted/20" />
-                    <Skeleton className="h-12 w-24 rounded-2xl bg-muted/10" />
-                </div>
-            ))}
+        <div className="text-center space-y-2 relative z-10">
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-foreground animate-in fade-in duration-500">
+                {message || "Processing Data Stream"}
+            </h3>
+            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                Optimizing execution plan...
+            </p>
+        </div>
+        <div className="w-64 space-y-3 mt-4">
+            <Skeleton className="h-3 w-full rounded-full bg-muted/40" />
+            <Skeleton className="h-3 w-[80%] mx-auto rounded-full bg-muted/20" />
         </div>
     </div>
 );

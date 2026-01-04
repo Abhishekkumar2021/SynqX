@@ -5,7 +5,8 @@ import {
     CheckCircle2, Clock, Database, Zap,
     Activity, Terminal, AlertCircle,
     RefreshCw, Cpu, HardDrive, History, XCircle,
-    ArrowDownToLine, ArrowUpFromLine, ShieldAlert
+    ArrowDownToLine, ArrowUpFromLine, ShieldAlert,
+    Server, Box
 } from 'lucide-react';
 import { cn, formatNumber } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -68,7 +69,8 @@ export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
     const [inspectingStep, setInspectingStep] = React.useState<any | null>(null);
     const isSuccess = job.status === 'success';
     const isFailed = job.status === 'failed';
-    const isRunning = job.status === 'running' || job.status === 'pending';
+    const isQueued = job.status === 'queued';
+    const isRunning = job.status === 'running' || job.status === 'pending' || isQueued;
     const isCancelled = job.status === 'cancelled';
 
     const steps = run?.step_runs || [];
@@ -86,6 +88,7 @@ export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
                         isSuccess ? "bg-emerald-500/3 border-emerald-500/20" :
                         isFailed ? "bg-destructive/3 border-destructive/20" :
                         isCancelled ? "bg-amber-500/3 border-amber-500/20" :
+                        isQueued ? "bg-purple-500/3 border-purple-500/20" :
                         "bg-primary/3 border-primary/20"
                     )}>
                         <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -96,6 +99,7 @@ export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
                                         isSuccess ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
                                         isFailed ? "bg-destructive/10 text-destructive border-destructive/20" :
                                         isCancelled ? "bg-amber-500/10 text-amber-600 border-amber-500/20" :
+                                        isQueued ? "bg-purple-500/10 text-purple-600 border-purple-500/20" :
                                         "bg-primary/10 text-primary border-primary/20"
                                     )}>
                                         {job.status}
@@ -105,13 +109,31 @@ export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
                                             #{run.run_number}
                                         </Badge>
                                     )}
-                                    {isRunning && (
+                                    {job.queue_name ? (
+                                        <Badge variant="outline" className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-primary/5 border-primary/20 text-primary flex items-center gap-1.5">
+                                            <Server className="h-2.5 w-2.5" /> {job.queue_name}
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-blue-500/5 border-blue-500/20 text-blue-600 flex items-center gap-1.5">
+                                            <Box className="h-2.5 w-2.5" /> Internal Cloud
+                                        </Badge>
+                                    )}
+                                    {isRunning && !isQueued && (
                                         <div className="flex items-center gap-2 px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10">
                                             <span className="relative flex h-1.5 w-1.5">
                                                 <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping" />
                                                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
                                             </span>
                                             <span className="text-[9px] font-black text-primary/80 uppercase tracking-widest">Active</span>
+                                        </div>
+                                    )}
+                                    {isQueued && (
+                                        <div className="flex items-center gap-2 px-2 py-0.5 rounded-md bg-purple-500/5 border border-purple-500/10">
+                                            <span className="relative flex h-1.5 w-1.5">
+                                                <span className="absolute inset-0 rounded-full bg-purple-400 animate-pulse" />
+                                                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-purple-500" />
+                                            </span>
+                                            <span className="text-[9px] font-black text-purple-600 uppercase tracking-widest">Waiting</span>
                                         </div>
                                     )}
                                 </div>
@@ -121,6 +143,7 @@ export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
                                         {isSuccess ? "Orchestration finalized. All data packets processed and target states synchronized." :
                                          isFailed ? `Orchestration halted due to a terminal error: ${run?.error_message || "System failure."}` :
                                          isCancelled ? "Orchestration terminated by operator intervention." :
+                                         isQueued ? `Standing by. Awaiting connection from an agent in the '${job.queue_name}' group.` :
                                          "Orchestration in progress. Analyzing DAG dependencies and streaming telemetry."}
                                     </p>
                                 </div>

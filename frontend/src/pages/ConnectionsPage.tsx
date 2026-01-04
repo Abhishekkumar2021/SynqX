@@ -9,7 +9,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-    Dialog, DialogContent
+    Dialog, DialogContent,
+    DialogDescription,
+    DialogTitle
 } from "@/components/ui/dialog";
 import { PageMeta } from '@/components/common/PageMeta';
 import { motion } from 'framer-motion';
@@ -22,6 +24,8 @@ import { ConnectionsToolbar } from '@/components/features/connections/Connection
 import { ConnectionsList } from '@/components/features/connections/ConnectionsList';
 import { DeleteConnectionDialog } from '@/components/features/connections/DeleteConnectionDialog';
 import { CreateConnectionDialog } from '@/components/features/connections/CreateConnectionDialog';
+
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 
 export const ConnectionsPage: React.FC = () => {
     const queryClient = useQueryClient();
@@ -158,7 +162,7 @@ export const ConnectionsPage: React.FC = () => {
                 isZenMode ? "h-[calc(100vh-3rem)]" : "h-[calc(100vh-8rem)]"
             )}
         >
-            <PageMeta title="Connections" description="Manage data sources and destinations." />
+            <PageMeta title="Connectivity Hub" description="Manage data sources and destinations." />
 
             <ConnectionsHeader onCreate={isEditor ? handleCreate : undefined} />
 
@@ -184,6 +188,10 @@ export const ConnectionsPage: React.FC = () => {
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-5xl h-175 flex flex-col p-0 gap-0 overflow-hidden rounded-3xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
+                    <VisuallyHidden.Root>
+                        <DialogTitle>Connection Configuration</DialogTitle>
+                        <DialogDescription>Create or edit a data source connection.</DialogDescription>
+                    </VisuallyHidden.Root>
                     <CreateConnectionDialog
                         initialData={editingConnection}
                         onClose={() => setIsDialogOpen(false)}

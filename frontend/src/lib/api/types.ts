@@ -3,6 +3,7 @@ import {
   ConnectorType,
   PipelineStatus,
   JobStatus,
+  JobType,
   RetryStrategy,
   OperatorType,
   AuditEvent,
@@ -41,6 +42,7 @@ export interface WorkspaceRead {
   name: string;
   slug: string;
   description?: string;
+  default_agent_group?: string;
   role: string;
   created_at: string;
   updated_at: string;
@@ -91,6 +93,31 @@ export interface ConnectionUpdate {
   connection_timeout_seconds?: number;
 }
 
+export interface EphemeralJobResponse {
+  id: number;
+  workspace_id: number;
+  user_id?: number;
+  job_type: JobType;
+  status: JobStatus;
+  payload: any;
+  agent_group?: string;
+  worker_id?: string;
+  result_summary?: {
+    count: number;
+    total_count?: number;
+    columns: string[];
+  };
+  result_sample?: {
+    rows: any[];
+  };
+  error_message?: string;
+  started_at?: string;
+  completed_at?: string;
+  execution_time_ms?: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Pipeline {
   id: number;
   name: string;
@@ -106,6 +133,7 @@ export interface Pipeline {
   retry_strategy: RetryStrategy;
   retry_delay_seconds: number;
   execution_timeout_seconds?: number;
+  agent_group?: string;
   tags: Record<string, any>;
   priority: number;
   created_at: string;
@@ -131,9 +159,8 @@ export interface PipelineCreate {
   retry_strategy?: RetryStrategy;
   retry_delay_seconds?: number;
   execution_timeout_seconds?: number;
+  agent_group?: string;
   tags?: Record<string, any>;
-  priority?: number;
-  initial_version: PipelineVersionCreate;
 }
 
 export interface PipelineUpdate {
@@ -148,6 +175,7 @@ export interface PipelineUpdate {
   retry_strategy?: RetryStrategy;
   retry_delay_seconds?: number;
   execution_timeout_seconds?: number;
+  agent_group?: string;
   tags?: Record<string, any>;
   priority?: number;
 }
@@ -492,7 +520,6 @@ export interface HistoryItem {
   created_by?: string;
 }
 
-
 export interface ThroughputDataPoint {
   timestamp: string;
   success_count: number;
@@ -542,10 +569,27 @@ export interface DashboardAlert {
   created_at: string;
   pipeline_id?: number;
 }
+export interface AuditLog {
+  id: number;
+  workspace_id: number;
+  user_id: number;
+  event_type: string;
+  target_type?: string;
+  target_id?: number;
+  details?: Record<string, any>;
+  status: string;
+  created_at: string;
+}
 
 export interface ConnectorHealth {
   status: string;
   count: number;
+}
+
+export interface AgentGroupStats {
+  name: string;
+  count: number;
+  status: string;
 }
 
 export interface DashboardStats {
@@ -553,31 +597,30 @@ export interface DashboardStats {
   active_pipelines: number;
   total_connections: number;
   connector_health: ConnectorHealth[];
-  
-      total_jobs: number;
-  
-      success_rate: number;
-  
-      avg_duration: number;
-  
-          total_rows: number;
-  
-          total_rejected_rows: number;
-  
-          active_issues: number;
-  
-          resolution_rate: number;
-  
-          total_bytes: number;
-  
-          throughput: ThroughputDataPoint[];
+  // Agent Stats
+  total_agents: number;
+  active_agents: number;
+  agent_groups: AgentGroupStats[];
+  // Inventory Stats
+  total_users: number;
+  total_assets: number;
+  total_jobs: number;
+  success_rate: number;
+  avg_duration: number;
+  total_rows: number;
+  total_rejected_rows: number;
+  active_issues: number;
+  resolution_rate: number;
+  total_bytes: number;
+  throughput: ThroughputDataPoint[];
   pipeline_distribution: PipelineDistribution[];
   recent_activity: RecentActivity[];
-  
   system_health: SystemHealth;
   top_failing_pipelines: FailingPipeline[];
   slowest_pipelines: SlowestPipeline[];
   recent_alerts: DashboardAlert[];
+  recent_audit_logs: AuditLog[];
+  recent_ephemeral_jobs: EphemeralJobResponse[];
 }
 
 export interface JobListResponse {
@@ -655,7 +698,6 @@ export interface AuditLogsResponse {
   limit: number;
   offset: number;
 }
-
 
 export interface AlertListResponse {
   items: Alert[];

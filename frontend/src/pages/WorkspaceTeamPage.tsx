@@ -9,9 +9,8 @@ import { PageMeta } from '@/components/common/PageMeta';
 import { AnimatePresence } from 'framer-motion';
 
 // Segregated Components
-import { WorkspaceHeader } from '@/components/features/workspace/WorkspaceHeader';
+import { TeamHeader } from '@/components/features/workspace/TeamHeader';
 import { MembersTab } from '@/components/features/workspace/MembersTab';
-import { SettingsTab } from '@/components/features/workspace/SettingsTab';
 
 export const WorkspaceTeamPage: React.FC = () => {
     const { activeWorkspace, isAdmin } = useWorkspace();
@@ -19,7 +18,6 @@ export const WorkspaceTeamPage: React.FC = () => {
     const { isZenMode } = useZenMode();
     const queryClient = useQueryClient();
     
-    const [activeTab, setActiveTab] = useState('members');
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -39,45 +37,29 @@ export const WorkspaceTeamPage: React.FC = () => {
 
     return (
         <div className={cn(
-            "flex flex-col h-full",
+            "flex flex-col h-full gap-6 md:gap-8",
             isZenMode ? "min-h-[calc(100vh-4rem)]" : "min-h-[80vh]"
         )}>
-            <PageMeta title="Workspace Management" description="Manage your team and environment settings." />
+            <PageMeta title="Team Management" description="Manage your workspace team and permissions." />
+
+            <TeamHeader />
 
             {/* --- Unified Registry Container --- */}
             <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden relative">
-                <WorkspaceHeader 
-                    activeWorkspace={activeWorkspace}
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                />
-
                 <div className="flex-1 min-h-0 flex flex-col relative">
-                    <AnimatePresence mode="wait">
-                        {activeTab === 'members' ? (
-                            <MembersTab
-                                key="members-tab"
-                                members={filteredMembers}
-                                isLoading={isLoading}
-                                viewMode={viewMode}
-                                setViewMode={setViewMode}
-                                searchQuery={searchQuery}
-                                setSearchQuery={setSearchQuery}
-                                isAdmin={isAdmin}
-                                currentUser={currentUser}
-                                workspaceId={activeWorkspace?.id}
-                                queryClient={queryClient}
-                            />
-                        ) : (
-                            <SettingsTab
-                                key="settings-tab"
-                                activeWorkspace={activeWorkspace}
-                                isAdmin={isAdmin}
-                                members={members}
-                                queryClient={queryClient}
-                            />
-                        )}
-                    </AnimatePresence>
+                    <MembersTab
+                        key="members-tab"
+                        members={filteredMembers}
+                        isLoading={isLoading}
+                        viewMode={viewMode}
+                        setViewMode={setViewMode}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        isAdmin={isAdmin}
+                        currentUser={currentUser}
+                        workspaceId={activeWorkspace?.id}
+                        queryClient={queryClient}
+                    />
                 </div>
             </div>
         </div>

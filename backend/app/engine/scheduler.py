@@ -351,6 +351,42 @@ class Scheduler:
             self.db_session.add(job)
             self.db_session.flush()  # Get job.id before enqueueing
 
+            # Check for Remote Agent Routing
+            if pipeline.agent_group and pipeline.agent_group != "internal":
+                from app.services.agent_service import AgentService
+                if not AgentService.is_group_active(self.db_session, pipeline.workspace_id, pipeline.agent_group):
+                    logger.error(
+                        f"Skipping scheduled run for pipeline {pipeline.id}: No active agents in group '{pipeline.agent_group}'",
+                        extra={"pipeline_id": pipeline.id, "agent_group": pipeline.agent_group}
+                    )
+                    # Log a specific event for the user to see in history
+                    error_event = SchedulerEvent(
+                        pipeline_id=pipeline.id,
+                        workspace_id=pipeline.workspace_id,
+                        event_type="ERROR",
+                        timestamp=now,
+                        cron_expression=pipeline.schedule_cron,
+                        reason=f"Failed to trigger: No active agents in group '{pipeline.agent_group}'",
+                    )
+                    self.db_session.add(error_event)
+                    self.db_session.commit()
+                    return
+
+                # Mark as queued for remote agent
+                job.status = JobStatus.QUEUED
+                job.queue_name = pipeline.agent_group
+                self.db_session.commit()
+                
+                logger.info(
+                    "Scheduled run queued for remote execution",
+                    extra={
+                        "pipeline_id": pipeline.id,
+                        "job_id": job.id,
+                        "agent_group": pipeline.agent_group
+                    },
+                )
+                return
+
             # 3. Enqueue Celery Task
             task = execute_pipeline_task.apply_async(
                 args=[job.id],

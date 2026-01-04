@@ -9,7 +9,7 @@ import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { NavItem } from '../navigation/NavItem';
 import { useAuth } from '@/hooks/useAuth';
 import { DocsSidebar } from '../navigation/DocsSidebar';
-import { MAIN_NAV, CONFIG_NAV } from '@/lib/main-nav';
+import { NAV_STRUCTURE } from '@/lib/main-nav';
 
 interface MobileSidebarProps {
     isMobileMenuOpen: boolean;
@@ -125,37 +125,27 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isMobileMenuOpen, 
                                     </div>
                                 </div>
                             ) : (
-                                <nav className="flex flex-col gap-1.5 w-full" aria-label="Main navigation">
-                                    {MAIN_NAV.map((item) => (
-                                        <NavItem 
-                                            key={item.to}
-                                            to={item.to} 
-                                            icon={item.icon} 
-                                            label={item.label} 
-                                            onClick={handleMobileNavClick} 
-                                            end={item.end}
-                                        />
-                                    ))}
-
-                                    <div className="my-4 px-2">
-                                        <div className="h-px w-full bg-linear-to-r from-transparent via-border to-transparent" />
-                                    </div>
-
-                                    <div className="px-3 mb-1 mt-4">
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">
-                                            Configuration
-                                        </span>
-                                    </div>
-
-                                    {CONFIG_NAV.map((item) => (
-                                        <NavItem 
-                                            key={item.to}
-                                            to={item.to} 
-                                            icon={item.icon} 
-                                            label={item.label} 
-                                            onClick={handleMobileNavClick} 
-                                            end={item.end}
-                                        />
+                                <nav className="flex flex-col gap-6 w-full" aria-label="Main navigation">
+                                    {NAV_STRUCTURE.map((group) => (
+                                        <div key={group.title} className="space-y-2">
+                                            <div className="px-3 mb-1">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">
+                                                    {group.title}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                {group.items.map((item) => (
+                                                    <NavItem 
+                                                        key={item.to}
+                                                        to={item.to} 
+                                                        icon={item.icon} 
+                                                        label={item.label} 
+                                                        onClick={handleMobileNavClick} 
+                                                        end={item.end}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
                                     ))}
                                 </nav>
                             )}

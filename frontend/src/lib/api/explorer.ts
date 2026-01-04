@@ -9,11 +9,12 @@ export const executeRawQuery = async (
   connectionId: number,
   query: string,
   limit: number = 100,
-  offset: number = 0
+  offset: number = 0,
+  agent_group?: string
 ) => {
   const { data } = await api.post<QueryResponse>(
     `/explorer/${connectionId}/execute`,
-    { query, limit, offset }
+    { query, limit, offset, agent_group }
   );
   return data;
 };

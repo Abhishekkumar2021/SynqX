@@ -112,6 +112,16 @@ export const JobStatus = {
 } as const;
 export type JobStatus = typeof JobStatus[keyof typeof JobStatus];
 
+export const JobType = {
+    PIPELINE: "pipeline",
+    EXPLORER: "explorer",
+    METADATA: "metadata",
+    TEST: "test",
+    SYSTEM: "system",
+    FILE: "file"
+} as const;
+export type JobType = typeof JobType[keyof typeof JobType];
+
 export const RetryStrategy = {
     NONE: "none",
     FIXED: "fixed",
@@ -183,3 +193,11 @@ export const AuditEvent = {
     ACTION: "action"
 } as const;
 export type AuditEvent = typeof AuditEvent[keyof typeof AuditEvent];
+
+export const AgentStatus = {
+    ONLINE: "online",
+    OFFLINE: "offline",
+    BUSY: "busy",
+    MAINTENANCE: "maintenance"
+} as const;
+export type AgentStatus = typeof AgentStatus[keyof typeof AgentStatus];

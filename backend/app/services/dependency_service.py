@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class DependencyService:
     """
     Manages isolated execution environments for connections, persisting state in the DB.
+    Automatically routes to remote agents if assigned.
     """
     
     BASE_ENV_PATH = "data/environments"
@@ -23,21 +24,65 @@ class DependencyService:
         self.connection_id = connection_id
         self.user_id = user_id
         
+        # Resolve routing
+        self.connection = self.db.query(Connection).filter(Connection.id == connection_id).first()
+        if not self.connection:
+            raise AppError("Connection not found", status_code=404)
+            
+        self.agent_group = self.connection.workspace.default_agent_group if self.connection.workspace else "internal"
+        self.is_remote = self.agent_group and self.agent_group != "internal"
+
         # Verify ownership if user_id is provided
         if user_id:
             self._ensure_ownership()
             
         self.base_env_path = os.path.abspath(os.path.join(self.BASE_ENV_PATH, str(connection_id)))
-        self._ensure_base_path()
+        if not self.is_remote:
+            self._ensure_base_path()
 
     def _ensure_ownership(self):
-        """Check if the user owns the connection."""
-        conn = self.db.query(Connection).filter(
-            Connection.id == self.connection_id,
-            Connection.user_id == self.user_id
-        ).first()
-        if not conn:
-            raise AppError("Connection not found or access denied", status_code=404)
+        """Check if the user owns the connection or is workspace admin."""
+        # Simple check for now
+        if self.connection.user_id != self.user_id:
+             # Check workspace member role
+             from app.models.workspace import WorkspaceMember, WorkspaceRole
+             member = self.db.query(WorkspaceMember).filter(
+                 WorkspaceMember.workspace_id == self.connection.workspace_id,
+                 WorkspaceMember.user_id == self.user_id
+             ).first()
+             if not member or member.role not in [WorkspaceRole.ADMIN, WorkspaceRole.EDITOR]:
+                 raise AppError("Access denied", status_code=403)
+
+    def _trigger_remote_task(self, payload: Dict):
+        from app.services.ephemeral_service import EphemeralJobService
+        from app.schemas.ephemeral import EphemeralJobCreate
+        from app.models.enums import JobType, JobStatus
+        import time
+
+        job_in = EphemeralJobCreate(
+            job_type=JobType.SYSTEM,
+            connection_id=self.connection_id,
+            payload=payload,
+            agent_group=self.agent_group
+        )
+        job = EphemeralJobService.create_job(self.db, self.connection.workspace_id, self.user_id or 0, job_in)
+        
+        # Sync wait
+        start = time.time()
+        while time.time() - start < 60:
+            self.db.expire_all()
+            from app.models.ephemeral import EphemeralJob
+            updated = self.db.query(EphemeralJob).get(job.id)
+            if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
+                break
+            time.sleep(1)
+            
+        if updated.status == JobStatus.FAILED:
+            raise AppError(f"Remote dependency task failed: {updated.error_message}")
+        if updated.status != JobStatus.SUCCESS:
+            raise AppError("Remote task timed out")
+            
+        return updated.result_summary
 
     def _ensure_base_path(self):
         if not os.path.exists(self.base_env_path):
@@ -56,21 +101,34 @@ class DependencyService:
         ).first()
 
     def initialize_environment(self, language: str) -> Environment:
-        path = self._get_lang_path(language)
         env = self.get_environment(language)
         
         if not env:
             env = Environment(
                 connection_id=self.connection_id,
                 language=language,
-                path=path,
+                path=self._get_lang_path(language) if not self.is_remote else f"agent://{language}",
                 status="initializing"
             )
             self.db.add(env)
             self.db.commit()
             self.db.refresh(env)
 
+        if self.is_remote:
+            try:
+                res = self._trigger_remote_task({"action": "initialize", "language": language})
+                env.status = "ready"
+                env.version = res.get("version", "Remote")
+                env.updated_at = datetime.now(timezone.utc)
+                self.db.commit()
+                return env
+            except Exception as e:
+                env.status = "error"
+                self.db.commit()
+                raise AppError(str(e))
+
         try:
+            path = self._get_lang_path(language)
             version = None
             if language == "python":
                 venv_path = os.path.join(path, "venv")
@@ -105,6 +163,13 @@ class DependencyService:
         env = self.get_environment(language)
         if not env or env.status != "ready":
             raise AppError(f"{language} environment is not ready. Please initialize it first.")
+
+        if self.is_remote:
+            res = self._trigger_remote_task({"action": "install", "language": language, "package": package_name})
+            # Remote agents don't easily return full list yet, we'll mark for refresh or keep current
+            env.updated_at = datetime.now(timezone.utc)
+            self.db.commit()
+            return res.get("output", "Success")
 
         try:
             output = ""

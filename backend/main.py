@@ -15,6 +15,7 @@ from app.core.logging import setup_logging, get_logger
 from app.middlewares.correlation import CorrelationMiddleware
 from app.models import Base
 from app.api.v1.api import api_router
+from app.core.errors import AppError, NotFoundError, ForbiddenError
 import app.connectors.impl  # Register connectors
 import app.engine.transforms.impl  # Register transforms
 
@@ -89,6 +90,22 @@ async def validation_handler(request: Request, exc: RequestValidationError):
     
     logger.warning("validation_error", errors=errors, path=request.url.path)
     return JSONResponse(status_code=422, content={"detail": errors})
+
+
+@app.exception_handler(NotFoundError)
+async def not_found_handler(request: Request, exc: NotFoundError):
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(ForbiddenError)
+async def forbidden_handler(request: Request, exc: ForbiddenError):
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError):
+    logger.warning("app_error", error=str(exc))
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
 @app.exception_handler(Exception)

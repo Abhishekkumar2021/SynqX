@@ -102,6 +102,14 @@ class JobStatus(str, enum.Enum):
     RETRYING = "retrying"
     CANCELLED = "cancelled"
 
+class JobType(str, enum.Enum):
+    PIPELINE = "pipeline"
+    EXPLORER = "explorer"
+    METADATA = "metadata"
+    TEST = "test"
+    SYSTEM = "system"
+    FILE = "file"
+
 class RetryStrategy(str, enum.Enum):
     NONE = "none"
     FIXED = "fixed"
@@ -144,3 +152,9 @@ class AlertDeliveryMethod(str, enum.Enum):
     WEBHOOK = "webhook"
     PAGERDUTY = "pagerduty"
     IN_APP = "in_app"
+
+class AgentStatus(str, enum.Enum):
+    ONLINE = "online"
+    OFFLINE = "offline"
+    BUSY = "busy"
+    MAINTENANCE = "maintenance"

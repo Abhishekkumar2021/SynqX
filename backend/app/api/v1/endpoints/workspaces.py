@@ -18,6 +18,7 @@ class WorkspaceRead(BaseModel):
     name: str
     slug: str
     description: Optional[str]
+    default_agent_group: Optional[str]
     role: str
 
     class Config:
@@ -26,6 +27,7 @@ class WorkspaceRead(BaseModel):
 class WorkspaceCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    default_agent_group: Optional[str] = None
 
 class WorkspaceMemberRead(BaseModel):
     user_id: int
@@ -44,6 +46,8 @@ class MemberUpdateRequest(BaseModel):
 class WorkspaceUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    default_agent_group: Optional[str] = None
+    clear_all_pipelines: Optional[bool] = False
 
 @router.get("", response_model=List[WorkspaceRead])
 def list_my_workspaces(
@@ -67,6 +71,7 @@ def list_my_workspaces(
                 "name": ws.name,
                 "slug": ws.slug,
                 "description": ws.description,
+                "default_agent_group": ws.default_agent_group,
                 "role": membership.role.value if membership else WorkspaceRole.ADMIN.value
             })
         return results
@@ -81,6 +86,7 @@ def list_my_workspaces(
             "name": ws.name,
             "slug": ws.slug,
             "description": ws.description,
+            "default_agent_group": ws.default_agent_group,
             "role": m.role.value
         })
     return results
@@ -93,7 +99,7 @@ def update_workspace(
     current_user: User = Depends(deps.get_current_user),
     _: WorkspaceMember = Depends(deps.require_admin),
 ):
-    """Update workspace details (name, description)."""
+    """Update workspace details (name, description, runner group)."""
     ws = db.query(Workspace).filter(Workspace.id == workspace_id).first()
     if not ws:
         raise HTTPException(status_code=404, detail="Workspace not found")
@@ -102,6 +108,16 @@ def update_workspace(
         ws.name = request.name
     if request.description is not None:
         ws.description = request.description
+    if request.default_agent_group is not None:
+        ws.default_agent_group = request.default_agent_group
+    
+    # If explicitly asked to clear all, OR if switching the workspace to internal mode
+    if request.clear_all_pipelines or request.default_agent_group == "internal":
+        from app.models.pipelines import Pipeline
+        db.query(Pipeline).filter(Pipeline.workspace_id == workspace_id).update(
+            {Pipeline.agent_group: "internal"},
+            synchronize_session=False
+        )
         
     db.add(ws)
     db.commit()
@@ -113,7 +129,7 @@ def update_workspace(
         workspace_id=workspace_id,
         event_type="workspace.update",
         target_id=ws.id,
-        details={"name": ws.name, "description": ws.description}
+        details={"name": ws.name, "description": ws.description, "default_agent_group": ws.default_agent_group}
     )
     
     # Get user's role for the response
@@ -127,6 +143,7 @@ def update_workspace(
         "name": ws.name,
         "slug": ws.slug,
         "description": ws.description,
+        "default_agent_group": ws.default_agent_group,
         "role": membership.role.value if membership else WorkspaceRole.ADMIN.value
     }
 
@@ -142,7 +159,8 @@ def create_workspace(
     ws = Workspace(
         name=request.name,
         slug=slug,
-        description=request.description
+        description=request.description,
+        default_agent_group=request.default_agent_group
     )
     db.add(ws)
     db.flush()
@@ -176,6 +194,7 @@ def create_workspace(
         "name": ws.name,
         "slug": ws.slug,
         "description": ws.description,
+        "default_agent_group": ws.default_agent_group,
         "role": WorkspaceRole.ADMIN.value
     }
 

@@ -2,13 +2,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { updateWorkspace } from '@/lib/api';
-import { Settings2, Globe, Info, CheckCircle2, RefreshCw, Copy } from 'lucide-react';
+import { updateWorkspace, getAgents } from '@/lib/api';
+import { Settings2, Globe, Info, CheckCircle2, RefreshCw, Copy, Laptop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 
 interface WorkspaceSettingsFormProps {
@@ -24,36 +27,74 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
 }) => {
     const [wsName, setWsName] = useState(activeWorkspace?.name || '');
     const [wsDesc, setWsDesc] = useState(activeWorkspace?.description || '');
+    const [agentGroup, setAgentGroup] = useState(activeWorkspace?.default_agent_group || '');
+
+    // Fetch agents to get unique groups
+    const { data: agents } = useQuery({
+        queryKey: ['agents'],
+        queryFn: getAgents
+    });
+
+    const agentGroups = useMemo(() => {
+        const groups = new Set<string>();
+        if (agents && Array.isArray(agents)) {
+            agents.forEach((a: any) => {
+                if (a.tags) {
+                    if (Array.isArray(a.tags.groups)) {
+                        a.tags.groups.forEach((g: string) => {
+                            if (g.toLowerCase() !== 'internal') groups.add(String(g));
+                        });
+                    } else if (Array.isArray(a.tags)) {
+                        a.tags.forEach((g: any) => {
+                            if (String(g).toLowerCase() !== 'internal') groups.add(String(g));
+                        });
+                    } else if (typeof a.tags === 'object' && typeof a.tags.groups === 'string') {
+                        if (a.tags.groups.toLowerCase() !== 'internal') groups.add(a.tags.groups);
+                    }
+                }
+            });
+        }
+        return Array.from(groups).sort();
+    }, [agents]);
 
     useEffect(() => {
         if (activeWorkspace) {
             setWsName(activeWorkspace.name);
             setWsDesc(activeWorkspace.description || '');
+            setAgentGroup(activeWorkspace.default_agent_group || 'internal');
         }
     }, [activeWorkspace]);
 
     const updateWsMutation = useMutation({
-        mutationFn: (data: { name?: string, description?: string }) => 
+        mutationFn: (data: { name?: string, description?: string, default_agent_group?: string }) => 
             updateWorkspace(activeWorkspace!.id, data),
         onSuccess: () => {
             toast.success("Workspace Identity Updated");
             queryClient.invalidateQueries({ queryKey: ['workspaces'] });
             queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+            queryClient.invalidateQueries({ queryKey: ['pipelines'] });
         },
         onError: (err: any) => {
             toast.error("Failed to update workspace", { description: err.response?.data?.detail });
         }
     });
 
-    const hasChanges = wsName !== activeWorkspace?.name || wsDesc !== (activeWorkspace?.description || '');
+    const hasChanges = wsName !== activeWorkspace?.name || 
+                       wsDesc !== (activeWorkspace?.description || '') ||
+                       agentGroup !== (activeWorkspace?.default_agent_group || 'internal');
 
     const handleReset = () => {
         setWsName(activeWorkspace?.name || '');
         setWsDesc(activeWorkspace?.description || '');
+        setAgentGroup(activeWorkspace?.default_agent_group || 'internal');
     };
 
     const handleSave = () => {
-        updateWsMutation.mutate({ name: wsName, description: wsDesc });
+        updateWsMutation.mutate({ 
+            name: wsName, 
+            description: wsDesc,
+            default_agent_group: agentGroup 
+        });
     };
 
     return (
@@ -124,6 +165,57 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                                 </Button>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Agent Configuration */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                        <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
+                        <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500/80 flex items-center gap-2 whitespace-nowrap">
+                            <RefreshCw className="h-2.5 w-2.5" /> Agent Routing
+                        </h4>
+                        <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
+                    </div>
+
+                    <div className="space-y-2.5">
+                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
+                            Default Agent Group
+                        </Label>
+                        
+                        <Select 
+                            disabled={!isAdmin}
+                            value={agentGroup || 'internal'} 
+                            onValueChange={(val) => setAgentGroup(val)}
+                        >
+                            <SelectTrigger className="h-11 bg-muted/20 border-border/40 rounded-xl font-bold text-sm focus:ring-primary/20 transition-all px-5 shadow-sm text-foreground">
+                                <SelectValue placeholder="Select execution target..." />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-border/40 glass-panel shadow-2xl">
+                                <SelectItem value="internal" className="text-xs font-bold py-2.5 group">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                                            <RefreshCw size={12} />
+                                        </div>
+                                        <span>Internal Cloud Worker</span>
+                                    </div>
+                                </SelectItem>
+                                {agentGroups.map(group => (
+                                    <SelectItem key={group} value={group} className="text-xs font-bold py-2.5 group">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-all flex items-center justify-center">
+                                                <Laptop size={12} />
+                                            </div>
+                                            <span>Remote Agent: {group}</span>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        <p className="text-[10px] text-muted-foreground px-1 font-medium italic opacity-70">
+                            Setting a default group routes all operations in this workspace to your private agents.
+                        </p>
                     </div>
                 </div>
 

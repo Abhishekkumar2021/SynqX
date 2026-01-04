@@ -146,17 +146,33 @@ class JobService:
             self.db_session.add(new_job)
             self.db_session.flush()
 
-            task = execute_pipeline_task.delay(new_job.id)
-            new_job.celery_task_id = task.id
+            # Prepare retried job
+            if job.pipeline and job.pipeline.agent_group and job.pipeline.agent_group != "internal":
+                # Mark as queued for remote agent
+                new_job.status = JobStatus.QUEUED
+                new_job.queue_name = job.pipeline.agent_group
+                self.db_session.commit()
+                
+                logger.info(
+                    f"Job {job_id} retried and queued for remote agent group '{job.pipeline.agent_group}'",
+                    extra={"job_id": job_id, "new_job_id": new_job.id}
+                )
+            else:
+                task = execute_pipeline_task.delay(new_job.id)
+                new_job.celery_task_id = task.id
+                self.db_session.commit()
 
-            self.db_session.commit()
-
-            logger.info(
-                f"Job {job_id} retried as job {new_job.id}",
-                extra={"original_job_id": job_id, "new_job_id": new_job.id, "user_id": user_id},
-            )
+                logger.info(
+                    f"Job {job_id} retried as job {new_job.id}",
+                    extra={"original_job_id": job_id, "new_job_id": new_job.id, "user_id": user_id},
+                )
 
             return new_job
+
+        except Exception as e:
+            self.db_session.rollback()
+            logger.error(f"Failed to retry job {job_id}: {e}")
+            raise AppError(f"Failed to retry job: {str(e)}")
 
         except Exception as e:
             self.db_session.rollback()

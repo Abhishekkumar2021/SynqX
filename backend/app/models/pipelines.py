@@ -42,7 +42,8 @@ class Pipeline(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     )
     retry_delay_seconds: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
     
-    execution_timeout_seconds: Mapped[Optional[int]] = mapped_column(Integer)
+    execution_timeout_seconds: Mapped[Optional[int]] = mapped_column(Integer, default=3600)
+    agent_group: Mapped[str] = mapped_column(String(100), index=True, server_default="internal", default="internal") # Target specific agent group/tag
     tags: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     priority: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
 

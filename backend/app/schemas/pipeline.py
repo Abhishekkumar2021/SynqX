@@ -189,6 +189,7 @@ class PipelineBase(BaseModel):
     retry_strategy: RetryStrategy = Field(default=RetryStrategy.FIXED)
     retry_delay_seconds: int = Field(default=60, ge=0, le=3600)
     execution_timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
+    agent_group: Optional[str] = Field(None, max_length=100)
     tags: Optional[Dict[str, Any]] = Field(default_factory=dict)
     priority: int = Field(default=5, ge=1, le=10)
 
@@ -241,6 +242,7 @@ class PipelineUpdate(BaseModel):
     retry_strategy: Optional[RetryStrategy] = None
     retry_delay_seconds: Optional[int] = Field(None, ge=0, le=3600)
     execution_timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
+    runner_group: Optional[str] = None
     tags: Optional[Dict[str, Any]] = None
     priority: Optional[int] = Field(None, ge=1, le=10)
 

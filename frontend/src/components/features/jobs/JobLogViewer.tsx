@@ -6,7 +6,7 @@ import {
     ArrowDown, Search, WrapText, CalendarCheck,
     ListFilter, Activity,
     Settings2, MoreVertical, FileDown, ClipboardCopy, Trash2,
-    Maximize2, Minimize2
+    Maximize2, Minimize2, Server
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,8 @@ import {
 
 interface JobLogViewerProps {
     jobId: number | null;
+    status?: string;
+    queueName?: string;
 }
 
 const LogLevelBadge: React.FC<{ level: string }> = ({ level }) => {
@@ -314,9 +316,26 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                     )}
                 >
                     {filteredLogs.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center opacity-20 gap-4">
-                            <Terminal size={40} />
-                            <span className="font-black uppercase tracking-[0.3em]">Awaiting Buffers...</span>
+                        <div className="h-full flex flex-col items-center justify-center opacity-20 gap-4 p-8 text-center">
+                            {status === 'queued' ? (
+                                <>
+                                    <div className="relative">
+                                        <Server size={48} className="text-primary animate-pulse" />
+                                        <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <span className="font-black uppercase tracking-[0.3em] block">Waiting for Agent</span>
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">
+                                            Cluster Queue: {queueName || 'Default'}
+                                        </span>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <Terminal size={40} />
+                                    <span className="font-black uppercase tracking-[0.3em]">Awaiting Buffers...</span>
+                                </>
+                            )}
                         </div>
                     ) : (
                         <div className="min-w-full py-3">

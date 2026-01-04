@@ -68,8 +68,17 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ variant = 
             </div>
 
             {(!isCollapsed || variant === 'header') && (
-                <div className="flex flex-1 flex-col items-start overflow-hidden whitespace-nowrap">
-                    {variant === 'sidebar' && <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 leading-none mb-1">Workspace</span>}
+                <div className="flex flex-1 flex-col items-start overflow-hidden whitespace-nowrap mr-2">
+                    <div className="flex items-center gap-2 mb-0.5 w-full">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60 leading-none shrink-0">
+                            Workspace
+                        </span>
+                        {activeWorkspace?.default_agent_group && (
+                            <span className="ml-auto text-[8px] font-black uppercase tracking-tighter text-emerald-500 bg-emerald-500/10 px-1.5 py-px rounded border border-emerald-500/20 truncate max-w-20" title={`Agent: ${activeWorkspace.default_agent_group}`}>
+                                {activeWorkspace.default_agent_group}
+                            </span>
+                        )}
+                    </div>
                     <span className={cn(
                         "font-bold truncate text-left",
                         variant === 'header' ? "text-[11px]" : "text-sm w-32"
@@ -196,8 +205,8 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ variant = 
                         </DropdownMenuItem>
 
                         <DropdownMenuItem 
-                            className="p-2 rounded-xl focus:bg-primary/5 focus:text-primary cursor-pointer transition-colors group"
-                            onClick={() => navigate('/settings')}
+                            className="flex flex-col items-center gap-1.5 p-3 rounded-2xl focus:bg-primary/10 focus:text-primary cursor-pointer text-center group transition-all"
+                            onClick={() => navigate('/settings?tab=workspace')}
                         >
                             <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center mr-1">
                                 <Settings2 className="h-4 w-4" />

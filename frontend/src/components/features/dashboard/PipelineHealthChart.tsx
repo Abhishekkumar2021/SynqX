@@ -30,19 +30,19 @@ const CustomTooltip = ({ active, payload }: any) => {
         const percentage = (item.value / total) * 100;
 
         return (
-            <div className="z-50 rounded-[1.25rem] border border-border/40 bg-background/95 backdrop-blur-2xl p-4 shadow-2xl ring-1 ring-white/10 min-w-[180px]">
+            <div className="z-1000 rounded-2xl border border-white/20 bg-background/95 backdrop-blur-3xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ring-1 ring-white/20 min-w-[180px] animate-in fade-in zoom-in duration-200">
                 <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
                     {item.name}
                 </p>
                 <div className="flex items-center gap-3">
                     <div
-                        className="h-2 w-2 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)]"
-                        style={{ backgroundColor: item.payload.fill }}
+                        className="h-3 w-3 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.3)] animate-pulse"
+                        style={{ backgroundColor: item.payload.fill, boxShadow: `0 0 20px ${item.payload.fill}66` }}
                     />
                     <div className="flex flex-col">
-                        <span className="text-sm font-black text-foreground">{item.value} Entities</span>
-                        <span className="text-[10px] font-bold text-primary">
-                            {percentage.toFixed(1)}% of fleet
+                        <span className="text-base font-black text-foreground tracking-tight">{item.value} Entities</span>
+                        <span className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">
+                            {percentage.toFixed(1)}% OF TOTAL FLEET
                         </span>
                     </div>
                 </div>
@@ -68,7 +68,7 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
     const healthScore = totalPipelines > 0 ? Math.round((activeCount / totalPipelines) * 100) : 0;
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full">
             <div className="px-8 pt-8 pb-2 flex items-center justify-between shrink-0">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -92,7 +92,7 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
             <div className="flex-1 flex flex-col items-center justify-center relative px-6 pb-8 pt-0">
                 {data.length > 0 && totalPipelines > 0 ? (
                     <>
-                        <div className="w-full h-full min-h-[260px] relative">
+                        <div className="w-full h-full min-h-65 relative">
                             <ResponsiveContainer width="100%" height="100%" key={theme}>
                                 <PieChart>
                                     <Pie
@@ -105,21 +105,27 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
                                         cornerRadius={12}
                                         dataKey="value"
                                         stroke="transparent"
+                                        animationBegin={0}
+                                        animationDuration={1200}
                                     >
                                         {dataWithTotal.map((entry, index) => (
                                             <Cell
                                                 key={`cell-${index}`}
                                                 fill={entry.fill}
-                                                className="hover:opacity-80 transition-all duration-500 outline-none"
+                                                className="hover:opacity-80 transition-all duration-500 outline-none cursor-pointer"
                                             />
                                         ))}
                                     </Pie>
-                                    <Tooltip content={<CustomTooltip colors={colors} />} />
+                                    <Tooltip 
+                                        content={<CustomTooltip colors={colors} />} 
+                                        wrapperStyle={{ zIndex: 1000, outline: 'none' }}
+                                        cursor={false}
+                                    />
                                 </PieChart>
                             </ResponsiveContainer>
 
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-2">
-                                <div className="flex flex-col items-center justify-center bg-background/40 backdrop-blur-md h-24 w-24 rounded-full border border-white/5 shadow-2xl ring-1 ring-white/10">
+                                <div className="flex flex-col items-center justify-center bg-background/60 backdrop-blur-xl h-24 w-24 rounded-full border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.2)] ring-1 ring-white/5">
                                     <span className="text-4xl font-black tabular-nums text-foreground tracking-tighter">
                                         {totalPipelines}
                                     </span>

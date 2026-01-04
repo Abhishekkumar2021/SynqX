@@ -53,6 +53,18 @@ function AlertDialogContent({
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target?.closest('[data-sonner-toast]') || target?.closest('.sonner')) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target?.closest('[data-sonner-toast]') || target?.closest('.sonner')) {
+            e.preventDefault();
+          }
+        }}
         className={cn(
           // GLASS/CERAMIC STYLING
           // Uses glass-panel utility logic: high blur, oklch border, and deep shadow

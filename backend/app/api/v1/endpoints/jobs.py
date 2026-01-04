@@ -517,8 +517,7 @@ def get_step_data(
     current_user: models.User = Depends(deps.get_current_user),
 ):
     try:
-        from app.models.execution import StepRun, PipelineRun
-        from app.engine.runner_core.forensics import ForensicSniffer
+        from app.engine.agent_core.forensics import ForensicSniffer
         
         # Ownership check
         query = db.query(StepRun).join(PipelineRun).filter(StepRun.id == step_id)

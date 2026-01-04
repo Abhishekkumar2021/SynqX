@@ -9,7 +9,7 @@ import {
     Workflow, CalendarDays,
     Network,
     ShieldCheck,
-    ShieldAlert} from 'lucide-react';
+    Users, Database} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Select,
@@ -20,11 +20,11 @@ import {
 } from "@/components/ui/select";
 import { ExecutionThroughputChart } from '@/components/features/dashboard/ExecutionThroughputChart';
 import { PipelineHealthChart } from '@/components/features/dashboard/PipelineHealthChart';
-import { RecentActivityTable } from '@/components/features/dashboard/RecentActivityTable';
+import { AgentStatusChart } from '@/components/features/dashboard/AgentStatusChart';
+import { UnifiedActivityPanel } from '@/components/features/dashboard/UnifiedActivityPanel';
 import { SystemHealthMonitor } from '@/components/features/dashboard/SystemHealthMonitor';
 import { TopFailingPipelines } from '@/components/features/dashboard/TopFailingPipelines';
 import { SlowestPipelines } from '@/components/features/dashboard/SlowestPipelines';
-import { DashboardAlertsFeed } from '@/components/features/dashboard/DashboardAlertsFeed';
 import { RunPipelineDialog } from '@/components/features/dashboard/RunPipelineDialog';
 import { PageMeta } from '@/components/common/PageMeta';
 import { StatsCard } from '@/components/ui/StatsCard';
@@ -220,10 +220,10 @@ export const DashboardPage: React.FC = () => {
                 </div>
             </motion.div>
 
-            {/* --- Stats Cards Grid (Optimized 5 Columns) --- */}
-            <motion.div variants={item} className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {/* --- Stats Cards Grid (Balanced 3 Columns) --- */}
+            <motion.div variants={item} className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {isLoading ? (
-                    Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-[2.5rem] bg-muted/20" />)
+                    Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-[2.5rem] bg-muted/20" />)
                 ) : (
                     <>
                         <StatsCard
@@ -257,11 +257,18 @@ export const DashboardPage: React.FC = () => {
                             variant="warning"
                         />
                         <StatsCard
-                            title="Quarantined"
-                            value={formatNumber(stats?.total_rejected_rows || 0)}
-                            subtext="Records pending"
-                            icon={ShieldAlert}
-                            variant="destructive"
+                            title="Managed Assets"
+                            value={formatNumber(stats?.total_assets || 0)}
+                            subtext="Tables & Files"
+                            icon={Database}
+                            variant="primary"
+                        />
+                        <StatsCard
+                            title="Total Users"
+                            value={stats?.total_users || 0}
+                            subtext="Active Accounts"
+                            icon={Users}
+                            variant="info"
                         />
                     </>
                 )}
@@ -273,12 +280,12 @@ export const DashboardPage: React.FC = () => {
                 {/* PRIMARY ROW: Performance & Distribution */}
                 <div className="grid gap-8 lg:grid-cols-12">
                     <div className="lg:col-span-8">
-                        <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-112.5">
+                        <motion.div variants={item} className="glass-panel p-0! border-border/40 shadow-2xl shadow-black/5 h-112.5">
                             <ExecutionThroughputChart data={throughputData} />
                         </motion.div>
                     </div>
                     <div className="lg:col-span-4">
-                        <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-112.5">
+                        <motion.div variants={item} className="glass-panel p-0! border-border/40 shadow-2xl shadow-black/5 h-112.5">
                             <PipelineHealthChart 
                                 data={distributionData} 
                                 totalPipelines={stats?.total_pipelines || 0}
@@ -287,20 +294,29 @@ export const DashboardPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* SECONDARY ROW: Infrastructure & Security Feed */}
+                {/* SECONDARY ROW: Infrastructure & Agents */}
                 <div className="grid gap-8 lg:grid-cols-2">
-                    <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-87.5">
+                    <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-[26rem]">
                         <SystemHealthMonitor data={stats?.system_health} />
                     </motion.div>
 
-                    <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-87.5">
-                        <DashboardAlertsFeed alerts={stats?.recent_alerts || []} />
+                    <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-[26rem]">
+                        <AgentStatusChart 
+                            totalAgents={stats?.total_agents || 0}
+                            activeAgents={stats?.active_agents || 0}
+                            groups={stats?.agent_groups || []}
+                        />
                     </motion.div>
                 </div>
 
-                {/* TERTIARY ROW: Full Width Activity Log */}
-                <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-125">
-                    <RecentActivityTable jobs={recentJobs} />
+                {/* TERTIARY ROW: Unified Activity Panel */}
+                <motion.div variants={item} className="glass-panel p-0! border-border/40 overflow-hidden shadow-2xl shadow-black/5 h-[32rem]">
+                    <UnifiedActivityPanel 
+                        jobs={recentJobs}
+                        alerts={stats?.recent_alerts || []}
+                        auditLogs={stats?.recent_audit_logs || []}
+                        ephemeralJobs={stats?.recent_ephemeral_jobs || []}
+                    />
                 </motion.div>
 
                 {/* QUATERNARY ROW: Risks & Bottlenecks */}

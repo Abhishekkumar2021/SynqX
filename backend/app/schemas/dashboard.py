@@ -2,6 +2,9 @@ from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.audit import AuditLogRead
+from app.schemas.ephemeral import EphemeralJobResponse
+
 class ThroughputDataPoint(BaseModel):
     timestamp: datetime
     success_count: int
@@ -51,12 +54,22 @@ class ConnectorHealth(BaseModel):
     status: str
     count: int
 
+class AgentGroupStats(BaseModel):
+    name: str
+    count: int
+    status: str # 'active', 'idle', 'offline'
+
 class DashboardStats(BaseModel):
     total_pipelines: int
     active_pipelines: int
     total_connections: int
     connector_health: List[ConnectorHealth] = []
     
+    # Agent Stats
+    total_agents: int = 0
+    active_agents: int = 0
+    agent_groups: List[AgentGroupStats] = []
+
     # Period stats
     total_jobs: int
     success_rate: float
@@ -67,6 +80,10 @@ class DashboardStats(BaseModel):
     resolution_rate: float = 0.0
     total_bytes: int = 0
     
+    # Inventory Stats
+    total_users: int = 0
+    total_assets: int = 0
+    
     throughput: List[ThroughputDataPoint]
     pipeline_distribution: List[PipelineDistribution]
     recent_activity: List[RecentActivity]
@@ -76,5 +93,7 @@ class DashboardStats(BaseModel):
     top_failing_pipelines: List[FailingPipeline] = []
     slowest_pipelines: List[SlowestPipeline] = []
     recent_alerts: List[DashboardAlert] = []
+    recent_audit_logs: List[AuditLogRead] = []
+    recent_ephemeral_jobs: List[EphemeralJobResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

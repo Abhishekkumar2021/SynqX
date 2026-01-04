@@ -20,7 +20,8 @@ from app.models.enums import (
     AlertLevel,
     AlertStatus,
     AlertType,
-    AlertDeliveryMethod
+    AlertDeliveryMethod,
+    AgentStatus
 )
 
 from app.models.connections import Connection, Asset, AssetSchemaVersion
@@ -32,6 +33,9 @@ from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
 from app.models.api_keys import ApiKey
 from app.models.explorer import QueryHistory
+from app.models.agent import Agent
+from app.models.audit import AuditLog
+from app.models.ephemeral import EphemeralJob
 
 # Export all models for Alembic and easy access
 __all__ = [
@@ -55,6 +59,7 @@ __all__ = [
     "AlertStatus",
     "AlertType",
     "AlertDeliveryMethod",
+    "AgentStatus",
 
     # Models
     "User",
@@ -81,4 +86,7 @@ __all__ = [
     "Alert",
     "ApiKey",
     "QueryHistory",
+    "Agent",
+    "AuditLog",
+    "EphemeralJob",
 ]

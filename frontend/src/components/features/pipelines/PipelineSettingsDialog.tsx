@@ -23,13 +23,15 @@ import {
 } from "@/components/ui/select";
 import { Slider } from '@/components/ui/slider';
 import { CronBuilder } from '@/components/common/CronBuilder';
-import { type Pipeline, updatePipeline } from '@/lib/api';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type Pipeline, updatePipeline, api, getAgents } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 import {
     Loader2, Settings2, FileText,
     ShieldAlert, Zap,
-    CalendarClock, Clock, Info, ChevronRight
+    CalendarClock, Clock, Info, ChevronRight,
+    Server, Terminal, Box
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +54,8 @@ interface SettingsFormData {
     retry_strategy: string;
     retry_delay_seconds: number;
     execution_timeout_seconds: number | null;
+    agent_group: string | null;
+    tags: Record<string, any>;
     priority: number;
 }
 
@@ -63,6 +67,22 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
     const scheduleEnabled = watch('schedule_enabled');
     const scheduleCron = watch('schedule_cron');
     const priority = watch('priority') || 5;
+
+    // Fetch Agents to get available groups
+    const { data: agents } = useQuery({
+        queryKey: ['agents'],
+        queryFn: getAgents,
+    });
+
+    const agentGroups = useMemo(() => {
+        const groups = new Set<string>();
+        if (agents) {
+            agents.forEach((r: any) => {
+                if (r.tags?.groups) r.tags.groups.forEach((g: string) => groups.add(g));
+            });
+        }
+        return Array.from(groups);
+    }, [agents]);
 
     useEffect(() => {
         if (pipeline && open) {
@@ -76,7 +96,8 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                 retry_strategy: (pipeline as any).retry_strategy || 'fixed',
                 retry_delay_seconds: (pipeline as any).retry_delay_seconds || 60,
                 execution_timeout_seconds: pipeline.execution_timeout_seconds || 3600,
-                priority: pipeline.priority || 5
+                priority: pipeline.priority || 5,
+                agent_group: (pipeline as any).agent_group || 'internal',
             });
         }
     }, [pipeline, open, reset]);
@@ -136,7 +157,7 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                     <Tabs defaultValue="general" className="flex-1 flex min-h-0">
                         {/* Sidebar Navigation */}
                         <div className="p-4 w-64 border-r border-border/40 bg-slate-50/30 dark:bg-transparent flex flex-col gap-2 shrink-0 justify-between">
-                            <TabsList className="flex flex-col h-auto bg-transparent gap-1.5 border-none p-0">
+                            <TabsList className="flex flex-col h-auto bg-transparent gap-1.5 border-none shadow-none p-0">
                                 {[
                                     { id: "general", label: "General Info", icon: FileText, desc: "Identify and describe" },
                                     { id: "automation", label: "Scheduling", icon: CalendarClock, desc: "Automate sync cycles" },
@@ -200,7 +221,7 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                                 <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Logical Description</Label>
                                                 <Textarea
                                                     {...register('description')}
-                                                    className="min-h-[120px] rounded-xl bg-background/50 border-border/40 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 transition-all text-xs p-4 resize-none leading-relaxed shadow-inner"
+                                                    className="min-h-30 rounded-xl bg-background/50 border-border/40 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 transition-all text-xs p-4 resize-none leading-relaxed shadow-inner"
                                                     placeholder="Explain the purpose and expected outcome of this sequence..."
                                                 />
                                             </div>
@@ -247,6 +268,44 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                     </TabsContent>
 
                                     <TabsContent value="performance" className="m-0 p-8 animate-in fade-in slide-in-from-right-4 duration-500 space-y-8">
+                                        <div className="p-6 rounded-3xl border border-border/40 bg-card/30 backdrop-blur-md space-y-6">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1 flex items-center gap-2">
+                                                    <Server className="h-3 w-3" /> Execution Target
+                                                </Label>
+                                                <Controller
+                                                    control={control}
+                                                    name="agent_group"
+                                                    render={({ field }) => (
+                                                        <Select onValueChange={field.onChange} value={field.value || 'internal'}>
+                                                            <SelectTrigger className="h-12 rounded-xl bg-background/50 border-border/40 font-black text-[10px] uppercase tracking-widest shadow-inner px-4">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="glass-card border-border/40 rounded-xl">
+                                                                <SelectItem value="internal" className="text-[10px] font-black uppercase">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Box className="h-3 w-3 text-blue-500" />
+                                                                        SynqX Internal Worker (Cloud)
+                                                                    </div>
+                                                                </SelectItem>
+                                                                {agentGroups.map(group => (
+                                                                    <SelectItem key={group} value={group} className="text-[10px] font-black uppercase">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Terminal className="h-3 w-3 text-emerald-500" />
+                                                                            Remote Group: {group}
+                                                                        </div>
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )}
+                                                />
+                                                <p className="text-[9px] text-muted-foreground/60 font-bold ml-1">
+                                                    Choose where the data processing should occur. Remote groups keep data in your private network.
+                                                </p>
+                                            </div>
+                                        </div>
+
                                         <div className="p-6 rounded-3xl border border-border/40 bg-card/30 backdrop-blur-md space-y-8">
                                             <div className="space-y-6">
                                                 <div className="flex items-center justify-between">
@@ -359,7 +418,7 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                                 </div>
                                             </div>
                                             <h3 className="font-black text-lg tracking-tight uppercase">System Governance</h3>
-                                            <p className="text-[10px] text-muted-foreground/60 max-w-[260px] mt-3 font-bold leading-relaxed uppercase tracking-wider">
+                                            <p className="text-[10px] text-muted-foreground/60 max-w-65 mt-3 font-bold leading-relaxed uppercase tracking-wider">
                                                 Immutable audit trails and RBAC policies are managed at the core platform level.
                                             </p>
                                         </div>

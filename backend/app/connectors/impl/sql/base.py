@@ -94,6 +94,9 @@ class SQLConnector(BaseConnector):
                 all_assets = [t for t in all_assets if pattern.lower() in t.lower()]
 
             if not include_metadata:
+                # Even without full metadata, basic stats are useful if cheap
+                # But for now, we stick to the requested logic or maybe enable it?
+                # User complaint implies they want it. Let's make sure if they ask for it (include_metadata=True), they get it.
                 return [
                     {
                         "name": t, 
@@ -105,12 +108,16 @@ class SQLConnector(BaseConnector):
 
             results = []
             for asset in all_assets:
+                row_count = self._get_row_count(asset, db_schema)
+                size_bytes = self._get_table_size(asset, db_schema)
+                
                 results.append({
                     "name": asset,
                     "fully_qualified_name": f"{db_schema}.{asset}" if db_schema else asset,
                     "type": "table" if asset in tables else "view",
                     "schema": db_schema,
-                    "row_count": self._get_row_count(asset, db_schema),
+                    "row_count": row_count,
+                    "size_bytes": size_bytes
                 })
             return results
         except Exception as e:
@@ -119,11 +126,22 @@ class SQLConnector(BaseConnector):
     def _get_row_count(self, table: str, schema: Optional[str] = None) -> Optional[int]:
         try:
             name, actual_schema = self.normalize_asset_identifier(table)
+            # Use provided schema if not in identifier
+            if not actual_schema and schema:
+                actual_schema = schema
+                
             table_ref = f"{actual_schema}.{name}" if actual_schema else name
             query = text(f"SELECT COUNT(*) FROM {table_ref}")
             return int(self._connection.execute(query).scalar())
         except Exception:
             return None
+
+    def _get_table_size(self, table: str, schema: Optional[str] = None) -> Optional[int]:
+        """
+        Estimate table size in bytes. 
+        Override this in specific dialects (Postgres, MySQL, etc).
+        """
+        return None
 
     def infer_schema(
         self, asset: str, sample_size: int = 1000, mode: str = "auto", **kwargs

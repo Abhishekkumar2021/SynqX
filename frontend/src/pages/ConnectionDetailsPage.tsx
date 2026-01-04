@@ -58,9 +58,11 @@ import { AssetsTabContent } from '@/components/features/connections/AssetsTabCon
 import { ConnectionConfigStats } from '@/components/features/connections/ConnectionConfigStats';
 import { EnvironmentInfo } from '@/components/features/connections/EnvironmentInfo';
 import { LiveFileExplorer } from '@/components/features/connections/LiveFileExplorer';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 export const ConnectionDetailsPage: React.FC = () => {
     const { isZenMode } = useZenMode();
+    const { activeWorkspace } = useWorkspace();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const connectionId = parseInt(id!);
@@ -116,36 +118,97 @@ export const ConnectionDetailsPage: React.FC = () => {
         enabled: !!connection
     });
 
-    const testMutation = useMutation({
-        mutationFn: () => testConnection(connectionId),
-        onSuccess: (data: ConnectionTestResult) => {
-            if (data.success) {
-                toast.success("Connection Healthy", {
-                    description: `${data.message || 'The system can successfully communicate with the data source.'}`,
-                    icon: <ShieldCheck className="text-emerald-500 h-4 w-4" />
-                });
-            } else {
-                toast.error("Connection Failed", {
-                    description: data.message || "The data source could not be reached. Please check your credentials and host settings.",
-                    icon: <AlertTriangle className="text-destructive h-4 w-4" />
+        const isRemote = useMemo(() => {
+
+            return activeWorkspace?.default_agent_group && activeWorkspace.default_agent_group !== 'internal';
+
+        }, [activeWorkspace]);
+
+    
+
+        const testMutation = useMutation({
+
+            mutationFn: () => testConnection(connectionId),
+
+            onSuccess: (data: ConnectionTestResult) => {
+
+                if (data.success) {
+
+                    toast.success(isRemote ? "Agent Connectivity Verified" : "Connection Healthy", {
+
+                        description: `${data.message || 'The system can successfully communicate with the data source.'}`,
+
+                        icon: <ShieldCheck className="text-emerald-500 h-4 w-4" />
+
+                    });
+
+                } else {
+
+                    toast.error("Connection Failed", {
+
+                        description: data.message || "The data source could not be reached. Please check your credentials and host settings.",
+
+                        icon: <AlertTriangle className="text-destructive h-4 w-4" />
+
+                    });
+
+                }
+
+            },
+
+            onError: (err: any) => {
+                let errorMsg = "An internal error occurred while trying to verify connectivity.";
+                const detail = err.response?.data?.detail;
+                if (typeof detail === 'string') {
+                    errorMsg = detail;
+                } else if (detail && typeof detail === 'object') {
+                    errorMsg = detail.message || detail.error || JSON.stringify(detail);
+                }
+                toast.error("Test execution failed", {
+                    description: errorMsg
                 });
             }
-        },
-        onError: () => toast.error("Test execution failed", {
-            description: "An internal error occurred while trying to verify connectivity."
-        })
-    });
 
-    const discoverMutation = useMutation({
-        mutationFn: () => discoverAssets(connectionId),
-        onSuccess: (data: any) => {
-            const newAssets = data.assets || [];
-            toast.success(`Discovery Complete`, { description: `Found ${data.discovered_count || newAssets.length || 0} items` });
-            setDiscoveredAssets(newAssets);
-        },
-                onError: () => toast.error("Discovery failed")
-            });
-    if (loadingConnection) return (
+        });
+
+    
+
+        const discoverMutation = useMutation({
+
+            mutationFn: () => discoverAssets(connectionId),
+
+            onSuccess: (data: any) => {
+
+                const newAssets = data.assets || [];
+
+                toast.success(isRemote ? `Agent Discovery Complete` : `Discovery Complete`, { 
+
+                    description: `Found ${data.discovered_count || newAssets.length || 0} items across remote node.` 
+
+                });
+
+                setDiscoveredAssets(newAssets);
+
+            },
+
+            onError: (err: any) => {
+                let errorMsg = "Make sure your remote agent is online.";
+                const detail = err.response?.data?.detail;
+                if (typeof detail === 'string') {
+                    errorMsg = detail;
+                } else if (detail && typeof detail === 'object') {
+                    errorMsg = detail.message || detail.error || JSON.stringify(detail);
+                }
+                toast.error("Discovery failed", {
+                    description: errorMsg
+                });
+            }
+
+        });
+
+    
+
+        if (loadingConnection) return (
         <div className="p-8 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -157,7 +220,7 @@ export const ConnectionDetailsPage: React.FC = () => {
                 </div>
                 <Skeleton className="h-10 w-36 rounded-xl" />
             </div>
-            <Skeleton className="h-[600px] w-full rounded-3xl" />
+            <Skeleton className="h-150 w-full rounded-3xl" />
         </div>
     );
 
@@ -275,7 +338,12 @@ export const ConnectionDetailsPage: React.FC = () => {
                         ) : (
                             <Activity className="h-4 w-4" />
                         )}
-                        {testMutation.isPending ? 'Testing...' : 'Test Connection'}
+                        {testMutation.isPending 
+                            ? (isRemote ? 'Testing Agent...' : 'Testing...') 
+                            : testMutation.isSuccess 
+                                ? (isRemote ? 'Verified on Agent' : 'Connection Healthy')
+                                : 'Test Connection'
+                        }
                     </Button>
 
                     <DropdownMenu>
@@ -410,7 +478,7 @@ export const ConnectionDetailsPage: React.FC = () => {
                             </Tabs>
                 
                             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                                <DialogContent className="max-w-5xl h-[700px] flex flex-col p-0 gap-0 overflow-hidden rounded-3xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
+                                <DialogContent className="max-w-5xl h-175 flex flex-col p-0 gap-0 overflow-hidden rounded-3xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
                                     <CreateConnectionDialog
                                         initialData={connection}
                                         onClose={() => setIsEditDialogOpen(false)}

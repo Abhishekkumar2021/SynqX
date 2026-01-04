@@ -33,7 +33,7 @@ export const CodeBlock = ({
   title,
   maxHeight = '400px',
   rounded = false,
-  wrap = false,
+  wrap = true,
   usePortal = false
 }: CodeBlockProps) => {
   const [isMaximized, setIsMaximized] = useState(false);

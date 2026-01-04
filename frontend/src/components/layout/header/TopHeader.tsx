@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-    Search, Menu, Command, Maximize2, HelpCircle, Home
+    Search, Menu, Command, Maximize2, HelpCircle, Home,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModeToggle } from '../ModeToggle';
 import { NotificationsBell } from '../navigation/NotificationsBell';
-import { WorkspaceSwitcher } from '../WorkspaceSwitcher';
+import { UnifiedSwitcher } from '../UnifiedSwitcher';
 import {
     Tooltip,    TooltipContent,
     TooltipProvider,
@@ -23,6 +23,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useZenMode } from '@/hooks/useZenMode';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { cn } from '@/lib/utils';
 
 interface TopHeaderProps {
     setIsMobileMenuOpen: (isOpen: boolean) => void;
@@ -33,50 +35,43 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
     const location = useLocation();
     const { user } = useAuth();
     const { isZenMode, setIsZenMode } = useZenMode();
+    const { activeWorkspace } = useWorkspace();
 
     const generateBreadcrumbs = () => {
         const pathnames = location.pathname.split('/').filter((x) => x);
-        
-        // Always start with Home/Dashboard
         const breadcrumbs = [
             <BreadcrumbItem key="home">
                 <BreadcrumbLink asChild>
-                    <Link to="/dashboard" className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                        <Home className="h-4 w-4" />
-                        <span className="hidden sm:inline-block">Home</span>
+                    <Link to="/dashboard" className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all group">
+                        <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
                     </Link>
                 </BreadcrumbLink>
             </BreadcrumbItem>
         ];
 
-        // Process path segments
         pathnames.forEach((value, index) => {
             const to = `/${pathnames.slice(0, index + 1).join('/')}`;
             const isLast = index === pathnames.length - 1;
-            
-            // Format segment name
             let name = value.replace(/-/g, ' ');
             
-            // Check if it's likely an ID (numeric or long mixed alphanumeric)
-            // Simple heuristic: if it contains numbers and is > 3 chars, treat as ID or specific resource
-            // For better UX, we could fetch names, but statically:
             if (/^\d+$/.test(value) || (value.length > 12 && /\d/.test(value))) {
-                 name = `Resource ${value.substring(0, 6)}...`; // Or keep full ID if preferred
+                 name = `...${value.substring(value.length - 4)}`;
             } else {
                  name = name.charAt(0).toUpperCase() + name.slice(1);
             }
 
-            breadcrumbs.push(
-                <BreadcrumbSeparator key={`sep-${index}`} />
-            );
-
+            breadcrumbs.push(<BreadcrumbSeparator key={`sep-${index}`} className="opacity-20" />);
             breadcrumbs.push(
                 <BreadcrumbItem key={to}>
                     {isLast ? (
-                        <BreadcrumbPage className="font-black text-foreground tracking-tight">{name}</BreadcrumbPage>
+                        <BreadcrumbPage className="font-bold text-foreground tracking-tight px-2 py-1 rounded-md bg-primary/10 border border-primary/20 text-[9px] uppercase text-primary">
+                            {name}
+                        </BreadcrumbPage>
                     ) : (
                         <BreadcrumbLink asChild>
-                            <Link to={to} className="hover:text-primary transition-colors font-bold tracking-tight">{name}</Link>
+                            <Link to={to} className="hover:text-primary transition-all font-bold tracking-tight text-[10px] uppercase opacity-40 hover:opacity-100">
+                                {name}
+                            </Link>
                         </BreadcrumbLink>
                     )}
                 </BreadcrumbItem>
@@ -90,88 +85,102 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
         <AnimatePresence>
             {!isZenMode && (
                 <motion.header
-                    initial={{ y: -100, opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
-                    animate={{ 
-                        y: 0, 
-                        opacity: 1, 
-                        height: 64, // 16 * 4 (h-16)
-                        marginTop: 16, // mt-4
-                        marginBottom: 0 
-                    }}
-                    exit={{ 
-                        y: -100, 
-                        opacity: 0, 
-                        height: 0, 
-                        marginTop: 0, 
-                        marginBottom: 0 
-                    }}
+                    initial={{ y: -100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: -100, opacity: 0 }}
                     transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                    className="flex h-16 items-center justify-between mx-4 mt-4 rounded-[2rem] px-6 z-20 sticky top-0 transition-all border border-border/60 bg-card/40 backdrop-blur-2xl shadow-[0_16px_32px_-8px_rgba(0,0,0,0.1)] dark:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.4)] overflow-hidden"
+                    className="h-16 mx-4 mt-4 flex items-center justify-between shrink-0 z-40 relative px-4 rounded-[2rem] border border-border/60 bg-card/40 backdrop-blur-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] dark:shadow-none"
                 >
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
-                    <Menu className="h-5 w-5" />
-                </Button>
-                
-                {/* Breadcrumbs */}
-                <div className="hidden md:flex items-center text-sm">
-                    <Breadcrumb>
-                        <BreadcrumbList>
-                            {generateBreadcrumbs()}
-                        </BreadcrumbList>
-                    </Breadcrumb>
-                </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-                {/* Search Bar - Sleeker */}
-                <div className="relative group hidden lg:block">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-20" />
-                    <input 
-                        type="text"
-                        readOnly
-                        onClick={() => setIsSearchOpen(true)}
-                        placeholder="Quick search..."
-                        className="h-10 w-64 pl-10 pr-12 rounded-2xl border border-border/60 bg-background/40 text-sm text-muted-foreground cursor-pointer hover:bg-muted/30 hover:border-primary/30 transition-all outline-none"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 rounded-md border border-border/40 bg-muted/20 px-1.5 font-mono text-[10px] font-bold text-muted-foreground opacity-70">
-                        <Command className="h-2.5 w-2.5" />
-                        <span>K</span>
+                    {/* Left: Interactive Breadcrumbs */}
+                    <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                            <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 rounded-2xl border border-border/40 bg-background/40" onClick={() => setIsMobileMenuOpen(true)}>
+                                <Menu className="h-5 w-5" />
+                            </Button>
+                        </motion.div>
+                        
+                        <div className="hidden md:flex items-center">
+                            <Breadcrumb>
+                                <BreadcrumbList className="gap-1.5 sm:gap-2">
+                                    {generateBreadcrumbs()}
+                                </BreadcrumbList>
+                            </Breadcrumb>
+                        </div>
                     </div>
-                </div>
 
-                <div className="h-8 w-px bg-border/30 mx-1 hidden sm:block"></div>
-                
-                <div className="flex items-center gap-1">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Link to="/docs/intro">
-                                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-primary/5 hover:text-primary">
-                                        <HelpCircle className="h-4.5 w-4.5" />
-                                    </Button>
-                                </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>Knowledge Base</TooltipContent>
-                        </Tooltip>
+                    {/* Right: Premium Action Hub */}
+                    <div className="flex items-center gap-2.5">
+                        
+                        {/* Search Bar - Stable & Professional */}
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <motion.button 
+                                        onClick={() => setIsSearchOpen(true)}
+                                        whileHover={{ scale: 1.01, backgroundColor: "var(--background-hover)" }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="h-10 w-52 hidden lg:flex items-center gap-3 px-4 rounded-xl border border-border/40 bg-muted/20 text-muted-foreground transition-all group shadow-xs overflow-hidden relative"
+                                    >
+                                        <Search className="h-3.5 w-3.5 shrink-0 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40 group-hover:opacity-100 transition-opacity">Search</span>
+                                        <div className="ml-auto flex items-center gap-1">
+                                            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border/40 bg-background/50 px-1.5 font-mono text-[9px] font-black opacity-40 group-hover:opacity-80 transition-opacity">
+                                                <span className="text-[8px]">⌘</span>K
+                                            </kbd>
+                                        </div>
+                                    </motion.button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-[10px] font-bold">Omni-Search</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
 
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => setIsZenMode(true)} title="Enter Zen Mode (Alt+Z)" className="rounded-xl hover:bg-primary/5 hover:text-primary">
-                                    <Maximize2 className="h-4.5 w-4.5" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Zen Mode (Alt+Z)</TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
+                        <div className="h-8 w-px bg-border/20 mx-1 hidden lg:block" />
 
-                <div className="h-8 w-px bg-border/30 mx-1 hidden sm:block"></div>
-                
-                <WorkspaceSwitcher />
-                <ModeToggle />
-                {user && <NotificationsBell />}
-            </div>
+                        {/* Integrated Switcher Hub */}
+                        <UnifiedSwitcher />
+
+                        <div className="h-8 w-px bg-border/20 mx-1 hidden sm:block" />
+
+                        {/* Action Stack */}
+                        <div className="flex items-center gap-1.5">
+                            <TooltipProvider>
+                                <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 500 }}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Link to="/docs/intro">
+                                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl hover:bg-primary/10 text-muted-foreground hover:text-primary border border-transparent hover:border-primary/20 transition-all">
+                                                    <HelpCircle className="h-5 w-5" />
+                                                </Button>
+                                            </Link>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Resources</TooltipContent>
+                                    </Tooltip>
+                                </motion.div>
+
+                                <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 500 }}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => setIsZenMode(true)} className="h-10 w-10 rounded-2xl hover:bg-primary/10 text-muted-foreground hover:text-primary border border-transparent hover:border-primary/20 hidden sm:flex transition-all">
+                                                <Maximize2 className="h-5 w-5" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Focus Mode</TooltipContent>
+                                    </Tooltip>
+                                </motion.div>
+                            </TooltipProvider>
+                            
+                            <ModeToggle />
+                        </div>
+
+                        {user && (
+                            <>
+                                <div className="h-8 w-px bg-border/20 mx-1 hidden sm:block" />
+                                <div className="scale-90 origin-right">
+                                    <NotificationsBell />
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </motion.header>
             )}
         </AnimatePresence>

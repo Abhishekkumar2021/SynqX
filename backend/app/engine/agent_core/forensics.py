@@ -37,7 +37,7 @@ class ForensicSniffer:
         self.run_id = run_id
         # Use absolute path to ensure consistency across different processes/workers
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        # current_dir is backend/app/engine/runner_core
+        # current_dir is backend/app/engine/agent_core
         # We need to go up 3 levels to reach 'backend'
         project_root = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
         self.base_dir = os.path.join(project_root, "data", "forensics", f"run_{run_id}")

@@ -26,6 +26,11 @@ api.interceptors.response.use(
   (error) => {
     const { response } = error;
 
+    // Propagate backend error message if available
+    if (response && response.data && typeof response.data.detail === "string") {
+      error.message = response.data.detail;
+    }
+
     if (response && response.status === 401) {
       const publicRoutes = ["/login", "/register", "/", "/docs"];
       const isPublicRoute = publicRoutes.some(

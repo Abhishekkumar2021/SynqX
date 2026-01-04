@@ -39,21 +39,24 @@ const formatBytes = (bytes: number) => {
 const CustomTooltip = ({ active, payload, label, viewType }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-[1.5rem] border border-border/40 bg-background/95 backdrop-blur-2xl p-4 shadow-2xl ring-1 ring-white/10 min-w-50 z-100">
-                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-white/5 pb-2">
+            <div className="rounded-2xl border border-white/20 bg-background/95 backdrop-blur-3xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ring-1 ring-white/20 min-w-56 z-[1000] animate-in fade-in zoom-in duration-200">
+                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-white/10 pb-2">
                     {label}
                 </p>
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                     {payload.map((entry: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between gap-6 text-xs font-bold">
+                        <div key={index} className="flex items-center justify-between gap-8 text-xs font-bold">
                             <div className="flex items-center gap-2.5">
                                 <div
-                                    className="h-2 w-2 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.2)]"
-                                    style={{ backgroundColor: entry.color || entry.fill }}
+                                    className="h-2.5 w-2.5 rounded-full shadow-[0_0_12px_rgba(0,0,0,0.3)]"
+                                    style={{ 
+                                        backgroundColor: entry.color || entry.fill,
+                                        boxShadow: `0 0 15px ${entry.color || entry.fill}44`
+                                    }}
                                 />
-                                <span className="text-muted-foreground/80">{entry.name}:</span>
+                                <span className="text-muted-foreground/80 uppercase tracking-tight">{entry.name}:</span>
                             </div>
-                            <span className="font-mono text-foreground font-black">
+                            <span className="font-mono text-foreground font-black text-sm">
                                 {viewType === 'bytes' ? formatBytes(entry.value) : formatNumber(entry.value)}
                             </span>
                         </div>
@@ -72,7 +75,7 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
     const colors = useMemo(() => getThemeColors(theme), [theme]);
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full">
             <div className="px-8 pt-8 pb-4 flex flex-row items-center justify-between shrink-0">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -131,7 +134,11 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
                                 axisLine={false}
                                 width={40}
                             />
-                            <Tooltip content={<CustomTooltip viewType="jobs" colors={colors} />} cursor={{ stroke: colors.SUCCESS, strokeWidth: 2, strokeDasharray: '6 6', opacity: 0.4 }} />
+                            <Tooltip 
+                                content={<CustomTooltip viewType="jobs" colors={colors} />} 
+                                cursor={{ stroke: colors.SUCCESS, strokeWidth: 2, strokeDasharray: '6 6', opacity: 0.4 }}
+                                wrapperStyle={{ zIndex: 1000, outline: 'none' }}
+                            />
                             <Area type="monotone" dataKey="success" name="Completed" stroke={colors.SUCCESS} strokeWidth={4} fill="url(#gradSuccess)" animationDuration={1500} />
                             <Area type="monotone" dataKey="failed" name="Failed" stroke={colors.FAILED} strokeWidth={4} fill="url(#gradFailed)" animationDuration={1500} />
                         </AreaChart>
@@ -148,7 +155,11 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
                                 width={60}
                                 tickFormatter={(val) => view === 'bytes' ? formatBytes(val) : formatNumber(val)}
                             />
-                            <Tooltip content={<CustomTooltip viewType={view} colors={colors} />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }} />
+                            <Tooltip 
+                                content={<CustomTooltip viewType={view} colors={colors} />} 
+                                cursor={{ fill: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }} 
+                                wrapperStyle={{ zIndex: 1000, outline: 'none' }}
+                            />
                             <Bar
                                 dataKey={view === 'rows' ? 'rows' : 'bytes'}
                                 name={view === 'rows' ? 'Records' : 'Volume'}

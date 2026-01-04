@@ -22,8 +22,8 @@ from app.services.vault_service import VaultService
 from app.connectors.factory import ConnectorFactory
 from app.engine.transforms.factory import TransformFactory
 from app.core.errors import AppError
-from app.engine.runner_core.state_manager import StateManager
-from app.engine.runner_core.forensics import ForensicSniffer
+from app.engine.agent_core.state_manager import StateManager
+from app.engine.agent_core.forensics import ForensicSniffer
 
 logger = get_logger(__name__)
 

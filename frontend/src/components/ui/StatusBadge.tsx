@@ -96,11 +96,17 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
             case 'pending':
             case 'waiting':
-            case 'queued':
                 return {
                     variant: "outline",
                     icon: Clock,
                     animate: false
+                };
+
+            case 'queued':
+                return {
+                    variant: "secondary",
+                    icon: Clock,
+                    animate: true // New pulse behavior
                 };
 
             default:
@@ -130,7 +136,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
                 <Icon
                     className={cn(
                         "h-3 w-3 mr-1.5",
-                        config.animate ? "animate-spin" : ""
+                        config.animate ? (s === 'queued' ? "animate-pulse" : "animate-spin") : ""
                     )}
                 />
             )}

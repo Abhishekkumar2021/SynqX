@@ -1,3 +1,5 @@
+from typing import Optional
+from sqlalchemy import text
 from app.connectors.impl.sql.base import SQLConnector
 from app.core.errors import ConfigurationError
 from pydantic import Field
@@ -32,3 +34,18 @@ class PostgresConnector(SQLConnector):
             f"@{conf.host}:{conf.port}/"
             f"{conf.database}"
         )
+
+    def _get_table_size(self, table: str, schema: Optional[str] = None) -> Optional[int]:
+        try:
+            name, actual_schema = self.normalize_asset_identifier(table)
+            if not actual_schema and schema:
+                actual_schema = schema
+            
+            # Sanitize for query injection prevention (though name is internal)
+            # Use distinct identifier for postgres 'schema.table'
+            identifier = f"'{actual_schema}.{name}'" if actual_schema else f"'{name}'"
+            
+            query = text(f"SELECT pg_total_relation_size({identifier})")
+            return int(self._connection.execute(query).scalar())
+        except Exception:
+            return None

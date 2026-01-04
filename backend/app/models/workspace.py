@@ -15,6 +15,7 @@ class Workspace(Base, TimestampMixin):
     name = Column(String, nullable=False)
     slug = Column(String, unique=True, index=True, nullable=False)
     description = Column(String, nullable=True)
+    default_agent_group = Column(String, nullable=False, server_default="internal", default="internal", comment="Default agent tag for all jobs in this workspace")
     
     # Relationships
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")

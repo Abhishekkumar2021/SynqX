@@ -1,6 +1,6 @@
 """
 =================================================================================
-FILE 1: pipeline_runner.py - Enhanced DAG Runner
+FILE 1: pipeline_agent.py - Enhanced DAG Agent
 =================================================================================
 """
 
@@ -17,10 +17,10 @@ from app.models.execution import PipelineRun
 from app.core.errors import ConfigurationError, PipelineExecutionError
 from app.core.logging import get_logger
 from app.core.db_logging import DBLogger
-from app.engine.runner_core.state_manager import StateManager
-from app.engine.runner_core.node_executor import NodeExecutor
-from app.engine.runner_core.data_cache import DataCache
-from app.engine.runner_core.execution_metrics import ExecutionMetrics
+from app.engine.agent_core.state_manager import StateManager
+from app.engine.agent_core.node_executor import NodeExecutor
+from app.engine.agent_core.data_cache import DataCache
+from app.engine.agent_core.execution_metrics import ExecutionMetrics
 from app.db.session import SessionLocal
 
 logger = get_logger(__name__)
@@ -216,9 +216,9 @@ class ParallelExecutionLayer:
         return base_delay
 
 
-class PipelineRunner:
+class PipelineAgent:
     """
-    Production-Grade DAG Pipeline Runner
+    Production-Grade DAG Pipeline Agent
 
     Features:
     - Layer-based parallel execution for independent nodes

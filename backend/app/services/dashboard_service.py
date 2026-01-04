@@ -6,12 +6,19 @@ from sqlalchemy import func, case, and_, desc, or_
 from app.models.pipelines import Pipeline
 from app.models.execution import Job, PipelineRun, StepRun
 from app.models.monitoring import Alert, AlertConfig
-from app.models.connections import Connection
-from app.models.enums import PipelineStatus, JobStatus, OperatorRunStatus, AlertStatus
+from app.models.connections import Connection, Asset
+from app.models.agent import Agent
+from app.models.user import User
+from app.models.audit import AuditLog
+from app.models.ephemeral import EphemeralJob
+from app.models.enums import PipelineStatus, JobStatus, OperatorRunStatus, AlertStatus, AgentStatus
 from app.schemas.dashboard import (
     DashboardStats, ThroughputDataPoint, PipelineDistribution, RecentActivity,
-    SystemHealth, FailingPipeline, SlowestPipeline, DashboardAlert, ConnectorHealth
+    SystemHealth, FailingPipeline, SlowestPipeline, DashboardAlert, ConnectorHealth,
+    AgentGroupStats
 )
+from app.schemas.audit import AuditLogRead
+from app.schemas.ephemeral import EphemeralJobResponse
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -21,8 +28,8 @@ class DashboardService:
         self.db = db_session
 
     def get_stats(
-        self, 
-        user_id: int, 
+        self,
+        user_id: int,
         workspace_id: Optional[int] = None,
         time_range: str = "24h",
         start_date: Optional[datetime] = None,
@@ -30,7 +37,7 @@ class DashboardService:
     ) -> DashboardStats:
         try:
             now = datetime.now(timezone.utc)
-            
+
             # Use end_date if provided, otherwise now
             actual_end_date = end_date if end_date else now
             if actual_end_date.tzinfo is None:
@@ -52,19 +59,45 @@ class DashboardService:
                 actual_start_date = start_date
                 if actual_start_date.tzinfo is None:
                     actual_start_date = actual_start_date.replace(tzinfo=timezone.utc)
-                
+
                 # Determine interval based on duration
                 duration = actual_end_date - actual_start_date
                 if duration.total_seconds() <= 172800: # 48 hours
                     group_interval = 'hour'
                 else:
                     group_interval = 'day'
-            
+
             # Helper for workspace scoping
             def scope_query(query, model):
                 if workspace_id:
                     return query.filter(model.workspace_id == workspace_id)
                 return query.filter(model.user_id == user_id)
+
+            # --- Agent Stats ---
+            agent_query = self.db.query(Agent).filter(Agent.deleted_at.is_(None))
+            if workspace_id:
+                agent_query = agent_query.filter(Agent.workspace_id == workspace_id)
+
+            agents = agent_query.all()
+            total_agents = len(agents)
+            active_agents = sum(1 for a in agents if a.status in [AgentStatus.ONLINE, AgentStatus.BUSY])
+
+            # Group by tags['groups']
+            group_counts = {}
+            for agent in agents:
+                groups = agent.tags.get("groups", []) if agent.tags else []
+                if not groups:
+                    groups = ["Unassigned"]
+
+                for group in groups:
+                    if group not in group_counts:
+                        group_counts[group] = {"count": 0, "status": "active"}
+                    group_counts[group]["count"] += 1
+
+            agent_groups = [
+                AgentGroupStats(name=name, count=data["count"], status="active")
+                for name, data in group_counts.items()
+            ]
 
             # 1. Global Metrics
             total_pipelines = scope_query(
@@ -84,8 +117,39 @@ class DashboardService:
                 Connection
             ).scalar() or 0
 
-            # Connector Health Distribution
-            connector_health = []
+            # Inventory Stats
+            total_assets = scope_query(
+                self.db.query(func.count(Asset.id)).filter(Asset.deleted_at.is_(None)),
+                Asset
+            ).scalar() or 0
+
+            if workspace_id:
+                from app.models.workspace import WorkspaceMember
+                total_users = self.db.query(func.count(WorkspaceMember.user_id)).filter(
+                    WorkspaceMember.workspace_id == workspace_id
+                ).scalar() or 0
+            else:
+                 total_users = self.db.query(func.count(User.id)).scalar() or 0
+
+            # --- Audit Logs ---
+            audit_query = self.db.query(AuditLog)
+            if workspace_id:
+                audit_query = audit_query.filter(AuditLog.workspace_id == workspace_id)
+            
+            recent_audit = audit_query.order_by(desc(AuditLog.created_at)).limit(10).all()
+            recent_audit_logs = [AuditLogRead.model_validate(a) for a in recent_audit]
+
+            # --- Ephemeral Jobs ---
+            ephemeral_query = self.db.query(EphemeralJob)
+            if workspace_id:
+                ephemeral_query = ephemeral_query.filter(EphemeralJob.workspace_id == workspace_id)
+            else:
+                ephemeral_query = ephemeral_query.filter(EphemeralJob.user_id == user_id)
+            
+            recent_ephemeral = ephemeral_query.order_by(desc(EphemeralJob.created_at)).limit(10).all()
+            recent_ephemeral_jobs = [EphemeralJobResponse.model_validate(j) for j in recent_ephemeral]
+
+            # Connector Health Distribution            connector_health = []
             try:
                 health_query = scope_query(
                     self.db.query(Connection.health_status, func.count(Connection.id)).filter(Connection.deleted_at.is_(None)),
@@ -428,6 +492,15 @@ class DashboardService:
                 total_connections=total_connections,
                 connector_health=connector_health,
                 
+                # Agent Stats
+                total_agents=total_agents,
+                active_agents=active_agents,
+                agent_groups=agent_groups,
+
+                # Inventory Stats
+                total_users=total_users,
+                total_assets=total_assets,
+
                 total_jobs=total_jobs,
                 success_rate=round(success_rate, 1),
                 avg_duration=round(avg_duration, 2),
@@ -444,7 +517,9 @@ class DashboardService:
                 system_health=system_health,
                 top_failing_pipelines=top_failing,
                 slowest_pipelines=slowest_pipelines,
-                recent_alerts=recent_alerts
+                recent_alerts=recent_alerts,
+                recent_audit_logs=recent_audit_logs,
+                recent_ephemeral_jobs=recent_ephemeral_jobs
             )
         except Exception as e:
             logger.error("Error generating dashboard stats", error=str(e), exc_info=True)

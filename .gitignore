@@ -1,2 +1,17 @@
 .synqx/
 .vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+.env
+*.log
+*.pid
+.DS_Store

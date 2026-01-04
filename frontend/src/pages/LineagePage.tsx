@@ -212,7 +212,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="absolute top-4 right-4 bottom-4 w-[400px] glass-panel rounded-[2rem] border-border/40 shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden z-50 bg-background/80"
+                        className="absolute top-4 right-4 bottom-4 w-100 glass-panel rounded-[2rem] border-border/40 shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden z-50 bg-background/80"
                     >
                         <div className="p-6 border-b border-border/40 bg-muted/20 flex items-start justify-between">
                             <div>
@@ -370,7 +370,7 @@ export const LineagePage = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-2 hidden lg:flex">
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground px-2 lg:flex">
                         <div className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
                             <span>Active</span>
@@ -387,7 +387,7 @@ export const LineagePage = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                     <div className="relative group w-full md:w-[240px]">
+                     <div className="relative group w-full md:w-60">
                         <Search className="z-20 absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input 
                             placeholder="Find assets..." 
