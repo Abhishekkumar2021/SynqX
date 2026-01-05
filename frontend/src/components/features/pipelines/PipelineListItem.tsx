@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
     Workflow, Play, MoreVertical, Settings, History,
     Trash2, CheckCircle2, XCircle, Loader2, Zap, ShieldAlert,
-    Database, Clock
+    Database, Clock, FileDown
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { cn, formatNumber } from '@/lib/utils';import { formatDistanceToNow } from 'date-fns';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { RunPipelineDialog } from './RunPipelineDialog';
+import { exportPipelineYAML } from '@/lib/api';
 
 interface PipelineListItemProps {
     pipeline: Pipeline & { lastJob?: Job; stats?: PipelineStatsResponse };
@@ -53,6 +54,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
     const queryClient = useQueryClient();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
 
     const lastJob = pipeline.lastJob;
     const isSuccess = lastJob?.status === 'success';
@@ -76,6 +78,26 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
             });
         }
     });
+
+    const handleExport = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExporting(true);
+        try {
+            const blob = await exportPipelineYAML(pipeline.id);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `synqx_${pipeline.name.toLowerCase().replace(/ /g, '_')}.yaml`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            toast.success("Definition Exported");
+        } catch (e) {
+            toast.error("Export Failed");
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <>
@@ -231,6 +253,11 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onOpenSettings?.(pipeline)} disabled={!onOpenSettings}>
                                 <Workflow className="h-3.5 w-3.5 opacity-70" /> Pipeline Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-border/40 my-1" />
+                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={handleExport} disabled={isExporting}>
+                                {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5 opacity-70" />}
+                                Export as YAML
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border/40 my-1" />
                             <DropdownMenuItem 

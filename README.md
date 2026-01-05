@@ -45,6 +45,7 @@ graph TD
 *   **Immutable Pipelines**: Every change to a pipeline creates a new immutable version. Instantly rollback to any previous snapshot if a production run fails.
 *   **Visual DAG Editor**: Design complex dependency graphs with a drag-and-drop interface powered by React Flow.
 *   **Smart Scheduling**: Integrated Cron-based scheduling with timezone awareness and catch-up policies.
+*   **GitOps & Version Control**: Import and export pipelines as YAML manifests for version control, CI/CD integration, and easy sharing between environments.
 
 ### 🔍 Deep Forensics & Observability
 *   **Real-time Telemetry**: Watch execution logs stream live via WebSockets as they happen.
@@ -54,10 +55,15 @@ graph TD
 ### 🔌 Universal Connectivity
 *   **Standardized Assets**: Abstracts physical systems (SQL tables, S3 files, API endpoints) into logical "Assets" with a unified naming convention.
 *   **Broad Support**:
-    *   **Relational**: PostgreSQL, MySQL, SQL Server, Snowflake, BigQuery.
-    *   **Files**: S3, Local Filesystem (CSV, Parquet, JSONL), Azure Blob, GCS.
-    *   **APIs**: Generic REST connectors with adaptive pagination.
-    *   **NoSQL**: MongoDB, Redis.
+    *   **Relational**: PostgreSQL, MySQL, MariaDB, Oracle, SQL Server (MSSQL), SQLite.
+    *   **Data Warehouses**: Snowflake, BigQuery, Redshift, Databricks.
+    *   **Files**: S3, GCS, Azure Blob, SFTP, Local Filesystem (CSV, Parquet, JSONL).
+    *   **NoSQL & Streaming**: MongoDB, Redis, Cassandra, DynamoDB, Elasticsearch, Kafka, RabbitMQ.
+    *   **SaaS APIs**: Generic REST, GraphQL, Salesforce, Airtable, Google Sheets.
+
+### 🛠️ Powerful Transformations
+*   **Low-Code Modules**: Filter, Map, TypeCast, Join, Union, Merge, Aggregate (GroupBy), Sort, Deduplicate, RegexReplace, FillNulls, DropColumns.
+*   **Code-First**: Execute custom Python/Pandas logic for complex transformations that go beyond standard operators.
 
 ### 🛡️ Enterprise-Grade Security & Governance
 *   **The Vault**: Application-layer AES-256 encryption ensures credentials never leak, even if the underlying database is compromised. Decryption occurs only in volatile memory.

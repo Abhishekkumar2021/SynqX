@@ -1,6 +1,7 @@
 from typing import Optional, List
 import json
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
+import yaml
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, File, UploadFile, Response
 from sqlalchemy.orm import Session
 
 from app import models
@@ -23,6 +24,7 @@ from app.schemas.pipeline import (
     PipelineDiffResponse,
 )
 from app.services.pipeline_service import PipelineService
+from app.services.gitops_service import GitOpsService
 from app.services.audit_service import AuditService
 from app.core.errors import AppError, ConfigurationError
 from app.core.logging import get_logger
@@ -100,6 +102,45 @@ def create_pipeline(
                 "error": "Internal server error",
                 "message": "An unexpected error occurred",
             },
+        )
+
+
+@router.post(
+    "/import",
+    response_model=PipelineRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Import Pipeline YAML",
+    description="Create or update a pipeline from a YAML definition",
+)
+def import_pipeline(
+    file: UploadFile = File(...),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
+):
+    try:
+        content = file.file.read()
+        data = yaml.safe_load(content)
+        pipeline = GitOpsService.import_pipeline_from_dict(
+            db, data, current_user.active_workspace_id, current_user.id
+        )
+        
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="pipeline.import",
+            target_type="Pipeline",
+            target_id=pipeline.id,
+            details={"name": pipeline.name}
+        )
+        
+        return PipelineRead.model_validate(pipeline)
+    except Exception as e:
+        logger.error(f"Failed to import YAML: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Import failed", "message": str(e)},
         )
 
 
@@ -205,6 +246,37 @@ def get_pipeline(
         ]
 
     return response
+
+
+@router.get(
+    "/{pipeline_id}/export",
+    summary="Export Pipeline YAML",
+    description="Export a pipeline definition as a YAML file",
+)
+def export_pipeline(
+    pipeline_id: int,
+    version_id: Optional[int] = Query(None, description="Specific version to export"),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+):
+    service = PipelineService(db)
+    pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+    
+    if not pipeline:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
+        
+    try:
+        yaml_content = GitOpsService.export_pipeline_to_yaml(db, pipeline_id, version_id)
+        filename = f"synqx_{pipeline.name.lower().replace(' ', '_')}.yaml"
+        
+        return Response(
+            content=yaml_content,
+            media_type="application/x-yaml",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"Export failed: {e}")
+        raise HTTPException(status_code=500, detail="Export failed")
 
 
 @router.patch(

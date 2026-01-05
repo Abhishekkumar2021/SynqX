@@ -9,12 +9,12 @@ export const getWorkspaces = async () => {
   return data;
 };
 
-export const createWorkspace = async (payload: { name: string; description?: string; default_agent_group?: string }) => {
+export const createWorkspace = async (payload: { name: string; description?: string; default_agent_group?: string; git_config?: Record<string, any> }) => {
   const { data } = await api.post<WorkspaceRead>("/workspaces", payload);
   return data;
 };
 
-export const updateWorkspace = async (workspaceId: number, payload: { name?: string; description?: string; default_agent_group?: string; clear_all_pipelines?: boolean }) => {
+export const updateWorkspace = async (workspaceId: number, payload: { name?: string; description?: string; default_agent_group?: string; git_config?: Record<string, any>; clear_all_pipelines?: boolean }) => {
   const { data } = await api.patch<WorkspaceRead>(`/workspaces/${workspaceId}`, payload);
   return data;
 };

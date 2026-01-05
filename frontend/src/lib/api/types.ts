@@ -43,6 +43,7 @@ export interface WorkspaceRead {
   slug: string;
   description?: string;
   default_agent_group?: string;
+  git_config?: Record<string, any>;
   role: string;
   created_at: string;
   updated_at: string;

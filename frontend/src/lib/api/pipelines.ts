@@ -97,3 +97,20 @@ export const triggerPipeline = async (id: number, versionId?: number) => {
   );
   return data;
 };
+
+export const exportPipelineYAML = async (id: number, versionId?: number) => {
+  const { data } = await api.get(`/pipelines/${id}/export`, {
+    params: { version_id: versionId },
+    responseType: 'blob'
+  });
+  return data;
+};
+
+export const importPipelineYAML = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post<PipelineRead>("/pipelines/import", formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return data;
+};

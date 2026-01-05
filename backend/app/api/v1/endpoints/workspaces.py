@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -19,15 +19,20 @@ class WorkspaceRead(BaseModel):
     slug: str
     description: Optional[str]
     default_agent_group: Optional[str]
+    git_config: Optional[Dict[str, Any]] = None
     role: str
 
     class Config:
         from_attributes = True
-
 class WorkspaceCreate(BaseModel):
     name: str
     description: Optional[str] = None
     default_agent_group: Optional[str] = None
+    git_config: Optional[Dict[str, Any]] = None
+
+class MemberInviteRequest(BaseModel):
+    email: str
+    role: WorkspaceRole = WorkspaceRole.VIEWER
 
 class WorkspaceMemberRead(BaseModel):
     user_id: int
@@ -36,17 +41,14 @@ class WorkspaceMemberRead(BaseModel):
     role: str
     joined_at: datetime
 
-class MemberInviteRequest(BaseModel):
-    email: str
-    role: WorkspaceRole
-
 class MemberUpdateRequest(BaseModel):
-    role: WorkspaceRole
+    role: str
 
 class WorkspaceUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     default_agent_group: Optional[str] = None
+    git_config: Optional[Dict[str, Any]] = None
     clear_all_pipelines: Optional[bool] = False
 
 @router.get("", response_model=List[WorkspaceRead])

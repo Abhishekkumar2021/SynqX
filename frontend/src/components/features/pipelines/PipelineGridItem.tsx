@@ -15,7 +15,8 @@ import {
     Loader2,
     Calendar,
     History,
-    XCircle
+    XCircle,
+    FileDown
 } from 'lucide-react';import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +37,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { cn, formatNumber } from '@/lib/utils';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
-import { type Pipeline, type Job, getPipelineStats, deletePipeline } from '@/lib/api';
+import { type Pipeline, type Job, getPipelineStats, deletePipeline, exportPipelineYAML } from '@/lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { RunPipelineDialog } from './RunPipelineDialog';
@@ -62,6 +63,7 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
     const queryClient = useQueryClient();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const lastJob = pipeline.lastJob;
 
     // Fetch pipeline stats
@@ -80,6 +82,25 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
         },
         onError: () => toast.error("Failed to delete pipeline")
     });
+
+    const handleExport = async () => {
+        setIsExporting(true);
+        try {
+            const blob = await exportPipelineYAML(pipeline.id);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `synqx_${pipeline.name.toLowerCase().replace(/ /g, '_')}.yaml`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            toast.success("Definition Exported", { description: "YAML manifest is ready." });
+        } catch (e) {
+            toast.error("Export Failed");
+        } finally {
+            setIsExporting(false);
+        }
+    };
     
     // Status Logic
     const isRunning = lastJob?.status === 'running' || lastJob?.status === 'pending';
@@ -141,6 +162,11 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onOpenSettings?.(pipeline)} disabled={!onOpenSettings}>
                                 <Workflow className="h-3.5 w-3.5 opacity-70" /> Pipeline Settings
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-border/40 my-1" />
+                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={handleExport} disabled={isExporting}>
+                                {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5 opacity-70" />}
+                                Export as YAML
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border/40 my-1" />
                             <DropdownMenuItem 

@@ -39,20 +39,18 @@ from app.models.ephemeral import EphemeralJob
 
 # Export all models for Alembic and easy access
 __all__ = [
+    # Base
     "Base",
-    "TimestampMixin",
-    "UserTrackingMixin",
-    "AuditMixin",
-    "SoftDeleteMixin",
-    "OwnerMixin",
     
     # Enums
     "ConnectorType",
+    "AssetType",
     "PipelineStatus",
     "PipelineRunStatus",
     "OperatorType",
     "OperatorRunStatus",
     "JobStatus",
+    "JobType",
     "RetryStrategy",
     "DataDirection",
     "AlertLevel",
@@ -67,7 +65,6 @@ __all__ = [
     "WorkspaceMember",
     "WorkspaceRole",
     "Connection",
-    "Environment",
     "Asset",
     "AssetSchemaVersion",
     "Pipeline",
@@ -77,11 +74,7 @@ __all__ = [
     "Job",
     "PipelineRun",
     "StepRun",
-    "PipelineRunContext",
-    "Watermark",
-    "SchedulerEvent",
     "JobLog",
-    "StepLog",
     "AlertConfig",
     "Alert",
     "ApiKey",

@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
     Plus, Workflow, Activity, Search,
-    LayoutGrid, List as ListIcon, Laptop
+    LayoutGrid, List as ListIcon, Laptop,
+    FileDown, FileUp, Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -15,6 +16,7 @@ import { PipelineSettingsDialog } from '@/components/features/pipelines/Pipeline
 import { PipelineVersionDialog } from '@/components/features/pipelines/PipelineVersionDialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { api } from '@/lib/api/base';
 import { PipelineGridItem } from '@/components/features/pipelines/PipelineGridItem';
 import { PipelineListItem } from '@/components/features/pipelines/PipelineListItem';
 import { LoadingSkeleton, EmptyState } from '@/components/features/pipelines/PipelineStates';
@@ -37,6 +39,7 @@ export const PipelinesListPage: React.FC = () => {
     const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
     const [filter, setFilter] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [isImporting, setIsExecutingImport] = useState(false);
 
     // Data Fetching
     const { data: pipelines, isLoading: isLoadingPipelines } = useQuery({ queryKey: ['pipelines'], queryFn: getPipelines });
@@ -81,6 +84,28 @@ export const PipelinesListPage: React.FC = () => {
     const openVersions = (pipeline: Pipeline) => {
         setSelectedPipeline(pipeline);
         setVersionsOpen(true);
+    };
+
+    const handleImportYAML = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsExecutingImport(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            await api.post('/pipelines/import', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success("Pipeline Synchronized", { description: "Definition imported successfully via YAML." });
+            queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+        } catch (err: any) {
+            toast.error("Import Aborted", { description: err.message });
+        } finally {
+            setIsExecutingImport(false);
+            e.target.value = '';
+        }
     };
 
     // Derived State
@@ -135,13 +160,35 @@ export const PipelinesListPage: React.FC = () => {
                             : "Orchestrate and monitor your data workflows."}
                     </p>
                 </div>
-                {isEditor && (
-                    <Link to="/pipelines/new" className="w-full md:w-auto">
-                        <Button size="sm" className="w-full md:w-auto rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-semibold">
-                            <Plus className="mr-2 h-5 w-5" /> Create Pipeline
-                        </Button>
-                    </Link>
-                )}
+                <div className="flex items-center gap-3">
+                    {isEditor && (
+                        <>
+                            <input
+                                type="file"
+                                id="yaml-import"
+                                className="hidden"
+                                accept=".yaml,.yml"
+                                onChange={handleImportYAML}
+                                disabled={isImporting}
+                            />
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="rounded-full font-bold text-[10px] uppercase tracking-widest gap-2 bg-background/50 border-border/40 hover:bg-background transition-all"
+                                onClick={() => document.getElementById('yaml-import')?.click()}
+                                disabled={isImporting}
+                            >
+                                {isImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
+                                Import YAML
+                            </Button>
+                            <Link to="/pipelines/new" className="w-full md:w-auto">
+                                <Button size="sm" className="w-full md:w-auto rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-semibold">
+                                    <Plus className="mr-2 h-5 w-5" /> Create Pipeline
+                                </Button>
+                            </Link>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* --- Content Pane (Glass) --- */}

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, UniqueConstraint, JSON
 from sqlalchemy.orm import relationship
 from app.models.base import Base, TimestampMixin
 import enum
@@ -16,6 +16,7 @@ class Workspace(Base, TimestampMixin):
     slug = Column(String, unique=True, index=True, nullable=False)
     description = Column(String, nullable=True)
     default_agent_group = Column(String, nullable=False, server_default="internal", default="internal", comment="Default agent tag for all jobs in this workspace")
+    git_config = Column(JSON, nullable=True)
     
     # Relationships
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")

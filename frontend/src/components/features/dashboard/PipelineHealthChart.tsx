@@ -30,7 +30,7 @@ const CustomTooltip = ({ active, payload }: any) => {
         const percentage = (item.value / total) * 100;
 
         return (
-            <div className="z-1000 rounded-2xl border border-white/20 bg-background/95 backdrop-blur-3xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ring-1 ring-white/20 min-w-[180px] animate-in fade-in zoom-in duration-200">
+            <div className="z-1000 rounded-2xl border border-white/20 bg-background/95 backdrop-blur-3xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ring-1 ring-white/20 min-w-45 animate-in fade-in zoom-in duration-200">
                 <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
                     {item.name}
                 </p>
