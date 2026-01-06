@@ -5,7 +5,7 @@ export const executeQuery = async (connectionId: number, payload: {
     query: string, 
     limit?: number, 
     offset?: number, 
-    params?: any,
+    params?: Record<string, unknown>,
     agent_group?: string 
 }) => {
     const { data } = await api.post<EphemeralJobResponse>(`/explorer/${connectionId}/execute`, payload);

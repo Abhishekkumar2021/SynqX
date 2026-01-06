@@ -1,10 +1,7 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime
-import time
-import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 from app import models
 from app.api import deps
 from app.services import connection_service
@@ -13,7 +10,7 @@ from app.connectors.factory import ConnectorFactory
 from app.models.ephemeral import EphemeralJob
 from app.models.explorer import QueryHistory
 from app.models.user import User
-from app.models.enums import JobType, JobStatus
+from app.models.enums import JobType
 from pydantic import BaseModel
 
 from app.services.ephemeral_service import EphemeralJobService

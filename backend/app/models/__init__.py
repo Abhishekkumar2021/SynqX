@@ -41,6 +41,11 @@ from app.models.ephemeral import EphemeralJob
 __all__ = [
     # Base
     "Base",
+    "TimestampMixin",
+    "UserTrackingMixin",
+    "AuditMixin",
+    "SoftDeleteMixin",
+    "OwnerMixin",
     
     # Enums
     "ConnectorType",
@@ -67,6 +72,7 @@ __all__ = [
     "Connection",
     "Asset",
     "AssetSchemaVersion",
+    "Environment",
     "Pipeline",
     "PipelineVersion",
     "PipelineNode",
@@ -74,7 +80,10 @@ __all__ = [
     "Job",
     "PipelineRun",
     "StepRun",
+    "PipelineRunContext",
+    "Watermark",
     "JobLog",
+    "StepLog",
     "AlertConfig",
     "Alert",
     "ApiKey",
@@ -82,4 +91,5 @@ __all__ = [
     "Agent",
     "AuditLog",
     "EphemeralJob",
+    "SchedulerEvent",
 ]

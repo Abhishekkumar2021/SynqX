@@ -6,7 +6,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useZenMode } from '@/hooks/useZenMode';
 import { cn } from '@/lib/utils';
 import { PageMeta } from '@/components/common/PageMeta';
-import { AnimatePresence } from 'framer-motion';
 
 // Segregated Components
 import { TeamHeader } from '@/components/features/workspace/TeamHeader';

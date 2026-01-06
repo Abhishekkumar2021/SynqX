@@ -1,7 +1,7 @@
 import io
 import os
 import zipfile
-from typing import List, Optional, Any
+from typing import List
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Header
@@ -276,7 +276,6 @@ def update_ephemeral_job(
     db: Session = Depends(deps.get_db),
 ):
     """Agent reports result of an ephemeral job."""
-    from app.services.ephemeral_service import EphemeralJobService
     job = db.query(EphemeralJob).get(job_id)
     if not job:
         raise HTTPException(404, "Job not found")

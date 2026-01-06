@@ -92,7 +92,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
             a.click();
             a.remove();
             toast.success("Definition Exported");
-        } catch (e) {
+        } catch {
             toast.error("Export Failed");
         } finally {
             setIsExporting(false);

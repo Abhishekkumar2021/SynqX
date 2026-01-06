@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from '@/components/ui/slider';
 import { CronBuilder } from '@/components/common/CronBuilder';
-import { type Pipeline, updatePipeline, api, getAgents } from '@/lib/api';
+import { type Pipeline, updatePipeline, getAgents } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { toast } from 'sonner';

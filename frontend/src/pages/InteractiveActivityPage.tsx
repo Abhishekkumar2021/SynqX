@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
     Clock, X, PlayCircle, Cpu, ExternalLink, Activity
 } from 'lucide-react';
@@ -37,6 +37,7 @@ export const InteractiveActivityPage: React.FC = () => {
     const [filter, setFilter] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [filterType, setFilterType] = useState<string>('all');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedJob, setSelectedJob] = useState<any | null>(null);
 
     // --- Data Fetching ---

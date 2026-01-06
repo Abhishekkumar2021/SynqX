@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models.agent import Agent
 from app.models.enums import AgentStatus
-from app.schemas.agent import AgentCreate, AgentUpdate, AgentHeartbeat, AgentToken
+from app.schemas.agent import AgentCreate, AgentHeartbeat, AgentToken
 from app.core.errors import AppError, NotFoundError
 
 class AgentService:

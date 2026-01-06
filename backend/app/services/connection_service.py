@@ -29,11 +29,6 @@ from app.core.logging import get_logger
 from app.core.cache import cache
 from app.services.dependency_service import DependencyService
 # New imports for Ephemeral Jobs
-from app.services.pipeline_service import PipelineService
-from app.schemas.pipeline import PipelineCreate, PipelineVersionCreate, PipelineNodeCreate
-from app.models.enums import OperatorType, PipelineRunStatus, JobStatus
-from app.models.execution import StepRun
-import uuid
 
 logger = get_logger(__name__)
 
@@ -313,7 +308,6 @@ class ConnectionService:
         agent_group = connection.workspace.default_agent_group if connection.workspace else None
         
         # Override config logic remains the same, but we handle execution differently
-        final_config = custom_config if custom_config else None
 
         if agent_group:
             # --- REMOTE AGENT MODE ---
@@ -761,15 +755,18 @@ class ConnectionService:
                     columns = []
                     if "dtypes" in agent_res:
                         for name, dtype in agent_res["dtypes"].items():
-                            col_type = "string"
-                            dt = str(dtype).lower()
-                            if "int" in dt: col_type = "integer"
-                            elif "float" in dt: col_type = "float"
-                            elif "bool" in dt: col_type = "boolean"
-                            elif "date" in dt: col_type = "datetime"
-                            
-                            columns.append({
-                                "name": name,
+                                                col_type = "string"
+                                                dt = str(dtype).lower()
+                                                if "int" in dt: 
+                                                    col_type = "integer"
+                                                elif "float" in dt: 
+                                                    col_type = "float"
+                                                elif "bool" in dt: 
+                                                    col_type = "boolean"
+                                                elif "date" in dt: 
+                                                    col_type = "datetime"
+                                                
+                                                columns.append({                                "name": name,
                                 "type": col_type,
                                 "native_type": str(dtype)
                             })

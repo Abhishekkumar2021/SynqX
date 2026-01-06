@@ -346,7 +346,7 @@ export const SetupInstructions = ({clientId, apiKey, runnerName, tags, isNew = f
     const pythonCommand = platform === 'windows' 
         ? `# 1. Isolate Environment
 uv venv
-.venv\Scripts\Activate.ps1
+.venv\\Scripts\\Activate.ps1
 
 # 2. Install Standard CLI
 uv pip install -e . 

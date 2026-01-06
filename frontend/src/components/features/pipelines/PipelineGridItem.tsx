@@ -95,7 +95,7 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
             a.click();
             a.remove();
             toast.success("Definition Exported", { description: "YAML manifest is ready." });
-        } catch (e) {
+        } catch {
             toast.error("Export Failed");
         } finally {
             setIsExporting(false);

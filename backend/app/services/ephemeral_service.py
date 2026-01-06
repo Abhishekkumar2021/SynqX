@@ -1,6 +1,5 @@
-from typing import List, Optional, Any, Dict, Tuple
+from typing import List, Optional
 from datetime import datetime, timezone
-import time
 from sqlalchemy.orm import Session
 from app.models.ephemeral import EphemeralJob
 from app.models.enums import JobStatus, JobType

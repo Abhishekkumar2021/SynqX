@@ -1,8 +1,7 @@
 import yaml
-import json
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from app.models.pipelines import Pipeline, PipelineVersion, PipelineNode, PipelineEdge
+from app.models.pipelines import Pipeline, PipelineVersion
 from app.models.connections import Connection
 from app.schemas.pipeline import PipelineCreate, PipelineVersionCreate, PipelineNodeCreate, PipelineEdgeCreate
 from app.core.errors import AppError

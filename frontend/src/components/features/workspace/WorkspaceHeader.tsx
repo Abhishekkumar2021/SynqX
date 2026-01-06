@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
-import { Users, Building2 } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface WorkspaceHeaderProps {

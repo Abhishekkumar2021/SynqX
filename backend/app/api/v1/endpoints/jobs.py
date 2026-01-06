@@ -518,6 +518,7 @@ def get_step_data(
 ):
     try:
         from app.engine.agent_core.forensics import ForensicSniffer
+        from app.models.execution import StepRun, PipelineRun
         
         # Ownership check
         query = db.query(StepRun).join(PipelineRun).filter(StepRun.id == step_id)

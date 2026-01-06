@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-    Search, Menu, Command, Maximize2, HelpCircle, Home,
+    Search, Menu, Maximize2, HelpCircle, Home,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ModeToggle } from '../ModeToggle';
@@ -23,8 +23,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useZenMode } from '@/hooks/useZenMode';
-import { useWorkspace } from '@/hooks/useWorkspace';
-import { cn } from '@/lib/utils';
 
 interface TopHeaderProps {
     setIsMobileMenuOpen: (isOpen: boolean) => void;
@@ -35,7 +33,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
     const location = useLocation();
     const { user } = useAuth();
     const { isZenMode, setIsZenMode } = useZenMode();
-    const { activeWorkspace } = useWorkspace();
 
     const generateBreadcrumbs = () => {
         const pathnames = location.pathname.split('/').filter((x) => x);

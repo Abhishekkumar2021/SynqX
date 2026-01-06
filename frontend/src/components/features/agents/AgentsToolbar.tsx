@@ -1,7 +1,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, LayoutGrid, List, Activity, Filter } from 'lucide-react';
+import { Search, LayoutGrid, List, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AgentsToolbarProps {

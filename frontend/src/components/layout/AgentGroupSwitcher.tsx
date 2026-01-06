@@ -5,7 +5,6 @@ import {
     ChevronDown, 
     Check, 
     Box, 
-    ShieldCheck, 
     RefreshCw,
     Loader2,
     Cpu
@@ -15,7 +14,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -49,6 +47,7 @@ export const AgentGroupSwitcher: React.FC = () => {
     const agentGroups = useMemo(() => {
         const groups = new Set<string>();
         if (agents) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             agents.forEach((a: any) => {
                 if (a.tags?.groups) {
                     a.tags.groups.forEach((g: string) => {

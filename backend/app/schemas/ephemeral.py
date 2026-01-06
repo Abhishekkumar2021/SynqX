@@ -1,8 +1,8 @@
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 from app.models.enums import JobStatus, JobType
-from app.schemas.common import AuditSchema, TimestampSchema
+from app.schemas.common import TimestampSchema
 
 class EphemeralJobBase(BaseModel):
     job_type: JobType

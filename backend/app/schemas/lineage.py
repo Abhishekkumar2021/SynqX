@@ -1,6 +1,5 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
-from datetime import datetime
 
 class LineageNode(BaseModel):
     id: str  # composite "asset_{id}" or "pipeline_{id}"

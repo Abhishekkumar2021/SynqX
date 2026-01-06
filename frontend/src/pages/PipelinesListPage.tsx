@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import {
     Plus, Workflow, Activity, Search,
     LayoutGrid, List as ListIcon, Laptop,
-    FileDown, FileUp, Loader2
+    FileUp, Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';

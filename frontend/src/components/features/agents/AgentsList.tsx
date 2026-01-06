@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -132,7 +131,7 @@ const AgentCard = ({ agent, onInspect, onDelete }: { agent: Agent, onInspect: (a
     );
 };
 
-const AgentRow = ({ agent, onInspect, onDelete }: { agent: Agent, onInspect: (a: Agent) => void, onDelete: (id: number) => void }) => {
+const AgentRow = ({ agent, onInspect }: { agent: Agent, onInspect: (a: Agent) => void }) => {
     return (
         <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -292,7 +291,6 @@ export const AgentsList: React.FC<AgentsListProps> = ({
                                 key={agent.id}
                                 agent={agent}
                                 onInspect={onInspect}
-                                onDelete={onDelete}
                             />
                         ))}
                     </div>

@@ -2,11 +2,9 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import (
-    Integer, String, DateTime, ForeignKey, JSON, Enum as SQLEnum, CheckConstraint, UniqueConstraint
+    String, DateTime, ForeignKey, JSON, Enum as SQLEnum, UniqueConstraint
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
 
 from app.models.base import Base, AuditMixin, SoftDeleteMixin
 from app.models.enums import AgentStatus

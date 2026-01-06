@@ -20,7 +20,7 @@ import { getAgents, deleteAgent } from '@/lib/api/agents';
 export const AgentsPage = () => {
     const queryClient = useQueryClient();
     const { isZenMode } = useZenMode();
-    const { isAdmin, isEditor } = useWorkspace();
+    const { isEditor } = useWorkspace();
 
     // State
     const [isRegisterOpen, setIsRegisterOpen] = useState(false);

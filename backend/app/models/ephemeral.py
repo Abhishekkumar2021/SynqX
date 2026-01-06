@@ -1,7 +1,7 @@
 from typing import Optional, Any, Dict
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, DateTime, ForeignKey, JSON, Enum as SQLEnum, BigInteger
+    Integer, String, DateTime, ForeignKey, JSON, Enum as SQLEnum
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.models.base import Base, AuditMixin
