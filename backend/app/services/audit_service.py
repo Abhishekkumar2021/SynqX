@@ -11,7 +11,7 @@ class AuditService:
         db: Session,
         *,
         user_id: int,
-        workspace_id: int,
+        workspace_id: Optional[int] = None,
         event_type: str,
         status: str = "success",
         target_type: Optional[str] = None,
@@ -34,7 +34,7 @@ class AuditService:
         db.add(log_entry)
         db.commit()
 
-        if notify:
+        if notify and workspace_id:
             message = details.get("message") if details else "A system event occurred."
             AlertService.create_system_alert(
                 db,
