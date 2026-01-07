@@ -46,9 +46,12 @@ class SQLConnector(BaseConnector):
         
         try:
             if not self._engine:
-                self._engine = create_engine(
-                    self._sqlalchemy_url(), 
-                    **self._get_engine_options()
+                from engine.core.engine_manager import EngineManager
+                self._engine = EngineManager.get_engine(
+                    connector_type=self.__class__.__name__,
+                    url=self._sqlalchemy_url(),
+                    options=self._get_engine_options(),
+                    config=self.config
                 )
             self._connection = self._engine.connect()
         except Exception as e:
@@ -61,8 +64,7 @@ class SQLConnector(BaseConnector):
         try:
             if self._connection:
                 self._connection.close()
-            if self._engine:
-                self._engine.dispose()
+            # PERFORMANCE: Engine is managed by singleton EngineManager
         except Exception as e:
             logger.warning(f"Error during disconnect: {e}")
         finally:

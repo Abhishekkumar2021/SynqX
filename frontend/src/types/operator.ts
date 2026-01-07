@@ -4,7 +4,8 @@ import {
     Type, Hash, 
     Copy, FileCode, Sliders, X,
     Database, HardDriveUpload, CheckCircle2,
-    PlayCircle, GitMerge, Layers
+    PlayCircle, GitMerge, Layers,
+    Zap
 } from 'lucide-react';
 
 export interface OperatorDef {
@@ -262,6 +263,25 @@ export const OPERATORS: OperatorDef[] = [
 }`
     },
     // --- Advanced ---
+    {
+        id: 'polars_code',
+        name: 'Polars Logic (Rust Speed)',
+        type: 'transform',
+        description: 'High-performance Python logic using Polars Lazy API (optimized for millions of rows).',
+        icon: Zap,
+        category: 'Advanced',
+        color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        configSchema: {
+            "code": "string (e.g. 'def transform(lf): return lf.filter(pl.col(\"score\") > 0.5)')"
+        },
+        example: `{ 
+  "operator_type": "transform",
+  "operator_class": "polars_code",
+  "config": {
+    "code": "def transform(lf):\n    return lf.with_columns((pl.col('price') * 1.2).alias('taxed_price'))"
+  }
+}`
+    },
     {
         id: 'code',
         name: 'Python Code',

@@ -16,6 +16,7 @@ from app.engine.transforms.impl.sort_transform import SortTransform
 from app.engine.transforms.impl.type_cast_transform import TypeCastTransform
 from app.engine.transforms.impl.regex_replace_transform import RegexReplaceTransform
 from app.engine.transforms.impl.code_transform import CodeTransform
+from app.engine.transforms.impl.code_polars import CodePolarsTransform
 from app.engine.transforms.impl.union_transform import UnionTransform
 from app.engine.transforms.impl.validate_transform import ValidateTransform
 from app.engine.transforms.impl.dbt_transform import DbtTransform
@@ -42,5 +43,6 @@ TransformFactory.register_transform("sort", SortTransform)
 TransformFactory.register_transform("type_cast", TypeCastTransform)
 TransformFactory.register_transform("regex_replace", RegexReplaceTransform)
 TransformFactory.register_transform("code", CodeTransform)
+TransformFactory.register_transform("polars_code", CodePolarsTransform)
 TransformFactory.register_transform("noop", NoOpTransform)
 TransformFactory.register_transform("pass_through", NoOpTransform)

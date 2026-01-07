@@ -18,6 +18,7 @@ from app.schemas.ephemeral import EphemeralJobCreate, EphemeralJobResponse
 from app.utils.agent import is_remote_group
 from app.utils.serialization import sanitize_for_json
 from app.core.logging import get_logger
+from app.core.cache_manager import ResultCacheManager
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -91,7 +92,58 @@ def execute_connection_query(
         return job
 
     # --- INTERNAL EXECUTION ---
-    # 1. Prepare Config & Connector
+    # 1. Prepare Params & Cache Check
+    query = request.query
+    limit = request.limit or 100
+    offset = request.offset or 0
+    params = request.params or {}
+    
+    # PERFORMANCE: Check for cached result first
+    cached = ResultCacheManager.get_cached_result(connection_id, query, limit, offset, params)
+    if cached:
+        start_time = datetime.now(timezone.utc)
+        results = cached["results"]
+        result_summary = cached["summary"]
+        status = JobStatus.SUCCESS
+        error_msg = None
+        execution_time_ms = 0 # Cache hits are near-zero latency
+        
+        # Still record in history for observability
+        history = QueryHistory(
+            connection_id=connection_id,
+            workspace_id=current_user.active_workspace_id,
+            query=query,
+            status="success",
+            execution_time_ms=0,
+            row_count=len(results),
+            created_at=start_time,
+            created_by=str(current_user.id)
+        )
+        db.add(history)
+        db.commit()
+        db.refresh(history)
+        
+        return EphemeralJobResponse(
+            id=history.id,
+            job_type=JobType.EXPLORER,
+            connection_id=connection_id,
+            workspace_id=current_user.active_workspace_id,
+            user_id=current_user.id,
+            status=status,
+            payload=request.model_dump(),
+            agent_group=target_agent_group,
+            started_at=start_time,
+            completed_at=datetime.now(timezone.utc),
+            execution_time_ms=0,
+            result_summary=result_summary,
+            result_sample={"rows": results},
+            error_message=None,
+            worker_id="cache",
+            created_at=start_time,
+            updated_at=datetime.now(timezone.utc)
+        )
+
+    # 2. Prepare Config & Connector
     try:
         config = VaultService.get_connector_config(connection)
         
@@ -109,12 +161,7 @@ def execute_connection_query(
             config=config
         )
         
-        # 2. Execute
-        query = request.query
-        limit = request.limit or 100
-        offset = request.offset or 0
-        params = request.params or {}
-        
+        # 3. Execute
         start_time = datetime.now(timezone.utc)
         status = JobStatus.SUCCESS
         error_msg = None
@@ -136,7 +183,7 @@ def execute_connection_query(
         end_time = datetime.now(timezone.utc)
         execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
         
-        # 3. Save to Legacy History (so it appears in history tab)
+        # 4. Save to Legacy History (so it appears in history tab)
         history = QueryHistory(
             connection_id=connection_id,
             workspace_id=current_user.active_workspace_id,
@@ -152,7 +199,7 @@ def execute_connection_query(
         db.commit()
         db.refresh(history)
         
-        # 4. Construct Response (EphemeralJobResponse from QueryHistory)
+        # 5. Construct Response & Cache Success
         
         # Sample truncation logic
         result_sample = {"rows": results}
@@ -168,6 +215,11 @@ def execute_connection_query(
                 "columns": columns
             })
             result_sample = sanitize_for_json(result_sample)
+            
+            # PERFORMANCE: Cache successful internal results
+            ResultCacheManager.set_cached_result(
+                connection_id, query, limit, offset, params, results, result_summary
+            )
 
         return EphemeralJobResponse(
             id=history.id, # Using history ID as surrogate
