@@ -31,6 +31,8 @@ export const DOCS_NAV: NavSection[] = [
       { title: "Data Models", href: "/docs/data-models", icon: <Database /> },
       { title: "Pipelines & DAGs", href: "/docs/pipelines", icon: <GitGraph /> },
       { title: "Connectors", href: "/docs/connectors", icon: <Zap /> },
+      { title: "dbt Projects", href: "/docs/connectors/dbt", icon: <Workflow /> },
+      { title: "Operator Reference", href: "/docs/operators", icon: <Book /> },
     ]
   },
   {

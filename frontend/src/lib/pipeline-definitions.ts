@@ -13,7 +13,9 @@ import {
     Regex,
     Trash2,
     PaintBucket,
-    SortAsc
+    SortAsc,
+    Zap,
+    Workflow
 } from 'lucide-react';
 import { OperatorType } from './enums';
 
@@ -121,6 +123,20 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                         name: 'condition', label: 'Filter Condition', type: 'text', configKey: 'condition', 
                         placeholder: "status == 'active'",
                         tooltip: 'Python-style boolean expression. Use column names directly. Example: (age > 21) & (country == "US")'
+                    }
+                ]
+            },
+            {
+                label: "Polars Logic", 
+                type: "transform", 
+                opClass: "polars_code", 
+                icon: Zap, 
+                desc: "High-performance Rust-backed transformations",
+                fields: [
+                    {
+                        name: 'code', label: 'Polars Code', type: 'textarea', configKey: 'code', 
+                        placeholder: "def transform(lf):\n    return lf.filter(pl.col('status') == 'active')",
+                        tooltip: 'Must define a "transform(lf)" function that accepts and returns a Polars LazyFrame.'
                     }
                 ]
             },
@@ -335,6 +351,24 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                         name: 'code', label: 'Python Code', type: 'textarea', configKey: 'code', 
                         placeholder: "def transform(df):\n    # Custom logic here\n    return df",
                         tooltip: 'Must define a "transform(df)" function that accepts and returns a Pandas DataFrame.'
+                    }
+                ]
+            },
+            {
+                label: "dbt Command", 
+                type: "transform", 
+                opClass: "dbt", 
+                icon: Workflow, 
+                desc: "Orchestrate dbt runs and tests",
+                fields: [
+                    {
+                        name: 'connection_id', label: 'dbt Connection', type: 'number', configKey: 'connection_id', 
+                        tooltip: 'ID of the dbt connector to use for execution.'
+                    },
+                    {
+                        name: 'command', label: 'dbt Command', type: 'text', configKey: 'command', 
+                        placeholder: "run --select model_name",
+                        tooltip: 'The specific dbt CLI command to trigger.'
                     }
                 ]
             },

@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.models.enums import OperatorType
 
 class SQLPushdownGenerator:
@@ -48,6 +48,15 @@ class SQLPushdownGenerator:
                     if offset:
                         current_sql += f" OFFSET {offset}"
 
+            elif op_class == "join":
+                right_sql = config.get("_right_sql")
+                join_on = config.get("on")
+                how = config.get("how", "inner").upper()
+                if right_sql and join_on:
+                    # Basic join implementation. 
+                    # Production level should handle column aliasing to avoid collisions.
+                    current_sql = f"SELECT * FROM ({current_sql}) AS left_subq {how} JOIN ({right_sql}) AS right_subq ON left_subq.{join_on} = right_subq.{join_on}"
+
         return current_sql
 
 class StaticOptimizer:
@@ -65,15 +74,12 @@ class StaticOptimizer:
         Main optimization entry point. Returns a modified pipeline_version (cloned)
         with collapsed nodes.
         """
-        # Note: In a real system, we'd clone the objects. 
-        # For this implementation, we'll mark nodes as 'collapsed'.
-        
         from app.models.connections import Connection, Asset
         
         # 1. Map node_id to node object
         node_map = {n.node_id: n for n in pipeline_version.nodes}
         
-        # 2. Find SQL Extract nodes
+        # 2. Linear Pushdown (Filter, Limit)
         for node_id, node in node_map.items():
             if node.operator_type == OperatorType.EXTRACT:
                 asset = db.query(Asset).filter(Asset.id == node.source_asset_id).first()
@@ -81,15 +87,170 @@ class StaticOptimizer:
                     continue
                 conn = db.query(Connection).filter(Connection.id == asset.connection_id).first()
                 
-                # Check if connector supports pushdown
-                # (Simple check for now: relational types)
                 if conn.connector_type.value in ["postgresql", "mysql", "mariadb", "mssql", "snowflake", "bigquery"]:
-                    cls._attempt_pushdown(node, node_map, pipeline_version.edges)
+                    cls._attempt_linear_pushdown(node, node_map, pipeline_version.edges)
+        
+        # 3. Set Operation Pushdown (Joins)
+        cls._optimize_joins(pipeline_version, db)
+
+        # 4. PERFORMANCE: Zero-Movement ELT (Source -> Target on same Connection)
+        cls._optimize_zero_movement(pipeline_version, db)
         
         return pipeline_version
 
     @classmethod
-    def _attempt_pushdown(cls, start_node: Any, node_map: Dict[str, Any], edges: List[Any]):
+    def _optimize_zero_movement(cls, pipeline_version: Any, db: Any):
+        """
+        Detects chains that start and end on the same connection.
+        Collapses them into a single INSERT INTO ... SELECT or CREATE TABLE AS.
+        """
+        from app.models.connections import Asset, Connection
+        node_map = {n.node_id: n for n in pipeline_version.nodes}
+        edges = pipeline_version.edges
+
+        for node in list(pipeline_version.nodes):
+            if node.operator_type == OperatorType.LOAD:
+                # Find parent (only support single-parent load for now)
+                parent_edges = [e for e in edges if e.to_node_id == node.node_id]
+                if len(parent_edges) != 1:
+                    continue
+                
+                source_node = node_map.get(parent_edges[0].from_node_id)
+                if not source_node:
+                    continue
+
+                # Both must share the same connection
+                target_asset = db.query(Asset).filter(Asset.id == node.destination_asset_id).first()
+                if not target_asset:
+                    continue
+                
+                source_conn_id = cls._get_node_connection_id(source_node, db)
+                if not source_conn_id or source_conn_id != target_asset.connection_id:
+                    continue
+
+                # Check if the connector supports native ELT commands
+                conn = db.query(Connection).filter(Connection.id == source_conn_id).first()
+                if conn.connector_type.value not in ["postgresql", "mysql", "mariadb", "mssql", "snowflake", "bigquery"]:
+                    continue
+
+                # SUCCESS: We can do a Zero-Movement pushdown
+                source_sql = cls._get_node_sql(source_node, db)
+                if not source_sql:
+                    continue
+
+                target_table = target_asset.fully_qualified_name or target_asset.name
+                write_mode = node.config.get("write_strategy", "append").lower()
+
+                # Generate the native command
+                native_query = ""
+                if write_mode == "replace":
+                    # Some dialects support 'CREATE OR REPLACE', but standard is TRUNCATE then INSERT
+                    # For safety across dialects, we use a multi-statement approach if supported, 
+                    # but here we generate the main statement.
+                    native_query = f"TRUNCATE TABLE {target_table}; INSERT INTO {target_table} {source_sql}"
+                elif write_mode == "overwrite":
+                    native_query = f"DELETE FROM {target_table}; INSERT INTO {target_table} {source_sql}"
+                else:
+                    native_query = f"INSERT INTO {target_table} {source_sql}"
+
+                # Collapse logic
+                if not node.config:
+                    node.config = {}
+                node.config["_native_elt_query"] = native_query
+                node.config["_collapsed_source_node"] = source_node.node_id
+                
+                # Mark source node as collapsed so it doesn't extract data
+                if not source_node.config:
+                    source_node.config = {}
+                source_node.config["_collapsed_into"] = node.node_id
+
+    @classmethod
+    def _get_node_connection_id(cls, node: Any, db: Any) -> Optional[int]:
+        from app.models.connections import Asset
+        if node.operator_type == OperatorType.EXTRACT:
+            asset = db.query(Asset).filter(Asset.id == node.source_asset_id).first()
+            return asset.connection_id if asset else None
+        
+        # If it was collapsed, it carries its source connection
+        return node.config.get("_source_connection_id")
+
+    @classmethod
+    def _get_node_sql(cls, node: Any, db: Any) -> Optional[str]:
+        from app.models.connections import Asset
+        if node.operator_type == OperatorType.EXTRACT:
+            asset = db.query(Asset).filter(Asset.id == node.source_asset_id).first()
+            if not asset:
+                return None
+            base = asset.fully_qualified_name or asset.name
+            if node.config and node.config.get("_pushdown_operators"):
+                return SQLPushdownGenerator.generate_sql(base, node.config["_pushdown_operators"])
+            return f"SELECT * FROM {base}"
+        return None
+
+    @classmethod
+    def _optimize_joins(cls, pipeline_version: Any, db: Any):
+        node_map = {n.node_id: n for n in pipeline_version.nodes}
+        edges = pipeline_version.edges
+        
+        for node in list(pipeline_version.nodes):
+            if node.operator_class == "join":
+                # Find parents
+                parent_edges = [e for e in edges if e.to_node_id == node.node_id]
+                if len(parent_edges) != 2:
+                    continue
+                
+                left = node_map.get(parent_edges[0].from_node_id)
+                right = node_map.get(parent_edges[1].from_node_id)
+                
+                if not left or not right:
+                    continue
+                
+                left_conn_id = cls._get_node_connection_id(left, db)
+                right_conn_id = cls._get_node_connection_id(right, db)
+                
+                if left_conn_id and left_conn_id == right_conn_id:
+                    # SUCCESS: Join between same connection
+                    cls._collapse_join(node, left, right, pipeline_version, db)
+
+    @classmethod
+    def _collapse_join(cls, join_node: Any, left: Any, right: Any, pipeline_version: Any, db: Any):
+        # 1. Get SQL for Right side
+        right_sql = cls._get_node_sql(right, db)
+        if not right_sql:
+            return
+        
+        # 2. Inject Join into Left side's pushdown stack
+        if not left.config:
+            left.config = {}
+        if "_pushdown_operators" not in left.config:
+            left.config["_pushdown_operators"] = []
+            
+        join_meta = {
+            "operator_class": "join",
+            "config": {
+                **join_node.config,
+                "_right_sql": right_sql
+            }
+        }
+        left.config["_pushdown_operators"].append(join_meta)
+        left.config["_source_connection_id"] = cls._get_node_connection_id(left, db)
+        
+        # 3. Mark Join and Right side as collapsed
+        if not join_node.config:
+            join_node.config = {}
+        join_node.config["_collapsed_into"] = left.node_id
+        
+        if not right.config:
+            right.config = {}
+        right.config["_collapsed_into"] = left.node_id
+        
+        # 4. Redirect Join's output to Left
+        out_edges = [e for e in pipeline_version.edges if e.from_node_id == join_node.node_id]
+        for edge in out_edges:
+            edge.from_node_id = left.node_id
+
+    @classmethod
+    def _attempt_linear_pushdown(cls, start_node: Any, node_map: Dict[str, Any], edges: List[Any]):
         """
         Greedily find downstream transform nodes that can be pushed into the SQL.
         """

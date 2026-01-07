@@ -363,38 +363,55 @@ class NodeExecutor:
                 cfg = VaultService.get_connector_config(conn)
                 connector = ConnectorFactory.get_connector(conn.connector_type.value, cfg)
                 
-                # Prepare sink stream
-                def sink_stream():
-                    for uid, chunks in (input_data or {}).items():
-                        logger.debug(f"  Processing input from upstream '{uid}': {len(chunks)} chunks")
-                        for chunk in chunks:
-                            on_chunk(chunk, direction="in")
-                            on_chunk(chunk, direction="out")
-                            yield chunk
-                
-                # Write data
-                write_mode = node.config.get("write_strategy") or (asset.config or {}).get("write_mode") or "append"
-                asset_identifier = asset.fully_qualified_name or asset.name
-                logger.info(f"  Write mode: {write_mode.upper()}")
-                DBLogger.log_step(db, step_run.id, "INFO", f"Executing target commit using strategy: {write_mode.upper()}.", job_id=pipeline_run.job_id)
-                
-                with connector.session() as session:
-                    # Merge node config for write parameters
-                    write_params = {**node.config}
-                    write_params.pop("write_strategy", None) # Handled separately via 'mode'
-                    write_params.pop("ui", None)             # Metadata cleanup
-                    write_params.pop("connection_id", None)  # Metadata cleanup
+                # PERFORMANCE: Zero-Movement ELT Pushdown
+                native_query = node.config.get("_native_elt_query")
+                if native_query:
+                    logger.info("  ELT Pushdown active: Executing Zero-Movement transfer inside database.")
+                    DBLogger.log_step(db, step_run.id, "INFO", "Zero-Movement ELT optimization active. Synchronizing data natively within the database cluster.", job_id=pipeline_run.job_id)
+                    with connector.session() as session:
+                        # Handle multi-statement (e.g. TRUNCATE; INSERT)
+                        for stmt in native_query.split(';'):
+                            if stmt.strip():
+                                session.execute_query(stmt.strip())
                     
-                    records_out = session.write_batch(
-                        sink_stream(),
-                        asset=asset_identifier,
-                        mode=write_mode,
-                        **write_params
-                    )
-                    stats["out"] = records_out
-                
-                logger.info(f"  ✓ Loaded {records_out:,} records")
-                DBLogger.log_step(db, step_run.id, "SUCCESS", f"Load phase complete. Successfully committed {records_out:,} records to destination.", job_id=pipeline_run.job_id)
+                    # For pushdown, records processed is often unknown or the full source count
+                    # We'll set a success flag
+                    stats["out"] = 0 
+                    logger.info("  ✓ Native ELT command completed.")
+                    DBLogger.log_step(db, step_run.id, "SUCCESS", "Native database synchronization finalized successfully.", job_id=pipeline_run.job_id)
+                else:
+                    # Prepare sink stream
+                    def sink_stream():
+                        for uid, chunks in (input_data or {}).items():
+                            logger.debug(f"  Processing input from upstream '{uid}': {len(chunks)} chunks")
+                            for chunk in chunks:
+                                on_chunk(chunk, direction="in")
+                                on_chunk(chunk, direction="out")
+                                yield chunk
+                    
+                    # Write data
+                    write_mode = node.config.get("write_strategy") or (asset.config or {}).get("write_mode") or "append"
+                    asset_identifier = asset.fully_qualified_name or asset.name
+                    logger.info(f"  Write mode: {write_mode.upper()}")
+                    DBLogger.log_step(db, step_run.id, "INFO", f"Executing target commit using strategy: {write_mode.upper()}.", job_id=pipeline_run.job_id)
+                    
+                    with connector.session() as session:
+                        # Merge node config for write parameters
+                        write_params = {**node.config}
+                        write_params.pop("write_strategy", None) # Handled separately via 'mode'
+                        write_params.pop("ui", None)             # Metadata cleanup
+                        write_params.pop("connection_id", None)  # Metadata cleanup
+                        
+                        records_out = session.write_batch(
+                            sink_stream(),
+                            asset=asset_identifier,
+                            mode=write_mode,
+                            **write_params
+                        )
+                        stats["out"] = records_out
+                    
+                    logger.info(f"  ✓ Loaded {records_out:,} records")
+                    DBLogger.log_step(db, step_run.id, "SUCCESS", f"Load phase complete. Successfully committed {records_out:,} records to destination.", job_id=pipeline_run.job_id)
             
             # =====================================================================
             # C. TRANSFORM / JOIN / SET Operations

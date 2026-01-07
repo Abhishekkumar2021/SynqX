@@ -316,8 +316,13 @@ class SQLConnector(BaseConnector):
             else:
                 final_query = clean_query
             
+            # PERFORMANCE: For non-SELECT statements (INSERT/UPDATE/TRUNCATE), use direct execution
+            if not final_query.strip().upper().startswith("SELECT"):
+                self._connection.execute(text(final_query), bind_params if bind_params else None)
+                return []
+
             # Pass bind parameters explicitly to pandas
-            df = pd.read_sql_query(text(final_query), con=self._connection, params=bind_params)
+            df = pd.read_sql_query(text(final_query), con=self._connection, params=bind_params if bind_params else None)
             
             logger.info(f"Query Result: {len(df)} rows returned")
             return df.replace({np.nan: None}).to_dict(orient="records")

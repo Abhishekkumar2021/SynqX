@@ -49,9 +49,26 @@ Transformation nodes modify data in-flight between extraction and loading.
 
 ### 2. Logic & Computation
 -   **Aggregate**: Powerful grouping and summarization (Sum, Mean, Count, etc.).
--   **Join**: Perform horizontal merges between multiple data streams (Inner, Left, Outer).
+-   **Join**: Perform horizontal merges between multiple data streams (Inner, Left, Outer). **Optimizer**: Supports automatic SQL pushdown if inputs share a database connection.
+-   **Polars Logic**: (NEW) High-performance Python logic using the Polars Lazy API. Optimized for multi-million row datasets with Rust-speed execution.
 -   **Code Transform**: Execute arbitrary Python logic using Pandas for complex, custom requirements.
--   **Filter**: Apply boolean predicates to include or exclude specific records.
+-   **Filter**: Apply boolean predicates to include or exclude specific records. **Optimizer**: Automatically pushed down to SQL source when possible.
+-   **dbt Command**: (NEW) Orchestrate dbt runs, tests, and seeds directly from SynqX. Supports isolated virtual environments.
+
+---
+
+## Performance Optimizations
+
+SynqX features an intelligent execution engine that optimizes your DAG at runtime.
+
+### ELT Pushdown
+The engine automatically detects sequences of operations that can be executed natively in the source database.
+-   **Linear Pushdown**: `Filter` and `Limit` nodes following an SQL Extract are collapsed into a single subquery.
+-   **Join Pushdown**: Horizontal joins between two tables residing on the same SQL connection are executed inside the database, moving **zero data** over the network for the join operation.
+
+### Multi-Engine Execution
+Operators can seamlessly switch between **Pandas** and **Polars** engines.
+-   **Zero-Copy Handover**: Data is transitioned between engines using the **Apache Arrow IPC** format, ensuring no overhead when mixing standard transforms with high-speed Polars logic.
 
 ### 3. Data Quality
 -   **Deduplicate**: Remove redundant records based on unique key subsets.

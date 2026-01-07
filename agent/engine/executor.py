@@ -192,18 +192,30 @@ class NodeExecutor:
                     raise ValueError(f"Target connection metadata (ID: {conn_id}) is missing from payload.")
                 
                 connector = ConnectorFactory.get_connector(conn_data["type"], conn_data["config"])
-                asset_name = config.get("table") or config.get("target_table") or "synqx_output"
                 
-                def input_stream():
-                    for chunks in inputs.values():
-                        for df in chunks:
-                            on_chunk(df, direction="in")
-                            yield df
-                
-                logger.info(f"  Streaming commit to {conn_data['type'].upper()} entity: '{asset_name}'")
-                with connector.session():
-                    rows_written = connector.write_batch(input_stream(), asset=asset_name, mode=config.get("write_mode", "append"))
-                    stats["out"] = rows_written
+                # PERFORMANCE: Zero-Movement ELT Pushdown
+                native_query = config.get("_native_elt_query")
+                if native_query:
+                    logger.info("  ELT Pushdown active: Executing Zero-Movement transfer inside database.")
+                    with connector.session():
+                        for stmt in native_query.split(';'):
+                            if stmt.strip():
+                                connector.execute_query(stmt.strip())
+                    stats["out"] = 0
+                    logger.info("  ✓ Native ELT command completed.")
+                else:
+                    asset_name = config.get("table") or config.get("target_table") or "synqx_output"
+                    
+                    def input_stream():
+                        for chunks in inputs.values():
+                            for df in chunks:
+                                on_chunk(df, direction="in")
+                                yield df
+                    
+                    logger.info(f"  Streaming commit to {conn_data['type'].upper()} entity: '{asset_name}'")
+                    with connector.session():
+                        rows_written = connector.write_batch(input_stream(), asset=asset_name, mode=config.get("write_mode", "append"))
+                        stats["out"] = rows_written
                 results = []
 
             # TRANSFORM

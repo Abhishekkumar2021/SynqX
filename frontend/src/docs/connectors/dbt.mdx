@@ -1,0 +1,32 @@
+---
+title: "dbt (Data Build Tool)"
+description: "Orchestrate and execute dbt projects natively within SynqX."
+---
+
+# dbt Connector
+
+The dbt connector allows you to integrate your dbt (Data Build Tool) projects directly into SynqX pipelines. This enables a hybrid workflow where SynqX handles data ingestion (ETL) and dbt handles complex in-warehouse transformations (ELT).
+
+## Configuration
+
+When creating a new dbt connection, you need to provide:
+
+| Field | Description |
+| :--- | :--- |
+| `Project Path` | The local filesystem path to your dbt project (used by local or remote agents). |
+| `Git URL` | The repository URL to clone your project from. |
+| `Target Profile` | The dbt profile target to use (e.g., `dev`, `prod`). |
+
+## Features
+
+### Asset Discovery
+SynqX automatically parses your dbt `manifest.json` to discover all models defined in your project. These models appear as available assets in the SynqX UI.
+
+### Integrated Execution
+You can use the **dbt Command** operator in the Pipeline Builder to trigger specific dbt actions:
+-   `dbt run`: Build your models.
+-   `dbt test`: Validate your data.
+-   `dbt seed`: Load CSV files into your warehouse.
+
+## High-Performance Runtimes
+SynqX manages isolated Python virtual environments for dbt. When a dbt task is triggered, the agent ensures that the correct version of `dbt-core` and the required database adapters are installed and used, preventing dependency conflicts with other pipeline tasks.

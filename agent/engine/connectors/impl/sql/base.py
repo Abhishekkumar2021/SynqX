@@ -296,7 +296,12 @@ class SQLConnector(BaseConnector):
             else:
                 final_query = clean_query
             
-            df = pd.read_sql_query(text(final_query), con=self._connection, params=bind_params)
+            # PERFORMANCE: For non-SELECT statements (INSERT/UPDATE/TRUNCATE), use direct execution
+            if not final_query.strip().upper().startswith("SELECT"):
+                self._connection.execute(text(final_query), bind_params if bind_params else None)
+                return []
+
+            df = pd.read_sql_query(text(final_query), con=self._connection, params=bind_params if bind_params else None)
             return df.replace({np.nan: None}).to_dict(orient="records")
         except Exception as e:
             raise DataTransferError(f"Query execution failed. Detailed fault: {str(e)}")
