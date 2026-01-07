@@ -21,6 +21,7 @@ from app.engine.agent_core.state_manager import StateManager
 from app.engine.agent_core.node_executor import NodeExecutor
 from app.engine.agent_core.data_cache import DataCache
 from app.engine.agent_core.execution_metrics import ExecutionMetrics
+from app.engine.agent_core.sql_generator import StaticOptimizer
 from app.db.session import SessionLocal
 
 logger = get_logger(__name__)
@@ -373,6 +374,13 @@ class PipelineAgent:
             # Build and validate DAG
             DBLogger.log_job(db, job_id, "DEBUG", "Analyzing pipeline topology and constructing Directed Acyclic Graph (DAG)...")
             dag = self._build_dag(pipeline_version)
+            
+            # PERFORMANCE: Apply Static Optimizations (ELT Pushdown)
+            DBLogger.log_job(db, job_id, "INFO", "Performing static analysis and ELT pushdown optimization...")
+            StaticOptimizer.optimize(pipeline_version, db)
+            # Re-build DAG as edges might have changed
+            dag = self._build_dag(pipeline_version)
+            
             node_map = {n.node_id: n for n in pipeline_version.nodes}
 
             # Compute execution layers

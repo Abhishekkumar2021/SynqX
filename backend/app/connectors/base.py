@@ -177,3 +177,9 @@ class BaseConnector(ABC):
     def chunk_dataframe(df: pd.DataFrame, chunksize: int):
         for i in range(0, len(df), chunksize):
             yield df.iloc[i : i + chunksize]
+
+    def supports_pushdown(self) -> bool:
+        """
+        Indicates if this connector can execute transformations natively (e.g. SQL databases).
+        """
+        return False

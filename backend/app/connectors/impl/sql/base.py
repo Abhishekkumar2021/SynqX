@@ -27,6 +27,9 @@ class SQLConnector(BaseConnector):
         self._connection: Optional[Connection] = None
         super().__init__(config)
 
+    def supports_pushdown(self) -> bool:
+        return True
+
     @abstractmethod
     def _sqlalchemy_url(self) -> str:
         pass

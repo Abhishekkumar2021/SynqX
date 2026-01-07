@@ -32,6 +32,7 @@ sys.path.append(str(BASE_DIR))
 from engine.dag import DAG  # noqa: E402
 from engine.executor import NodeExecutor, ParallelAgent  # noqa: E402
 from engine.utils.serialization import sanitize_for_json  # noqa: E402
+from engine.core.sql_generator import StaticOptimizer  # noqa: E402
 
 # Load existing .env
 load_dotenv(ENV_FILE)
@@ -132,6 +133,10 @@ class SynqxAgent:
         start_time = time.time()
         
         try:
+            # 0. PERFORMANCE: Apply Static Optimizations (ELT Pushdown)
+            logger.info(f"🔍 Analyzing pipeline topology for Job #{job_id}...")
+            StaticOptimizer.optimize(dag_data['nodes'], dag_data['edges'], connections)
+
             # 1. Reconstruct High-Fidelity DAG
             dag = DAG()
             node_map = {n['node_id']: n for n in dag_data['nodes']}

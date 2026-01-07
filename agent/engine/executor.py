@@ -12,6 +12,7 @@ from datetime import datetime
 from engine.metrics import ExecutionMetrics
 from engine.connectors.factory import ConnectorFactory
 from engine.transforms.factory import TransformFactory
+from engine.core.sql_generator import SQLPushdownGenerator
 
 logger = logging.getLogger("SynqX-Agent-Executor")
 
@@ -96,6 +97,15 @@ class NodeExecutor:
 
     def execute(self, node: Dict[str, Any], inputs: Dict[str, List[pd.DataFrame]], status_cb: Any = None) -> List[pd.DataFrame]:
         node_id = node.get("node_id", "unknown")
+        
+        # PERFORMANCE: Handle nodes collapsed via ELT Pushdown
+        if node.get("config", {}).get("_collapsed_into"):
+            collapsed_id = node.get("config", {}).get("_collapsed_into")
+            logger.info(f"Node '{node_id}' was collapsed into '{collapsed_id}' via ELT Pushdown. Skipping local execution.")
+            if status_cb:
+                status_cb(node_id, "success", {"records_in": 0, "records_out": 0, "message": f"Pushed down to {collapsed_id}"})
+            return []
+
         op_type = node.get("operator_type", "noop").lower()
         op_class = node.get("operator_class") or op_type
         
@@ -151,6 +161,15 @@ class NodeExecutor:
                 connector = ConnectorFactory.get_connector(conn_data["type"], conn_data["config"])
                 asset_name = config.get("table") or config.get("asset") or config.get("query") or "unknown"
                 
+                # PERFORMANCE: Apply ELT Pushdown
+                pushdown_ops = config.get("_pushdown_operators")
+                if pushdown_ops:
+                    optimized_sql = SQLPushdownGenerator.generate_sql(asset_name, pushdown_ops)
+                    logger.info(f"  ELT Pushdown applied. Generated SQL: {optimized_sql}")
+                    config["query"] = optimized_sql
+                    if "asset" in config: config.pop("asset")
+                    if "table" in config: config.pop("table")
+
                 logger.info(f"  Streaming read from {conn_data['type'].upper()} entity: '{asset_name}'")
                 with connector.session():
                     for chunk in connector.read_batch(asset=asset_name, **config):

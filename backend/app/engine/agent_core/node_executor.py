@@ -25,6 +25,7 @@ from app.engine.transforms.factory import TransformFactory
 from app.core.errors import AppError
 from app.engine.agent_core.state_manager import StateManager
 from app.engine.agent_core.forensics import ForensicSniffer
+from app.engine.agent_core.sql_generator import SQLPushdownGenerator
 
 logger = get_logger(__name__)
 
@@ -98,17 +99,22 @@ class NodeExecutor:
     ) -> List[pd.DataFrame]:
         """
         Execute a single node with comprehensive error handling and telemetry.
-        
-        Args:
-            pipeline_run: Current pipeline run
-            node: Node to execute
-            input_data: Input data from upstream nodes
-            
-        Returns:
-            List of output DataFrames (materialized chunks)
         """
         db = self.state_manager.db
         
+        # PERFORMANCE: Handle nodes collapsed via ELT Pushdown
+        if node.config and node.config.get("_collapsed_into"):
+            collapsed_id = node.config.get("_collapsed_into")
+            logger.info(f"Node '{node.name}' was collapsed into '{collapsed_id}' via ELT Pushdown. Skipping local execution.")
+            
+            # Record a success with 0 records so UI shows it as complete
+            step_run = self.state_manager.create_step_run(pipeline_run.id, node.id, node.operator_type, node.order_index)
+            self.state_manager.update_step_status(
+                step_run, OperatorRunStatus.SUCCESS, records_in=0, records_out=0, 
+                message=f"Pushed down to {collapsed_id}"
+            )
+            return []
+
         # Get or create step run
         step_run = db.query(StepRun).filter(
             StepRun.pipeline_run_id == pipeline_run.id,
@@ -273,15 +279,18 @@ class NodeExecutor:
                 if node.config:
                     read_params.update(node.config)
                 
-                # CLEANUP: Remove UI and routing metadata that shouldn't reach the connector
-                read_params.pop("ui", None)
-                read_params.pop("connection_id", None)
-                
-                logger.info(f"Extract parameters for {asset.name}: {read_params}")
-                    
-                if inc_filter:
-                    read_params["incremental_filter"] = inc_filter
-                
+                # PERFORMANCE: Apply ELT Pushdown (Collapse downstream transforms into SQL)
+                pushdown_ops = node.config.get("_pushdown_operators")
+                if pushdown_ops:
+                    from app.engine.agent_core.sql_generator import SQLPushdownGenerator
+                    original_asset = read_params.get("asset") or read_params.get("query")
+                    optimized_sql = SQLPushdownGenerator.generate_sql(original_asset, pushdown_ops)
+                    logger.info(f"  ELT Pushdown applied. Generated SQL: {optimized_sql}")
+                    DBLogger.log_step(db, step_run.id, "INFO", f"ELT Pushdown optimization active. Collapsed {len(pushdown_ops)} downstream transforms into SQL subqueries.", job_id=pipeline_run.job_id)
+                    # Switch to raw query mode
+                    read_params["query"] = optimized_sql
+                    if "asset" in read_params: read_params.pop("asset")
+
                 wm_col = self._get_watermark_column(asset) if asset.is_incremental_capable else None
                 max_val = None
                 
