@@ -10,6 +10,7 @@ from app.schemas.ephemeral import EphemeralJobCreate, EphemeralJobUpdate
 from app.core.logging import get_logger
 from app.core.websockets import manager
 from app.utils.agent import is_remote_group
+from app.utils.serialization import sanitize_for_json
 
 logger = get_logger(__name__)
 
@@ -77,6 +78,13 @@ class EphemeralJobService:
         update_data = data.model_dump(exclude_unset=True)
         # result_sample_arrow is for transport only, don't persist it to DB
         update_data.pop("result_sample_arrow", None)
+        
+        # PERFORMANCE: Sanitize JSON fields to handle Timestamps/datetimes from Arrow or other sources
+        # This prevents 'Object of type datetime is not JSON serializable' errors during db.commit()
+        if "result_sample" in update_data:
+            update_data["result_sample"] = sanitize_for_json(update_data["result_sample"])
+        if "result_summary" in update_data:
+            update_data["result_summary"] = sanitize_for_json(update_data["result_summary"])
         
         for field, value in update_data.items():
             setattr(job, field, value)

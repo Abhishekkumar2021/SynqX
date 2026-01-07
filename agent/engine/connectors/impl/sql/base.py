@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Iterator, Union
 import pandas as pd
 import numpy as np
 import json
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import text, inspect
 from sqlalchemy.engine import Engine, Connection
 from engine.connectors.base import BaseConnector
 from engine.core.errors import (

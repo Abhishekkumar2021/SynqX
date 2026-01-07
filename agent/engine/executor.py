@@ -167,8 +167,10 @@ class NodeExecutor:
                     optimized_sql = SQLPushdownGenerator.generate_sql(asset_name, pushdown_ops)
                     logger.info(f"  ELT Pushdown applied. Generated SQL: {optimized_sql}")
                     config["query"] = optimized_sql
-                    if "asset" in config: config.pop("asset")
-                    if "table" in config: config.pop("table")
+                    if "asset" in config:
+                        config.pop("asset")
+                    if "table" in config:
+                        config.pop("table")
 
                 logger.info(f"  Streaming read from {conn_data['type'].upper()} entity: '{asset_name}'")
                 with connector.session():

@@ -1,6 +1,6 @@
 import hashlib
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from app.core.logging import get_logger

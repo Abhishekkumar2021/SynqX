@@ -25,7 +25,6 @@ from app.engine.transforms.factory import TransformFactory
 from app.core.errors import AppError
 from app.engine.agent_core.state_manager import StateManager
 from app.engine.agent_core.forensics import ForensicSniffer
-from app.engine.agent_core.sql_generator import SQLPushdownGenerator
 
 logger = get_logger(__name__)
 
@@ -289,7 +288,8 @@ class NodeExecutor:
                     DBLogger.log_step(db, step_run.id, "INFO", f"ELT Pushdown optimization active. Collapsed {len(pushdown_ops)} downstream transforms into SQL subqueries.", job_id=pipeline_run.job_id)
                     # Switch to raw query mode
                     read_params["query"] = optimized_sql
-                    if "asset" in read_params: read_params.pop("asset")
+                    if "asset" in read_params:
+                        read_params.pop("asset")
 
                 wm_col = self._get_watermark_column(asset) if asset.is_incremental_capable else None
                 max_val = None

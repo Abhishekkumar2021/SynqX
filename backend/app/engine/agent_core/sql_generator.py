@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any
 from app.models.enums import OperatorType
 
 class SQLPushdownGenerator:
@@ -43,8 +43,10 @@ class SQLPushdownGenerator:
                 offset = config.get("offset")
                 if limit or offset:
                     current_sql = f"SELECT * FROM ({current_sql}) AS limit_subq"
-                    if limit: current_sql += f" LIMIT {limit}"
-                    if offset: current_sql += f" OFFSET {offset}"
+                    if limit:
+                        current_sql += f" LIMIT {limit}"
+                    if offset:
+                        current_sql += f" OFFSET {offset}"
 
         return current_sql
 
@@ -75,7 +77,8 @@ class StaticOptimizer:
         for node_id, node in node_map.items():
             if node.operator_type == OperatorType.EXTRACT:
                 asset = db.query(Asset).filter(Asset.id == node.source_asset_id).first()
-                if not asset: continue
+                if not asset:
+                    continue
                 conn = db.query(Connection).filter(Connection.id == asset.connection_id).first()
                 
                 # Check if connector supports pushdown
@@ -124,10 +127,12 @@ class StaticOptimizer:
                     "config": pn.config
                 })
                 # Mark node as collapsed so executor skips it
-                if not pn.config: pn.config = {}
+                if not pn.config:
+                    pn.config = {}
                 pn.config["_collapsed_into"] = start_node.node_id
             
-            if not start_node.config: start_node.config = {}
+            if not start_node.config:
+                start_node.config = {}
             start_node.config["_pushdown_operators"] = pushed_meta
             
             # Redirect edges: Connect start_node directly to whatever was after the last pushed node

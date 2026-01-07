@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 class SQLPushdownGenerator:
     """
@@ -27,8 +27,10 @@ class SQLPushdownGenerator:
                 offset = config.get("offset")
                 if limit or offset:
                     current_sql = f"SELECT * FROM ({current_sql}) AS limit_subq"
-                    if limit: current_sql += f" LIMIT {limit}"
-                    if offset: current_sql += f" OFFSET {offset}"
+                    if limit:
+                        current_sql += f" LIMIT {limit}"
+                    if offset:
+                        current_sql += f" OFFSET {offset}"
 
         return current_sql
 
@@ -84,10 +86,12 @@ class StaticOptimizer:
                     "operator_class": pn.get('operator_class'),
                     "config": pn.get('config', {})
                 })
-                if 'config' not in pn: pn['config'] = {}
+                if 'config' not in pn:
+                    pn['config'] = {}
                 pn['config']["_collapsed_into"] = start_node['node_id']
             
-            if 'config' not in start_node: start_node['config'] = {}
+            if 'config' not in start_node:
+                start_node['config'] = {}
             start_node['config']["_pushdown_operators"] = pushed_meta
             
             # Edge redirection
