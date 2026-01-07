@@ -1,23 +1,8 @@
 import { api } from "./base";
 import { 
-  type QueryResponse, 
   type ConnectionSchemaMetadata,
   type HistoryItem
 } from "./types";
-
-export const executeRawQuery = async (
-  connectionId: number,
-  query: string,
-  limit: number = 100,
-  offset: number = 0,
-  agent_group?: string
-) => {
-  const { data } = await api.post<QueryResponse>(
-    `/explorer/${connectionId}/execute`,
-    { query, limit, offset, agent_group }
-  );
-  return data;
-};
 
 export const getConnectionSchemaMetadata = async (connectionId: number) => {
   const { data } = await api.get<ConnectionSchemaMetadata>(

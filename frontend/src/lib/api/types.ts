@@ -43,6 +43,7 @@ export interface WorkspaceRead {
   slug: string;
   description?: string;
   default_agent_group?: string;
+  is_remote_group: boolean;
   git_config?: Record<string, any>;
   role: string;
   created_at: string;
@@ -135,6 +136,7 @@ export interface Pipeline {
   retry_delay_seconds: number;
   execution_timeout_seconds?: number;
   agent_group?: string;
+  is_remote_group: boolean;
   tags: Record<string, any>;
   priority: number;
   created_at: string;

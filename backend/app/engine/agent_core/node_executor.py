@@ -123,13 +123,11 @@ class NodeExecutor:
         self.state_manager.update_step_status(step_run, OperatorRunStatus.RUNNING)
         
         logger.info(f"→ Starting node '{node.name}' (ID: {node.node_id})")
-        logger.info(f"  Type: {node.operator_type.value.upper()}")
-        logger.info(f"  Implementation: {node.operator_class}")
         
         DBLogger.log_step(
             db, step_run.id, "INFO",
-            f"Task lifecycle initiated for '{node.name}'. "
-            f"Operation mode: {node.operator_type.value.upper()} (Logic: {node.operator_class}).",
+            f"Execution lifecycle started for node '{node.name}'. "
+            f"Operation: {node.operator_type.value.upper()} | Implementation: {node.operator_class}.",
             job_id=pipeline_run.job_id
         )
         
@@ -144,15 +142,15 @@ class NodeExecutor:
                 if asset:
                     lang = asset.config.get("language")
                     if lang in ["python", "node"]:
-                        DBLogger.log_step(db, step_run.id, "DEBUG", f"Validating required execution runtime for {lang}...", job_id=pipeline_run.job_id)
+                        DBLogger.log_step(db, step_run.id, "DEBUG", f"Verifying required runtime environment: {lang.upper()}...", job_id=pipeline_run.job_id)
                         dep_service = DependencyService(db, asset.connection_id)
                         env = dep_service.get_environment(lang)
                         if not env or env.status != "ready":
-                            error_msg = f"Runtime environment for {lang} is not ready (Status: {env.status if env else 'not initialized'}). Please initialize it in connection settings."
+                            error_msg = f"Runtime environment '{lang.upper()}' is not ready (current status: {env.status if env else 'not initialized'}). Please initialize the environment in Connection Settings."
                             DBLogger.log_step(db, step_run.id, "ERROR", error_msg, job_id=pipeline_run.job_id)
                             raise AppError(error_msg)
                         else:
-                            DBLogger.log_step(db, step_run.id, "DEBUG", f"Runtime check passed. {lang.capitalize()} environment is operational.", job_id=pipeline_run.job_id)
+                            DBLogger.log_step(db, step_run.id, "DEBUG", f"Runtime check successful. {lang.capitalize()} environment is operational.", job_id=pipeline_run.job_id)
 
         # Initialize forensics and statistics
         sniffer = ForensicSniffer(pipeline_run.id)
@@ -235,7 +233,7 @@ class NodeExecutor:
                 logger.info(f"  Source: {conn.connector_type.value.upper()} / {asset.name}")
                 DBLogger.log_step(
                     db, step_run.id, "INFO",
-                    f"Establishing connection to {conn.connector_type.value.upper()} data source. Target entity: '{asset.name}'.",
+                    f"Connecting to {conn.connector_type.value.upper()} data source. Target entity: '{asset.name}'.",
                     job_id=pipeline_run.job_id
                 )
                 
@@ -253,13 +251,13 @@ class NodeExecutor:
                         logger.info(f"  Incremental: Resuming from watermark={current_wm}")
                         DBLogger.log_step(
                             db, step_run.id, "INFO",
-                            f"Incremental sync active. Resuming from high-watermark cursor: {current_wm}.",
+                            f"Resuming incremental synchronization from high-watermark: {current_wm}.",
                             job_id=pipeline_run.job_id
                         )
                     else:
                         DBLogger.log_step(
                             db, step_run.id, "INFO",
-                            "Incremental sync active but no previous cursor found. Initiating full baseline extract.",
+                            "Incremental synchronization enabled. No previous state found; initiating full baseline extraction.",
                             job_id=pipeline_run.job_id
                         )
                 
@@ -273,6 +271,12 @@ class NodeExecutor:
                     read_params.update(asset.config)
                 if node.config:
                     read_params.update(node.config)
+                
+                # CLEANUP: Remove UI and routing metadata that shouldn't reach the connector
+                read_params.pop("ui", None)
+                read_params.pop("connection_id", None)
+                
+                logger.info(f"Extract parameters for {asset.name}: {read_params}")
                     
                 if inc_filter:
                     read_params["incremental_filter"] = inc_filter
@@ -282,7 +286,7 @@ class NodeExecutor:
                 
                 # Extract data
                 logger.info("  Extracting data in batches...")
-                DBLogger.log_step(db, step_run.id, "DEBUG", f"Initiating stream read from {conn.connector_type.value.upper()}.", job_id=pipeline_run.job_id)
+                DBLogger.log_step(db, step_run.id, "DEBUG", f"Initiating optimized stream read from {conn.connector_type.value.upper()}.", job_id=pipeline_run.job_id)
                 with connector.session() as session:
                     for chunk_idx, chunk in enumerate(session.read_batch(**read_params), 1):
                         on_chunk(chunk, direction="out")
@@ -313,12 +317,18 @@ class NodeExecutor:
                     )
                     logger.info(f"  ✓ New watermark persisted: {max_val}")
                     DBLogger.log_step(
-                        db, step_run.id, "INFO",
-                        f"Extract phase complete. Updated high-watermark cursor to: {max_val}.",
+                        db, step_run.id, "SUCCESS",
+                        f"Data extraction complete. Synchronized {stats['out']:,} new records. High-watermark updated to: {max_val}.",
+                        job_id=pipeline_run.job_id
+                    )
+                elif stats["out"] > 0:
+                    DBLogger.log_step(
+                        db, step_run.id, "SUCCESS",
+                        f"Data extraction complete. Successfully processed {stats['out']:,} total records.",
                         job_id=pipeline_run.job_id
                     )
                 else:
-                    DBLogger.log_step(db, step_run.id, "INFO", "Extract phase complete. Received 0 new records.", job_id=pipeline_run.job_id)
+                    DBLogger.log_step(db, step_run.id, "INFO", "Extraction phase complete. No new data identified in source.", job_id=pipeline_run.job_id)
             
             # =====================================================================
             # B. LOAD Operation
@@ -340,7 +350,7 @@ class NodeExecutor:
                 # Prepare sink stream
                 def sink_stream():
                     for uid, chunks in (input_data or {}).items():
-                        logger.debug(f"  Processing input from '{uid}': {len(chunks)} chunks")
+                        logger.debug(f"  Processing input from upstream '{uid}': {len(chunks)} chunks")
                         for chunk in chunks:
                             on_chunk(chunk, direction="in")
                             on_chunk(chunk, direction="out")
@@ -356,6 +366,8 @@ class NodeExecutor:
                     # Merge node config for write parameters
                     write_params = {**node.config}
                     write_params.pop("write_strategy", None) # Handled separately via 'mode'
+                    write_params.pop("ui", None)             # Metadata cleanup
+                    write_params.pop("connection_id", None)  # Metadata cleanup
                     
                     records_out = session.write_batch(
                         sink_stream(),
@@ -398,7 +410,7 @@ class NodeExecutor:
                     logger.info(f"  Applying multi-input operation: {op_type.value.upper()}")
                     DBLogger.log_step(
                         db, step_run.id, "INFO",
-                        f"Executing composite multi-stream operation: {op_type.value.upper()}.",
+                        f"Executing multi-stream fusion operation: {op_type.value.upper()}.",
                         job_id=pipeline_run.job_id
                     )
                     
@@ -418,7 +430,7 @@ class NodeExecutor:
                     # Single input transform
                     if not input_iters:
                         logger.warning("  No input data for transform node")
-                        DBLogger.log_step(db, step_run.id, "WARNING", "No input data detected for transform. Finalizing with empty result.", job_id=pipeline_run.job_id)
+                        DBLogger.log_step(db, step_run.id, "WARNING", "No upstream input data detected. Initializing empty stream.", job_id=pipeline_run.job_id)
                         data_iter = iter([])
                     else:
                         upstream_it = next(iter(input_iters.values()))
@@ -451,7 +463,7 @@ class NodeExecutor:
                             )
                             DBLogger.log_step(
                                 db, step_run.id, "WARNING",
-                                f"Logic implementation '{node.operator_class}' failed to initialize (falling back to pass-through): {str(e)}",
+                                f"Logic implementation '{node.operator_class}' failed to initialize (falling back to direct pass-through): {str(e)}",
                                 job_id=pipeline_run.job_id
                             )
                             data_iter = upstream_it
@@ -467,7 +479,7 @@ class NodeExecutor:
                         logger.debug(f"    Processed {chunk_count} chunks, {stats['out']:,} rows")
                 
                 logger.info(f"  ✓ Transform complete: {stats['out']:,} rows, {chunk_count} chunks")
-                DBLogger.log_step(db, step_run.id, "SUCCESS", f"Transformation complete. Processed {stats['out']:,} total records across {chunk_count} memory chunks.", job_id=pipeline_run.job_id)
+                DBLogger.log_step(db, step_run.id, "SUCCESS", f"Transformation complete. Materialized {stats['out']:,} total records across {chunk_count} memory chunks.", job_id=pipeline_run.job_id)
             
             # =====================================================================
             # Finalize Success
@@ -490,15 +502,17 @@ class NodeExecutor:
             
             duration = step_run.duration_seconds or 0
             logger.info(f"← Node '{node.name}' completed successfully")
-            logger.info(f"  Records IN: {stats['in']:,}, OUT: {stats['out']:,}, REJECTIONS: {stats['error']:,}")
-            logger.info(f"  Duration: {duration:.2f}s")
-            logger.info(f"  Resources: CPU={cpu:.1f}%, Memory={mem:.1f}MB")
+            logger.info(f"  Inbound: {stats['in']:,} | Outbound: {stats['out']:,} | Quarantined: {stats['error']:,}")
+            logger.info(f"  Efficiency: {duration:.2f}s | CPU: {cpu:.1f}% | Memory: {mem:.1f}MB")
             
             DBLogger.log_step(
                 db, step_run.id, "SUCCESS",
-                f"Task completed successfully: {stats['out']:,} records processed, {stats['error']:,} rejected in {duration:.2f}s"
+                f"Node execution finalized. Successfully processed {stats['out']:,} records ({stats['error']:,} rejected) in {duration:.2f}s. "
+                f"Peak system footprint: CPU {cpu:.1f}%, Mem {mem:.1f}MB.",
+                job_id=pipeline_run.job_id
             )
             
+            logger.info(f"Node {node.id} returning {len(results)} chunks")
             return results
         
         except Exception as e:
@@ -523,7 +537,7 @@ class NodeExecutor:
             )
             
             logger.error(f"✗ Node '{node.name}' FAILED: {str(e)}", exc_info=True)
-            DBLogger.log_step(db, step_run.id, "ERROR", f"Task failed: {str(e)}")
+            DBLogger.log_step(db, step_run.id, "ERROR", f"Terminal execution fault in node '{node.name}': {str(e)}", job_id=pipeline_run.job_id)
             
             raise e
     

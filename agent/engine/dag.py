@@ -1,5 +1,5 @@
 from collections import defaultdict, deque
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Optional
 
 class DagCycleError(Exception):
     pass

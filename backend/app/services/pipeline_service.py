@@ -19,6 +19,7 @@ from app.engine.agent_engine import PipelineAgent as PipelineRunner
 from app.core.errors import AppError, ConfigurationError
 from app.core.logging import get_logger
 from app.worker.tasks import execute_pipeline_task
+from app.utils.agent import is_remote_group
 
 logger = get_logger(__name__)
 
@@ -231,8 +232,10 @@ class PipelineService:
             pipeline.priority = pipeline_update.priority
         
         # agent_group can be explicitly set to None to revert to Internal worker
-        if hasattr(pipeline_update, 'agent_group'):
+        if pipeline_update.agent_group is not None:
              pipeline.agent_group = pipeline_update.agent_group
+        elif "agent_group" in pipeline_update.model_fields_set and pipeline_update.agent_group is None:
+             pipeline.agent_group = "internal"
              
         if pipeline_update.tags is not None:
             pipeline.tags = pipeline_update.tags
@@ -427,7 +430,7 @@ class PipelineService:
         
         try:
             # Check for Remote Agent Routing
-            if pipeline.agent_group and pipeline.agent_group != "internal":
+            if is_remote_group(pipeline.agent_group):
                 from app.services.agent_service import AgentService
                 if not AgentService.is_group_active(self.db_session, workspace_id or pipeline.workspace_id, pipeline.agent_group):
                     raise AppError(f"No active agents found in group '{pipeline.agent_group}'. Please ensure your remote agent is running.")
@@ -438,7 +441,7 @@ class PipelineService:
                 self.db_session.commit()
                 
                 logger.info(
-                    "Pipeline run queued for remote execution",
+                    f"Pipeline #{pipeline_id} run queued for remote agent group '{pipeline.agent_group}'",
                     extra={
                         "pipeline_id": pipeline_id,
                         "job_id": job.id,
@@ -448,7 +451,7 @@ class PipelineService:
                 
                 return {
                     "status": "queued",
-                    "message": f"Job queued for remote agent group '{pipeline.agent_group}'",
+                    "message": f"Job successfully queued for remote agent group '{pipeline.agent_group}'. Waiting for agent pickup.",
                     "job_id": job.id,
                     "queue": pipeline.agent_group
                 }
@@ -459,7 +462,7 @@ class PipelineService:
                 self.db_session.commit()
                 
                 logger.info(
-                    "Pipeline run enqueued",
+                    f"Pipeline #{pipeline_id} run enqueued for background processing (Job #{job.id})",
                     extra={
                         "pipeline_id": pipeline_id,
                         "job_id": job.id,
@@ -469,7 +472,7 @@ class PipelineService:
                 
                 return {
                     "status": "enqueued",
-                    "message": "Pipeline run enqueued for execution",
+                    "message": "Pipeline run successfully enqueued for background execution.",
                     "job_id": job.id,
                     "task_id": task.id,
                 }
@@ -493,7 +496,7 @@ class PipelineService:
                 self.db_session.commit()
                 
                 logger.info(
-                    "Pipeline run completed synchronously",
+                    f"Pipeline #{pipeline_id} run completed synchronously in {job.execution_time_ms}ms (Job #{job.id})",
                     extra={"pipeline_id": pipeline_id, "job_id": job.id},
                 )
                 

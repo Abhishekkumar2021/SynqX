@@ -174,9 +174,9 @@ class SQLiteConnector(BaseConnector):
 
         query = f'SELECT * FROM "{asset}"'
         if limit is not None:
-            query += f" LIMIT {limit}"
+            query += f" LIMIT {int(limit)}"
         if offset is not None:
-            query += f" OFFSET {offset}"
+            query += f" OFFSET {int(offset)}"
 
         chunksize = kwargs.pop("chunksize", 10000)
 
@@ -234,9 +234,9 @@ class SQLiteConnector(BaseConnector):
             clean_query = query.strip().rstrip(';')
             final_query = clean_query
             if limit and "limit" not in clean_query.lower():
-                final_query += f" LIMIT {limit}"
+                final_query += f" LIMIT {int(limit)}"
             if offset and "offset" not in clean_query.lower():
-                final_query += f" OFFSET {offset}"
+                final_query += f" OFFSET {int(offset)}"
             
             df = pd.read_sql_query(text(final_query), con=self._connection, **kwargs)
             return df.where(pd.notnull(df), None).to_dict(orient="records")

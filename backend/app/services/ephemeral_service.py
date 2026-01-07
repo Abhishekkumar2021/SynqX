@@ -6,8 +6,7 @@ from app.models.enums import JobStatus, JobType
 from app.schemas.ephemeral import EphemeralJobCreate, EphemeralJobUpdate
 from app.core.logging import get_logger
 from app.core.websockets import manager
-from app.connectors.factory import ConnectorFactory
-from app.services.vault_service import VaultService
+from app.utils.agent import is_remote_group
 
 logger = get_logger(__name__)
 
@@ -23,7 +22,7 @@ class EphemeralJobService:
         from app.core.errors import AppError
 
         # Determine target status
-        is_remote = data.agent_group and data.agent_group != "internal"
+        is_remote = is_remote_group(data.agent_group)
         
         if is_remote:
             if not AgentService.is_group_active(db, workspace_id, data.agent_group):
@@ -65,9 +64,13 @@ class EphemeralJobService:
             setattr(job, field, value)
             
         if data.status == JobStatus.SUCCESS or data.status == JobStatus.FAILED:
-            job.completed_at = datetime.now(timezone.utc)
+            now = datetime.now(timezone.utc)
+            job.completed_at = now
             if job.started_at:
-                job.execution_time_ms = int((job.completed_at - job.started_at).total_seconds() * 1000)
+                start = job.started_at
+                if start.tzinfo is None:
+                    start = start.replace(tzinfo=timezone.utc)
+                job.execution_time_ms = int((now - start).total_seconds() * 1000)
         
         db.add(job)
         db.commit()
@@ -82,85 +85,6 @@ class EphemeralJobService:
         })
         
         return job
-
-    @staticmethod
-    def execute_locally(db: Session, job: EphemeralJob):
-        """Execute the job logic directly in the backend process."""
-        job.status = JobStatus.RUNNING
-        job.started_at = datetime.now(timezone.utc)
-        db.commit()
-        
-        try:
-            if job.job_type == JobType.EXPLORER:
-                # Resolve connection
-                if not job.connection:
-                    raise ValueError("Connection context missing for explorer job")
-                
-                config = VaultService.get_connector_config(job.connection)
-
-                # Inject Execution Context for Custom Script (Parity with old explorer logic)
-                if job.connection.connector_type.value == "custom_script":
-                    from app.services.dependency_service import DependencyService
-                    dep_service = DependencyService(db, job.connection.id, user_id=job.user_id)
-                    exec_ctx = {}
-                    exec_ctx.update(dep_service.get_execution_context("python"))
-                    exec_ctx.update(dep_service.get_execution_context("node"))
-                    config["execution_context"] = exec_ctx
-
-                connector = ConnectorFactory.get_connector(job.connection.connector_type.value, config)
-                
-                query = job.payload.get("query")
-                limit = job.payload.get("limit", 100)
-                offset = job.payload.get("offset", 0)
-                params = job.payload.get("params", {})
-                
-                results = []
-                total_count = 0
-                
-                try:
-                    results = connector.execute_query(query=query, limit=limit, offset=offset, **params)
-                    total_count = connector.get_total_count(query, is_query=True, **params)
-                except NotImplementedError:
-                    # Fallback to fetch_sample (Parity with old explorer logic)
-                    results = connector.fetch_sample(asset=query, limit=limit, offset=offset, **params)
-                    total_count = connector.get_total_count(query, is_query=False, **params)
-                
-                columns = list(results[0].keys()) if results else []
-                
-                job.status = JobStatus.SUCCESS
-                job.result_summary = {"count": len(results), "total_count": total_count, "columns": columns}
-                
-                # Cap the stored sample size to prevent DB bloat (approx 1MB of JSON)
-                if len(results) > 1000:
-                    job.result_sample = {"rows": results[:1000], "is_truncated": True}
-                else:
-                    job.result_sample = {"rows": results}
-                
-            elif job.job_type == JobType.METADATA:
-                # Metadata discovery parity
-                pass
-                
-            job.completed_at = datetime.now(timezone.utc)
-            job.execution_time_ms = int((job.completed_at - job.started_at).total_seconds() * 1000)
-            
-        except Exception as e:
-            logger.error(f"Local Ephemeral Job {job.id} failed: {e}")
-            job.status = JobStatus.FAILED
-            job.error_message = str(e)
-            job.completed_at = datetime.now(timezone.utc)
-            if job.started_at:
-                job.execution_time_ms = int((job.completed_at - job.started_at).total_seconds() * 1000)
-            
-        db.add(job)
-        db.commit()
-        
-        # Final broadcast
-        manager.broadcast_sync(f"ephemeral_job:{job.id}", {
-            "type": "ephemeral_job_completed",
-            "job_id": job.id,
-            "status": job.status.value,
-            "result_summary": job.result_summary
-        })
 
     @staticmethod
     def list_jobs(db: Session, workspace_id: int, job_type: Optional[JobType] = None, limit: int = 50) -> List[EphemeralJob]:

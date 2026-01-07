@@ -2,6 +2,7 @@
 
 # Core Engine
 requests>=2.31.0
+httpx>=0.27.0
 pandas>=2.2.2
 sqlalchemy>=2.0.29
 python-dotenv>=1.0.1

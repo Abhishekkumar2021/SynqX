@@ -65,9 +65,13 @@ const JobCard = ({ job, onInspect }: { job: EphemeralJobResponse, onInspect: (j:
                                 >
                                     {job.status}
                                 </Badge>
-                                {job.agent_group && (
+                                {job.agent_group ? (
                                     <Badge variant="outline" className="text-[8px] font-black uppercase bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-1.5 py-0 rounded flex items-center gap-1">
                                         <Cpu size={8} /> {job.agent_group}
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="outline" className="text-[8px] font-black uppercase bg-primary/5 text-primary border-primary/20 px-1.5 py-0 rounded flex items-center gap-1">
+                                        <Cpu size={8} /> Internal Agent
                                     </Badge>
                                 )}
                             </div>
@@ -194,9 +198,13 @@ const JobRow = ({ job, onInspect }: { job: EphemeralJobResponse, onInspect: (j: 
                             {job.status}
                         </Badge>
                     </div>
-                    {job.agent_group && (
+                    {job.agent_group ? (
                         <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 opacity-80">
                             <Cpu size={10} /> {job.agent_group}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-primary opacity-80">
+                            <Cpu size={10} /> Internal Agent
                         </div>
                     )}
                 </div>

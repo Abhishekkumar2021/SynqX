@@ -153,7 +153,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                         <Input
                             placeholder="Search pipelines or executions..."
                             className={cn(
-                                "pl-12 pr-28 h-14 text-xl font-bold tracking-tight",
+                                "pl-12 pr-28 h-14 text-xl font-semibold tracking-tight",
                                 "bg-background/40 border border-border/40 rounded-2xl shadow-inner",
                                 "focus-visible:ring-0 focus-visible:border-primary/40 focus-visible:bg-background/60",
                                 "placeholder:text-muted-foreground/30 selection:bg-primary/20",
@@ -168,11 +168,11 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 z-20">
                             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-sm pointer-events-none ring-1 ring-border/5">
                                 <Command className="h-3.5 w-3.5 text-muted-foreground/60" />
-                                <span className="text-[10px] font-black text-muted-foreground/60">K</span>
+                                <span className="text-[10px] font-semibold text-muted-foreground/60">K</span>
                             </div>
                             <button 
                                 onClick={onClose}
-                                className="h-9 px-4 flex items-center justify-center rounded-xl border border-border/40 bg-background/80 text-[10px] font-black text-muted-foreground/60 hover:text-foreground hover:border-border hover:bg-muted/30 transition-all active:scale-95 shadow-sm"
+                                className="h-9 px-4 flex items-center justify-center rounded-xl border border-border/40 bg-background/80 text-[10px] font-semibold text-muted-foreground/60 hover:text-foreground hover:border-border hover:bg-muted/30 transition-all active:scale-95 shadow-sm"
                             >
                                 ESC
                             </button>
@@ -195,7 +195,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                             {/* Jobs Section */}
                             {filteredJobs.length > 0 && (
                                 <div className="space-y-2">
-                                    <div className="px-4 py-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-primary/60">
+                                    <div className="px-4 py-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-primary/60">
                                         <Activity className="h-3 w-3" />
                                         Forensic History
                                     </div>
@@ -220,7 +220,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                                                         <Hash className="h-5 w-5" />
                                                     </div>
                                                     <div className="flex flex-col gap-0.5">
-                                                        <span className="text-sm font-bold font-mono tracking-tight">Execution #{j.id}</span>
+                                                        <span className="text-sm font-semibold font-mono tracking-tight">Execution #{j.id}</span>
                                                         <div className="flex items-center gap-2 text-xs text-muted-foreground/60 font-medium">
                                                             <span className="capitalize">{j.status}</span>
                                                             <span className="h-1 w-1 rounded-full bg-border" />
@@ -241,7 +241,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                             {/* Pipelines Section */}
                             {filteredPipelines.length > 0 && (
                                 <div className="space-y-2">
-                                    <div className="px-4 py-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-blue-500/60">
+                                    <div className="px-4 py-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-blue-500/60">
                                         <Workflow className="h-3 w-3" />
                                         Data Pipelines
                                     </div>
@@ -268,7 +268,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                                                             <Workflow className="h-5 w-5" />
                                                         </div>
                                                         <div className="flex flex-col gap-0.5">
-                                                            <span className="text-sm font-bold tracking-tight">{p.name}</span>
+                                                            <span className="text-sm font-semibold tracking-tight">{p.name}</span>
                                                             <span className="text-xs text-muted-foreground/60 line-clamp-1 font-medium italic">{p.description || 'No description provided'}</span>
                                                         </div>
                                                     </div>
@@ -286,7 +286,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                             {/* Docs Section */}
                             {filteredDocs.length > 0 && (
                                 <div className="space-y-2">
-                                    <div className="px-4 py-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-amber-500/60">
+                                    <div className="px-4 py-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-500/60">
                                         <Book className="h-3 w-3" />
                                         Knowledge Base
                                     </div>
@@ -313,7 +313,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                                                             <Book className="h-5 w-5" />
                                                         </div>
                                                         <div className="flex flex-col gap-0.5">
-                                                            <span className="text-sm font-bold tracking-tight">{d.title}</span>
+                                                            <span className="text-sm font-semibold tracking-tight">{d.title}</span>
                                                             <span className="text-xs text-muted-foreground/60 line-clamp-1 font-medium italic">{d.description || 'View documentation page'}</span>
                                                         </div>
                                                     </div>
@@ -335,7 +335,7 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                                 <Command className="absolute -bottom-2 -right-2 h-8 w-8 opacity-20" />
                             </div>
                             <p className="text-sm font-medium">No results found for "{search}"</p>
-                            <p className="text-[10px] uppercase tracking-widest mt-2 font-bold opacity-50">Try searching for a different keyword</p>
+                            <p className="text-[10px] uppercase tracking-widest mt-2 font-semibold opacity-50">Try searching for a different keyword</p>
                         </div>
                     )}
                 </div>
@@ -343,18 +343,18 @@ export const SearchDialog: React.FC<SearchDialogProps> = ({ isOpen, onClose }) =
                 {/* Footer with Hints */}
                 <div className="border-t border-border/10 px-6 py-4 flex items-center justify-between bg-muted/10">
                     <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                             <kbd className="rounded-md border border-border/40 bg-muted/30 px-1.5 py-0.5 font-mono text-[11px] shadow-sm">↵</kbd>
                             <span>Select</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                             <kbd className="rounded-md border border-border/40 bg-muted/30 px-1.5 py-0.5 font-mono text-[11px] shadow-sm">↑↓</kbd>
                             <span>Navigate</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">SynqX</span>
+                        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-primary/80">SynqX</span>
                     </div>
                 </div>
             </DialogContent>

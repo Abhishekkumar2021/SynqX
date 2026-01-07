@@ -276,7 +276,7 @@ const GroupSelector = ({
     );
 };
 
-export const SetupInstructions = ({clientId, apiKey, runnerName, tags, isNew = false, onClose }: any) => {
+export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = false, onClose }: any) => {
     const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
     const [platform, setPlatform] = useState<'windows' | 'macos' | 'linux'>(() => {
         const ua = typeof window !== 'undefined' ? window.navigator.userAgent.toLowerCase() : '';
@@ -292,7 +292,7 @@ export const SetupInstructions = ({clientId, apiKey, runnerName, tags, isNew = f
         setIsDownloading(true);
         try {
             const response = await api.post('/agents/export', {
-                runner_name: runnerName,
+                agent_name: agentName,
                 client_id: clientId,
                 api_key: apiKey,
                 tags: tags
@@ -301,7 +301,7 @@ export const SetupInstructions = ({clientId, apiKey, runnerName, tags, isNew = f
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `synqx-agent-${runnerName.toLowerCase().replace(/\s+/g, '-')}.zip`);
+            link.setAttribute('download', `synqx-agent-${agentName.toLowerCase().replace(/\s+/g, '-')}.zip`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -315,7 +315,7 @@ export const SetupInstructions = ({clientId, apiKey, runnerName, tags, isNew = f
 
     const handleDownloadJson = () => {
         const data = {
-            agent_name: runnerName,
+            agent_name: agentName,
             client_id: clientId,
             api_key: apiKey,
             tags: tags,
@@ -326,13 +326,13 @@ export const SetupInstructions = ({clientId, apiKey, runnerName, tags, isNew = f
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `synqx-agent-${runnerName.toLowerCase().replace(/\s+/g, '-')}-config.json`;
+        a.download = `synqx-agent-${agentName.toLowerCase().replace(/\s+/g, '-')}-config.json`;
         a.click();
         toast.success("Credentials saved as JSON");
     };
 
     const dockerCommand = `docker run -d \
-  --name synqx-agent-${runnerName.toLowerCase().replace(/\s+/g, '-')} \
+  --name synqx-agent-${agentName.toLowerCase().replace(/\s+/g, '-')} \
   -e SYNQX_API_URL="${API_URL}" \
   -e SYNQX_CLIENT_ID="${clientId}" \
   -e SYNQX_API_KEY="${apiKey}" \
@@ -352,7 +352,7 @@ uv venv
 uv pip install -e . 
 
 # 3. Permanent Configuration
-synqx-agent configure --client-id ${clientId} --api-key ${apiKey} --tags ${tags}
+synqx-agent configure --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}" --tags "${tags}"
 
 # 4. Start Agent
 synqx-agent start`
@@ -364,7 +364,7 @@ source .venv/bin/activate
 uv pip install -e . 
 
 # 3. Permanent Configuration
-synqx-agent configure --client-id "${clientId}" --api-key "${apiKey}" --tags "${tags}"
+synqx-agent configure --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}" --tags "${tags}"
 
 # 4. Start Agent
 synqx-agent start`;
@@ -392,7 +392,7 @@ synqx-agent start`;
                                 {isNew ? "Agent Authorized" : "Agent Setup"}
                             </h2>
                             <p className="text-sm text-muted-foreground font-semibold mt-1">
-                                {isNew ? "Credentials generated. Save them before closing." : `Re-install agent for ${runnerName}`}
+                                {isNew ? "Credentials generated. Save them before closing." : `Re-install agent for ${agentName}`}
                             </p>
                         </div>
                     </div>
@@ -550,7 +550,7 @@ synqx-agent start`;
 
 export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
     const queryClient = useQueryClient();
-    const [newRunnerName, setNewRunnerName] = useState('');
+    const [newAgentName, setNewAgentName] = useState('');
     const [selectedGroups, setSelectedGroups] = useState<string[]>(['default']);
     const [generatedCreds, setGeneratedCreds] = useState<any | null>(null);
 
@@ -579,7 +579,7 @@ export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
     const handleClose = () => {
         onOpenChange(false);
         setGeneratedCreds(null);
-        setNewRunnerName('');
+        setNewAgentName('');
         setSelectedGroups(['default']);
     };
 
@@ -611,8 +611,8 @@ export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
                                     <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1 leading-none">Friendly Name</label>
                                     <Input 
                                         placeholder="e.g. West-Cloud-Prod" 
-                                        value={newRunnerName} 
-                                        onChange={(e) => setNewRunnerName(e.target.value)}
+                                        value={newAgentName} 
+                                        onChange={(e) => setNewAgentName(e.target.value)}
                                         className="rounded-[1.5rem] h-16 text-lg px-8 font-bold placeholder:text-muted-foreground/30 text-foreground shadow-sm shadow-black/5 bg-muted/20 border-border/40 focus-visible:ring-primary/20 focus-visible:bg-background transition-all"
                                     />
                                 </div>
@@ -649,10 +649,10 @@ export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
                         <div className="pt-6 border-t border-border/40">
                             <Button 
                                 onClick={() => createMutation.mutate({
-                                    name: newRunnerName, 
+                                    name: newAgentName, 
                                     tags: { groups: selectedGroups } 
                                 })}
-                                disabled={!newRunnerName || createMutation.isPending}
+                                disabled={!newAgentName || createMutation.isPending}
                                 className="w-full h-16 rounded-[1.5rem] font-black text-xl shadow-2xl shadow-primary/20 dark:shadow-none gap-3 transition-all hover:scale-[1.01] active:scale-95 bg-primary text-primary-foreground"
                             >
                                 {createMutation.isPending ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /> Create & Generate Credentials</>}</Button>
@@ -662,7 +662,7 @@ export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
                     <SetupInstructions 
                         clientId={generatedCreds.client_id}
                         apiKey={generatedCreds.api_key}
-                        runnerName={newRunnerName}
+                        agentName={newAgentName}
                         tags={selectedGroups.join(',')}
                         isNew
                         onClose={handleClose}

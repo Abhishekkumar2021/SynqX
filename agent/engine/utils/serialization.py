@@ -1,0 +1,37 @@
+from datetime import datetime, date
+from uuid import UUID
+from typing import Any, Dict, List, Union
+
+def sanitize_for_json(obj: Any) -> Any:
+    """
+    Recursively sanitize an object to make it JSON serializable.
+    Converts datetime, date, UUID, and other common non-serializable types to strings.
+    """
+    if isinstance(obj, dict):
+        return {str(k): sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple, set)):
+        return [sanitize_for_json(i) for i in obj]
+    elif isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, UUID):
+        return str(obj)
+    # Handle pandas/numpy types if they exist without requiring them as dependencies
+    elif hasattr(obj, 'isoformat') and callable(getattr(obj, 'isoformat')):
+        return obj.isoformat()
+    elif hasattr(obj, 'item') and callable(getattr(obj, 'item')): # numpy types
+        return obj.item()
+    elif hasattr(obj, '__dict__'):
+        return sanitize_for_json(obj.__dict__)
+    
+    # Check if it's a pandas Timestamp or similar by class name to avoid hard dependency
+    class_name = obj.__class__.__name__
+    if class_name in ['Timestamp', 'Timedelta']:
+        return str(obj)
+        
+    try:
+        # Final fallback for anything else - if it's not serializable, str() it
+        import json
+        json.dumps(obj)
+        return obj
+    except (TypeError, OverflowError):
+        return str(obj)

@@ -92,7 +92,7 @@ const SelectContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Layout & Shape
-        "relative z-50 max-h-96 min-w-32 overflow-hidden rounded-xl border border-border/50",
+        "relative z-[200] max-h-96 min-w-32 overflow-hidden rounded-xl border border-border/50",
 
         // Colors (Glass Effect)
         "bg-popover/80 backdrop-blur-xl text-popover-foreground shadow-2xl shadow-black/10",

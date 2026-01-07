@@ -124,18 +124,18 @@ export const UnifiedSwitcher: React.FC = () => {
                         </div>
 
                         <div className="flex flex-col items-start overflow-hidden whitespace-nowrap min-w-25 max-w-45">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none mb-0.5">
+                            <span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/60 leading-none mb-0.5">
                                 {activeWorkspace.name}
                             </span>
                             <span className={cn(
-                                "text-[10px] font-black uppercase tracking-tight truncate",
+                                "text-[10px] font-semibold uppercase tracking-tight truncate",
                                 currentAgentGroup !== 'internal' ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
                             )}>
                                 {currentAgentGroup !== 'internal' ? `Agent: ${currentAgentGroup}` : "Internal Cloud Mode"}
                             </span>
                         </div>
 
-                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-30 group-hover:opacity-100 transition-opacity" />
+                        <ChevronsUpDown className="h-3.5 w-3.5 ml-auto opacity-30 group-hover:opacity-100 transition-opacity" />
                     </motion.button>
                 </DropdownMenuTrigger>
 
@@ -147,10 +147,10 @@ export const UnifiedSwitcher: React.FC = () => {
                     <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
                         <div className="p-4 pb-2">
                             <TabsList className="grid w-full grid-cols-2 h-10 p-1 bg-muted/30 rounded-xl border border-border/40 shadow-inner">
-                                <TabsTrigger value="workspace" className="rounded-lg text-[9px] font-black uppercase tracking-widest gap-2 transition-all data-[state=active]:shadow-md">
+                                <TabsTrigger value="workspace" className="rounded-lg text-[9px] font-semibold uppercase tracking-widest gap-2 transition-all data-[state=active]:shadow-md">
                                     <Building2 className="h-3 w-3" /> Environments
                                 </TabsTrigger>
-                                <TabsTrigger value="execution" className="rounded-lg text-[9px] font-black uppercase tracking-widest gap-2 transition-all data-[state=active]:shadow-md">
+                                <TabsTrigger value="execution" className="rounded-lg text-[9px] font-semibold uppercase tracking-widest gap-2 transition-all data-[state=active]:shadow-md">
                                     <Cpu className="h-3 w-3" /> Routing
                                 </TabsTrigger>
                             </TabsList>
@@ -165,7 +165,7 @@ export const UnifiedSwitcher: React.FC = () => {
                                             placeholder="Find environment..." 
                                             value={search}
                                             onChange={(e) => setSearch(e.target.value)}
-                                            className="h-8 pl-8 rounded-lg bg-muted/20 border-border/40 focus-visible:ring-primary/20 text-[10px] font-bold"
+                                            className="h-8 pl-8 rounded-lg bg-muted/20 border-border/40 focus-visible:ring-primary/20 text-[10px] font-medium"
                                         />
                                     </div>
                                 </div>
@@ -187,8 +187,8 @@ export const UnifiedSwitcher: React.FC = () => {
                                                 <Building2 className="h-3.5 w-3.5" />
                                             </div>
                                             <div className="flex flex-col flex-1 overflow-hidden">
-                                                <span className="text-[11px] font-bold truncate leading-none mb-0.5">{ws.name}</span>
-                                                <span className="text-[8px] opacity-50 uppercase font-black tracking-tighter">{ws.role}</span>
+                                                <span className="text-[11px] font-semibold truncate leading-none mb-0.5">{ws.name}</span>
+                                                <span className="text-[8px] opacity-50 uppercase font-medium tracking-tighter">{ws.role}</span>
                                             </div>
                                             {activeWorkspace.id === ws.id && <Check className="h-3.5 w-3.5" />}
                                         </DropdownMenuItem>
@@ -210,7 +210,7 @@ export const UnifiedSwitcher: React.FC = () => {
                                         <Box className="h-4 w-4" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-xs font-bold leading-none mb-0.5">Internal Worker</span>
+                                        <span className="text-xs font-semibold leading-none mb-0.5">Internal Worker</span>
                                         <span className="text-[9px] opacity-50 font-medium uppercase tracking-tighter italic">Native Cloud Mode</span>
                                     </div>
                                     {currentAgentGroup === 'internal' && <Check className="h-4 w-4 ml-auto text-primary" />}
@@ -231,7 +231,7 @@ export const UnifiedSwitcher: React.FC = () => {
                                             <Laptop className="h-4 w-4" />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-bold leading-none mb-0.5">{group}</span>
+                                            <span className="text-xs font-semibold leading-none mb-0.5">{group}</span>
                                             <span className="text-[9px] opacity-50 font-medium uppercase tracking-tighter italic">Secure Agent Mode</span>
                                         </div>
                                         {currentAgentGroup === group && <Check className="h-4 w-4 ml-auto text-emerald-500" />}
@@ -251,7 +251,7 @@ export const UnifiedSwitcher: React.FC = () => {
                             <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all shadow-sm">
                                 <PlusCircle size={16} />
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-[0.15em] opacity-70">New Env</span>
+                            <span className="text-[9px] font-medium uppercase tracking-[0.15em] opacity-70">New Env</span>
                         </DropdownMenuItem>
 
                         <DropdownMenuItem 
@@ -261,7 +261,7 @@ export const UnifiedSwitcher: React.FC = () => {
                             <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:-rotate-12 transition-all shadow-sm">
                                 <Settings2 size={16} />
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-[0.15em] opacity-70">Governance</span>
+                            <span className="text-[9px] font-medium uppercase tracking-[0.15em] opacity-70">Governance</span>
                         </DropdownMenuItem>
                     </div>
                 </DropdownMenuContent>

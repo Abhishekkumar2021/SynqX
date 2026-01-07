@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum, UniqueConstraint, JSON
 from sqlalchemy.orm import relationship
 from app.models.base import Base, TimestampMixin
+from app.utils.agent import is_remote_group
 import enum
 
 class WorkspaceRole(str, enum.Enum):
@@ -22,6 +23,14 @@ class Workspace(Base, TimestampMixin):
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
     pipelines = relationship("Pipeline", back_populates="workspace")
     connections = relationship("Connection", back_populates="workspace")
+    
+    @property
+    def is_remote_group(self) -> bool:
+        """
+        Check if the workspace is configured to use a remote agent group.
+        Returns False if the default agent group is 'internal'.
+        """
+        return is_remote_group(self.default_agent_group)
 
 class WorkspaceMember(Base, TimestampMixin):
     __tablename__ = "workspace_members"

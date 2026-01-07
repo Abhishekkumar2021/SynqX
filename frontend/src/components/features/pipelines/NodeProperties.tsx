@@ -84,7 +84,7 @@ const HelpIcon = ({ content }: { content?: string }) => {
                 <TooltipTrigger asChild>
                     <HelpCircle className="h-3 w-3 text-muted-foreground/50 hover:text-primary cursor-help transition-colors ml-1.5" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-55 text-[10px] leading-relaxed p-3 rounded-xl border-border/40 bg-background/95 backdrop-blur-md shadow-2xl z-50">
+                <TooltipContent className="max-w-55 text-[10px] leading-relaxed p-3 rounded-xl border-border/40 bg-background/95 backdrop-blur-md shadow-2xl">
                     <div className="space-y-1.5">
                         <div className="flex items-center gap-1.5 text-primary/80 font-bold uppercase tracking-widest text-[9px]">
                             <Info className="h-3 w-3" /> Information
@@ -241,6 +241,18 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
     const operatorClass = watch('operator_class');
     const selectedConnectionId = watch('connection_id');
 
+    // Reset asset_id when connection changes
+    useEffect(() => {
+        if (selectedConnectionId) {
+            const currentAssetId = watch('asset_id');
+            // Only reset if it's not already empty and we're not in the initial load
+            // (Initial load handled by reset() in the other useEffect)
+            if (currentAssetId && node && String(node.data.connection_id) !== selectedConnectionId) {
+                setValue('asset_id', '');
+            }
+        }
+    }, [selectedConnectionId, setValue, watch, node]);
+
     // Get Definition
     const opDef = useMemo(() => getOperatorDefinition(operatorClass), [operatorClass]);
 
@@ -251,17 +263,20 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
     });
 
     // Fetch Assets
-    const { data: assets } = useQuery({
+    const { data: assets, isLoading: isLoadingAssets } = useQuery({
         queryKey: ['assets', selectedConnectionId],
         queryFn: () => getConnectionAssets(parseInt(selectedConnectionId)),
         enabled: !!selectedConnectionId && !isNaN(parseInt(selectedConnectionId)),
     });
 
-    const filteredAssets = assets?.filter((a: { is_source: any; is_destination: any; }) => {
-        if (nodeType === 'source') return a.is_source;
-        if (nodeType === 'sink') return a.is_destination;
-        return true;
-    });
+    const filteredAssets = useMemo(() => {
+        if (!assets) return [];
+        return assets.filter((a: any) => {
+            if (nodeType === 'source') return a.is_source !== false; // Show unless explicitly false
+            if (nodeType === 'sink') return a.is_destination !== false; // Show unless explicitly false
+            return true;
+        });
+    }, [assets, nodeType]);
 
     useEffect(() => {
         if (node) {
@@ -349,7 +364,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                     } else if (field.description?.toLowerCase().includes('comma separated')) {
                         dynamicConfig[field.configKey] = val.split(',').map((s: string) => s.trim()).filter(Boolean);
                     } else if (field.type === 'number') {
-                        dynamicConfig[field.configKey] = Number(val);
+                        dynamicConfig[field.configKey] = val === '' || val === undefined ? undefined : Number(val);
                     } else if (field.type === 'boolean') {
                         dynamicConfig[field.configKey] = Boolean(val);
                     } else {
@@ -608,12 +623,25 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                     control={control}
                                                     name="asset_id"
                                                     render={({ field }) => (
-                                                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedConnectionId || !isEditor}>
+                                                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedConnectionId || !isEditor || isLoadingAssets}>
                                                             <SelectTrigger className="h-9 rounded-lg bg-background/50">
-                                                                <SelectValue placeholder={selectedConnectionId ? "Select asset" : "Connect first"} />
+                                                                <SelectValue placeholder={
+                                                                    isLoadingAssets ? "Loading assets..." :
+                                                                    !selectedConnectionId ? "Connect first" :
+                                                                    filteredAssets.length === 0 ? "No assets found" :
+                                                                    "Select asset"
+                                                                } />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                {filteredAssets?.map((a: { id: React.Key | null | undefined; name: string | number | bigint | boolean | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Promise<string | number | bigint | boolean | React.ReactPortal | React.ReactElement<unknown, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined> | null | undefined; }) => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
+                                                                {filteredAssets?.map((a: any) => (
+                                                                    <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
+                                                                ))}
+                                                                {filteredAssets.length === 0 && !isLoadingAssets && (
+                                                                    <div className="p-4 text-center text-[10px] text-muted-foreground italic">
+                                                                        No {nodeType === 'sink' ? 'destination' : 'source'} assets found. 
+                                                                        Go to Connections to discover and import them.
+                                                                    </div>
+                                                                )}
                                                             </SelectContent>
                                                         </Select>
                                                     )}

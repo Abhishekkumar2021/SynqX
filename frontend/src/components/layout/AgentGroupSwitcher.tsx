@@ -83,7 +83,7 @@ export const AgentGroupSwitcher: React.FC = () => {
                         )}
                     </div>
                     
-                    <span className="text-[10px] font-black uppercase tracking-wider">
+                    <span className="text-[10px] font-medium uppercase tracking-wider">
                         {currentGroup !== 'internal' ? currentGroup : "Internal Worker"}
                     </span>
 
@@ -93,7 +93,7 @@ export const AgentGroupSwitcher: React.FC = () => {
 
             <DropdownMenuContent align="end" className="w-64 rounded-2xl glass-card shadow-2xl p-2 border-border/40 bg-background/95 backdrop-blur-xl">
                 <div className="px-3 py-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Routing Control</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/50">Routing Control</p>
                 </div>
                 
                 <DropdownMenuItem 
@@ -107,7 +107,7 @@ export const AgentGroupSwitcher: React.FC = () => {
                         <Box className="h-4 w-4" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold leading-tight">Internal Worker</span>
+                        <span className="text-xs font-semibold leading-tight">Internal Worker</span>
                         <span className="text-[9px] opacity-50 font-medium tracking-tight">Cloud Default</span>
                     </div>
                     {currentGroup === 'internal' && <Check className="h-4 w-4 ml-auto text-primary" />}
@@ -116,7 +116,7 @@ export const AgentGroupSwitcher: React.FC = () => {
                 <DropdownMenuSeparator className="bg-border/10 my-2 mx-1" />
                 
                 <div className="px-3 py-1 mb-1">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Registered Agent Groups</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/50">Registered Agent Groups</p>
                 </div>
 
                 {isLoadingAgents ? (
@@ -138,7 +138,7 @@ export const AgentGroupSwitcher: React.FC = () => {
                                     <Laptop className="h-4 w-4" />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-xs font-bold leading-tight">{group}</span>
+                                    <span className="text-xs font-semibold leading-tight">{group}</span>
                                     <span className="text-[9px] opacity-50 font-medium tracking-tight">Remote Execution</span>
                                 </div>
                                 {currentGroup === group && <Check className="h-4 w-4 ml-auto text-emerald-500" />}

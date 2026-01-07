@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.environment import Environment
 from app.models.connections import Connection
 from app.core.errors import AppError
+from app.utils.agent import is_remote_group
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ class DependencyService:
             raise AppError("Connection not found", status_code=404)
             
         self.agent_group = self.connection.workspace.default_agent_group if self.connection.workspace else "internal"
-        self.is_remote = self.agent_group and self.agent_group != "internal"
+        self.is_remote = is_remote_group(self.agent_group)
 
         # Verify ownership if user_id is provided
         if user_id:
@@ -155,14 +156,14 @@ class DependencyService:
 
         except Exception as e:
             env.status = "error"
-            logger.error(f"Failed to initialize {language} env for connection {self.connection_id}: {e}")
+            logger.error(f"Isolated runtime initialization failed for {language} (Connection #{self.connection_id}): {e}")
             self.db.commit()
-            raise AppError(f"Initialization failed: {str(e)}")
+            raise AppError(f"Failed to initialize isolated {language.capitalize()} runtime: {str(e)}")
 
     def install_package(self, language: str, package_name: str) -> str:
         env = self.get_environment(language)
         if not env or env.status != "ready":
-            raise AppError(f"{language} environment is not ready. Please initialize it first.")
+            raise AppError(f"{language.capitalize()} environment is not operational. Please initialize the runtime before installing packages.")
 
         if self.is_remote:
             res = self._trigger_remote_task({"action": "install", "language": language, "package": package_name})
@@ -185,12 +186,12 @@ class DependencyService:
             self.db.commit()
             return output
         except subprocess.CalledProcessError as e:
-            raise AppError(f"Installation failed: {e.output}")
+            raise AppError(f"Package installation failed for '{package_name}': {e.output}")
 
     def uninstall_package(self, language: str, package_name: str) -> str:
         env = self.get_environment(language)
         if not env or env.status != "ready":
-            raise AppError(f"{language} environment is not ready. Please initialize it first.")
+            raise AppError(f"{language.capitalize()} environment is not operational. Please initialize the runtime before managing packages.")
 
         try:
             output = ""
@@ -206,7 +207,7 @@ class DependencyService:
             self.db.commit()
             return output
         except subprocess.CalledProcessError as e:
-            raise AppError(f"Uninstallation failed: {e.output}")
+            raise AppError(f"Package removal failed for '{package_name}': {e.output}")
 
     def list_packages(self, language: str) -> Dict[str, str]:
         env = self.get_environment(language)

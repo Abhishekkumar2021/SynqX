@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { 
-    Clock, X, PlayCircle, Cpu, ExternalLink, Activity
+    Clock, PlayCircle, Cpu, ExternalLink, Activity
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { PageMeta } from '@/components/common/PageMeta';
@@ -37,6 +37,7 @@ export const InteractiveActivityPage: React.FC = () => {
     const [filter, setFilter] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [filterType, setFilterType] = useState<string>('all');
+    const [agentFilter, setAgentFilter] = useState<string>('all');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedJob, setSelectedJob] = useState<any | null>(null);
 
@@ -61,12 +62,20 @@ export const InteractiveActivityPage: React.FC = () => {
 
     const filteredActivity = useMemo(() => {
         if (!activity) return [];
-        return activity.filter(a => 
-            a.job_type.toLowerCase().includes(filter.toLowerCase()) ||
-            JSON.stringify(a.payload).toLowerCase().includes(filter.toLowerCase()) ||
-            a.agent_group?.toLowerCase().includes(filter.toLowerCase())
-        );
-    }, [activity, filter]);
+        return activity.filter(a => {
+            const matchesSearch = 
+                a.job_type.toLowerCase().includes(filter.toLowerCase()) ||
+                JSON.stringify(a.payload).toLowerCase().includes(filter.toLowerCase()) ||
+                a.agent_group?.toLowerCase().includes(filter.toLowerCase());
+            
+            const matchesAgent = 
+                agentFilter === 'all' ? true :
+                agentFilter === 'internal' ? !a.agent_group :
+                agentFilter === 'remote' ? !!a.agent_group : true;
+
+            return matchesSearch && matchesAgent;
+        });
+    }, [activity, filter, agentFilter]);
 
     return (
         <motion.div 
@@ -92,6 +101,8 @@ export const InteractiveActivityPage: React.FC = () => {
                     setViewMode={setViewMode}
                     filterType={filterType}
                     setFilterType={setFilterType}
+                    agentFilter={agentFilter}
+                    setAgentFilter={setAgentFilter}
                     count={filteredActivity.length}
                 />
 
@@ -138,13 +149,10 @@ export const InteractiveActivityPage: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 hover:bg-muted" onClick={() => setSelectedJob(null)}>
-                                        <X size={20} />
-                                    </Button>
                                 </div>
                             </div>
 
-                            <div className="flex-1 min-h-0 relative bg-muted/5">
+                            <div className="flex-1 min-h-0 relative bg-muted/5 flex flex-col">
                                 <ResultsGrid 
                                     data={selectedJob.result_sample ? {
                                         results: selectedJob.result_sample.rows,

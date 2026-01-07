@@ -147,13 +147,13 @@ class LocalFileConnector(BaseConnector):
                         asset.update({
                             "size_bytes": stat.st_size,
                             "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-                            "format": ext.replace('.', '')
+                            "format": ext.replace('.', '').upper()
                         })
                     
                     files.append(asset)
             return files
         except Exception as e:
-            raise DataTransferError(f"Failed to discover local files at {base}: {e}")
+            raise DataTransferError(f"Filesystem discovery failed for path '{base}': {str(e)}")
 
     def infer_schema(self, asset: str, sample_size: int = 1000, **kwargs) -> Dict[str, Any]:
         try:
@@ -187,11 +187,11 @@ class LocalFileConnector(BaseConnector):
             return {
                 "asset": asset,
                 "columns": columns,
-                "format": asset.split('.')[-1].lower() if '.' in asset else 'unknown',
+                "format": asset.split('.')[-1].upper() if '.' in asset else 'UNKNOWN',
                 "row_count_estimate": len(df)
             }
         except Exception as e:
-            raise SchemaDiscoveryError(f"Failed to infer schema for {asset}: {e}")
+            raise SchemaDiscoveryError(f"Automated schema inference failed for '{asset}': {str(e)}")
 
     def read_batch(
         self,
@@ -208,20 +208,22 @@ class LocalFileConnector(BaseConnector):
         offset = int(offset) if offset is not None else 0
         
         if not os.path.exists(path):
-            raise DataTransferError(f"File not found: {path}")
+            raise DataTransferError(f"Local resource not found at path: {path}")
 
         try:
             df_iter: Iterator[pd.DataFrame]
+            
+            # Standardize chunksize
+            chunksize_val = kwargs.get("chunksize") or kwargs.get("batch_size")
+            chunksize = int(chunksize_val) if chunksize_val and int(chunksize_val) > 0 else 10000
+
             if fmt == 'csv':
-                chunksize = kwargs.get("chunksize", kwargs.get("batch_size", 10000))
                 skip_rows = range(1, offset + 1) if offset > 0 else None
                 df_iter = pd.read_csv(path, chunksize=chunksize, skiprows=skip_rows)
             elif fmt == 'tsv':
-                chunksize = kwargs.get("chunksize", kwargs.get("batch_size", 10000))
                 skip_rows = range(1, offset + 1) if offset > 0 else None
                 df_iter = pd.read_csv(path, sep='\t', chunksize=chunksize, skiprows=skip_rows)
             elif fmt == 'txt':
-                chunksize = kwargs.get("chunksize", kwargs.get("batch_size", 10000))
                 skip_rows = range(offset) if offset > 0 else None
                 df_iter = pd.read_csv(path, sep='\n', header=None, names=['line'], chunksize=chunksize, skiprows=skip_rows)
             elif fmt == 'xml':
@@ -237,7 +239,7 @@ class LocalFileConnector(BaseConnector):
                 df = pd.read_excel(path)
                 df_iter = iter([self.slice_dataframe(df, offset, None)])
             else:
-                raise DataTransferError(f"Unsupported local file format: {fmt}")
+                raise DataTransferError(f"Unsupported filesystem format: '{fmt}'")
 
             rows_yielded = 0
             for df in df_iter:
@@ -260,7 +262,7 @@ class LocalFileConnector(BaseConnector):
                 yield df
 
         except Exception as e:
-            raise DataTransferError(f"Error reading local file {asset}: {e}")
+            raise DataTransferError(f"Stream read failed for local resource '{asset}': {str(e)}")
 
     def write_batch(
         self,
@@ -310,7 +312,7 @@ class LocalFileConnector(BaseConnector):
                 first = False
             return total
         except Exception as e:
-            raise DataTransferError(f"Error writing to local file {asset}: {e}")
+            raise DataTransferError(f"Target commit failed for local resource '{asset}': {str(e)}")
 
     def execute_query(
         self,

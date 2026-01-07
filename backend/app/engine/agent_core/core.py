@@ -48,7 +48,7 @@ class ParallelExecutionLayer:
         if len(nodes) == 1:
             # Single node - execute directly without threading overhead
             node = nodes[0]
-            DBLogger.log_job(state_manager.db, job_id, "DEBUG", f"Executing node '{node.name}' sequentially.")
+            DBLogger.log_job(state_manager.db, job_id, "DEBUG", f"Executing node '{node.name}' sequentially (no parallel siblings).")
             try:
                 result = self._execute_single_node(
                     node, pipeline_run, data_cache, dag, state_manager, job_id
@@ -61,7 +61,7 @@ class ParallelExecutionLayer:
         else:
             # Multiple nodes - parallel execution
             actual_workers = min(self.max_workers, len(nodes))
-            DBLogger.log_job(state_manager.db, job_id, "INFO", f"Executing {len(nodes)} nodes in parallel using {actual_workers} worker threads.")
+            DBLogger.log_job(state_manager.db, job_id, "INFO", f"Initiating parallel execution for {len(nodes)} independent nodes using {actual_workers} worker threads.")
             logger.info(
                 f"Parallel execution: {len(nodes)} nodes with {actual_workers} workers"
             )
@@ -94,7 +94,7 @@ class ParallelExecutionLayer:
                         )
                     except concurrent.futures.TimeoutError:
                         errors.append(
-                            (node.name, Exception(f"Execution timeout ({timeout}s)"))
+                            (node.name, Exception(f"Execution timeout reached ({timeout}s)"))
                         )
                         logger.error(f"✗ Node '{node.name}' timed out after {timeout}s")
                     except Exception as e:
@@ -105,7 +105,7 @@ class ParallelExecutionLayer:
 
         if errors:
             error_summary = "; ".join([f"Node '{name}': {str(e)}" for name, e in errors])
-            raise PipelineExecutionError(error_summary)
+            raise PipelineExecutionError(f"Stage execution failed. Component errors: {error_summary}")
 
         return results
 
@@ -138,7 +138,6 @@ class ParallelExecutionLayer:
                     )
 
                     if not t_pipeline_run or not t_node:
-                        from app.core.errors import PipelineExecutionError
                         raise PipelineExecutionError(
                             f"Failed to load pipeline run or node '{node.name}' in thread"
                         )
@@ -366,24 +365,24 @@ class PipelineAgent:
             db,
             job_id,
             "INFO",
-            f"Orchestration initiated. Identified {len(pipeline_version.nodes)} logical processing nodes. "
-            f"Maximum engine parallelism set to {self.max_parallel_nodes} concurrent threads.",
+            f"Execution lifecycle initiated. Orchestrating {len(pipeline_version.nodes)} logical processing nodes. "
+            f"Engine concurrency level optimized to {self.max_parallel_nodes} threads.",
         )
 
         try:
             # Build and validate DAG
-            DBLogger.log_job(db, job_id, "DEBUG", "Parsing pipeline topology and generating Directed Acyclic Graph (DAG)...")
+            DBLogger.log_job(db, job_id, "DEBUG", "Analyzing pipeline topology and constructing Directed Acyclic Graph (DAG)...")
             dag = self._build_dag(pipeline_version)
             node_map = {n.node_id: n for n in pipeline_version.nodes}
 
             # Compute execution layers
-            DBLogger.log_job(db, job_id, "DEBUG", "Resolving execution dependencies and calculating optimal parallel layers...")
+            DBLogger.log_job(db, job_id, "DEBUG", "Resolving stream dependencies and calculating optimal execution stages...")
             layers = self._compute_execution_layers(dag, node_map)
 
             DBLogger.log_job(
                 db, job_id, "INFO", 
-                f"Static analysis complete. Execution plan finalized with {len(layers)} sequential stages. "
-                f"Starting execution lifecycle."
+                f"Static analysis finalized. Orchestration plan contains {len(layers)} sequential stages. "
+                f"Beginning automated execution sequence."
             )
 
             # Execute layers sequentially, nodes within layer in parallel
@@ -398,7 +397,7 @@ class PipelineAgent:
                 if pipeline_version.pipeline and pipeline_version.pipeline.execution_timeout_seconds:
                     elapsed = (datetime.now(timezone.utc) - self.metrics.execution_start).total_seconds()
                     if elapsed > pipeline_version.pipeline.execution_timeout_seconds:
-                        timeout_msg = f"Pipeline execution exceeded total time limit of {pipeline_version.pipeline.execution_timeout_seconds}s"
+                        timeout_msg = f"Orchestration aborted: Pipeline execution exceeded global timeout limit of {pipeline_version.pipeline.execution_timeout_seconds}s."
                         logger.error(timeout_msg)
                         raise PipelineExecutionError(timeout_msg)
 
@@ -407,7 +406,7 @@ class PipelineAgent:
                     db,
                     job_id,
                     "INFO",
-                    f"Stage {layer_idx}/{len(layers)}: Initiating processing for nodes: [{', '.join(node_ids)}].",
+                    f"Stage {layer_idx}/{len(layers)}: Initiating synchronized processing for nodes: [{', '.join(node_ids)}].",
                 )
 
                 # Execute layer
@@ -436,8 +435,8 @@ class PipelineAgent:
                     db,
                     job_id,
                     "INFO",
-                    f"Stage {layer_idx} completed successfully. Processed {total_layer_records:,} records in {layer_duration:.2f}s. "
-                    f"Engine memory utilization: {cache_stats['utilization_pct']:.1f}%.",
+                    f"Stage {layer_idx} finalized successfully. Processed {total_layer_records:,} records in {layer_duration:.2f}s. "
+                    f"Engine memory footprint: {cache_stats['utilization_pct']:.1f}%.",
                 )
 
             # Finalize execution
@@ -445,9 +444,9 @@ class PipelineAgent:
             state_manager.complete_run(pipeline_run)
 
             summary = (
-                f"Pipeline execution finalized successfully. "
+                f"Pipeline orchestration finalized successfully. "
                 f"Total Duration: {self.metrics.duration_seconds:.2f}s. "
-                f"Completed {self.metrics.completed_nodes} nodes with a global throughput of {self.metrics.throughput_records_per_sec:.2f} rec/s."
+                f"Processed {self.metrics.total_records_processed:,} records across {self.metrics.completed_nodes} nodes with an average throughput of {self.metrics.throughput_records_per_sec:.2f} rec/s."
             )
             DBLogger.log_job(db, job_id, "SUCCESS", summary)
 
@@ -456,9 +455,9 @@ class PipelineAgent:
             self.metrics.failed_nodes += 1
 
             error_msg = (
-                f"Execution aborted after {self.metrics.duration_seconds:.2f}s "
-                f"({self.metrics.completed_nodes}/{self.metrics.total_nodes} nodes completed). "
-                f"Reason: {str(e)}"
+                f"Orchestration halted due to a terminal error after {self.metrics.duration_seconds:.2f}s "
+                f"({self.metrics.completed_nodes}/{self.metrics.total_nodes} nodes finalized). "
+                f"Terminal fault: {str(e)}"
             )
 
             DBLogger.log_job(db, job_id, "ERROR", error_msg)

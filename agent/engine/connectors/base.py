@@ -19,34 +19,44 @@ class BaseConnector(ABC):
         return asset, config_schema
 
     @abstractmethod
-    def validate_config(self) -> None: pass
+    def validate_config(self) -> None:
+        pass
 
     @abstractmethod
-    def connect(self) -> None: pass
+    def connect(self) -> None:
+        pass
 
     @abstractmethod
-    def disconnect(self) -> None: pass
+    def disconnect(self) -> None:
+        pass
 
     @abstractmethod
-    def test_connection(self) -> bool: pass
+    def test_connection(self) -> bool:
+        pass
 
     @contextmanager
     def session(self) -> Generator["BaseConnector", None, None]:
         self.connect()
-        try: yield self
-        finally: self.disconnect()
+        try:
+            yield self
+        finally:
+            self.disconnect()
 
     @abstractmethod
-    def discover_assets(self, pattern: Optional[str] = None, include_metadata: bool = False, **kwargs) -> List[Dict[str, Any]]: pass
+    def discover_assets(self, pattern: Optional[str] = None, include_metadata: bool = False, **kwargs) -> List[Dict[str, Any]]:
+        pass
 
     @abstractmethod
-    def infer_schema(self, asset: str, sample_size: int = 1000, mode: str = "auto", **kwargs) -> Dict[str, Any]: pass
+    def infer_schema(self, asset: str, sample_size: int = 1000, mode: str = "auto", **kwargs) -> Dict[str, Any]:
+        pass
     
     @abstractmethod
-    def read_batch(self, asset: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs) -> Iterator[pd.DataFrame]: pass
+    def read_batch(self, asset: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs) -> Iterator[pd.DataFrame]:
+        pass
 
     @abstractmethod
-    def write_batch(self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs) -> int: pass
+    def write_batch(self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs) -> int:
+        pass
 
     def fetch_sample(self, asset: str, limit: int = 100, **kwargs) -> List[Dict[str, Any]]:
         try:
@@ -55,19 +65,24 @@ class BaseConnector(ABC):
             for df in self.read_batch(asset, limit=limit, **kwargs):
                 chunks.append(df)
                 rows_collected += len(df)
-                if rows_collected >= limit: break
-            if not chunks: return []
+                if rows_collected >= limit:
+                    break
+            if not chunks:
+                return []
             full_df = pd.concat(chunks, ignore_index=True)
-            if len(full_df) > limit: full_df = full_df.iloc[:limit]
+            if len(full_df) > limit:
+                full_df = full_df.iloc[:limit]
             return full_df.where(pd.notnull(full_df), None).to_dict(orient="records")
         except Exception as e:
             logger.error(f"Error fetching sample for {asset}: {e}")
             return []
 
     @abstractmethod
-    def execute_query(self, query: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs) -> List[Dict[str, Any]]: pass
+    def execute_query(self, query: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs) -> List[Dict[str, Any]]:
+        pass
 
-    def get_total_count(self, query_or_asset: str, is_query: bool = False, **kwargs) -> Optional[int]: return None
+    def get_total_count(self, query_or_asset: str, is_query: bool = False, **kwargs) -> Optional[int]:
+        return None
 
     def list_files(self, path: str = "") -> List[Dict[str, Any]]:
         raise NotImplementedError(f"Live file listing not supported for {self.__class__.__name__}")
@@ -89,8 +104,10 @@ class BaseConnector(ABC):
 
     @staticmethod
     def slice_dataframe(df: pd.DataFrame, offset: Optional[int], limit: Optional[int]):
-        if offset is not None: df = df.iloc[int(offset):]
-        if limit is not None: df = df.iloc[:int(limit)]
+        if offset is not None:
+            df = df.iloc[int(offset):]
+        if limit is not None:
+            df = df.iloc[:int(limit)]
         return df
 
     @staticmethod

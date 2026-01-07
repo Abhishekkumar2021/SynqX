@@ -38,8 +38,11 @@ if agent_dir not in sys.path:
 print("\n--- Connector Import Test ---")
 try:
     print("Attempting to import engine.connectors.impl.files.local...")
-    import engine.connectors.impl.files.local
-    print("✅ engine.connectors.impl.files.local imported successfully.")
+    from importlib.util import find_spec
+    if find_spec("engine.connectors.impl.files.local"):
+        print("✅ engine.connectors.impl.files.local spec found.")
+    else:
+        print("❌ engine.connectors.impl.files.local spec NOT found.")
 except ImportError as e:
     print(f"❌ Failed to import engine.connectors.impl.files.local: {e}")
 except Exception as e:

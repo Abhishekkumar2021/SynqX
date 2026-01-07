@@ -107,7 +107,7 @@ export const AgentsPage = () => {
                         <SetupInstructions 
                             clientId={inspectingAgent.client_id}
                             apiKey="••••••••••••••••" 
-                            runnerName={inspectingAgent.name}
+                            agentName={inspectingAgent.name}
                             tags={inspectingAgent.tags?.groups?.join(',') || 'default'}
                             onClose={() => setInspectingAgent(null)}
                         />

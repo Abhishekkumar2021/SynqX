@@ -1,17 +1,17 @@
 import time
 import requests
-import json
 import os
 import sys
 import logging
 import platform
 import socket
 import signal
-import typer
 import base64
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from datetime import datetime
 from pathlib import Path
+
+import typer
 from dotenv import load_dotenv, set_key
 
 # Modern CLI Tools
@@ -21,20 +21,20 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt, Confirm
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich import print as rprint
 
 # Platform agnostic path resolution
 BASE_DIR = Path(__file__).resolve().parent
 ENV_FILE = BASE_DIR / ".env"
 PID_FILE = BASE_DIR / ".agent.pid"
 
-# Load existing .env
-load_dotenv(ENV_FILE)
-
 # Import local engine logic
 sys.path.append(str(BASE_DIR))
-from engine.dag import DAG
-from engine.executor import NodeExecutor, ParallelAgent
+from engine.dag import DAG  # noqa: E402
+from engine.executor import NodeExecutor, ParallelAgent  # noqa: E402
+from engine.utils.serialization import sanitize_for_json  # noqa: E402
+
+# Load existing .env
+load_dotenv(ENV_FILE)
 
 # Initialize Typer and Rich
 app = typer.Typer(help="SynqX Intelligent Remote Agent CLI", add_completion=False)
@@ -95,9 +95,11 @@ class SynqxAgent:
                 "version": "1.0.0"
             }
             requests.post(f"{self.api_url}/agents/heartbeat", json=payload, headers=self.headers, timeout=2)
-        except: pass
+        except Exception:
+            pass
         
-        if PID_FILE.exists(): PID_FILE.unlink()
+        if PID_FILE.exists():
+            PID_FILE.unlink()
         if not self.headless:
             console.print("[bold yellow]Agent stopped.[/bold yellow]")
         
@@ -124,8 +126,8 @@ class SynqxAgent:
         dag_data = payload["dag"]
         connections = payload.get("connections", {})
         
-        logger.info(f"🚀 Starting Pipeline Job {job_id}")
-        self.report_job_status(job_id, "running", "Orchestrating parallel execution plan")
+        logger.info(f"🚀 Initializing Pipeline Job #{job_id}")
+        self.report_job_status(job_id, "running", "Orchestrating high-fidelity parallel execution plan")
         
         start_time = time.time()
         
@@ -133,8 +135,10 @@ class SynqxAgent:
             # 1. Reconstruct High-Fidelity DAG
             dag = DAG()
             node_map = {n['node_id']: n for n in dag_data['nodes']}
-            for n in dag_data['nodes']: dag.add_node(n['node_id'])
-            for e in dag_data['edges']: dag.add_edge(e['from_node_id'], e['to_node_id'])
+            for n in dag_data['nodes']:
+                dag.add_node(n['node_id'])
+            for e in dag_data['edges']:
+                dag.add_edge(e['from_node_id'], e['to_node_id'])
             
             # 2. Parallel Execution Lifecycle
             executor = NodeExecutor(connections=connections)
@@ -154,16 +158,16 @@ class SynqxAgent:
             self.report_job_status(
                 job_id, 
                 "success", 
-                f"Completed in {duration_ms}ms", 
+                f"Execution finalized in {duration_ms}ms", 
                 duration_ms, 
                 run_stats['total_records']
             )
-            logger.info(f"✅ Job {job_id} completed successfully in {duration_ms}ms")
+            logger.info(f"✅ Pipeline Job #{job_id} finalized successfully in {duration_ms}ms")
 
         except Exception as e:
-            logger.exception(f"❌ Job {job_id} FAILED")
+            logger.exception(f"❌ Pipeline Job #{job_id} ABORTED")
             duration_ms = int((time.time() - start_time) * 1000)
-            self.report_job_status(job_id, "failed", str(e), duration_ms)
+            self.report_job_status(job_id, "failed", f"Terminal execution fault: {str(e)}", duration_ms)
 
     def process_ephemeral_job(self, data: Dict[str, Any]):
         job_id = data["id"]
@@ -171,12 +175,12 @@ class SynqxAgent:
         payload = data["payload"]
         conn_data = data.get("connection")
         
-        logger.info(f"⚡ Processing Ephemeral {job_type.upper()} Job {job_id}")
+        logger.info(f"⚡ Processing Ephemeral {job_type.upper()} Request #{job_id}")
         start_time = time.time()
         
         try:
             if not conn_data:
-                raise ValueError("Connection metadata missing for ephemeral job")
+                raise ValueError("Contextual connection metadata missing for ephemeral request")
             
             from engine.connectors.factory import ConnectorFactory
             connector = ConnectorFactory.get_connector(conn_data["type"], conn_data["config"])
@@ -185,50 +189,61 @@ class SynqxAgent:
             
             if job_type == "explorer":
                 query = payload.get("query")
-                limit = payload.get("limit", 100)
-                offset = payload.get("offset", 0)
+                limit = int(payload.get("limit", 100))
+                offset = int(payload.get("offset", 0))
+                params = payload.get("params") or {}
                 
-                # Intelligent Asset Resolution
-                # For SQL connectors, 'asset' is ignored if 'query' is provided.
-                # For File connectors, 'asset' must be the file path.
-                # We use the 'query' payload as the asset name effectively.
-                target_asset = query if query else "sql_query"
+                results = []
+                total_count = 0
                 
-                # Fetch lazily
-                iterator = connector.read_batch(asset=target_asset, query=query, limit=limit, offset=offset)
-                chunks = list(iterator)
+                try:
+                    # Prefer dedicated execute_query path
+                    results = connector.execute_query(query=query, limit=limit, offset=offset, **params)
+                    total_count = connector.get_total_count(query, is_query=True, **params)
+                except NotImplementedError:
+                    # Fallback to fetch_sample (Matches Backend)
+                    results = connector.fetch_sample(asset=query, limit=limit, offset=offset, **params)
+                    total_count = connector.get_total_count(query, is_query=False, **params)
                 
-                # Sniff first chunk
-                if chunks:
-                    df = chunks[0]
-                    columns = list(df.columns)
-                    rows = json.loads(df.to_json(orient="records", date_format="iso"))
-                    
-                    result_update["result_summary"] = {"count": len(rows), "columns": columns}
-                    
-                    # Truncate for backend transmission
-                    if len(rows) > 1000:
-                        result_update["result_sample"] = {"rows": rows[:1000], "is_truncated": True}
-                    else:
-                        result_update["result_sample"] = {"rows": rows}
+                columns = list(results[0].keys()) if results else []
+                result_update["result_summary"] = {
+                    "count": len(results), 
+                    "total_count": total_count or len(results),
+                    "columns": columns
+                }
+                
+                # Truncate for backend transmission (Safety Limit)
+                if len(results) > 1000:
+                    result_update["result_sample"] = {"rows": results[:1000], "is_truncated": True}
                 else:
-                    result_update["result_summary"] = {"count": 0, "columns": []}
-                    result_update["result_sample"] = {"rows": []}
+                    result_update["result_sample"] = {"rows": results}
             
             elif job_type == "metadata":
                 task_type = payload.get("task_type")
-                if task_type == "discover_assets":
-                    discovered = connector.discover_assets(pattern=payload.get("pattern"))
+                if task_type == "discover_assets" or "discover_assets" in str(payload.get("task_name", "")):
+                    discovered = connector.discover_assets(
+                        pattern=payload.get("pattern"),
+                        include_metadata=payload.get("include_metadata", False)
+                    )
                     result_update["result_sample"] = {"assets": discovered}
                 else:
                     # Default to schema inference if asset name provided
                     asset = payload.get("asset")
                     if asset:
-                        schema = connector.infer_schema(asset)
-                        # We also fetch a sample to provide dtypes parity
-                        iterator = connector.read_batch(asset=asset, limit=payload.get("limit", 5))
-                        chunks = list(iterator)
-                        dtypes = {col: str(dtype) for col, dtype in chunks[0].dtypes.items()} if chunks else {}
+                        sample_size = int(payload.get("limit", 1000))
+                        schema = connector.infer_schema(asset, sample_size=sample_size)
+                        
+                        # Fetch sample rows for dtypes verification/parity
+                        try:
+                            sample_rows = connector.fetch_sample(asset=asset, limit=5)
+                            dtypes = {}
+                            if sample_rows:
+                                # We use the first row to sniff basic types if needed, 
+                                # but usually schema['columns'] is better.
+                                # For now keep dtypes key for compatibility.
+                                dtypes = {k: type(v).__name__ for k, v in sample_rows[0].items()}
+                        except Exception:
+                            dtypes = {}
                         
                         result_update["result_sample"] = {
                             "schema": schema,
@@ -238,7 +253,7 @@ class SynqxAgent:
             elif job_type == "test":
                 with connector.session() as sess:
                     sess.test_connection()
-                result_update["result_summary"] = {"message": "Connection Successful"}
+                result_update["result_summary"] = {"message": "Verification Successful"}
 
             elif job_type == "system":
                 # Dependency / Environment Management
@@ -253,15 +268,16 @@ class SynqxAgent:
                 if action == "initialize":
                     if language == "python":
                         subprocess.check_call([sys.executable, "-m", "venv", os.path.join(base_dir, "venv")])
-                        result_update["result_summary"] = {"status": "ready", "version": "Isolated"}
+                        result_update["result_summary"] = {"status": "ready", "version": "Isolated Runtime"}
                     elif language == "node":
                         subprocess.check_call(["npm", "init", "-y"], cwd=base_dir)
-                        result_update["result_summary"] = {"status": "ready", "version": "Isolated"}
+                        result_update["result_summary"] = {"status": "ready", "version": "Isolated Runtime"}
                 
                 elif action == "install":
                     if language == "python":
                         pip = os.path.join(base_dir, "venv", "bin", "pip")
-                        if platform.system() == "Windows": pip = os.path.join(base_dir, "venv", "Scripts", "pip.exe")
+                        if platform.system() == "Windows":
+                            pip = os.path.join(base_dir, "venv", "Scripts", "pip.exe")
                         out = subprocess.check_output([pip, "install", package], text=True)
                         result_update["result_summary"] = {"output": out}
                     elif language == "node":
@@ -283,21 +299,21 @@ class SynqxAgent:
                     MAX_SIZE = 10 * 1024 * 1024 
                     content = connector.download_file(path=path)
                     if len(content) > MAX_SIZE:
-                        raise ValueError(f"File too large for live preview/download (Limit: 10MB). Size: {len(content)/1024/1024:.2f}MB")
+                        raise ValueError(f"Payload exceeds safety limit (10MB). Current size: {len(content)/1024/1024:.2f}MB")
                     b64_content = base64.b64encode(content).decode('utf-8')
                     result_update["result_sample"] = {"content": b64_content}
                 elif action == "zip":
                     MAX_SIZE = 10 * 1024 * 1024
                     content = connector.zip_directory(path=path)
                     if len(content) > MAX_SIZE:
-                        raise ValueError(f"Directory zip too large for live download (Limit: 10MB). Size: {len(content)/1024/1024:.2f}MB")
+                        raise ValueError(f"Archive exceeds safety limit (10MB). Current size: {len(content)/1024/1024:.2f}MB")
                     b64_content = base64.b64encode(content).decode('utf-8')
                     result_update["result_sample"] = {"content": b64_content}
                 elif action == "write":
                     # Upload Binary File
                     content_b64 = payload.get("content")
                     if not content_b64:
-                        raise ValueError("No content provided for write action")
+                        raise ValueError("No binary payload provided for write operation")
                     content = base64.b64decode(content_b64)
                     connector.upload_file(path=path, content=content)
                     result_update["result_summary"] = {"status": "written", "size": len(content)}
@@ -306,27 +322,32 @@ class SynqxAgent:
                     content_str = payload.get("content", "")
                     content = content_str.encode("utf-8")
                     connector.upload_file(path=path, content=content)
-                    result_update["result_summary"] = {"status": "saved", "size": len(content)}
+                    result_update["result_summary"] = {"status": "committed", "size": len(content)}
                 elif action == "delete":
                     connector.delete_file(path=path)
-                    result_update["result_summary"] = {"status": "deleted"}
+                    result_update["result_summary"] = {"status": "purged"}
 
             duration_ms = int((time.time() - start_time) * 1000)
             result_update["execution_time_ms"] = duration_ms
             
-            requests.post(f"{self.api_url}/agents/jobs/ephemeral/{job_id}/status", json=result_update, headers=self.headers, timeout=10)
-            logger.info(f"✅ Ephemeral Job {job_id} completed.")
+            # Sanitize payload to handle Timestamps and other non-JSON types
+            safe_result = sanitize_for_json(result_update)
+            
+            requests.post(f"{self.api_url}/agents/jobs/ephemeral/{job_id}/status", json=safe_result, headers=self.headers, timeout=10)
+            logger.info(f"✅ Ephemeral Request #{job_id} finalized successfully.")
 
         except Exception as e:
-            logger.exception(f"❌ Ephemeral Job {job_id} FAILED")
+            logger.exception(f"❌ Ephemeral Request #{job_id} FAILED")
             duration_ms = int((time.time() - start_time) * 1000)
-            requests.post(f"{self.api_url}/agents/jobs/ephemeral/{job_id}/status", json={"status": "failed", "error_message": str(e), "execution_time_ms": duration_ms}, headers=self.headers, timeout=10)
+            requests.post(f"{self.api_url}/agents/jobs/ephemeral/{job_id}/status", json={"status": "failed", "error_message": f"Interactive task failure: {str(e)}", "execution_time_ms": duration_ms}, headers=self.headers, timeout=10)
 
 
     def report_job_status(self, job_id: int, status: str, message: str = "", duration: int = 0, records: int = 0):
         payload = {"status": status, "message": message, "execution_time_ms": duration, "total_records": records}
-        try: requests.post(f"{self.api_url}/agents/jobs/{job_id}/status", json=payload, headers=self.headers, timeout=5)
-        except: pass
+        try:
+            requests.post(f"{self.api_url}/agents/jobs/{job_id}/status", json=payload, headers=self.headers, timeout=5)
+        except Exception:
+            pass
 
     def report_step_status(self, job_id: int, node_id: str, status: str, data: Dict[str, Any] = None):
         """Send granular step telemetry to the backend."""
@@ -357,8 +378,10 @@ class SynqxAgent:
 
     def send_logs(self, job_id: int, level: str, message: str, node_id: str = None):
         payload = [{"level": level, "message": message, "timestamp": datetime.utcnow().isoformat() + "Z", "node_id": node_id}]
-        try: requests.post(f"{self.api_url}/agents/jobs/{job_id}/logs", json=payload, headers=self.headers, timeout=5)
-        except: pass
+        try:
+            requests.post(f"{self.api_url}/agents/jobs/{job_id}/logs", json=payload, headers=self.headers, timeout=5)
+        except Exception:
+            pass
 
     def run(self):
         # Store PID
@@ -374,9 +397,12 @@ class SynqxAgent:
                 resp = requests.post(f"{self.api_url}/agents/poll", json=self.tags, headers=self.headers, timeout=10)
                 if resp.status_code == 200:
                     data = resp.json()
-                    if data.get("job"): self.process_job(data)
-                    elif data.get("ephemeral"): self.process_ephemeral_job(data["ephemeral"])
-            except Exception: pass
+                    if data.get("job"):
+                        self.process_job(data)
+                    elif data.get("ephemeral"):
+                        self.process_ephemeral_job(data["ephemeral"])
+            except Exception:
+                pass
             time.sleep(5)
 
 # --- CLI COMMANDS ---
@@ -409,7 +435,8 @@ def _do_start(interactive=False):
     except Exception as e:
         console.print(f"[bold red]Fatal Error:[/bold red] {e}")
         logger.exception("Fatal error")
-        if PID_FILE.exists(): PID_FILE.unlink()
+        if PID_FILE.exists():
+            PID_FILE.unlink()
 
 @app.command()
 def start():
@@ -419,7 +446,8 @@ def start():
 def _do_stop(interactive=False):
     if not PID_FILE.exists():
         console.print("[red]❌ No running agent found (no .agent.pid file).[/red]")
-        if not interactive: raise typer.Exit(1)
+        if not interactive:
+            raise typer.Exit(1)
         return
 
     try:
@@ -434,7 +462,7 @@ def _do_stop(interactive=False):
             TextColumn("[progress.description]{task.description}"),
             transient=True,
         ) as progress:
-            task = progress.add_task(description="Waiting for shutdown...", total=None)
+            progress.add_task(description="Waiting for shutdown...", total=None)
             for _ in range(50):
                 if not PID_FILE.exists():
                     break
@@ -459,7 +487,8 @@ def stop():
     _do_stop(interactive=False)
 
 def _do_configure():
-    if not ENV_FILE.exists(): ENV_FILE.touch()
+    if not ENV_FILE.exists():
+        ENV_FILE.touch()
     
     api_url = Prompt.ask("SynqX API URL", default=os.getenv("SYNQX_API_URL", "http://localhost:8000/api/v1"))
     client_id = Prompt.ask("Agent Client ID", default=os.getenv("SYNQX_CLIENT_ID", ""))
@@ -481,7 +510,8 @@ def configure(
     tags: str = typer.Option("default", prompt=True, help="Comma-separated tags")
 ):
     """Interactively configure the agent credentials."""
-    if not ENV_FILE.exists(): ENV_FILE.touch()
+    if not ENV_FILE.exists():
+        ENV_FILE.touch()
     set_key(str(ENV_FILE), "SYNQX_API_URL", api_url)
     set_key(str(ENV_FILE), "SYNQX_CLIENT_ID", client_id)
     set_key(str(ENV_FILE), "SYNQX_API_KEY", api_key)
@@ -535,7 +565,7 @@ def _do_status():
                 pid = int(f.read().strip())
             os.kill(pid, 0) # Check if running
             table.add_row("Agent Process", "[green]Running[/green]", f"PID: {pid}")
-        except:
+        except Exception:
             table.add_row("Agent Process", "[red]Stale PID[/red]", "Process died unexpectedly")
     else:
         table.add_row("Agent Process", "[dim]Stopped[/dim]", "")

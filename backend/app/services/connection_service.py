@@ -28,6 +28,8 @@ from app.connectors.factory import ConnectorFactory
 from app.core.logging import get_logger
 from app.core.cache import cache
 from app.services.dependency_service import DependencyService
+from app.utils.agent import is_remote_group
+from app.utils.serialization import sanitize_for_json
 # New imports for Ephemeral Jobs
 
 logger = get_logger(__name__)
@@ -57,7 +59,7 @@ class ConnectionService:
         from app.services.agent_service import AgentService
 
         # Fail early if no agents are online for this group
-        if agent_group and agent_group != "internal":
+        if is_remote_group(agent_group):
             if not AgentService.is_group_active(self.db_session, workspace_id, agent_group):
                 raise AppError(f"No active agents found in group '{agent_group}'. Please ensure your remote agent is running.")
 
@@ -97,10 +99,11 @@ class ConnectionService:
             time.sleep(0.5)
             
         if updated_job.status == JobStatus.FAILED:
-            raise AppError(f"Remote task failed: {updated_job.error_message or 'Unknown agent error'}")
+            error_detail = updated_job.error_message or 'No specific error provided by agent'
+            raise AppError(f"Remote execution failed for '{task_name}': {error_detail}")
         
         if updated_job.status != JobStatus.SUCCESS:
-            raise AppError(f"Remote task '{task_name}' timed out after 45s")
+            raise AppError(f"Interactive task '{task_name}' timed out after 45s. This usually happens if the remote agent is overloaded or has high latency.")
 
         return updated_job.result_sample if updated_job.result_sample else {}
 
@@ -309,7 +312,7 @@ class ConnectionService:
         
         # Override config logic remains the same, but we handle execution differently
 
-        if agent_group:
+        if is_remote_group(agent_group):
             # --- REMOTE AGENT MODE ---
             try:
                 # We need to save the custom config temporarily if provided, 
@@ -347,9 +350,9 @@ class ConnectionService:
                     "Test Connection", task_config
                 )
                 
-                result = {"success": True, "message": "Remote connection successful"}
+                result = {"success": True, "message": f"Connectivity verified successfully on remote agent group '{agent_group}'"}
             except Exception as e:
-                result = {"success": False, "message": str(e)}
+                result = {"success": False, "message": f"Remote verification failed: {str(e)}"}
         else:
             # --- INTERNAL MODE ---
             if custom_config:
@@ -468,7 +471,7 @@ class ConnectionService:
             latency = (time.time() - start) * 1000
             return {
                 "success": True,
-                "message": "Connection successful",
+                "message": f"Cloud connectivity established successfully via {connection.connector_type.value.upper()}.",
                 "latency_ms": round(latency, 2),
                 "details": {"connector_type": connection.connector_type.value},
             }
@@ -686,7 +689,7 @@ class ConnectionService:
         agent_group = connection.workspace.default_agent_group if connection.workspace else None
 
         try:
-            if agent_group:
+            if is_remote_group(agent_group):
                 # --- REMOTE AGENT MODE ---
                 task_config = {
                     "task_type": "discover_assets",
@@ -714,10 +717,11 @@ class ConnectionService:
             connection.last_schema_discovery_at = datetime.now(timezone.utc)
             self.db_session.commit()
             
+            sanitized_discovered = sanitize_for_json(discovered)
             response = AssetDiscoverResponse(
-                discovered_count=len(discovered),
-                assets=discovered,
-                message=f"Successfully discovered {len(discovered)} assets",
+                discovered_count=len(sanitized_discovered),
+                assets=sanitized_discovered,
+                message=f"Successfully discovered {len(sanitized_discovered)} assets",
             )
             
             # Cache the expensive discovery result for 10 minutes
@@ -737,7 +741,7 @@ class ConnectionService:
         agent_group = asset.connection.workspace.default_agent_group if asset.connection.workspace else None
         
         try:
-            if agent_group:
+            if is_remote_group(agent_group):
                 # --- REMOTE AGENT MODE ---
                 task_config = {
                     "asset": asset.fully_qualified_name or asset.name,
@@ -788,6 +792,7 @@ class ConnectionService:
                     schema = session.infer_schema(asset_identifier, sample_size=sample_size)
 
             # Common Persistence Logic
+            schema = sanitize_for_json(schema)
             schema_json = json.dumps(schema, sort_keys=True)
             schema_hash = hashlib.sha256(schema_json.encode()).hexdigest()
 
@@ -847,9 +852,17 @@ class ConnectionService:
         if not asset:
             raise AppError(f"Asset {asset_id} not found")
 
-        runner_group = asset.connection.workspace.default_agent_group if asset.connection.workspace else None
+        agent_group = asset.connection.workspace.default_agent_group if asset.connection.workspace else None
+        
+        if is_remote_group(agent_group):
+            from app.engine.scheduler import Scheduler
+            Scheduler.dispatch_discovery(
+                self.db_session, 
+                asset.connection_id, agent_group, user_id, workspace_id,
+                force=True
+            )
 
-        if runner_group:
+        if is_remote_group(agent_group):
             # --- REMOTE AGENT MODE ---
             try:
                 task_config = {
@@ -857,7 +870,7 @@ class ConnectionService:
                     "limit": limit
                 }
                 sample_data = self._trigger_ephemeral_job(
-                    asset.connection_id, runner_group, user_id, workspace_id,
+                    asset.connection_id, agent_group, user_id, workspace_id,
                     "Fetch Sample Data", task_config
                 )
                 
@@ -883,7 +896,7 @@ class ConnectionService:
 
                 return {
                     "asset_id": asset_id,
-                    "rows": rows,
+                    "rows": sanitize_for_json(rows),
                     "count": len(rows)
                 }
             except Exception as e:

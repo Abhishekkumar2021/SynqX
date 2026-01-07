@@ -9,6 +9,7 @@ from app.models.enums import JobStatus, PipelineRunStatus
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.worker.tasks import execute_pipeline_task
+from app.utils.agent import is_remote_group
 
 logger = get_logger(__name__)
 
@@ -147,7 +148,7 @@ class JobService:
             self.db_session.flush()
 
             # Prepare retried job
-            if job.pipeline and job.pipeline.agent_group and job.pipeline.agent_group != "internal":
+            if job.pipeline and is_remote_group(job.pipeline.agent_group):
                 # Mark as queued for remote agent
                 new_job.status = JobStatus.QUEUED
                 new_job.queue_name = job.pipeline.agent_group

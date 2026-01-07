@@ -242,7 +242,7 @@ class PipelineUpdate(BaseModel):
     retry_strategy: Optional[RetryStrategy] = None
     retry_delay_seconds: Optional[int] = Field(None, ge=0, le=3600)
     execution_timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
-    runner_group: Optional[str] = None
+    agent_group: Optional[str] = None
     tags: Optional[Dict[str, Any]] = None
     priority: Optional[int] = Field(None, ge=1, le=10)
 
@@ -267,6 +267,7 @@ class PipelineUpdate(BaseModel):
 class PipelineRead(PipelineBase):
     id: int
     status: PipelineStatus
+    is_remote_group: bool
     current_version: Optional[int]
     published_version_id: Optional[int]
     created_at: datetime

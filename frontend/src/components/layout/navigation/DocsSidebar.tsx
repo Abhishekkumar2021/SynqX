@@ -11,7 +11,7 @@ export const DocsSidebar = ({ collapsed }: { collapsed: boolean }) => {
       {DOCS_NAV.map((section) => (
         <div key={section.title} className={cn("space-y-3 w-full", collapsed ? "flex flex-col items-center" : "")}>
           {!collapsed && (
-            <h4 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+            <h4 className="px-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/50">
               {section.title}
             </h4>
           )}

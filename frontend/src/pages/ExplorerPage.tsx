@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { getConnections, executeRawQuery, getConnectionSchemaMetadata, getHistory, clearHistory } from '@/lib/api';
+import { getConnections, getConnectionSchemaMetadata, getHistory, clearHistory, type EphemeralJobResponse } from '@/lib/api';
 import { PageMeta } from '@/components/common/PageMeta';
 import { Button } from '@/components/ui/button';
 import {
@@ -265,6 +265,21 @@ export const ExplorerPage: React.FC = () => {
         throw new Error("Query timed out. Check agent status.");
     };
 
+    // Helper to normalize EphemeralJobResponse to QueryResponse for ResultsGrid
+    const parseJobResponse = (job: EphemeralJobResponse) => {
+        const rows = job.result_sample?.rows || [];
+        const backendCols = job.result_summary?.columns || [];
+        const derivedCols = rows.length > 0 ? Object.keys(rows[0]) : [];
+        const columns = backendCols.length > 0 ? backendCols : derivedCols;
+        
+        return {
+            results: rows,
+            count: job.result_sample?.is_truncated ? job.result_summary?.count : rows.length,
+            total_count: job.result_summary?.total_count || rows.length,
+            columns: columns
+        };
+    };
+
     const runQuery = async (mode: 'all' | 'selection' | 'cursor') => {
         if (!selectedConnectionId) {
             toast.error("Please select a data source first");
@@ -319,14 +334,7 @@ export const ExplorerPage: React.FC = () => {
                     id: resultId,
                     timestamp: Date.now(),
                     statement: stmt,
-                    data: {
-                        results: finalJob.result_sample?.rows || [],
-                        count: finalJob.result_sample?.is_truncated 
-                            ? finalJob.result_summary?.count 
-                            : (finalJob.result_sample?.rows?.length || 0),
-                        total_count: finalJob.result_summary?.total_count,
-                        columns: finalJob.result_summary?.columns || []
-                    },
+                    data: parseJobResponse(finalJob),
                     duration: finalJob.execution_time_ms || 0
                 };
 
@@ -364,20 +372,27 @@ export const ExplorerPage: React.FC = () => {
             editor.focus();
         } else if (type === 'run') {
             setIsExecuting(true);
-            executeRawQuery(parseInt(selectedConnectionId!), sql, queryLimit)
-                .then(data => {
+            // Re-use runQuery logic path via executeQuery to handle EphemeralJobResponse correctly
+            executeQuery(parseInt(selectedConnectionId!), { query: sql, limit: queryLimit })
+                .then(async (job) => {
+                    let finalJob = job;
+                    if (job.status === 'queued' || job.status === 'running') {
+                        finalJob = await pollJob(job.id);
+                    }
+                    
                     const resultId = Math.random().toString(36).substr(2, 9);
                     const newResult: ResultItem = {
                         id: resultId,
                         timestamp: Date.now(),
                         statement: sql,
-                        data,
-                        duration: 0
+                        data: parseJobResponse(finalJob),
+                        duration: finalJob.execution_time_ms || 0
                     };
                     setTabs(prev => prev.map(t => t.id === activeTabId ? {
                         ...t, results: [...t.results, newResult], activeResultId: resultId
                     } : t));
                     toast.success("Quick Query Executed");
+                    refetchHistory();
                 })
                 .catch(err => toast.error("Quick Query Failed", { description: err.message }))
                 .finally(() => setIsExecuting(false));
@@ -696,7 +711,7 @@ export const ExplorerPage: React.FC = () => {
                     {activeTab.results.length === 0 ? (
                         <div className="flex items-center gap-2 px-2 text-muted-foreground/50">
                             <TableIcon size={14} />
-                            <span className="text-[10px] font-black uppercase tracking-widest italic">No Results</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest italic">No Results</span>
                         </div>
                     ) : (
                         activeTab.results.map((res, idx) => (
@@ -705,7 +720,7 @@ export const ExplorerPage: React.FC = () => {
                                     <div
                                         onClick={() => setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, activeResultId: res.id } : t))}
                                         className={cn(
-                                            "group flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap shrink-0 cursor-pointer pr-1",
+                                            "group flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all whitespace-nowrap shrink-0 cursor-pointer pr-1",
                                             activeTab.activeResultId === res.id
                                                 ? "bg-primary/10 text-primary shadow-sm"
                                                 : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
@@ -714,7 +729,9 @@ export const ExplorerPage: React.FC = () => {
                                         <span className="opacity-50">#{idx + 1}</span>
                                         <span className="truncate max-w-25">{res.statement.substring(0, 15)}...</span>
                                         {activeTab.activeResultId === res.id && (
-                                            <span className="ml-1 text-[8px] bg-primary/20 px-1 rounded text-primary/80">{res.data.results.length}</span>
+                                            <span className="ml-1 text-[8px] bg-primary/20 px-1 rounded text-primary/80">
+                                                {res.data?.results?.length ?? (res.data as any)?.rows?.length ?? 0}
+                                            </span>
                                         )}
                                         <button
                                             onClick={(e) => closeResultTab(res.id, e)}

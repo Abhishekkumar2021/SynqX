@@ -132,7 +132,7 @@ class ForensicSniffer:
 
         except Exception as e:
             logger.error(
-                f"Forensic capture failed for node {node_id} ({direction}): {e}"
+                f"Forensic data capture failed for node #{node_id} ({direction}): {e}"
             )
 
     def fetch_slice(
@@ -180,7 +180,7 @@ class ForensicSniffer:
             }
 
         except Exception as e:
-            logger.error(f"Forensic fetch failed for node {node_id} ({direction}): {e}")
+            logger.error(f"Forensic data retrieval fault for node #{node_id} ({direction}): {e}")
             return {"rows": [], "columns": [], "total_cached": 0, "error": str(e)}
 
     def get_node_summary(self, node_id: int) -> Dict[str, Any]:

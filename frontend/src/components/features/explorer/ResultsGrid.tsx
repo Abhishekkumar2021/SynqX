@@ -9,7 +9,8 @@ import {
     Download, FileJson, FileText,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Columns, Settings2, EyeOff, MoreHorizontal,
-    PinOff, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, X
+    PinOff, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, X,
+    Loader2
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -352,7 +353,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                                     <Settings2 size={15} />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-48 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 z-10000" align="end">
+                            <DropdownMenuContent className="w-48 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 " align="end">
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Density</DropdownMenuLabel>
                                 <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
                                     <DropdownMenuRadioItem value="compact" className="text-xs font-medium rounded-lg">Compact</DropdownMenuRadioItem>
@@ -370,7 +371,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                                     <span className="hidden md:inline">Columns</span>
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 max-h-96 overflow-y-auto custom-scrollbar z-10000" align="end">
+                            <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 max-h-96 overflow-y-auto custom-scrollbar " align="end">
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Visible Columns</DropdownMenuLabel>
                                 {table.getAllColumns().filter(c => c.id !== 'select' && c.id !== 'index').map(column => (
                                     <DropdownMenuCheckboxItem
@@ -397,7 +398,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                                     <span className="hidden md:inline">Export</span>
                                 </Button>
                             </DropdownMenuTrigger>
-                             <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-2 z-10000" align="end">
+                             <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-2 " align="end">
                                 <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Data Formats</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => handleExport('json')} className="rounded-lg gap-3 py-2.5 cursor-pointer">
                                     <FileJson className="h-4 w-4 text-orange-500" />
@@ -519,7 +520,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                              <SelectTrigger className="h-7 w-16 text-[10px] font-bold">
                                 <SelectValue />
                              </SelectTrigger>
-                             <SelectContent className="z-10000">
+                             <SelectContent className="">
                                 {[10, 25, 50, 100, 500].map(size => (
                                      <SelectItem key={size} value={String(size)} className="text-[10px] font-bold">{size}</SelectItem>
                                 ))}
@@ -671,7 +672,7 @@ const DataTableColumnHeader = ({ column, title }: { column: Column<any, unknown>
                             )}
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 z-10001">
+                    <DropdownMenuContent align="end" className="w-56 ">
                          <div className="px-2 py-2">
                             <Input
                                 placeholder={`Filter ${title}...`}

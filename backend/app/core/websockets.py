@@ -100,10 +100,11 @@ class ConnectionManager:
         Useful for Celery workers.
         """
         import redis
-        r = redis.from_url(self.redis_url)
         try:
+            r = redis.from_url(self.redis_url)
             r.publish(channel, json.dumps(message))
-        finally:
             r.close()
+        except Exception as e:
+            logger.warning(f"Failed to broadcast sync message to {channel}: {e}")
 
 manager = ConnectionManager()

@@ -10,7 +10,7 @@ export const deleteAgent = async (id: number) => {
 };
 
 export const exportAgentPackage = async (payload: {
-  runner_name: string;
+  agent_name: string;
   client_id: string;
   api_key: string;
   tags: string;

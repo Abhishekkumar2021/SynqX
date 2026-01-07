@@ -11,6 +11,7 @@ from app.models.execution import Job
 from app.models.enums import JobStatus
 from app.worker.tasks import execute_pipeline_task
 from app.core.logging import get_logger
+from app.utils.agent import is_remote_group
 
 logger = get_logger(__name__)
 
@@ -352,7 +353,7 @@ class Scheduler:
             self.db_session.flush()  # Get job.id before enqueueing
 
             # Check for Remote Agent Routing
-            if pipeline.agent_group and pipeline.agent_group != "internal":
+            if is_remote_group(pipeline.agent_group):
                 from app.services.agent_service import AgentService
                 if not AgentService.is_group_active(self.db_session, pipeline.workspace_id, pipeline.agent_group):
                     logger.error(
@@ -378,7 +379,7 @@ class Scheduler:
                 self.db_session.commit()
                 
                 logger.info(
-                    "Scheduled run queued for remote execution",
+                    f"Automated run for Pipeline #{pipeline.id} queued for remote agent group '{pipeline.agent_group}'.",
                     extra={
                         "pipeline_id": pipeline.id,
                         "job_id": job.id,
@@ -398,7 +399,7 @@ class Scheduler:
             self.db_session.commit()
 
             logger.info(
-                "Successfully triggered scheduled run",
+                f"Successfully triggered automated execution for Pipeline #{pipeline.id} (Job #{job.id}).",
                 extra={
                     "pipeline_id": pipeline.id,
                     "job_id": job.id,
@@ -409,7 +410,7 @@ class Scheduler:
 
         except Exception as e:
             logger.error(
-                f"Failed to trigger scheduled run for pipeline {pipeline.id}: {e}",
+                f"Automated trigger failed for Pipeline #{pipeline.id}: {e}",
                 exc_info=True,
                 extra={"pipeline_id": pipeline.id},
             )

@@ -67,7 +67,7 @@ export const NotificationsBell: React.FC = () => {
                 <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground hover:bg-muted/10 rounded-full h-10 w-10">
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
-                        <span className="absolute top-2.5 right-2.5 h-4 min-w-4 px-1 rounded-full bg-destructive text-[10px] font-bold text-white border-2 border-background flex items-center justify-center animate-in zoom-in">
+                        <span className="absolute top-2.5 right-2.5 h-4 min-w-4 px-1 rounded-full bg-destructive text-[10px] font-semibold text-white border-2 border-background flex items-center justify-center animate-in zoom-in">
                             {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                     )}
@@ -75,12 +75,12 @@ export const NotificationsBell: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 glass-card rounded-2xl shadow-2xl p-0 overflow-hidden border-border/40">
                 <div className="flex items-center justify-between px-4 py-3 bg-muted/20 border-b border-border/40">
-                    <DropdownMenuLabel className="p-0 text-sm font-bold">Notifications</DropdownMenuLabel>
+                    <DropdownMenuLabel className="p-0 text-sm font-semibold">Notifications</DropdownMenuLabel>
                     {unreadCount > 0 && (
                         <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-7 text-[10px] font-bold uppercase tracking-wider text-primary hover:bg-primary/10"
+                            className="h-7 text-[10px] font-semibold uppercase tracking-wider text-primary hover:bg-primary/10"
                             onClick={() => {
                                 alerts?.filter(a => a.status === 'pending').forEach(a => acknowledgeMutation.mutate(a.id));
                             }}

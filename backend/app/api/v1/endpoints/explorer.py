@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app import models
@@ -10,13 +10,17 @@ from app.connectors.factory import ConnectorFactory
 from app.models.ephemeral import EphemeralJob
 from app.models.explorer import QueryHistory
 from app.models.user import User
-from app.models.enums import JobType
+from app.models.enums import JobType, JobStatus
 from pydantic import BaseModel
 
 from app.services.ephemeral_service import EphemeralJobService
 from app.schemas.ephemeral import EphemeralJobCreate, EphemeralJobResponse
+from app.utils.agent import is_remote_group
+from app.utils.serialization import sanitize_for_json
+from app.core.logging import get_logger
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 class QueryRequest(BaseModel):
     query: str
@@ -48,7 +52,8 @@ def execute_connection_query(
 ):
     """
     Execute a raw query against a connection.
-    Dedicated execution path via EphemeralJobService.
+    If Agent is remote, creates an EphemeralJob.
+    If Agent is internal, executes directly and saves to QueryHistory.
     """
     service = connection_service.ConnectionService(db)
     connection = service.get_connection(
@@ -61,32 +66,131 @@ def execute_connection_query(
     
     # --- RESOLVE AGENT GROUP ---
     target_agent_group = request.agent_group or (connection.workspace.default_agent_group if connection.workspace else "internal")
+    is_remote = is_remote_group(target_agent_group)
 
-    # Create Ephemeral Job
-    job_in = EphemeralJobCreate(
-        job_type=JobType.EXPLORER,
-        connection_id=connection_id,
-        payload={
-            "query": request.query,
-            "limit": request.limit,
-            "offset": request.offset,
-            "params": request.params
-        },
-        agent_group=target_agent_group if target_agent_group != "internal" else None
-    )
-    
-    job = EphemeralJobService.create_job(
-        db, 
-        workspace_id=current_user.active_workspace_id,
-        user_id=current_user.id,
-        data=job_in
-    )
+    # --- REMOTE EXECUTION ---
+    if is_remote:
+        job_in = EphemeralJobCreate(
+            job_type=JobType.EXPLORER,
+            connection_id=connection_id,
+            payload={
+                "query": request.query,
+                "limit": request.limit,
+                "offset": request.offset,
+                "params": request.params
+            },
+            agent_group=target_agent_group
+        )
+        
+        job = EphemeralJobService.create_job(
+            db, 
+            workspace_id=current_user.active_workspace_id,
+            user_id=current_user.id,
+            data=job_in
+        )
+        return job
 
-    if not job.agent_group:
-        # Execute synchronously for local cloud mode
-        EphemeralJobService.execute_locally(db, job)
-    
-    return job
+    # --- INTERNAL EXECUTION ---
+    # 1. Prepare Config & Connector
+    try:
+        config = VaultService.get_connector_config(connection)
+        
+        # Inject Execution Context for Custom Script
+        if connection.connector_type.value == "custom_script":
+            from app.services.dependency_service import DependencyService
+            dep_service = DependencyService(db, connection.id, user_id=current_user.id)
+            exec_ctx = {}
+            exec_ctx.update(dep_service.get_execution_context("python"))
+            exec_ctx.update(dep_service.get_execution_context("node"))
+            config["execution_context"] = exec_ctx
+
+        connector = ConnectorFactory.get_connector(
+            connector_type=connection.connector_type.value, 
+            config=config
+        )
+        
+        # 2. Execute
+        query = request.query
+        limit = request.limit or 100
+        offset = request.offset or 0
+        params = request.params or {}
+        
+        start_time = datetime.now(timezone.utc)
+        status = JobStatus.SUCCESS
+        error_msg = None
+        results = []
+        total_count = 0
+        
+        try:
+            try:
+                results = connector.execute_query(query=query, limit=limit, offset=offset, **params)
+                total_count = connector.get_total_count(query, is_query=True, **params)
+            except NotImplementedError:
+                results = connector.fetch_sample(asset=query, limit=limit, offset=offset, **params)
+                total_count = connector.get_total_count(query, is_query=False, **params)
+        except Exception as e:
+            status = JobStatus.FAILED
+            error_msg = str(e)
+            logger.error(f"Internal query execution failed: {e}", exc_info=True)
+            
+        end_time = datetime.now(timezone.utc)
+        execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        # 3. Save to Legacy History (so it appears in history tab)
+        history = QueryHistory(
+            connection_id=connection_id,
+            workspace_id=current_user.active_workspace_id,
+            query=query,
+            status="success" if status == JobStatus.SUCCESS else "failed",
+            execution_time_ms=execution_time_ms,
+            row_count=len(results),
+            error_message=error_msg,
+            created_at=start_time,
+            created_by=str(current_user.id)
+        )
+        db.add(history)
+        db.commit()
+        db.refresh(history)
+        
+        # 4. Construct Response (EphemeralJobResponse from QueryHistory)
+        
+        # Sample truncation logic
+        result_sample = {"rows": results}
+        if len(results) > 1000:
+            result_sample = {"rows": results[:1000], "is_truncated": True}
+
+        result_summary = None
+        if status == JobStatus.SUCCESS:
+            columns = list(results[0].keys()) if results else []
+            result_summary = sanitize_for_json({
+                "count": len(results), 
+                "total_count": total_count or 0,
+                "columns": columns
+            })
+            result_sample = sanitize_for_json(result_sample)
+
+        return EphemeralJobResponse(
+            id=history.id, # Using history ID as surrogate
+            job_type=JobType.EXPLORER,
+            connection_id=connection_id,
+            workspace_id=current_user.active_workspace_id,
+            user_id=current_user.id,
+            status=status,
+            payload=request.model_dump(),
+            agent_group=target_agent_group,
+            started_at=start_time,
+            completed_at=end_time,
+            execution_time_ms=execution_time_ms,
+            result_summary=result_summary,
+            result_sample=result_sample,
+            error_message=error_msg,
+            worker_id=None,
+            created_at=start_time,
+            updated_at=end_time
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/jobs/{job_id}", response_model=EphemeralJobResponse)
 def get_ephemeral_job(
@@ -218,7 +322,7 @@ def get_connection_schema_metadata(
     # --- AGENT ROUTING ---
     agent_group = connection.workspace.default_agent_group if connection.workspace else "internal"
     
-    if agent_group and agent_group != "internal":
+    if is_remote_group(agent_group):
         # For remote, return metadata from assets
         metadata = {}
         for asset in connection.assets:

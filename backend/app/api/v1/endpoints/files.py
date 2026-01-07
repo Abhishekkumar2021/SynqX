@@ -11,6 +11,7 @@ from app.core.logging import get_logger
 from app.services.ephemeral_service import EphemeralJobService
 from app.schemas.ephemeral import EphemeralJobCreate
 from app.models.enums import JobType, JobStatus
+from app.utils.agent import is_remote_group
 import os
 import time
 import base64
@@ -42,7 +43,7 @@ def list_files(
     """Real-time file listing for a connection."""
     connection, agent_group = get_routing_info(connection_id, db, current_user)
     
-    if agent_group and agent_group != "internal":
+    if is_remote_group(agent_group):
         job_in = EphemeralJobCreate(
             job_type=JobType.FILE,
             connection_id=connection_id,
@@ -88,7 +89,7 @@ def create_directory(
     """Real-time directory creation for a connection."""
     connection, agent_group = get_routing_info(connection_id, db, current_user)
 
-    if agent_group and agent_group != "internal":
+    if is_remote_group(agent_group):
         job_in = EphemeralJobCreate(
             job_type=JobType.FILE,
             connection_id=connection_id,
@@ -130,7 +131,7 @@ def download_file(
     """Real-time file download."""
     connection, agent_group = get_routing_info(connection_id, db, current_user)
 
-    if agent_group and agent_group != "internal":
+    if is_remote_group(agent_group):
         job_in = EphemeralJobCreate(
             job_type=JobType.FILE,
             connection_id=connection_id,
@@ -192,7 +193,7 @@ async def upload_file(
     
     content = await file.read()
     
-    if agent_group and agent_group != "internal":
+    if is_remote_group(agent_group):
         b64_content = base64.b64encode(content).decode('utf-8')
         target_path = os.path.join(path, file.filename) if path else file.filename
         
@@ -237,7 +238,7 @@ def save_file(
     """Real-time file save (overwrite content)."""
     connection, agent_group = get_routing_info(connection_id, db, current_user)
     
-    if agent_group and agent_group != "internal":
+    if is_remote_group(agent_group):
         job_in = EphemeralJobCreate(
             job_type=JobType.FILE,
             connection_id=connection_id,
@@ -276,7 +277,7 @@ def delete_file(
     """Real-time file/directory deletion."""
     connection, agent_group = get_routing_info(connection_id, db, current_user)
     
-    if agent_group and agent_group != "internal":
+    if is_remote_group(agent_group):
         job_in = EphemeralJobCreate(
             job_type=JobType.FILE,
             connection_id=connection_id,
@@ -314,7 +315,7 @@ def zip_directory(
     """Real-time directory zipping and download."""
     connection, agent_group = get_routing_info(connection_id, db, current_user)
 
-    if agent_group and agent_group != "internal":
+    if is_remote_group(agent_group):
         job_in = EphemeralJobCreate(
             job_type=JobType.FILE,
             connection_id=connection_id,

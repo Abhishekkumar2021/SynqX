@@ -14,6 +14,7 @@ from app.models.enums import OperatorRunStatus, PipelineRunStatus, OperatorType
 from app.core.db_logging import DBLogger
 from app.core.logging import get_logger
 from app.core.websockets import manager
+from app.utils.serialization import sanitize_for_json
 
 logger = get_logger(__name__)
 
@@ -118,8 +119,7 @@ class StateManager:
         
         DBLogger.log_job(
             self.db, self.job_id, "INFO",
-            f"Pipeline run initialized: run_number={pipeline_run.run_number}, "
-            f"nodes={total_nodes}"
+            f"Pipeline run initialized. Run number: {pipeline_run.run_number} | Stage count: {total_nodes}."
         )
         
         # Broadcast initial state
@@ -225,7 +225,7 @@ class StateManager:
             
             # Update sample data
             if sample_data is not None:
-                t_step_run.sample_data = sample_data
+                t_step_run.sample_data = sanitize_for_json(sample_data)
             
             # Update error info
             if error:
@@ -318,7 +318,7 @@ class StateManager:
             self.db.add(t_run)
             self.db.commit()
             
-            DBLogger.log_job(self.db, self.job_id, "SUCCESS", f"Pipeline run {t_run.run_number} completed successfully")
+            DBLogger.log_job(self.db, self.job_id, "SUCCESS", f"Pipeline orchestration completed. Run #{t_run.run_number} finalized successfully.")
             
             self._broadcast_telemetry({
                 "type": "run_completed",
@@ -366,7 +366,7 @@ class StateManager:
             self.db.add(t_run)
             self.db.commit()
             
-            DBLogger.log_job(self.db, self.job_id, "ERROR", f"Pipeline run {t_run.run_number} failed: {str(error)}")
+            DBLogger.log_job(self.db, self.job_id, "ERROR", f"Pipeline orchestration aborted. Run #{t_run.run_number} failed: {str(error)}")
             
             self._broadcast_telemetry({
                 "type": "run_failed",
@@ -404,4 +404,4 @@ class StateManager:
             db.commit()
             
             logger.info(f"Step {step_run.id} marked for retry (attempt {t_step.retry_count})")
-            DBLogger.log_step(self.db, step_run.id, "INFO", f"Retry attempt {t_step.retry_count}")
+            DBLogger.log_step(self.db, step_run.id, "WARNING", f"Retrying task (Attempt #{t_step.retry_count}). Previous execution attempt failed.")

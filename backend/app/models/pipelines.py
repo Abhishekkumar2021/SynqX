@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from app.models.base import Base, AuditMixin, SoftDeleteMixin, OwnerMixin
 from app.models.enums import PipelineStatus, OperatorType, RetryStrategy
+from app.utils.agent import is_remote_group
 
 if TYPE_CHECKING:
     from app.models.connections import Asset
@@ -74,6 +75,14 @@ class Pipeline(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
         CheckConstraint("max_parallel_runs > 0", name="ck_pipeline_max_parallel"),
         CheckConstraint("priority BETWEEN 1 AND 10", name="ck_pipeline_priority"),
     )
+
+    @property
+    def is_remote_group(self) -> bool:
+        """
+        Check if the pipeline is configured to use a remote agent group.
+        Returns False if the agent group is 'internal'.
+        """
+        return is_remote_group(self.agent_group)
 
     def __repr__(self):
         return f"<Pipeline(id={self.id}, name='{self.name}', status={self.status})>"

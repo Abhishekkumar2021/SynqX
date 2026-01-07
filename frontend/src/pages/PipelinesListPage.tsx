@@ -21,6 +21,7 @@ import { PipelineGridItem } from '@/components/features/pipelines/PipelineGridIt
 import { PipelineListItem } from '@/components/features/pipelines/PipelineListItem';
 import { LoadingSkeleton, EmptyState } from '@/components/features/pipelines/PipelineStates';
 import { PageMeta } from '@/components/common/PageMeta';
+import { isRemoteGroup } from '@/lib/utils/agent';
 import { useJobsListTelemetry } from '@/hooks/useJobsListTelemetry';
 import { useZenMode } from '@/hooks/useZenMode';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -142,10 +143,10 @@ export const PipelinesListPage: React.FC = () => {
                             <Workflow className="h-6 w-6 text-primary" />
                         </div>
                         Pipelines
-                        {activeWorkspace?.default_runner_group && (
+                        {activeWorkspace && isRemoteGroup(activeWorkspace.default_agent_group) && (
                             <Badge variant="outline" className="h-7 px-3 rounded-xl bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-black uppercase tracking-widest text-[9px] gap-1.5 hidden sm:flex">
                                 <Laptop className="h-3 w-3" />
-                                Agent: {activeWorkspace.default_runner_group}
+                                Agent: {activeWorkspace.default_agent_group}
                             </Badge>
                         )}
                         {user?.is_superuser && (

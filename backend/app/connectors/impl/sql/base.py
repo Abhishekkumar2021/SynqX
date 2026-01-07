@@ -218,9 +218,9 @@ class SQLConnector(BaseConnector):
             if limit or offset:
                 query = f"SELECT * FROM ({clean_query}) AS batch_subq"
                 if limit:
-                    query += f" LIMIT {limit}"
+                    query += f" LIMIT {int(limit)}"
                 if offset:
-                    query += f" OFFSET {offset}"
+                    query += f" OFFSET {int(offset)}"
             else:
                 query = clean_query
         else:
@@ -240,21 +240,33 @@ class SQLConnector(BaseConnector):
                     query += f" WHERE {' AND '.join(where_clauses)}"
 
             if limit:
-                query += f" LIMIT {limit}"
+                query += f" LIMIT {int(limit)}"
             if offset:
-                query += f" OFFSET {offset}"
+                query += f" OFFSET {int(offset)}"
         
         # UI uses 'batch_size', SQLAlchemy uses 'chunksize'
-        chunksize = kwargs.pop("chunksize", kwargs.pop("batch_size", 10000))
+        chunksize_val = kwargs.pop("chunksize", None) or kwargs.pop("batch_size", None)
+        chunksize = int(chunksize_val) if chunksize_val and int(chunksize_val) > 0 else 10000
+        
+        # CLEANUP: Remove metadata that shouldn't reach pandas/sqlalchemy
+        kwargs.pop("ui", None)
+        kwargs.pop("connection_id", None)
+        kwargs.pop("batch_size", None)
+        
         try:
             for chunk in pd.read_sql_query(text(query), con=self._connection, chunksize=chunksize, params=params, **kwargs):
                 yield chunk
         except Exception as e:
-            raise DataTransferError(f"Read failed for {asset}: {e}")
+            raise DataTransferError(f"Stream read failed for entity '{asset}'. Underlying fault: {str(e)}")
 
     def get_total_count(self, query_or_asset: str, is_query: bool = False, **kwargs) -> Optional[int]:
         self.connect()
         try:
+            # CLEANUP: Remove metadata
+            kwargs.pop("ui", None)
+            kwargs.pop("connection_id", None)
+            bind_params = kwargs.copy()
+
             if is_query:
                 clean_query = query_or_asset.strip().rstrip(';')
                 count_query = f"SELECT COUNT(*) FROM ({clean_query}) AS total_count_subq"
@@ -263,10 +275,11 @@ class SQLConnector(BaseConnector):
                 table_ref = f"{schema}.{name}" if schema else name
                 count_query = f"SELECT COUNT(*) FROM {table_ref}"
             
-            result = self._connection.execute(text(count_query)).scalar()
+            logger.debug(f"Calculating count: {count_query} | Params: {bind_params}")
+            result = self._connection.execute(text(count_query), bind_params).scalar()
             return int(result) if result is not None else None
         except Exception as e:
-            logger.warning(f"Failed to get total count for {query_or_asset}: {e}")
+            logger.warning(f"Failed to calculate total record count for '{query_or_asset}': {e}")
             return None
     def execute_query(
         self,
@@ -277,27 +290,43 @@ class SQLConnector(BaseConnector):
     ) -> List[Dict[str, Any]]:
         self.connect()
         try:
+            # CLEANUP: Remove metadata
+            kwargs.pop("ui", None)
+            kwargs.pop("connection_id", None)
+            
+            # Treat remaining kwargs as bind parameters
+            bind_params = kwargs.copy()
+            
             clean_query = query.strip().rstrip(';')
+            logger.info(f"Executing SQL: {clean_query} | Params: {bind_params} | Limit: {limit} | Offset: {offset}")
             
             # Safely apply limit and offset using a subquery wrap
             if limit or offset:
                 final_query = f"SELECT * FROM ({clean_query}) AS query_subq"
                 if limit:
-                    final_query += f" LIMIT {limit}"
+                    final_query += f" LIMIT {int(limit)}"
                 if offset:
-                    final_query += f" OFFSET {offset}"
+                    final_query += f" OFFSET {int(offset)}"
             else:
                 final_query = clean_query
             
-            df = pd.read_sql_query(text(final_query), con=self._connection, **kwargs)
+            # Pass bind parameters explicitly to pandas
+            df = pd.read_sql_query(text(final_query), con=self._connection, params=bind_params)
+            
+            logger.info(f"Query Result: {len(df)} rows returned")
             return df.replace({np.nan: None}).to_dict(orient="records")
         except Exception as e:
-            raise DataTransferError(f"Query execution failed: {e}")
+            logger.error(f"Query execution failed: {e}")
+            raise DataTransferError(f"Query execution failed. Detailed fault: {str(e)}")
 
     def write_batch(
         self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs
     ) -> int:
         self.connect()
+        # CLEANUP: Remove metadata
+        kwargs.pop("ui", None)
+        kwargs.pop("connection_id", None)
+        
         name, schema = self.normalize_asset_identifier(asset)
         
         # Normalize mode
@@ -310,7 +339,7 @@ class SQLConnector(BaseConnector):
             inspector = inspect(self._engine)
             target_columns = [c['name'] for c in inspector.get_columns(name, schema=schema)]
         except Exception as e:
-            logger.warning(f"Could not inspect columns for {asset}, skipping auto-filter: {e}")
+            logger.warning(f"Could not introspect column schema for '{asset}'; skipping automated filtration: {e}")
             target_columns = []
 
         if isinstance(data, pd.DataFrame):
@@ -329,7 +358,7 @@ class SQLConnector(BaseConnector):
                 if target_columns:
                     valid_cols = [c for c in df.columns if c in target_columns]
                     if not valid_cols:
-                        logger.warning(f"No matching columns for {asset}. Data columns: {df.columns.tolist()}")
+                        logger.warning(f"No schema-compliant columns identified for '{asset}'. Available: {df.columns.tolist()}")
                         continue
                     df = df[valid_cols]
 
@@ -344,7 +373,7 @@ class SQLConnector(BaseConnector):
                     if_exists_val = 'replace'
                 
                 if clean_mode == 'upsert':
-                    logger.warning(f"Upsert requested for {asset} but generic SQLConnector only supports append/overwrite. Falling back to append.")
+                    logger.warning(f"Atomic Upsert requested for '{asset}' but SQLConnector only supports append/overwrite. Falling back to bulk append.")
 
                 df.to_sql(
                     name=name,
@@ -358,4 +387,4 @@ class SQLConnector(BaseConnector):
                 first_chunk = False
             return total
         except Exception as e:
-            raise DataTransferError(f"Write failed for {asset}: {e}")
+            raise DataTransferError(f"Target commit failed for entity '{asset}'. Detailed fault: {str(e)}")

@@ -18,24 +18,29 @@ export interface NavGroupDef {
 
 export const NAV_STRUCTURE: NavGroupDef[] = [
     {
-        title: "Overview",
+        title: "Core",
         items: [
             { label: "Dashboard", to: "/dashboard", icon: <LayoutDashboard />, end: true },
-            { label: "Execution Logs", to: "/jobs", icon: <Activity /> },
-            { label: "Interactive Lab", to: "/interactive-lab", icon: <Zap /> },
+            { label: "Pipelines", to: "/pipelines", icon: <Workflow /> },
+            { label: "Connectivity Hub", to: "/connections", icon: <Cable /> },
         ]
     },
     {
-        title: "Architecture",
+        title: "Observability",
         items: [
-            { label: "Connectivity Hub", to: "/connections", icon: <Cable /> },
-            { label: "Pipelines", to: "/pipelines", icon: <Workflow /> },
-            { label: "Execution Agents", to: "/agents", icon: <Server /> },
+            { label: "Execution Logs", to: "/jobs", icon: <Activity /> },
             { label: "Topology Map", to: "/map", icon: <Share2 /> },
         ]
     },
     {
-        title: "Tools",
+        title: "Compute",
+        items: [
+            { label: "Execution Agents", to: "/agents", icon: <Server /> },
+            { label: "Interactive Lab", to: "/interactive-lab", icon: <Zap /> },
+        ]
+    },
+    {
+        title: "Discovery",
         items: [
             { label: "Data Explorer", to: "/explorer", icon: <Search /> },
             { label: "Standard Library", to: "/operators", icon: <Sparkles /> },
