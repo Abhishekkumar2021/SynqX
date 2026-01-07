@@ -1,12 +1,12 @@
 import time
 import requests
 import os
+import io
 import sys
 import logging
 import platform
 import socket
 import signal
-import base64
 from typing import Dict, Any
 from datetime import datetime
 from pathlib import Path
@@ -212,11 +212,29 @@ class SynqxAgent:
                     "columns": columns
                 }
                 
-                # Truncate for backend transmission (Safety Limit)
-                if len(results) > 1000:
-                    result_update["result_sample"] = {"rows": results[:1000], "is_truncated": True}
+                # PERFORMANCE: Use Arrow for efficient data transfer
+                if results:
+                    try:
+                        import polars as pl
+                        import base64
+                        
+                        # Convert to Polars and then to Arrow IPC bytes
+                        df = pl.from_dicts(results)
+                        buffer = io.BytesIO()
+                        df.write_ipc(buffer)
+                        
+                        # Encode as Base64 for JSON transport
+                        result_update["result_sample_arrow"] = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                        logger.debug(f"Serialized {len(results)} rows to Arrow ({buffer.tell()} bytes)")
+                    except Exception as e:
+                        logger.warning(f"Arrow serialization failed, falling back to JSON: {e}")
+                        # Fallback to JSON truncation for backend transmission
+                        if len(results) > 1000:
+                            result_update["result_sample"] = {"rows": results[:1000], "is_truncated": True}
+                        else:
+                            result_update["result_sample"] = {"rows": results}
                 else:
-                    result_update["result_sample"] = {"rows": results}
+                    result_update["result_sample"] = {"rows": []}
             
             elif job_type == "metadata":
                 task_type = payload.get("task_type")
@@ -235,19 +253,19 @@ class SynqxAgent:
                         
                         # Fetch sample rows for dtypes verification/parity
                         try:
-                            sample_rows = connector.fetch_sample(asset=asset, limit=5)
-                            dtypes = {}
-                            if sample_rows:
-                                # We use the first row to sniff basic types if needed, 
-                                # but usually schema['columns'] is better.
-                                # For now keep dtypes key for compatibility.
-                                dtypes = {k: type(v).__name__ for k, v in sample_rows[0].items()}
-                        except Exception:
-                            dtypes = {}
+                            results = connector.fetch_sample(asset=asset, limit=10)
+                            if results:
+                                import polars as pl
+                                import base64
+                                df = pl.from_dicts(results)
+                                buffer = io.BytesIO()
+                                df.write_ipc(buffer)
+                                result_update["result_sample_arrow"] = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                        except Exception as e:
+                            logger.debug(f"Metadata sample serialization failed: {e}")
                         
                         result_update["result_sample"] = {
-                            "schema": schema,
-                            "dtypes": dtypes
+                            "schema": schema
                         }
             
             elif job_type == "test":

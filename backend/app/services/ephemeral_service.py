@@ -1,5 +1,8 @@
 from typing import List, Optional
+import base64
+import io
 from datetime import datetime, timezone
+import polars as pl
 from sqlalchemy.orm import Session
 from app.models.ephemeral import EphemeralJob
 from app.models.enums import JobStatus, JobType
@@ -59,7 +62,22 @@ class EphemeralJobService:
         if not job:
             return None
             
+        # PERFORMANCE: Handle Arrow-serialized result sample
+        if data.result_sample_arrow:
+            try:
+                # Decode Base64 Arrow IPC data
+                raw_data = base64.b64decode(data.result_sample_arrow)
+                # Use Polars for zero-copy read from buffer
+                df = pl.read_ipc(io.BytesIO(raw_data))
+                # Convert back to JSON-compatible dict for storage/display
+                data.result_sample = {"rows": df.to_dicts()}
+            except Exception as e:
+                logger.error(f"Failed to deserialize Arrow payload for job {job_id}: {e}")
+
         update_data = data.model_dump(exclude_unset=True)
+        # result_sample_arrow is for transport only, don't persist it to DB
+        update_data.pop("result_sample_arrow", None)
+        
         for field, value in update_data.items():
             setattr(job, field, value)
             

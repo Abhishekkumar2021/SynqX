@@ -17,6 +17,7 @@ class EphemeralJobUpdate(BaseModel):
     status: Optional[JobStatus] = None
     result_summary: Optional[Dict[str, Any]] = None
     result_sample: Optional[Dict[str, Any]] = None
+    result_sample_arrow: Optional[str] = None # Base64 encoded Arrow IPC data
     error_message: Optional[str] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
