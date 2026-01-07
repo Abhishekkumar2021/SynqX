@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from uuid import UUID
-from typing import Any, Dict, List, Union
+from typing import Any
 
 def sanitize_for_json(obj: Any) -> Any:
     """

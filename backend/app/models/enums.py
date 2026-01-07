@@ -42,6 +42,7 @@ class ConnectorType(str, enum.Enum):
     # Generic
     CUSTOM_SCRIPT = "custom_script"
     SINGER_TAP = "singer_tap"
+    DBT = "dbt"
 
 class AssetType(str, enum.Enum):
     TABLE = "table"

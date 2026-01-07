@@ -35,5 +35,6 @@ _register("regex_replace", "engine.transforms.impl.regex_replace_transform", "Re
 
 # Advanced
 _register("code", "engine.transforms.impl.code_transform", "CodeTransform")
+_register("dbt", "engine.transforms.impl.dbt_transform", "DbtTransform")
 _register("noop", "engine.transforms.impl.noop_transform", "NoOpTransform")
 _register("pass_through", "engine.transforms.impl.noop_transform", "NoOpTransform")

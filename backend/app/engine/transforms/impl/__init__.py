@@ -15,6 +15,7 @@ from app.engine.transforms.impl.regex_replace_transform import RegexReplaceTrans
 from app.engine.transforms.impl.code_transform import CodeTransform
 from app.engine.transforms.impl.union_transform import UnionTransform
 from app.engine.transforms.impl.validate_transform import ValidateTransform
+from app.engine.transforms.impl.dbt_transform import DbtTransform
 from app.engine.transforms.impl.noop_transform import NoOpTransform
 
 # Register all available transforms
@@ -26,6 +27,7 @@ TransformFactory.register_transform("join", JoinTransform)
 TransformFactory.register_transform("union", UnionTransform)
 TransformFactory.register_transform("merge", MergeTransform)
 TransformFactory.register_transform("validate", ValidateTransform)
+TransformFactory.register_transform("dbt", DbtTransform)
 TransformFactory.register_transform("rename_columns", RenameColumnsTransform)
 TransformFactory.register_transform("drop_columns", DropColumnsTransform)
 TransformFactory.register_transform("deduplicate", DeduplicateTransform)

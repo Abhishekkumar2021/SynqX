@@ -338,5 +338,26 @@ export const OPERATORS: OperatorDef[] = [
   "operator_type": "noop",
   "config": {}
 }`
+    },
+    {
+        id: 'dbt_run',
+        name: 'dbt Command',
+        type: 'transform',
+        description: 'Execute dbt commands (run, test, seed) using a dbt connector.',
+        icon: PlayCircle,
+        category: 'Transformations',
+        color: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
+        configSchema: {
+            "connection_id": "integer (required)",
+            "command": "string (e.g. 'run', 'test --select my_model')"
+        },
+        example: `{ 
+  "operator_type": "transform",
+  "operator_class": "dbt",
+  "config": {
+    "connection_id": 505,
+    "command": "run --select +orders"
+  }
+}`
     }
 ];

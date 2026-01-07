@@ -143,6 +143,10 @@ export const CONNECTOR_META: Record<string, ConnectorMetadata> = {
         id: 'singer_tap', name: 'Singer Tap', description: 'Run any Singer-compliant Tap to ingest data.',
         icon: <Code />, category: 'Generic', color: "text-neutral-500 bg-neutral-500/10 border-neutral-500/20"
     },
+    dbt: {
+        id: 'dbt', name: 'dbt (Data Build Tool)', description: 'Transform data in your warehouse using SQL.',
+        icon: <Code />, category: 'Generic', color: "text-orange-500 bg-orange-500/10 border-orange-500/20"
+    },
 };
 
 export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
@@ -475,6 +479,13 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
             { name: "config", label: "Tap Config (JSON)", type: "textarea", required: true, placeholder: "{ \"api_key\": \"...\" }" },
             { name: "catalog", label: "Catalog/Properties (Optional JSON)", type: "textarea" },
             { name: "state", label: "Initial State (Optional JSON)", type: "textarea" },
+        ]
+    },
+    dbt: {
+        fields: [
+            { name: "project_path", label: "Project Path (Local)", type: "text", placeholder: "/path/to/dbt_project" },
+            { name: "git_url", label: "Git Repository URL", type: "text", placeholder: "https://github.com/org/dbt-project.git" },
+            { name: "target", label: "Target Profile", type: "text", defaultValue: "dev" },
         ]
     }
 };

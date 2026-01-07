@@ -29,5 +29,6 @@ export interface HistoryItem {
 
 export const SUPPORTED_EXPLORER_TYPES = [
     'postgresql', 'mysql', 'mariadb', 'mssql', 'oracle', 'sqlite',
-    'snowflake', 'bigquery', 'redshift', 'databricks', 'mongodb'
+    'snowflake', 'bigquery', 'redshift', 'databricks', 'mongodb',
+    'dbt'
 ];

@@ -180,7 +180,11 @@ class NodeExecutor:
 
             # TRANSFORM
             else:
-                t_config = {**config, "_on_chunk": on_chunk}
+                t_config = {
+                    **config, 
+                    "_on_chunk": on_chunk,
+                    "_connections": self.connections # Pass connections map for cross-connector tasks like dbt
+                }
                 transform = TransformFactory.get_transform(op_class, t_config)
                 
                 logger.info(f"  Applying transformation logic: '{op_class}'")

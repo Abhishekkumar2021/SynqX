@@ -421,7 +421,8 @@ class NodeExecutor:
                         "_job_id": pipeline_run.job_id,
                         "_node_id": node.id,
                         "_pipeline_id": pipeline_run.pipeline_id,
-                        "_on_chunk": on_chunk
+                        "_on_chunk": on_chunk,
+                        "_db": db # Pass DB session for backend tasks like dbt connection resolution
                     }
                     transform = TransformFactory.get_transform(node.operator_class, t_config)
                     data_iter = transform.transform_multi(input_iters)
@@ -449,7 +450,8 @@ class NodeExecutor:
                                 "_job_id": pipeline_run.job_id,
                                 "_node_id": node.id,
                                 "_pipeline_id": pipeline_run.pipeline_id,
-                                "_on_chunk": on_chunk
+                                "_on_chunk": on_chunk,
+                                "_db": db
                             }
                             transform = TransformFactory.get_transform(
                                 node.operator_class, t_config

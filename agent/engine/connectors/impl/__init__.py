@@ -53,4 +53,7 @@ _register("airtable", "engine.connectors.impl.api.airtable", "AirtableConnector"
 _register("salesforce", "engine.connectors.impl.api.salesforce", "SalesforceConnector")
 
 # Generic/Custom
+
 _register("custom_script", "engine.connectors.impl.generic.custom_script", "CustomScriptConnector")
+
+_register("dbt", "engine.connectors.impl.generic.dbt", "DbtConnector")

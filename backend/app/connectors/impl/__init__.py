@@ -28,6 +28,7 @@ from app.connectors.impl.api.google_sheets import GoogleSheetsConnector
 from app.connectors.impl.api.airtable import AirtableConnector
 from app.connectors.impl.api.salesforce import SalesforceConnector
 from app.connectors.impl.generic.custom_script import CustomScriptConnector
+from app.connectors.impl.generic.dbt import DbtConnector
 
 # Register all concrete connector implementations
 ConnectorFactory.register_connector("postgresql", PostgresConnector)
@@ -60,3 +61,4 @@ ConnectorFactory.register_connector("google_sheets", GoogleSheetsConnector)
 ConnectorFactory.register_connector("airtable", AirtableConnector)
 ConnectorFactory.register_connector("salesforce", SalesforceConnector)
 ConnectorFactory.register_connector("custom_script", CustomScriptConnector)
+ConnectorFactory.register_connector("dbt", DbtConnector)
