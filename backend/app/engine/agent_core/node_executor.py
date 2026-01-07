@@ -5,6 +5,7 @@ FILE 5: node_executor.py - Enhanced Production Node Executor
 """
 from typing import Optional, Dict, List, Tuple, Any
 import pandas as pd
+import polars as pl
 import numpy as np
 import os
 import psutil
@@ -289,6 +290,12 @@ class NodeExecutor:
                 DBLogger.log_step(db, step_run.id, "DEBUG", f"Initiating optimized stream read from {conn.connector_type.value.upper()}.", job_id=pipeline_run.job_id)
                 with connector.session() as session:
                     for chunk_idx, chunk in enumerate(session.read_batch(**read_params), 1):
+                        # PERFORMANCE: Convert to Arrow-backed dtypes for memory efficiency
+                        try:
+                            chunk = chunk.convert_dtypes(dtype_backend="pyarrow")
+                        except Exception as e:
+                            logger.debug(f"PyArrow conversion skipped for chunk: {e}")
+                            
                         on_chunk(chunk, direction="out")
                         
                         # Apply watermark filter
@@ -391,97 +398,66 @@ class NodeExecutor:
                 OperatorType.VALIDATE,
                 OperatorType.NOOP
             }:
-                # Prepare input iterators
+                # 1. Resolve Transform and Engine
+                t_config = {
+                    **node.config, 
+                    "_run_id": pipeline_run.id, 
+                    "_job_id": pipeline_run.job_id,
+                    "_node_id": node.id,
+                    "_pipeline_id": pipeline_run.pipeline_id,
+                    "_on_chunk": on_chunk,
+                    "_db": db
+                }
+                
+                try:
+                    transform = TransformFactory.get_transform(node.operator_class, t_config)
+                except Exception as e:
+                    logger.warning(f"Transform '{node.operator_class}' not found, using pass-through: {e}")
+                    transform = TransformFactory.get_transform("noop", t_config)
+                
+                engine = TransformFactory.get_engine(transform)
+                logger.info(f"  Applying {engine.upper()} transform: {node.operator_class}")
+                DBLogger.log_step(
+                    db, step_run.id, "INFO",
+                    f"Applying {engine.upper()} transformation logic: '{node.operator_class}'.",
+                    job_id=pipeline_run.job_id
+                )
+
+                # 2. Prepare input iterators with automatic engine conversion
                 input_iters = {}
                 for uid, chunks in (input_data or {}).items():
-                    logger.debug(f"  Input from '{uid}': {len(chunks)} chunks")
-                    
-                    def make_it(c):
+                    def make_it(c, target_engine):
                         for chunk in c:
                             on_chunk(chunk, direction="in")
-                            yield chunk
+                            # Convert engine if necessary (Zero-copy Arrow where possible)
+                            if target_engine == "polars" and isinstance(chunk, pd.DataFrame):
+                                yield pl.from_pandas(chunk)
+                            elif target_engine == "pandas" and isinstance(chunk, pl.DataFrame):
+                                yield chunk.to_pandas()
+                            else:
+                                yield chunk
                     
-                    input_iters[uid] = make_it(chunks)
+                    input_iters[uid] = make_it(chunks, engine)
                 
-                # Execute transform logic
+                # 3. Execute
                 data_iter = None
-                
                 if op_type in {OperatorType.JOIN, OperatorType.UNION, OperatorType.MERGE}:
-                    logger.info(f"  Applying multi-input operation: {op_type.value.upper()}")
-                    DBLogger.log_step(
-                        db, step_run.id, "INFO",
-                        f"Executing multi-stream fusion operation: {op_type.value.upper()}.",
-                        job_id=pipeline_run.job_id
-                    )
-                    
-                    # Inject run-time context for advanced features
-                    t_config = {
-                        **node.config, 
-                        "_run_id": pipeline_run.id, 
-                        "_job_id": pipeline_run.job_id,
-                        "_node_id": node.id,
-                        "_pipeline_id": pipeline_run.pipeline_id,
-                        "_on_chunk": on_chunk,
-                        "_db": db # Pass DB session for backend tasks like dbt connection resolution
-                    }
-                    transform = TransformFactory.get_transform(node.operator_class, t_config)
                     data_iter = transform.transform_multi(input_iters)
-                
                 else:
-                    # Single input transform
-                    if not input_iters:
-                        logger.warning("  No input data for transform node")
-                        DBLogger.log_step(db, step_run.id, "WARNING", "No upstream input data detected. Initializing empty stream.", job_id=pipeline_run.job_id)
-                        data_iter = iter([])
-                    else:
-                        upstream_it = next(iter(input_iters.values()))
-                        
-                        try:
-                            logger.info(f"  Applying transform: {node.operator_class}")
-                            DBLogger.log_step(
-                                db, step_run.id, "INFO",
-                                f"Applying transformation logic: '{node.operator_class}'.",
-                                job_id=pipeline_run.job_id
-                            )
-                            # Inject run-time context for advanced features
-                            t_config = {
-                                **node.config, 
-                                "_run_id": pipeline_run.id, 
-                                "_job_id": pipeline_run.job_id,
-                                "_node_id": node.id,
-                                "_pipeline_id": pipeline_run.pipeline_id,
-                                "_on_chunk": on_chunk,
-                                "_db": db
-                            }
-                            transform = TransformFactory.get_transform(
-                                node.operator_class, t_config
-                            )
-                            data_iter = transform.transform(upstream_it)
-                        
-                        except Exception as e:
-                            logger.warning(
-                                f"  Transform '{node.operator_class}' not found or failed to initialize, "
-                                f"using pass-through: {e}"
-                            )
-                            DBLogger.log_step(
-                                db, step_run.id, "WARNING",
-                                f"Logic implementation '{node.operator_class}' failed to initialize (falling back to direct pass-through): {str(e)}",
-                                job_id=pipeline_run.job_id
-                            )
-                            data_iter = upstream_it
+                    upstream_it = next(iter(input_iters.values())) if input_iters else iter([])
+                    data_iter = transform.transform(upstream_it)
                 
-                # Materialize results
+                # 4. Materialize results
                 chunk_count = 0
                 for chunk in data_iter:
                     chunk_count += 1
+                    # Ensure metadata is captured in Pandas format for forensics/telemetry if needed, 
+                    # but on_chunk handles both.
                     on_chunk(chunk, direction="out")
                     results.append(chunk)
                     
                     if chunk_count % 10 == 0:
                         logger.debug(f"    Processed {chunk_count} chunks, {stats['out']:,} rows")
-                
-                logger.info(f"  ✓ Transform complete: {stats['out']:,} rows, {chunk_count} chunks")
-                DBLogger.log_step(db, step_run.id, "SUCCESS", f"Transformation complete. Materialized {stats['out']:,} total records across {chunk_count} memory chunks.", job_id=pipeline_run.job_id)
             
             # =====================================================================
             # Finalize Success

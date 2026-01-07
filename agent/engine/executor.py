@@ -1,4 +1,5 @@
 import pandas as pd
+import polars as pl
 import logging
 import concurrent.futures
 import threading
@@ -153,6 +154,12 @@ class NodeExecutor:
                 logger.info(f"  Streaming read from {conn_data['type'].upper()} entity: '{asset_name}'")
                 with connector.session():
                     for chunk in connector.read_batch(asset=asset_name, **config):
+                        # PERFORMANCE: Convert to Arrow-backed dtypes
+                        try:
+                            chunk = chunk.convert_dtypes(dtype_backend="pyarrow")
+                        except Exception:
+                            pass
+                            
                         on_chunk(chunk, direction="out")
                         results.append(chunk)
 
@@ -183,18 +190,37 @@ class NodeExecutor:
                 t_config = {
                     **config, 
                     "_on_chunk": on_chunk,
-                    "_connections": self.connections # Pass connections map for cross-connector tasks like dbt
+                    "_connections": self.connections
                 }
-                transform = TransformFactory.get_transform(op_class, t_config)
                 
-                logger.info(f"  Applying transformation logic: '{op_class}'")
+                try:
+                    transform = TransformFactory.get_transform(op_class, t_config)
+                except Exception as e:
+                    logger.warning(f"Transform '{op_class}' not found, using pass-through: {e}")
+                    transform = TransformFactory.get_transform("noop", t_config)
+                
+                engine = TransformFactory.get_engine(transform)
+                logger.info(f"  Applying {engine.upper()} transformation: '{op_class}'")
+
+                # Prepare input iterators with engine conversion
+                input_iters = {}
+                for uid, chunks in inputs.items():
+                    def make_it(c, target_engine):
+                        for chunk in c:
+                            on_chunk(chunk, direction="in")
+                            if target_engine == "polars" and isinstance(chunk, pd.DataFrame):
+                                yield pl.from_pandas(chunk)
+                            elif target_engine == "pandas" and isinstance(chunk, pl.DataFrame):
+                                yield chunk.to_pandas()
+                            else:
+                                yield chunk
+                    input_iters[uid] = make_it(chunks, engine)
+                
                 if op_type in ["join", "union", "merge"]:
-                    input_map = {uid: iter(chunks) for uid, chunks in inputs.items()}
-                    # Join/Union implementations handle on_chunk internally via t_config
-                    data_iter = transform.transform_multi(input_map)
+                    data_iter = transform.transform_multi(input_iters)
                 else:
-                    first_input = next(iter(inputs.values())) if inputs else []
-                    data_iter = transform.transform(iter(first_input))
+                    upstream_it = next(iter(input_iters.values())) if input_iters else iter([])
+                    data_iter = transform.transform(upstream_it)
                 
                 for chunk in data_iter:
                     on_chunk(chunk, direction="out")

@@ -31,7 +31,7 @@ class ForensicSniffer:
     """
 
     MAX_ROWS_PER_FILE = 5000000  # Increased to 5M for better data capture coverage
-    COMPRESSION = "SNAPPY"  # fastparquet uses uppercase
+    COMPRESSION = "snappy"  # pyarrow uses lowercase
 
     def __init__(self, run_id: int):
         self.run_id = run_id
@@ -46,6 +46,7 @@ class ForensicSniffer:
         self._write_lock = threading.Lock()
         self._row_counts: Dict[str, int] = {}
         self._metadata: Dict[str, Dict] = {}
+        self._writers: Dict[str, Any] = {} # Keep writers open for active session performance
 
         logger.debug(f"ForensicSniffer initialized at {self.base_dir}")
         self._write_metadata()
@@ -58,13 +59,15 @@ class ForensicSniffer:
         metadata: Optional[Dict] = None,
     ):
         """
-        Thread-safe chunk capture with optimized batching using fastparquet appends.
+        Thread-safe chunk capture with optimized batching using native PyArrow writers.
         """
         if chunk.empty:
             return
 
         try:
-            import fastparquet
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+            
             file_path = os.path.join(
                 self.base_dir, f"node_{node_id}_{direction}.parquet"
             )
@@ -76,7 +79,6 @@ class ForensicSniffer:
                 # Initialize row count from file if not in memory (e.g. distributed workers)
                 if current_rows == 0 and os.path.exists(file_path):
                     try:
-                        import pyarrow.parquet as pq
                         current_rows = pq.read_metadata(file_path).num_rows
                         self._row_counts[file_key] = current_rows
                     except Exception:
@@ -96,17 +98,19 @@ class ForensicSniffer:
                 if rows_to_add == 0:
                     return
 
-                file_exists = os.path.exists(file_path)
+                # Convert to Arrow Table
+                table = pa.Table.from_pandas(chunk_to_write, preserve_index=False)
                 
-                # Use fastparquet for efficient appends
-                # Note: fastparquet requires 'append' to be True for subsequent writes
-                fastparquet.write(
-                    file_path, 
-                    chunk_to_write, 
-                    append=file_exists, 
-                    compression=self.COMPRESSION,
-                    write_index=False
-                )
+                # Use pq.ParquetWriter for efficient streaming appends
+                if file_key not in self._writers:
+                    # Initialize writer
+                    self._writers[file_key] = pq.ParquetWriter(
+                        file_path, 
+                        table.schema, 
+                        compression=self.COMPRESSION
+                    )
+                
+                self._writers[file_key].write_table(table)
                 
                 new_count = current_rows + rows_to_add
                 self._row_counts[file_key] = new_count
@@ -252,12 +256,26 @@ class ForensicSniffer:
 
     def cleanup(self):
         """Clean up forensic data for this run"""
+        self.close() # Ensure writers are closed before deletion
         try:
             if os.path.exists(self.base_dir):
                 shutil.rmtree(self.base_dir)
                 logger.info(f"Cleaned up forensic data for run {self.run_id}")
         except Exception as e:
             logger.error(f"Failed to cleanup forensic data: {e}")
+
+    def close(self):
+        """Finalize all open parquet writers"""
+        with self._write_lock:
+            for key, writer in self._writers.items():
+                try:
+                    writer.close()
+                except Exception as e:
+                    logger.debug(f"Error closing forensic writer {key}: {e}")
+            self._writers.clear()
+
+    def __del__(self):
+        self.close()
 
     @staticmethod
     def cleanup_all():

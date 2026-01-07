@@ -16,10 +16,12 @@ def _register(name, module_path, class_name):
 
 # Core Transforms
 _register("pandas_transform", "engine.transforms.impl.pandas_transform", "PandasTransform")
-_register("filter", "engine.transforms.impl.filter_transform", "FilterTransform")
+_register("filter", "engine.transforms.impl.filter_polars", "FilterPolarsTransform")
+_register("pandas_filter", "engine.transforms.impl.filter_transform", "FilterTransform")
 _register("map", "engine.transforms.impl.map_transform", "MapTransform")
 _register("aggregate", "engine.transforms.impl.aggregate_transform", "AggregateTransform")
-_register("join", "engine.transforms.impl.join_transform", "JoinTransform")
+_register("join", "engine.transforms.impl.join_polars", "JoinPolarsTransform")
+_register("pandas_join", "engine.transforms.impl.join_transform", "JoinTransform")
 _register("union", "engine.transforms.impl.union_transform", "UnionTransform")
 _register("merge", "engine.transforms.impl.merge_transform", "MergeTransform")
 _register("validate", "engine.transforms.impl.validate_transform", "ValidateTransform")
@@ -27,7 +29,8 @@ _register("validate", "engine.transforms.impl.validate_transform", "ValidateTran
 # Cleaning & Shaping
 _register("rename_columns", "engine.transforms.impl.rename_columns_transform", "RenameColumnsTransform")
 _register("drop_columns", "engine.transforms.impl.drop_columns_transform", "DropColumnsTransform")
-_register("deduplicate", "engine.transforms.impl.deduplicate_transform", "DeduplicateTransform")
+_register("deduplicate", "engine.transforms.impl.deduplicate_polars", "DeduplicatePolarsTransform")
+_register("pandas_deduplicate", "engine.transforms.impl.deduplicate_transform", "DeduplicateTransform")
 _register("fill_nulls", "engine.transforms.impl.fill_nulls_transform", "FillNullsTransform")
 _register("sort", "engine.transforms.impl.sort_transform", "SortTransform")
 _register("type_cast", "engine.transforms.impl.type_cast_transform", "TypeCastTransform")
