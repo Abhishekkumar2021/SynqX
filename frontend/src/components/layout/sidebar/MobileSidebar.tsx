@@ -6,8 +6,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { NavGroup } from '../navigation/NavGroup';
 import { NavItem } from '../navigation/NavItem';
+import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { DocsSidebar } from '../navigation/DocsSidebar';
 import { NAV_STRUCTURE } from '@/lib/main-nav';
@@ -126,9 +126,9 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isMobileMenuOpen, 
                                     </div>
                                 </div>
                             ) : (
-                                <nav className="flex flex-col w-full" aria-label="Main navigation">
-                                    {NAV_STRUCTURE.map((group) => (
-                                        <NavGroup key={group.title} collapsed={false} title={group.title}>
+                                <nav className="flex flex-col w-full gap-2" aria-label="Main navigation">
+                                    {NAV_STRUCTURE.map((group, groupIndex) => (
+                                        <div key={group.title} className="flex flex-col">
                                             <div className="flex flex-col">
                                                 {group.items.map((item) => (
                                                     <NavItem 
@@ -141,7 +141,10 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isMobileMenuOpen, 
                                                     />
                                                 ))}
                                             </div>
-                                        </NavGroup>
+                                            {groupIndex < NAV_STRUCTURE.length - 1 && (
+                                                <Separator className="my-2 bg-border/40" />
+                                            )}
+                                        </div>
                                     ))}
                                 </nav>
                             )}
