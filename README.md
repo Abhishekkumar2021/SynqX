@@ -7,13 +7,13 @@
 
 **SynqX** is an open-source, production-ready platform designed to simplify the orchestration of complex data workflows. By treating pipelines as **versioned, immutable logic objects** and providing deep, **real-time observability**, SynqX ensures data reliability at scale.
 
-## 🌟 Mission
+## Mission
 
 To eliminate the "Black Box" nature of traditional ETL. SynqX provides engineers with high-fidelity visibility into their data's journey—from extraction to destination—transforming fragile scripts into robust, observable engineering assets.
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 SynqX employs a decoupled, event-driven architecture designed for high availability and horizontal scalability.
 
@@ -39,20 +39,20 @@ graph TD
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-### 🧠 Intelligent Orchestration
+### Intelligent Orchestration
 *   **Immutable Pipelines**: Every change to a pipeline creates a new immutable version. Instantly rollback to any previous snapshot if a production run fails.
 *   **Visual DAG Editor**: Design complex dependency graphs with a drag-and-drop interface powered by React Flow.
 *   **Smart Scheduling**: Integrated Cron-based scheduling with timezone awareness and catch-up policies.
 *   **GitOps & Version Control**: Import and export pipelines as YAML manifests for version control, CI/CD integration, and easy sharing between environments.
 
-### 🔍 Deep Forensics & Observability
+### Deep Forensics & Observability
 *   **Real-time Telemetry**: Watch execution logs stream live via WebSockets as they happen.
 *   **Data Sniffing**: Inspect sample data snapshots at *each node boundary* to identify transformation bugs before they propagate.
 *   **Metric Tracking**: detailed CPU, memory, and duration metrics for every step of the pipeline.
 
-### 🔌 Universal Connectivity
+### Universal Connectivity
 *   **Standardized Assets**: Abstracts physical systems (SQL tables, S3 files, API endpoints) into logical "Assets" with a unified naming convention.
 *   **Broad Support**:
     *   **Relational**: PostgreSQL, MySQL, MariaDB, Oracle, SQL Server (MSSQL), SQLite.
@@ -61,11 +61,11 @@ graph TD
     *   **NoSQL & Streaming**: MongoDB, Redis, Cassandra, DynamoDB, Elasticsearch, Kafka, RabbitMQ.
     *   **SaaS APIs**: Generic REST, GraphQL, Salesforce, Airtable, Google Sheets.
 
-### 🛠️ Powerful Transformations
+### Powerful Transformations
 *   **Low-Code Modules**: Filter, Map, TypeCast, Join, Union, Merge, Aggregate (GroupBy), Sort, Deduplicate, RegexReplace, FillNulls, DropColumns.
 *   **Code-First**: Execute custom Python/Pandas logic for complex transformations that go beyond standard operators.
 
-### 🛡️ Enterprise-Grade Security & Governance
+### Enterprise-Grade Security & Governance
 *   **The Vault**: Application-layer AES-256 encryption ensures credentials never leak, even if the underlying database is compromised. Decryption occurs only in volatile memory.
 *   **Multi-Tenancy**: Isolate teams, projects, and environments with secure, self-contained Workspaces.
 *   **Role-Based Access Control (RBAC)**: Fine-grained permissions (Admin, Editor, Viewer) for every action, from pipeline creation to workspace administration.
@@ -73,7 +73,7 @@ graph TD
 
 ---
 
-## ⚡ Tech Stack
+## Tech Stack
 
 | Component | Technology | Description |
 | :--- | :--- | :--- |
@@ -87,7 +87,7 @@ graph TD
 
 ---
 
-## 🏁 Quick Start
+## Quick Start
 
 The easiest way to get started is using the unified management script, which handles environment checks and service orchestration.
 
@@ -154,7 +154,7 @@ python -m scripts.synqx_admin users create --superuser
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 | Module | Description | Path |
 | :--- | :--- | :--- |
@@ -166,10 +166,10 @@ python -m scripts.synqx_admin users create --superuser
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to submit pull requests, report issues, and request features.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -63,7 +63,7 @@ class SynqxAgent:
 
         if not self.client_id or not self.api_key:
             if not self.headless:
-                console.print("[bold red]❌ Critical Error:[/bold red] Agent not configured.")
+                console.print("[bold red][CRITICAL] Error:[/bold red] Agent not configured.")
                 console.print("Run [bold cyan]synqx-agent configure[/bold cyan] to set up credentials.")
             # In interactive mode we don't want to exit immediately if possible, 
             # but for the Agent class itself, it needs config. 
@@ -86,7 +86,7 @@ class SynqxAgent:
         signal.signal(signal.SIGTERM, self._handle_exit)
 
     def _handle_exit(self, signum, frame):
-        logger.info("🛑 Shutdown signal received. Cleaning up...")
+        logger.info("[STOP] Shutdown signal received. Cleaning up...")
         self.running = False
         try:
             payload = {
@@ -127,14 +127,14 @@ class SynqxAgent:
         dag_data = payload["dag"]
         connections = payload.get("connections", {})
         
-        logger.info(f"🚀 Initializing Pipeline Job #{job_id}")
+        logger.info(f"[START] Initializing Pipeline Job #{job_id}")
         self.report_job_status(job_id, "running", "Orchestrating high-fidelity parallel execution plan")
         
         start_time = time.time()
         
         try:
             # 0. PERFORMANCE: Apply Static Optimizations (ELT Pushdown)
-            logger.info(f"🔍 Analyzing pipeline topology for Job #{job_id}...")
+            logger.info(f"[INFO] Analyzing pipeline topology for Job #{job_id}...")
             StaticOptimizer.optimize(dag_data['nodes'], dag_data['edges'], connections)
 
             # 1. Reconstruct High-Fidelity DAG
@@ -167,10 +167,10 @@ class SynqxAgent:
                 duration_ms, 
                 run_stats['total_records']
             )
-            logger.info(f"✅ Pipeline Job #{job_id} finalized successfully in {duration_ms}ms")
+            logger.info(f"[SUCCESS] Pipeline Job #{job_id} finalized successfully in {duration_ms}ms")
 
         except Exception as e:
-            logger.exception(f"❌ Pipeline Job #{job_id} ABORTED")
+            logger.exception(f"[FAILED] Pipeline Job #{job_id} ABORTED")
             duration_ms = int((time.time() - start_time) * 1000)
             self.report_job_status(job_id, "failed", f"Terminal execution fault: {str(e)}", duration_ms)
 
@@ -180,7 +180,7 @@ class SynqxAgent:
         payload = data["payload"]
         conn_data = data.get("connection")
         
-        logger.info(f"⚡ Processing Ephemeral {job_type.upper()} Request #{job_id}")
+        logger.info(f"[INFO] Processing Ephemeral {job_type.upper()} Request #{job_id}")
         start_time = time.time()
         
         try:
@@ -357,10 +357,10 @@ class SynqxAgent:
             safe_result = sanitize_for_json(result_update)
             
             requests.post(f"{self.api_url}/agents/jobs/ephemeral/{job_id}/status", json=safe_result, headers=self.headers, timeout=10)
-            logger.info(f"✅ Ephemeral Request #{job_id} finalized successfully.")
+            logger.info(f"[SUCCESS] Ephemeral Request #{job_id} finalized successfully.")
 
         except Exception as e:
-            logger.exception(f"❌ Ephemeral Request #{job_id} FAILED")
+            logger.exception(f"[FAILED] Ephemeral Request #{job_id} FAILED")
             duration_ms = int((time.time() - start_time) * 1000)
             requests.post(f"{self.api_url}/agents/jobs/ephemeral/{job_id}/status", json={"status": "failed", "error_message": f"Interactive task failure: {str(e)}", "execution_time_ms": duration_ms}, headers=self.headers, timeout=10)
 
@@ -411,7 +411,7 @@ class SynqxAgent:
         with open(PID_FILE, "w") as f:
             f.write(str(os.getpid()))
             
-        logger.info(f"📡 SynqX Agent Online. ID: {self.client_id} (PID: {os.getpid()})")
+        logger.info(f"[ONLINE] SynqX Agent Online. ID: {self.client_id} (PID: {os.getpid()})")
         while self.running:
             if time.time() - self.last_heartbeat > 30:
                 self.heartbeat()
@@ -446,7 +446,7 @@ def _do_start(interactive=False):
         f"[bold blue]SynqX Agent[/bold blue] v1.0.0\n"
         f"ID: [green]{os.getenv('SYNQX_CLIENT_ID')}[/green]\n"
         f"API: [cyan]{os.getenv('SYNQX_API_URL')}[/cyan]",
-        title="🚀 Agent Startup",
+        title="Agent Startup",
         border_style="blue"
     ))
     
@@ -468,7 +468,7 @@ def start():
 
 def _do_stop(interactive=False):
     if not PID_FILE.exists():
-        console.print("[red]❌ No running agent found (no .agent.pid file).[/red]")
+        console.print("[red][ERROR] No running agent found (no .agent.pid file).[/red]")
         if not interactive:
             raise typer.Exit(1)
         return
@@ -477,7 +477,7 @@ def _do_stop(interactive=False):
         with open(PID_FILE, "r") as f:
             pid = int(f.read().strip())
         
-        console.print(f"🛑 Stopping Agent (PID: {pid})...")
+        console.print(f"[STOP] Stopping Agent (PID: {pid})...")
         os.kill(pid, signal.SIGTERM)
         
         with Progress(
@@ -496,10 +496,10 @@ def _do_stop(interactive=False):
             os.kill(pid, signal.SIGKILL)
             PID_FILE.unlink()
         else:
-            console.print("[bold green]✅ Agent stopped successfully.[/bold green]")
+            console.print("[bold green][SUCCESS] Agent stopped successfully.[/bold green]")
 
     except ProcessLookupError:
-        console.print("[yellow]⚠️ Process not found. Cleaning up PID file.[/yellow]")
+        console.print("[yellow][WARN] Process not found. Cleaning up PID file.[/yellow]")
         PID_FILE.unlink()
     except Exception as e:
         console.print(f"[bold red]Error stopping agent:[/bold red] {e}")
@@ -523,7 +523,7 @@ def _do_configure():
     set_key(str(ENV_FILE), "SYNQX_API_KEY", api_key)
     set_key(str(ENV_FILE), "SYNQX_TAGS", tags)
     
-    console.print(f"\n[bold green]✅ Configuration saved to {ENV_FILE}[/bold green]")
+    console.print(f"\n[bold green][SUCCESS] Configuration saved to {ENV_FILE}[/bold green]")
 
 @app.command()
 def configure(
@@ -539,7 +539,7 @@ def configure(
     set_key(str(ENV_FILE), "SYNQX_CLIENT_ID", client_id)
     set_key(str(ENV_FILE), "SYNQX_API_KEY", api_key)
     set_key(str(ENV_FILE), "SYNQX_TAGS", tags)
-    console.print(f"\n[bold green]✅ Configuration saved to {ENV_FILE}[/bold green]")
+    console.print(f"\n[bold green][SUCCESS] Configuration saved to {ENV_FILE}[/bold green]")
 
 def _do_status():
     table = Table(title="Agent Status Diagnostic")

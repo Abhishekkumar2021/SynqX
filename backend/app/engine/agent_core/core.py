@@ -55,10 +55,10 @@ class ParallelExecutionLayer:
                     node, pipeline_run, data_cache, dag, state_manager, job_id
                 )
                 results[node.node_id] = result
-                logger.info(f"✓ Node '{node.name}' completed ({len(result)} chunks)")
+                logger.info(f"[SUCCESS] Node '{node.name}' completed ({len(result)} chunks)")
             except Exception as e:
                 errors.append((node.name, e))
-                logger.error(f"✗ Node '{node.name}' failed: {e}", exc_info=True)
+                logger.error(f"[FAILED] Node '{node.name}' failed: {e}", exc_info=True)
         else:
             # Multiple nodes - parallel execution
             actual_workers = min(self.max_workers, len(nodes))
@@ -91,17 +91,17 @@ class ParallelExecutionLayer:
                         result = future.result(timeout=timeout)
                         results[node.node_id] = result
                         logger.info(
-                            f"✓ Node '{node.name}' completed ({len(result)} chunks)"
+                            f"[SUCCESS] Node '{node.name}' completed ({len(result)} chunks)"
                         )
                     except concurrent.futures.TimeoutError:
                         errors.append(
                             (node.name, Exception(f"Execution timeout reached ({timeout}s)"))
                         )
-                        logger.error(f"✗ Node '{node.name}' timed out after {timeout}s")
+                        logger.error(f"[FAILED] Node '{node.name}' timed out after {timeout}s")
                     except Exception as e:
                         errors.append((node.name, e))
                         logger.error(
-                            f"✗ Node '{node.name}' failed: {e}", exc_info=True
+                            f"[FAILED] Node '{node.name}' failed: {e}", exc_info=True
                         )
 
         if errors:
@@ -270,7 +270,7 @@ class PipelineAgent:
         try:
             order = dag.topological_sort()
             logger.info(
-                f"✓ DAG validation successful (topological order: {len(order)} nodes)"
+                f"[SUCCESS] DAG validation successful (topological order: {len(order)} nodes)"
             )
         except DagCycleError as e:
             raise ConfigurationError(

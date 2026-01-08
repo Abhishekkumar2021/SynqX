@@ -13,22 +13,22 @@ required = ['pydantic', 'pydantic-settings', 'pandas', 'sqlalchemy', 'requests']
 for req in required:
     try:
         ver = pkg_resources.get_distribution(req).version
-        print(f"✅ {req}: {ver}")
+        print(f"[OK] {req}: {ver}")
     except pkg_resources.DistributionNotFound:
-        print(f"❌ {req}: NOT FOUND")
+        print(f"[ERROR] {req}: NOT FOUND")
 
 print("\n--- Import Tests ---")
 try:
     import pydantic
-    print(f"✅ pydantic imported from {pydantic.__file__}")
+    print(f"[OK] pydantic imported from {pydantic.__file__}")
 except ImportError as e:
-    print(f"❌ pydantic import failed: {e}")
+    print(f"[ERROR] pydantic import failed: {e}")
 
 try:
     import pydantic_settings
-    print(f"✅ pydantic_settings imported from {pydantic_settings.__file__}")
+    print(f"[OK] pydantic_settings imported from {pydantic_settings.__file__}")
 except ImportError as e:
-    print(f"❌ pydantic_settings import failed: {e}")
+    print(f"[ERROR] pydantic_settings import failed: {e}")
 
 # Try to replicate the agent's import logic
 agent_dir = os.path.dirname(os.path.abspath(__file__))
@@ -40,10 +40,10 @@ try:
     print("Attempting to import engine.connectors.impl.files.local...")
     from importlib.util import find_spec
     if find_spec("engine.connectors.impl.files.local"):
-        print("✅ engine.connectors.impl.files.local spec found.")
+        print("[OK] engine.connectors.impl.files.local spec found.")
     else:
-        print("❌ engine.connectors.impl.files.local spec NOT found.")
+        print("[ERROR] engine.connectors.impl.files.local spec NOT found.")
 except ImportError as e:
-    print(f"❌ Failed to import engine.connectors.impl.files.local: {e}")
+    print(f"[ERROR] Failed to import engine.connectors.impl.files.local: {e}")
 except Exception as e:
-    print(f"❌ Unexpected error during import: {e}")
+    print(f"[ERROR] Unexpected error during import: {e}")

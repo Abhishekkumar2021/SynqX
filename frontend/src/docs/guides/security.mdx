@@ -46,9 +46,9 @@ SynqX defines three distinct roles to enforce the principle of least privilege:
 
 | Role | Permissions | Description |
 | :--- | :--- | :--- |
-| 👁️ **Viewer** | `Read-Only` | Can view all pipelines, connections, assets, and execution history within the workspace. Cannot make any changes. |
-| ✍️ **Editor** | `Read & Write` | Has all Viewer permissions, plus the ability to create, update, and trigger pipelines, connections, and assets. |
-| 👑 **Admin** | `Full Control` | Has all Editor permissions, plus the ability to manage workspace settings, invite or remove members, and delete resources. |
+| **Viewer** | `Read-Only` | Can view all pipelines, connections, assets, and execution history within the workspace. Cannot make any changes. |
+| **Editor** | `Read & Write` | Has all Viewer permissions, plus the ability to create, update, and trigger pipelines, connections, and assets. |
+| **Admin** | `Full Control` | Has all Editor permissions, plus the ability to manage workspace settings, invite or remove members, and delete resources. |
 
 **Enforcement**: These roles are checked by the API gateway for every incoming request, ensuring that no user can perform an action they are not authorized for.
 

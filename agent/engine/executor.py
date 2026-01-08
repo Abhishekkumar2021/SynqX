@@ -114,7 +114,7 @@ class NodeExecutor:
         config.pop("ui", None)
         config.pop("connection_id", None)
         
-        logger.info(f"→ Initializing node '{node_id}' ({op_type.upper()}/{op_class})")
+        logger.info(f"[INIT] Initializing node '{node_id}' ({op_type.upper()}/{op_class})")
         
         stats = {"in": 0, "out": 0, "error": 0, "bytes": 0}
         samples = {}
@@ -218,7 +218,7 @@ class NodeExecutor:
                             if stmt.strip():
                                 connector.execute_query(stmt.strip())
                     stats["out"] = 0
-                    logger.info("  ✓ Native ELT command completed.")
+                    logger.info("  [SUCCESS] Native ELT command completed.")
                 else:
                     asset_name = config.get("table") or config.get("target_table") or "synqx_output"
                     
@@ -296,7 +296,7 @@ class ParallelAgent:
         
         try:
             for i, layer_nodes_ids in enumerate(layers):
-                log_cb(f"🚀 Execution Stage {i+1}/{len(layers)} initiated")
+                log_cb(f"[START] Execution Stage {i+1}/{len(layers)} initiated")
                 with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as pool:
                     futures = {}
                     for nid in layer_nodes_ids:
@@ -316,7 +316,7 @@ class ParallelAgent:
                             self.metrics.completed_nodes += 1
                             total_rows = sum(len(df) for df in chunks)
                             self.metrics.total_records_processed += total_rows
-                            log_cb(f"✅ Node '{nid}' finalized successfully. [{total_rows:,} records processed]", nid)
+                            log_cb(f"[SUCCESS] Node '{nid}' finalized successfully. [{total_rows:,} records processed]", nid)
                             if status_cb:
                                 status_cb(nid, "success", {
                                     "records_out": total_rows,
@@ -324,7 +324,7 @@ class ParallelAgent:
                                 })
                         except Exception as e:
                             self.metrics.failed_nodes += 1
-                            log_cb(f"❌ Node '{nid}' aborted due to a terminal error: {str(e)}", nid)
+                            log_cb(f"[FAILED] Node '{nid}' aborted due to a terminal error: {str(e)}", nid)
                             if status_cb:
                                 status_cb(nid, "failed", {"error_message": str(e)})
                             raise e

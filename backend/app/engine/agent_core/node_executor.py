@@ -352,7 +352,7 @@ class NodeExecutor:
                     self._persist_watermark(
                         pipeline_run.pipeline_id, asset.id, wm_col, max_val
                     )
-                    logger.info(f"  ✓ New watermark persisted: {max_val}")
+                    logger.info(f"  [SUCCESS] New watermark persisted: {max_val}")
                     DBLogger.log_step(
                         db, step_run.id, "SUCCESS",
                         f"Data extraction complete. Synchronized {stats['out']:,} new records. High-watermark updated to: {max_val}.",
@@ -398,7 +398,7 @@ class NodeExecutor:
                     # For pushdown, records processed is often unknown or the full source count
                     # We'll set a success flag
                     stats["out"] = 0 
-                    logger.info("  ✓ Native ELT command completed.")
+                    logger.info("  [SUCCESS] Native ELT command completed.")
                     DBLogger.log_step(db, step_run.id, "SUCCESS", "Native database synchronization finalized successfully.", job_id=pipeline_run.job_id)
                 else:
                     # Prepare sink stream
@@ -431,7 +431,7 @@ class NodeExecutor:
                         )
                         stats["out"] = records_out
                     
-                    logger.info(f"  ✓ Loaded {records_out:,} records")
+                    logger.info(f"  [SUCCESS] Loaded {records_out:,} records")
                     DBLogger.log_step(db, step_run.id, "SUCCESS", f"Load phase complete. Successfully committed {records_out:,} records to destination.", job_id=pipeline_run.job_id)
             
             # =====================================================================
@@ -526,7 +526,7 @@ class NodeExecutor:
             )
             
             duration = step_run.duration_seconds or 0
-            logger.info(f"← Node '{node.name}' completed successfully")
+            logger.info(f"[SUCCESS] Node '{node.name}' completed successfully")
             logger.info(f"  Inbound: {stats['in']:,} | Outbound: {stats['out']:,} | Quarantined: {stats['error']:,}")
             logger.info(f"  Efficiency: {duration:.2f}s | CPU: {cpu:.1f}% | Memory: {mem:.1f}MB")
             
@@ -561,7 +561,7 @@ class NodeExecutor:
                 e
             )
             
-            logger.error(f"✗ Node '{node.name}' FAILED: {str(e)}", exc_info=True)
+            logger.error(f"[FAILED] Node '{node.name}' FAILED: {str(e)}", exc_info=True)
             DBLogger.log_step(db, step_run.id, "ERROR", f"Terminal execution fault in node '{node.name}': {str(e)}", job_id=pipeline_run.job_id)
             
             raise e

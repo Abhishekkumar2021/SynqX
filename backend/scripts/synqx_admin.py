@@ -56,10 +56,10 @@ def get_db_session():
         task = progress.add_task("[cyan]Connecting to database...", total=None)
         try:
             db = SessionLocal()
-            progress.update(task, completed=True, description="[green]✓ Connected to database")
+            progress.update(task, completed=True, description="[green][OK] Connected to database")
             yield db
         except Exception as e:
-            progress.update(task, description=f"[red]✗ Database connection failed: {e}")
+            progress.update(task, description=f"[red][ERROR] Database connection failed: {e}")
             raise
         finally:
             if db:
@@ -75,11 +75,11 @@ def create_user(
 ):
     """Creates a new user and a personal workspace for them."""
     with get_db_session() as db:
-        console.print("\n[bold cyan]✨ Creating New User...[/bold cyan]\n")
+        console.print("\n[bold cyan][NEW] Creating New User...[/bold cyan]\n")
 
         # Check if user exists
         if db.query(User).filter(User.email == email).first():
-            console.print(f"[red]✗ Error: User with email [bold]{email}[/bold] already exists.[/red]")
+            console.print(f"[red][ERROR] Error: User with email [bold]{email}[/bold] already exists.[/red]")
             raise typer.Exit(code=1)
 
         # Secure password input
@@ -89,7 +89,7 @@ def create_user(
         password_confirm = getpass.getpass("→ ")
 
         if password != password_confirm:
-            console.print("\n[red]✗ Error: Passwords do not match.[/red]")
+            console.print("\n[red][ERROR] Error: Passwords do not match.[/red]")
             raise typer.Exit(code=1)
 
         with Progress(
@@ -118,7 +118,7 @@ def create_user(
                 user.active_workspace_id = workspace.id
                 db.commit()
 
-                progress.update(task, description="[green]✓ User created successfully!")
+                progress.update(task, description="[green][SUCCESS] User created successfully!")
                 
                 # Show summary
                 summary = Table(title="[bold]User Creation Summary[/bold]", box=box.ROUNDED, show_header=False)
@@ -132,7 +132,7 @@ def create_user(
 
             except Exception as e:
                 db.rollback()
-                progress.update(task, description=f"[red]✗ Error: {e}")
+                progress.update(task, description=f"[red][ERROR] Error: {e}")
                 console.print(f"\n[red]Failed to create user: {e}[/red]")
                 raise typer.Exit(code=1)
 
@@ -157,8 +157,8 @@ def list_users():
                 str(user.id),
                 user.email,
                 user.full_name or "N/A",
-                "👑" if user.is_superuser else "",
-                "✓" if user.is_active else "✗"
+                "ADMIN" if user.is_superuser else "",
+                "YES" if user.is_active else "NO"
             )
         
         console.print(table)
@@ -170,7 +170,7 @@ def view_user(email: str = typer.Argument(..., help="Email of the user to view."
     with get_db_session() as db:
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            console.print(f"[red]✗ User with email {email} not found.[/red]")
+            console.print(f"[red][ERROR] User with email {email} not found.[/red]")
             raise typer.Exit(code=1)
 
         info = Table.grid(padding=(0, 2), expand=True)
@@ -179,8 +179,8 @@ def view_user(email: str = typer.Argument(..., help="Email of the user to view."
         info.add_row("ID:", str(user.id))
         info.add_row("Email:", user.email)
         info.add_row("Full Name:", user.full_name or "N/A")
-        info.add_row("Superuser:", "👑 Yes" if user.is_superuser else "No")
-        info.add_row("Active:", "✓ Yes" if user.is_active else "✗ No")
+        info.add_row("Superuser:", "Yes (Admin)" if user.is_superuser else "No")
+        info.add_row("Active:", "Yes" if user.is_active else "No")
         info.add_row("Active Workspace ID:", str(user.active_workspace_id) if user.active_workspace_id else "N/A")
         
         console.print(Panel(info, title=f"[bold]User: {user.full_name}[/bold]", border_style="green", padding=1))
@@ -200,7 +200,7 @@ def update_user(email: str = typer.Argument(..., help="Email of the user to upda
     with get_db_session() as db:
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            console.print(f"[red]✗ User with email {email} not found.[/red]")
+            console.print(f"[red][ERROR] User with email {email} not found.[/red]")
             raise typer.Exit(code=1)
         
         console.print(f"\n[dim]Current details for [bold]{user.email}[/bold]: Name: {user.full_name}, Superuser: {user.is_superuser}\n")
@@ -214,10 +214,10 @@ def update_user(email: str = typer.Argument(..., help="Email of the user to upda
             if toggle_superuser:
                 user.is_superuser = not user.is_superuser
             db.commit()
-            console.print("\n[green]✓ User updated successfully![/green]")
+            console.print("\n[green][SUCCESS] User updated successfully![/green]")
         except Exception as e:
             db.rollback()
-            console.print(f"\n[red]✗ Error updating user: {e}[/red]")
+            console.print(f"\n[red][ERROR] Error updating user: {e}[/red]")
             raise typer.Exit(code=1)
 
 @users_app.command("delete", help="Delete a user permanently.")
@@ -226,21 +226,21 @@ def delete_user(email: str = typer.Argument(..., help="Email of the user to dele
     with get_db_session() as db:
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            console.print(f"[red]✗ User with email {email} not found.[/red]")
+            console.print(f"[red][ERROR] User with email {email} not found.[/red]")
             raise typer.Exit(code=1)
 
         if not force:
-            console.print(f"\n[bold yellow]⚠ Warning:[/bold yellow] This will permanently delete user [bold]{user.full_name}[/bold] ({user.email}).")
+            console.print(f"\n[bold yellow][WARN] Warning:[/bold yellow] This will permanently delete user [bold]{user.full_name}[/bold] ({user.email}).")
             if not typer.confirm("Are you sure you want to proceed?"):
                 console.print("[yellow]Deletion cancelled.[/yellow]")
                 raise typer.Abort()
         try:
             db.delete(user)
             db.commit()
-            console.print("\n[green]✓ User deleted successfully![/green]")
+            console.print("\n[green][SUCCESS] User deleted successfully![/green]")
         except Exception as e:
             db.rollback()
-            console.print(f"\n[red]✗ Error deleting user: {e}[/red]")
+            console.print(f"\n[red][ERROR] Error deleting user: {e}[/red]")
             raise typer.Exit(code=1)
 
 # --- Workspace Commands ---

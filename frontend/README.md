@@ -2,7 +2,7 @@
 
 The SynqX Console is a high-fidelity, React-based management interface for the SynqX ETL Engine. It provides a "Glass Box" experience for designing, monitoring, and debugging complex data pipelines.
 
-## ✨ High-Level Features
+## High-Level Features
 
 ### 1. Visual DAG Orchestrator
 - **Visual Editor**: Drag-and-drop node interface powered by React Flow.
@@ -23,7 +23,7 @@ The SynqX Console is a high-fidelity, React-based management interface for the S
 - **Integrated Docs**: MDX-based technical reference accessible publicly.
 - **Command Palette (⌘K)**: Global search for pipelines, connections, and documentation.
 
-## 🚀 Tech Stack
+## Tech Stack
 
 - **Framework**: React 18+ with TypeScript
 - **Build Tool**: Vite
@@ -32,7 +32,7 @@ The SynqX Console is a high-fidelity, React-based management interface for the S
 - **Visualization**: React Flow for DAG orchestration
 - **Observability**: WebSocket-driven real-time updates
 
-## 🛠️ Development
+## Development
 
 ### Setup
 1. Install dependencies:

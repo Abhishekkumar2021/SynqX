@@ -2,7 +2,7 @@
 
 SynqX is a high-performance, distributed ETL engine designed for modern data stacks. It formalizes data movement as versioned, immutable Directed Acyclic Graphs (DAGs) and provides deep observability through real-time forensic telemetry.
 
-## 🏗️ Core Architecture
+## Core Architecture
 
 The backend is partitioned into a high-availability **Control Plane** and a scalable **Data Plane**.
 
@@ -23,7 +23,7 @@ The backend is partitioned into a high-availability **Control Plane** and a scal
 - **Streaming Architecture**: Utilizes Python generator-based streaming to process gigabytes of data with a constant memory footprint.
 - **Managed State**: Automatic high-watermark tracking for reliable incremental synchronization.
 
-## 🔌 Connectivity & Assets
+## Connectivity & Assets
 
 SynqX abstracts physical systems into logical **Assets** with a standardized naming convention:
 
@@ -44,7 +44,7 @@ SynqX abstracts physical systems into logical **Assets** with a standardized nam
 
 - **Custom**: Extensible via Python, Shell, or JavaScript scripts.
 
-## 🛠️ Technical Setup
+## Technical Setup
 
 ### Prerequisites
 
@@ -116,7 +116,7 @@ python -m scripts.synqx_admin users create --superuser
 
 ```
 
-## 🧪 Testing & Quality
+## Testing & Quality
 
 Run the comprehensive test suite to verify connectivity and transform logic:
 
