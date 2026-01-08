@@ -124,6 +124,22 @@ class NodeExecutor:
             if chunk.empty and error_count == 0:
                 return
             
+            # PERFORMANCE: Native Database Quarantine on Agent
+            if direction == "quarantine" and not chunk.empty:
+                q_asset_id = node.get("config", {}).get("quarantine_asset_id")
+                q_conn_id = node.get("config", {}).get("quarantine_connection_id") # May be passed from backend
+                
+                if q_conn_id and q_asset_id:
+                    try:
+                        q_conn_data = self.connections.get(str(q_conn_id))
+                        if q_conn_data:
+                            q_connector = ConnectorFactory.get_connector(q_conn_data["type"], q_conn_data["config"])
+                            logger.info(f"Diverting {len(chunk)} invalid rows to native quarantine...")
+                            with q_connector.session():
+                                q_connector.write_batch([chunk], asset=q_asset_id, mode="append")
+                    except Exception as q_err:
+                        logger.error(f"Agent failed to write native quarantine: {q_err}")
+
             if direction not in samples and not chunk.empty:
                 samples[direction] = self._sniff_data(chunk)
             

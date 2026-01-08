@@ -27,15 +27,23 @@ import {
   ArrowRight,
   Maximize2,
   Minimize2,
-  RefreshCw
+  RefreshCw,
+  CheckCircle2
 } from 'lucide-react';
 
-import { getLineageGraph, getImpactAnalysis } from '@/lib/api/lineage';
+import { getLineageGraph, getImpactAnalysis, getColumnLineage } from '@/lib/api/lineage';
 import { AssetNode } from '@/components/features/lineage/AssetNode';
 import GlowEdge from '@/components/features/pipelines/GlowEdge';
 import { PageMeta } from '@/components/common/PageMeta';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { 
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { useZenMode } from '@/hooks/useZenMode';
 import { useTheme } from '@/hooks/useTheme';
@@ -103,6 +111,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const [selectedAsset, setSelectedAsset] = useState<Node<AssetNodeData> | null>(null);
+    const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
 
     const flowTheme = useMemo(() => (theme === 'dark' ? 'dark' : 'light'), [theme]);
 
@@ -111,6 +120,13 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
         queryKey: ['impact-analysis', selectedAsset?.data?.asset_id],
         queryFn: () => getImpactAnalysis(selectedAsset?.data?.asset_id as number),
         enabled: !!selectedAsset?.data?.asset_id,
+    });
+
+    // Fetch Column Lineage when a column is selected
+    const { data: colLineage, isLoading: isLoadingColLineage } = useQuery({
+        queryKey: ['column-lineage', selectedAsset?.data?.asset_id, selectedColumn],
+        queryFn: () => getColumnLineage(selectedAsset?.data?.asset_id as number, selectedColumn as string),
+        enabled: !!selectedAsset?.data?.asset_id && !!selectedColumn,
     });
     
     // Build & Layout Graph
@@ -158,6 +174,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
     const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
         // Cast node to our specific type safely or assert it
         setSelectedAsset(node as Node<AssetNodeData>);
+        setSelectedColumn(null);
         fitView({ nodes: [{ id: node.id }], duration: 1000, padding: 2 });
     }, [fitView]);
 
@@ -247,6 +264,76 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                         <div className="pt-2 border-t border-border/20 mt-2">
                                             <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Full Path</div>
                                             <div className="text-xs font-mono break-all opacity-80">{selectedAsset.data.fqn}</div>
+                                        </div>
+                                    )}
+                                </div>
+                             </div>
+
+                             {/* Section 1.5: Trace Column (NEW) */}
+                             <div className="space-y-3">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                                    <Search className="h-3 w-3 text-primary" /> Trace Column
+                                </h3>
+                                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-4">
+                                    <Select value={selectedColumn || ''} onValueChange={setSelectedColumn}>
+                                        <SelectTrigger className="h-9 glass-input rounded-xl text-xs font-bold shadow-none border-border/20 bg-background/50">
+                                            <SelectValue placeholder="Select a column to trace..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="glass border-border/40 rounded-xl">
+                                            {(selectedAsset.data as AssetNodeData).schema_metadata?.columns?.map((col: { name: string, type: string }) => (
+                                                <SelectItem key={col.name} value={col.name} className="text-xs font-medium">
+                                                    {col.name} <span className="opacity-40 text-[10px] ml-1">({col.type})</span>
+                                                </SelectItem>
+                                            )) || <div className="p-2 text-xs text-muted-foreground italic">No schema metadata found.</div>}
+                                        </SelectContent>
+                                    </Select>
+
+                                    {isLoadingColLineage ? (
+                                        <div className="flex items-center justify-center py-4">
+                                            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                        </div>
+                                    ) : colLineage && (
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                                            <div className="space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-primary/20">
+                                                {/* Origin */}
+                                                <div className="flex gap-3 relative z-10">
+                                                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center ring-4 ring-background shrink-0">
+                                                        <Zap className="h-3 w-3 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[10px] font-black uppercase text-primary tracking-tighter">Origin</div>
+                                                        <div className="text-xs font-bold">{colLineage.origin_column_name}</div>
+                                                        <div className="text-[9px] text-muted-foreground truncate max-w-40 italic">Asset #{colLineage.origin_asset_id}</div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Flow Path */}
+                                                {colLineage.path.map((flow, idx) => (
+                                                    <div key={idx} className="flex gap-3 relative z-10 pl-0.5">
+                                                        <div className="h-5 w-5 rounded-full bg-background border-2 border-primary/40 flex items-center justify-center ring-4 ring-background shrink-0">
+                                                            <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter flex items-center gap-1">
+                                                                {flow.transformation_type} <ArrowRight className="h-2 w-2" /> {flow.target_column}
+                                                            </div>
+                                                            <div className="text-xs font-medium opacity-80">Pipeline #{flow.pipeline_id}</div>
+                                                            <div className="text-[9px] font-mono opacity-40">Node: {flow.node_id}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                {/* Terminal */}
+                                                <div className="flex gap-3 relative z-10">
+                                                    <div className="h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center ring-4 ring-background shrink-0">
+                                                        <CheckCircle2 className="h-3 w-3 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[10px] font-black uppercase text-emerald-600 tracking-tighter">Terminal</div>
+                                                        <div className="text-xs font-bold">{colLineage.column_name}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

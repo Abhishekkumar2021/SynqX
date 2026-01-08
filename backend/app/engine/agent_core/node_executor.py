@@ -181,6 +181,27 @@ class NodeExecutor:
             if error_count > 0:
                 logger.debug(f"Node {node.id} reporting {error_count} rejections/errors")
 
+            # PERFORMANCE: Native Database Quarantine
+            if direction == "quarantine" and not chunk.empty:
+                q_asset_id = node.config.get("quarantine_asset_id")
+                if q_asset_id:
+                    try:
+                        q_asset, q_conn = self._fetch_asset_connection(db, q_asset_id)
+                        q_cfg = VaultService.get_connector_config(q_conn)
+                        q_connector = ConnectorFactory.get_connector(q_conn.connector_type.value, q_cfg)
+                        
+                        logger.info(f"Diverting {len(chunk)} invalid rows to quarantine asset: {q_asset.name}")
+                        with q_connector.session():
+                            q_connector.write_batch(
+                                [chunk], 
+                                asset=q_asset.fully_qualified_name or q_asset.name,
+                                mode="append"
+                            )
+                        DBLogger.log_step(db, step_run.id, "DEBUG", f"Diverted {len(chunk)} rows to native quarantine table '{q_asset.name}'.", job_id=pipeline_run.job_id)
+                    except Exception as q_err:
+                        logger.error(f"Failed to write to native quarantine: {q_err}")
+                        DBLogger.log_step(db, step_run.id, "ERROR", f"Native quarantine write failed: {q_err}. Falling back to forensic capture.", job_id=pipeline_run.job_id)
+
             if direction == "quarantine":
                 logger.info(f"Node {node.id} QUARANTINE update: {error_count} records")
 

@@ -753,6 +753,7 @@ export interface LineageNode {
     size_bytes?: number;
     fqn?: string;
     schema_version?: number;
+    schema_metadata?: any;
     last_updated?: string;
   };
 }
@@ -796,5 +797,22 @@ export interface ImpactAnalysis {
     id: number;
     name: string;
     type: string;
+    schema_metadata?: any;
   }>;
+}
+
+export interface ColumnFlow {
+  source_column: string;
+  target_column: string;
+  transformation_type: string;
+  node_id: string;
+  pipeline_id: number;
+}
+
+export interface ColumnLineage {
+  column_name: string;
+  asset_id: number;
+  origin_asset_id: number;
+  origin_column_name: string;
+  path: ColumnFlow[];
 }

@@ -51,9 +51,9 @@ export const testConnection = async (id: number, config: any = {}) => {
   return data;
 };
 
-export const discoverAssets = async (id: number) => {
+export const discoverAssets = async (id: number, includeMetadata: boolean = false) => {
   const { data } = await api.post<any>(`/connections/${id}/discover`, {
-    include_metadata: false,
+    include_metadata: includeMetadata,
   });
   return data;
 };

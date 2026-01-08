@@ -6,7 +6,7 @@ from app.models.pipelines import Pipeline, PipelineVersion, PipelineNode
 from app.models.connections import Asset
 from app.models.execution import PipelineRun
 from app.models.enums import PipelineStatus, PipelineRunStatus
-from app.schemas.lineage import LineageGraph, LineageNode, LineageEdge, ImpactAnalysis
+from app.schemas.lineage import LineageGraph, LineageNode, LineageEdge, ImpactAnalysis, ColumnLineage, ColumnFlow
 
 class LineageService:
     def __init__(self, db: Session):
@@ -111,6 +111,7 @@ class LineageService:
                     "size_bytes": asset.size_bytes_estimate,
                     "fqn": asset.fully_qualified_name,
                     "schema_version": asset.current_schema_version,
+                    "schema_metadata": asset.schema_metadata,
                     "last_updated": asset.updated_at.isoformat() if asset.updated_at else None
                 }
             )
@@ -126,6 +127,75 @@ class LineageService:
             nodes=list(nodes.values()),
             edges=edges,
             stats=stats
+        )
+
+    def get_column_lineage(self, asset_id: int, column_name: str, workspace_id: int) -> ColumnLineage:
+        """
+        Trace a specific column back to its origin.
+        """
+        path: List[ColumnFlow] = []
+        current_asset_id = asset_id
+        current_column = column_name
+        
+        # Recursive trace back
+        while True:
+            # Find the node that produces this asset as a destination
+            producing_node = self.db.query(PipelineNode).join(
+                PipelineVersion, PipelineNode.pipeline_version_id == PipelineVersion.id
+            ).join(
+                Pipeline, PipelineVersion.pipeline_id == Pipeline.id
+            ).filter(
+                PipelineNode.destination_asset_id == current_asset_id,
+                Pipeline.workspace_id == workspace_id
+            ).first()
+            
+            if not producing_node:
+                # We've reached a source asset (no upstream pipeline produces it)
+                return ColumnLineage(
+                    column_name=column_name,
+                    asset_id=asset_id,
+                    origin_asset_id=current_asset_id,
+                    origin_column_name=current_column,
+                    path=path
+                )
+            
+            # Analyze node transformation to find upstream column
+            # For now, handle Direct, Rename, and Extract
+            source_col = current_column
+            transform_type = "direct"
+            
+            # Check for rename in config
+            if producing_node.operator_class == "rename_columns":
+                mapping = producing_node.config.get("columns", {})
+                # Mapping is {old: new}, we are going backwards {new: old}
+                reverse_mapping = {v: k for k, v in mapping.items()}
+                if current_column in reverse_mapping:
+                    source_col = reverse_mapping[current_column]
+                    transform_type = "rename"
+            
+            # Add to path
+            path.insert(0, ColumnFlow(
+                source_column=source_col,
+                target_column=current_column,
+                transformation_type=transform_type,
+                node_id=producing_node.node_id,
+                pipeline_id=producing_node.version.pipeline_id
+            ))
+            
+            # Move upstream
+            current_asset_id = producing_node.source_asset_id
+            current_column = source_col
+            
+            if not current_asset_id:
+                # Reached a terminal point without a source asset (e.g., custom code transform)
+                break
+                
+        return ColumnLineage(
+            column_name=column_name,
+            asset_id=asset_id,
+            origin_asset_id=current_asset_id or 0,
+            origin_column_name=current_column,
+            path=path
         )
 
     def get_impact_analysis(self, asset_id: int, workspace_id: int) -> ImpactAnalysis:
@@ -168,7 +238,8 @@ class LineageService:
                     downstream_assets.append({
                         "id": out_node.destination_asset.id,
                         "name": out_node.destination_asset.name,
-                        "type": out_node.destination_asset.asset_type
+                        "type": out_node.destination_asset.asset_type,
+                        "schema_metadata": out_node.destination_asset.schema_metadata
                     })
                     
         return ImpactAnalysis(

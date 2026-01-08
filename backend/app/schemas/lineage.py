@@ -24,3 +24,17 @@ class ImpactAnalysis(BaseModel):
     downstream_pipelines: List[Dict[str, Any]]
     downstream_assets: List[Dict[str, Any]]
     affected_dashboards: List[str] = [] # Placeholder for future
+
+class ColumnFlow(BaseModel):
+    source_column: str
+    target_column: str
+    transformation_type: str # "direct", "rename", "derived", "aggregate"
+    node_id: str
+    pipeline_id: int
+
+class ColumnLineage(BaseModel):
+    column_name: str
+    asset_id: int
+    origin_asset_id: int
+    origin_column_name: str
+    path: List[ColumnFlow]

@@ -24,7 +24,8 @@ _register("join", "engine.transforms.impl.join_polars", "JoinPolarsTransform")
 _register("pandas_join", "engine.transforms.impl.join_transform", "JoinTransform")
 _register("union", "engine.transforms.impl.union_transform", "UnionTransform")
 _register("merge", "engine.transforms.impl.merge_transform", "MergeTransform")
-_register("validate", "engine.transforms.impl.validate_transform", "ValidateTransform")
+_register("validate", "engine.transforms.impl.validate_polars", "ValidatePolarsTransform")
+_register("pandas_validate", "engine.transforms.impl.validate_transform", "ValidateTransform")
 
 # Cleaning & Shaping
 _register("rename_columns", "engine.transforms.impl.rename_columns_transform", "RenameColumnsTransform")

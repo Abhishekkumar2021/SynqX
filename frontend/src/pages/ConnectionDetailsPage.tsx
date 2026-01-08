@@ -175,7 +175,7 @@ export const ConnectionDetailsPage: React.FC = () => {
 
         const discoverMutation = useMutation({
 
-            mutationFn: () => discoverAssets(connectionId),
+            mutationFn: () => discoverAssets(connectionId, true),
 
             onSuccess: (data: any) => {
 

@@ -227,8 +227,16 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                         tooltip: 'If enabled, the entire pipeline will fail if any row fails validation. If disabled, invalid rows are dropped (and optionally quarantined).'
                     },
                     {
-                        name: 'quarantine', label: 'Quarantine', type: 'boolean', configKey: 'quarantine',
+                        name: 'quarantine', label: 'Forensic Capture', type: 'boolean', configKey: 'quarantine',
                         tooltip: 'If enabled, invalid rows will be captured in a separate forensic buffer for inspection.'
+                    },
+                    {
+                        name: 'quarantine_connection_id', label: 'Quarantine Connection', type: 'number', configKey: 'quarantine_connection_id',
+                        tooltip: 'Target connection for native database quarantine.'
+                    },
+                    {
+                        name: 'quarantine_asset_id', label: 'Quarantine Asset', type: 'number', configKey: 'quarantine_asset_id',
+                        tooltip: 'Target table/asset for native database quarantine.'
                     }
                 ]
             },

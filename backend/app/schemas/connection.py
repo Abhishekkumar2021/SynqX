@@ -137,6 +137,7 @@ class AssetBase(BaseModel):
     description: Optional[str] = Field(None, max_length=5000)
     config: Optional[Dict[str, Any]] = None
     tags: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    schema_metadata: Optional[Dict[str, Any]] = None
     row_count_estimate: Optional[int] = Field(None, ge=0)
     size_bytes_estimate: Optional[int] = Field(None, ge=0)
 
@@ -157,7 +158,6 @@ class AssetBase(BaseModel):
 
 class AssetCreate(AssetBase):
     connection_id: int = Field(..., gt=0)
-    schema_metadata: Optional[Dict[str, Any]] = None
 
 
 class AssetUpdate(BaseModel):
@@ -200,7 +200,6 @@ class AssetBulkCreateResponse(BaseModel):
 class AssetRead(AssetBase):
     id: int
     connection_id: int
-    schema_metadata: Optional[Dict[str, Any]] = None
     current_schema_version: Optional[int] = None
     created_at: datetime
     updated_at: datetime

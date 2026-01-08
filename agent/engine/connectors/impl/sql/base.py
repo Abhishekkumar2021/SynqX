@@ -110,12 +110,21 @@ class SQLConnector(BaseConnector):
 
             results = []
             for asset in all_assets:
+                # Fetch full schema metadata if requested
+                schema_metadata = None
+                if include_metadata:
+                    try:
+                        schema_metadata = self.infer_schema(asset)
+                    except Exception:
+                        pass
+
                 results.append({
                     "name": asset,
                     "fully_qualified_name": f"{db_schema}.{asset}" if db_schema else asset,
                     "type": "table" if asset in tables else "view",
                     "schema": db_schema,
                     "row_count": self._get_row_count(asset, db_schema),
+                    "schema_metadata": schema_metadata
                 })
             return results
         except Exception as e:
