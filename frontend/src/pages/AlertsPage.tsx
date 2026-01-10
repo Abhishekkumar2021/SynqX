@@ -94,7 +94,7 @@ export const AlertsPage: React.FC = () => {
                         <Button 
                             variant="outline" 
                             size="sm" 
-                            className="rounded-full border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary transition-all duration-300 shadow-sm font-bold"
+                            className="rounded-xl border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary transition-all duration-300 shadow-sm font-bold"
                             onClick={() => acknowledgeAllMutation.mutate()}
                             disabled={acknowledgeAllMutation.isPending}
                         >
@@ -106,7 +106,7 @@ export const AlertsPage: React.FC = () => {
             </div>
 
             {/* Main Content Pane */}
-            <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
                 
                 {/* Toolbar */}
                 <div className="p-4 md:p-6 border-b border-border/40 bg-muted/20 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4 md:gap-6">
@@ -116,15 +116,15 @@ export const AlertsPage: React.FC = () => {
                             placeholder="Search alerts..." 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-11 h-11 rounded-2xl bg-background/50 border-border/50 focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
+                            className="pl-11 h-11 rounded-xl bg-background/50 border-border/50 focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
                         />
                     </div>
                     
                     <div className="flex items-center gap-3 w-full md:w-auto">
-                        <div className="flex items-center gap-2 bg-background/50 border border-border/40 rounded-2xl px-3 py-1.5 h-11 shadow-sm">
+                        <div className="flex items-center gap-2 bg-background/50 border border-border/40 rounded-xl px-3 py-1.5 h-11 shadow-sm">
                             <Filter className="h-4 w-4 text-muted-foreground" />
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="h-8 border-none bg-transparent focus:ring-0 text-xs font-bold w-[140px]">
+                                <SelectTrigger className="h-8 border-none bg-transparent focus:ring-0 text-xs font-medium w-[140px]">
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -138,7 +138,7 @@ export const AlertsPage: React.FC = () => {
                 </div>
 
                 {/* List Header (Sticky Grid) */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
                     <div className="col-span-12 md:col-span-5">Alert Details</div>
                     <div className="col-span-2 hidden md:block">Pipeline</div>
                     <div className="col-span-2 hidden md:block">Job Trace</div>
@@ -178,7 +178,7 @@ export const AlertsPage: React.FC = () => {
                             value={limit.toString()}
                             onValueChange={(val) => { setLimit(Number(val)); setPage(0); }}
                         >
-                            <SelectTrigger className="h-8 w-[140px] rounded-lg border-border/40 bg-background text-xs font-bold">
+                            <SelectTrigger className="h-8 w-[140px] rounded-lg border-border/40 bg-background text-xs font-semibold">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>

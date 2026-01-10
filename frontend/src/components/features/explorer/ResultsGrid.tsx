@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/incompatible-library */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { type QueryResponse } from '@/lib/api';
@@ -37,12 +36,9 @@ import { cn, formatNumber } from '@/lib/utils';
 import { CodeBlock } from '@/components/ui/docs/CodeBlock';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info as InfoIcon } from 'lucide-react';
 
 import {
-    useReactTable,
-    getCoreRowModel,
+    useReactTable,    getCoreRowModel,
     getSortedRowModel,
     getFilteredRowModel,
     getPaginationRowModel,
@@ -57,8 +53,13 @@ import {
 } from "@tanstack/react-table"
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
+// Extend QueryResponse locally if missing total_count
+interface ExtendedQueryResponse extends QueryResponse {
+    total_count?: number;
+}
+
 interface ResultsGridProps {
-    data: QueryResponse | null;
+    data: ExtendedQueryResponse | null;
     isLoading: boolean;
     loadingMessage?: string | null;
     isMaximized?: boolean;
@@ -71,11 +72,11 @@ interface ResultsGridProps {
 
 type Density = 'compact' | 'standard' | 'comfortable';
 
-export const ResultsGrid: React.FC<ResultsGridProps> = ({ 
-    data, 
-    isLoading, 
+export const ResultsGrid: React.FC<ResultsGridProps> = ({
+    data,
+    isLoading,
     loadingMessage,
-    title, 
+    title,
     description,
     onSelectRows,
     selectedRows,
@@ -164,7 +165,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
             id: "index",
             header: () => <div className="text-center w-full">IDX</div>,
             accessorFn: (row) => row.__idx + 1,
-            cell: ({ getValue }) => <div className="text-center font-mono text-muted-foreground/50 font-bold text-[10px]">{getValue() as number}</div>,
+            cell: ({ getValue }) => <div className="text-center font-mono text-muted-foreground/50 font-semibold text-[10px]">{getValue() as number}</div>,
             size: 50,
             enablePinning: true,
             enableSorting: true,
@@ -231,7 +232,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     const handleExport = (format: 'json' | 'csv') => {
         if (!data || table.getRowModel().rows.length === 0) return;
         
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-') ;
         const visibleCols = table.getVisibleLeafColumns().filter(c => c.id !== 'select' && c.id !== 'index');
         const rows = table.getFilteredRowModel().rows; // Export all filtered rows, not just paginated
 
@@ -251,8 +252,9 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                 visibleCols.map(col => {
                     let val = row[col.id];
                     if (val !== null && typeof val === 'object') {
-                        try { val = JSON.stringify(val); } catch (e) { val = '[Object]'; }
+                        try { val = JSON.stringify(val); } catch { val = '[Object]'; }
                     }
+                    // Proper CSV escaping: wrap in quotes and escape internal quotes
                     return `"${String(val ?? '').replace(/"/g, '""')}"`;
                 }).join(',')
             ).join('\n');
@@ -272,8 +274,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
 
     const results = data.results || (data as any).rows || [];
     const columnsData = data.columns || [];
-    const isTruncated = (data as any).is_truncated;
-
+    
     if (tableData.length === 0 && results.length === 0 && columnsData.length === 0) {
         return (
              <div className="flex-1 h-full flex flex-col items-center justify-center text-muted-foreground gap-4 bg-card/5 animate-in fade-in duration-500">
@@ -282,7 +283,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                 </div>
                 <div className="text-center">
                     <h3 className="text-lg font-bold text-foreground">Command Executed</h3>
-                    <p className="text-xs text-muted-foreground">No data returned.</p>
+                    <p className="text-xs text-muted-foreground font-medium">No data returned.</p>
                 </div>
             </div>
         );
@@ -295,7 +296,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     };
 
     return (
-        <div className="flex-1 flex flex-col min-h-0 h-full bg-background/60 dark:bg-background/40 backdrop-blur-2xl backdrop-saturate-150 relative overflow-hidden isolate">
+        <div className="flex-1 flex flex-col min-h-0 h-full bg-background/60 dark:bg-background/40 backdrop-blur-2xl backdrop-saturate-150 relative overflow-hidden isolate text-foreground">
             <div className="absolute inset-x-0 top-0 h-px bg-white/40 dark:bg-white/10 pointer-events-none z-50" />
 
             {/* Header Control Bar */}
@@ -304,7 +305,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         {title && (
                             <div className="flex flex-col mr-2 shrink-0">
-                                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-foreground truncate max-w-30 sm:max-w-none">{title}</span>
+                                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-foreground truncate max-w-30 sm:max-w-none">{title}</span>
                                 {description && <span className="text-[9px] text-muted-foreground font-medium truncate max-w-30 sm:max-w-none hidden xs:block">{description}</span>}
                             </div>
                         )}
@@ -315,13 +316,13 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                             )} />
                             <Input
                                 placeholder="Search..."
-                                className="h-8 pl-9 rounded-xl bg-background/50 border-border/40 text-[11px] font-bold focus:ring-4 focus:ring-primary/10 transition-all shadow-none"
+                                className="h-8 pl-9 rounded-xl bg-background/50 border-border/40 text-[11px] font-semibold focus:ring-4 focus:ring-primary/10 transition-all shadow-none"
                                 value={globalFilter ?? ''}
                                 onChange={(e) => setGlobalFilter(e.target.value)}
                             />
                         </div>
                          <div className="flex items-center gap-1.5 shrink-0">
-                             <Badge variant="outline" className="h-5 px-2 rounded-full border-border/50 text-[9px] font-black uppercase tracking-tight text-muted-foreground/60 bg-muted/20 whitespace-nowrap">
+                             <Badge variant="outline" className="h-5 px-2 rounded-full border-border/50 text-[9px] font-bold uppercase tracking-tight text-muted-foreground/60 bg-muted/20 whitespace-nowrap">
                                 {formatNumber(table.getFilteredRowModel().rows.length)}
                                 {data.total_count !== undefined && data.total_count !== null && (
                                     <span className="ml-1 opacity-40">/ {formatNumber(data.total_count)}</span>
@@ -349,12 +350,12 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                         {/* Density & Settings */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-primary/5 text-muted-foreground hover:text-primary">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-primary/5 text-muted-foreground hover:text-primary transition-all">
                                     <Settings2 size={15} />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-48 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 " align="end">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Density</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Density</DropdownMenuLabel>
                                 <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
                                     <DropdownMenuRadioItem value="compact" className="text-xs font-medium rounded-lg">Compact</DropdownMenuRadioItem>
                                     <DropdownMenuRadioItem value="standard" className="text-xs font-medium rounded-lg">Standard</DropdownMenuRadioItem>
@@ -372,7 +373,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 max-h-96 overflow-y-auto custom-scrollbar " align="end">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Visible Columns</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Visible Columns</DropdownMenuLabel>
                                 {table.getAllColumns().filter(c => c.id !== 'select' && c.id !== 'index').map(column => (
                                     <DropdownMenuCheckboxItem
                                         key={column.id}
@@ -384,7 +385,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                                     </DropdownMenuCheckboxItem>
                                 ))}
                                 <DropdownMenuSeparator className="bg-border/30" />
-                                <DropdownMenuItem onClick={() => table.toggleAllColumnsVisible(true)} className="text-xs cursor-pointer rounded-lg justify-center text-primary font-bold">
+                                <DropdownMenuItem onClick={() => table.toggleAllColumnsVisible(true)} className="text-xs cursor-pointer rounded-lg justify-center text-primary font-semibold">
                                     Reset to All
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -393,35 +394,24 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                          {/* Export */}
                          <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 rounded-xl gap-2 font-black uppercase text-[10px] tracking-widest bg-primary/5 hover:bg-primary/10 text-primary transition-all px-2 md:px-3">
+                                <Button variant="ghost" size="sm" className="h-8 rounded-xl gap-2 font-bold uppercase text-[10px] tracking-widest bg-primary/5 hover:bg-primary/10 text-primary transition-all px-2 md:px-3">
                                     <Download size={14} />
                                     <span className="hidden md:inline">Export</span>
                                 </Button>
                             </DropdownMenuTrigger>
                              <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-2 " align="end">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest opacity-40 px-3 py-2">Data Formats</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Data Formats</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => handleExport('json')} className="rounded-lg gap-3 py-2.5 cursor-pointer">
                                     <FileJson className="h-4 w-4 text-orange-500" />
-                                    <span className="font-bold text-xs uppercase italic">JSON Registry</span>
+                                    <span className="font-bold text-xs uppercase">JSON Registry</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleExport('csv')} className="rounded-lg gap-3 py-2.5 cursor-pointer">
                                     <FileText className="h-4 w-4 text-blue-500" />
-                                    <span className="font-bold text-xs uppercase italic">CSV Spreadsheet</span>
+                                    <span className="font-bold text-xs uppercase">CSV Spreadsheet</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                </div>
-            )}
-
-            {isTruncated && (
-                <div className="px-4 py-2 bg-amber-500/5 border-b border-amber-500/20">
-                    <Alert className="rounded-xl bg-transparent border-none py-1 h-auto shadow-none">
-                        <InfoIcon className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500" />
-                        <AlertDescription className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-tight ml-2">
-                            Dataset truncated for performance. Showing the first 1,000 records.
-                        </AlertDescription>
-                    </Alert>
                 </div>
             )}
 
@@ -463,7 +453,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                     <tbody className="divide-y divide-border/10">
                          {table.getRowModel().rows.length === 0 ? (
                              <tr>
-                                <td colSpan={columns.length} className="h-24 text-center text-muted-foreground text-xs italic">
+                                <td colSpan={columns.length} className="h-24 text-center text-muted-foreground text-xs font-medium">
                                     No results match your filters.
                                 </td>
                             </tr>
@@ -514,10 +504,10 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                     <div className="flex items-center gap-2">
                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rows</span>
                          <Select 
-                            value={String(table.getState().pagination.pageSize)} 
+                            value={String(table.getState().pagination.pageSize)}
                             onValueChange={(v) => table.setPageSize(Number(v))}
                         >
-                             <SelectTrigger className="h-7 w-16 text-[10px] font-bold">
+                             <SelectTrigger className="h-7 w-16 text-[10px]">
                                 <SelectValue />
                              </SelectTrigger>
                              <SelectContent className="">
@@ -585,14 +575,14 @@ const DataTableCell = ({ value, density }: { value: any, density: Density }) => 
     const isObject = value !== null && typeof value === 'object';
     
     if (value === null) {
-        return <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 italic">NULL</span>;
+        return <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">NULL</span>;
     }
     
     if (isObject) {
         return (
              <div className="w-full bg-background/50 rounded-none overflow-hidden p-1">
                 <CodeBlock 
-                    code={JSON.stringify(value, null, 2)} 
+                    code={JSON.stringify(value, null, 2)}
                     language="json" 
                     maxHeight='128px' 
                     editable={false} 
@@ -608,7 +598,7 @@ const DataTableCell = ({ value, density }: { value: any, density: Density }) => 
              <div className="flex-1 min-w-0">
                 {typeof value === 'boolean' ? (
                      <Badge variant="outline" className={cn(
-                        "text-[9px] px-2.5 h-5 font-black uppercase border-0 tracking-widest",
+                        "text-[9px] px-2.5 h-5 font-bold uppercase border-0 tracking-widest",
                         value ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"
                     )}>
                         {String(value)}
@@ -646,7 +636,7 @@ const DataTableColumnHeader = ({ column, title }: { column: Column<any, unknown>
                 onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             >
                 <span className={cn(
-                    "text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-colors group-hover/h:text-foreground",
+                    "text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-colors group-hover/h:text-foreground",
                     column.getIsSorted() && "text-primary"
                 )}>{title}</span>
             </div>
@@ -742,7 +732,7 @@ const LoadingSkeleton = ({ message }: { message?: string | null }) => (
             <Loader2 className="h-12 w-12 text-primary animate-spin relative z-10" />
         </div>
         <div className="text-center space-y-2 relative z-10">
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-foreground animate-in fade-in duration-500">
+            <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground animate-in fade-in duration-500">
                 {message || "Processing Data Stream"}
             </h3>
             <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
@@ -765,8 +755,8 @@ const EmptyState = ({ message, description }: { message?: string, description?: 
             </div>
         </div>
         <div className="text-center space-y-3">
-            <h3 className="text-xl font-black italic uppercase tracking-tighter text-foreground">{message || "Waiting for Execution"}</h3>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground/40 max-w-xs leading-loose">
+            <h3 className="text-xl font-bold uppercase tracking-tighter text-foreground">{message || "Waiting for Execution"}</h3>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground/40 max-w-xs leading-loose">
                 {description || "Execute a command to populate the grid"}
             </p>
         </div>

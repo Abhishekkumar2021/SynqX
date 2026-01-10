@@ -41,7 +41,7 @@ export const ConfigField: React.FC<ConfigFieldProps> = ({
             onMouseLeave={() => setIsHovered(false)}
         >
             <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 transition-colors group-hover/field:text-primary/80">
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 transition-colors group-hover/field:text-primary/80">
                     {label}
                 </label>
                 {sensitive && (
@@ -82,7 +82,7 @@ export const ConfigField: React.FC<ConfigFieldProps> = ({
                                 initial={{ opacity: 0, x: 5 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 5 }}
-                                className="flex items-center gap-1.5 text-[9px] font-black text-primary/60 uppercase tracking-widest"
+                                className="flex items-center gap-1.5 text-[9px] font-bold text-primary/60 uppercase tracking-widest"
                             >
                                 <MousePointer2 className="h-2.5 w-2.5" />
                                 Click to copy

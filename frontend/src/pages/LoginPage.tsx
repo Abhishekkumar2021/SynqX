@@ -135,7 +135,7 @@ export const LoginPage: React.FC = () => {
                     <div className="p-6 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/5 shadow-2xl relative overflow-hidden group">
                         <div className="absolute inset-0 bg-linear-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <blockquote className="space-y-4 relative z-10">
-                            <p className="text-base font-medium leading-relaxed text-zinc-200 italic">
+                            <p className="text-base font-medium leading-relaxed text-zinc-200 ">
                                 &ldquo;The real-time forensic logging capabilities alone have saved us hundreds of engineering hours.&rdquo;
                             </p>
                             <footer className="flex items-center gap-4">

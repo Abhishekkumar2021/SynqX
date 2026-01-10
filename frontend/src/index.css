@@ -279,6 +279,14 @@
         0 0 30px -10px oklch(from var(--color-primary) l c h / 0.2);
 }
 
+@utility subtitle {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+}
+
 @utility glass-card {
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
@@ -411,16 +419,6 @@
   font-weight: 600;
   backdrop-filter: blur(8px);
   border: 1px solid var(--color-border);
-}
-
-@utility metric-card {
-  @apply glass-panel;
-  padding: 1.5rem;
-  transition: all 0.4s;
-
-  &:hover {
-    transform: translateY(-2px) scale(1.01);
-  }
 }
 
 @utility bg-grid-subtle {

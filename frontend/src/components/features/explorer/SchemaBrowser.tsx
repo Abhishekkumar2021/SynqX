@@ -79,7 +79,7 @@ export const SchemaBrowser: React.FC<SchemaBrowserProps> = ({ connectionId, onAc
                 </div>
             </div>
             <div className="space-y-1.5">
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-foreground/60">Initialize Registry</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-foreground/60">Initialize Registry</p>
                 <p className="text-[9px] font-bold text-muted-foreground/30 uppercase tracking-widest">Select connection to browse</p>
             </div>
         </div>
@@ -105,13 +105,13 @@ export const SchemaBrowser: React.FC<SchemaBrowserProps> = ({ connectionId, onAc
                 <AlertCircle className="h-6 w-6 text-destructive/60" />
             </div>
             <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-foreground/80">Metadata Blocked</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-foreground/80">Metadata Blocked</p>
                 <p className="text-[9px] font-medium text-muted-foreground leading-relaxed px-4 max-w-[200px]">The secure endpoint rejected the discovery request.</p>
             </div>
             <Button
                 size="sm"
                 variant="outline"
-                className="h-8 px-5 font-black uppercase text-[9px] tracking-[0.2em] rounded-xl border-border/40 hover:bg-destructive/5 hover:text-destructive transition-all"
+                className="h-8 px-5 font-bold uppercase text-[9px] tracking-[0.2em] rounded-xl border-border/40 hover:bg-destructive/5 hover:text-destructive transition-all"
                 onClick={() => refetch()}
             >
                 Retry handshake
@@ -173,7 +173,7 @@ export const SchemaBrowser: React.FC<SchemaBrowserProps> = ({ connectionId, onAc
                                         onClick={() => toggleTable(table)}
                                         onDoubleClick={() => onAction('run', `SELECT * FROM ${table} LIMIT 50;`)}
                                         className={cn(
-                                            "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group/table text-left pr-10",
+                                            "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all group/table text-left pr-10",
                                             expandedTables.has(table)
                                                 ? "text-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
                                                 : "text-muted-foreground/60 hover:bg-muted/40 hover:text-foreground"
@@ -194,8 +194,8 @@ export const SchemaBrowser: React.FC<SchemaBrowserProps> = ({ connectionId, onAc
                                             "h-3.5 w-3.5 shrink-0 transition-opacity",
                                             expandedTables.has(table) ? "opacity-100" : "opacity-30 group-hover/table:opacity-100"
                                         )} />
-                                        <span className="truncate flex-1 font-mono italic tracking-tighter">{table}</span>
-                                        <span className="text-[9px] font-mono font-black opacity-20 group-hover/table:opacity-100 transition-opacity">
+                                        <span className="truncate flex-1 font-mono  tracking-tighter">{table}</span>
+                                        <span className="text-[9px] font-mono font-bold opacity-20 group-hover/table:opacity-100 transition-opacity">
                                             {columns.length}
                                         </span>
                                     </motion.button>
@@ -212,7 +212,7 @@ export const SchemaBrowser: React.FC<SchemaBrowserProps> = ({ connectionId, onAc
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent className="w-48 glass-panel border-border/40 rounded-xl" align="end">
-                                                <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest opacity-40">Actions</DropdownMenuLabel>
+                                                <DropdownMenuLabel className="text-[9px] font-bold uppercase tracking-widest opacity-40">Actions</DropdownMenuLabel>
                                                 <DropdownMenuItem onClick={() => onAction('run', `SELECT * FROM ${table} LIMIT 100;`)} className="gap-2 text-[10px] font-bold uppercase tracking-wide">
                                                     <PlayCircle size={12} className="text-primary" /> Select Top 100
                                                 </DropdownMenuItem>
@@ -294,7 +294,7 @@ export const SchemaBrowser: React.FC<SchemaBrowserProps> = ({ connectionId, onAc
                                                 <motion.span
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 0.2 }}
-                                                    className="text-[9px] font-black uppercase py-2 block pl-3 tracking-widest italic"
+                                                    className="text-[9px] font-bold uppercase py-2 block pl-3 tracking-widest "
                                                 >
                                                     Node Empty
                                                 </motion.span>
@@ -310,12 +310,12 @@ export const SchemaBrowser: React.FC<SchemaBrowserProps> = ({ connectionId, onAc
 
             {/* Fixed Footer */}
             <div className="px-5 py-3 border-t border-border/40 bg-muted/5 backdrop-blur-sm shrink-0 flex items-center justify-between">
-                <span className="text-[9px] font-black uppercase text-muted-foreground/30 tracking-[0.2em]">Registry Schema</span>
+                <span className="text-[9px] font-bold uppercase text-muted-foreground/30 tracking-[0.2em]">Registry Schema</span>
                 <motion.span
                     key={Object.keys(filteredMetadata || {}).length}
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 0.4 }}
-                    className="text-[9px] font-mono font-black text-primary italic"
+                    className="text-[9px] font-mono font-bold text-primary "
                 >
                     {Object.keys(filteredMetadata || {}).length} TABLES LOADED
                 </motion.span>

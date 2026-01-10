@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { api } from "./base";
 import { 
+  type Pipeline,
   type PipelineCreate, 
   type PipelineListResponse, 
   type PipelineDetailRead,
@@ -109,7 +110,7 @@ export const exportPipelineYAML = async (id: number, versionId?: number) => {
 export const importPipelineYAML = async (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  const { data } = await api.post<PipelineRead>("/pipelines/import", formData, {
+  const { data } = await api.post<Pipeline>("/pipelines/import", formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return data;

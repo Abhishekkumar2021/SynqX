@@ -61,7 +61,7 @@ export const ExecutionHistory: React.FC<ExecutionHistoryProps> = ({ history, onC
                             <History size={16} />
                         </div>
                         <div className="flex flex-col">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-foreground">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-foreground">
                                 History
                             </h3>
                             <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">
@@ -190,7 +190,7 @@ export const ExecutionHistory: React.FC<ExecutionHistoryProps> = ({ history, onC
                                 variant="outline"
                                 disabled={history.length === 0}
                                 onClick={onClear}
-                                className="w-full h-10 rounded-xl text-[10px] font-black uppercase tracking-widest gap-2 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20 transition-all"
+                                className="w-full h-10 rounded-xl text-[10px] font-bold uppercase tracking-widest gap-2 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/20 transition-all"
                             >
                                 <Trash2 size={12} />
                                 Clear History

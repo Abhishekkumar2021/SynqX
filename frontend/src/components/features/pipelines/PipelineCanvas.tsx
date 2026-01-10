@@ -754,7 +754,7 @@ export const PipelineCanvas: React.FC = () => {
                                         size="sm"
                                         onClick={() => setDeployDialogOpen(true)}
                                         disabled={isSaving || !!versionIdParam}
-                                        className="h-9 rounded-full px-5 shadow-lg shadow-primary/25 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[10px] hover:shadow-primary/40 transition-all gap-2 hover:-translate-y-0.5 active:translate-y-0"
+                                        className="h-9 rounded-full px-5 shadow-lg shadow-primary/25 bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[10px] hover:shadow-primary/40 transition-all gap-2 hover:-translate-y-0.5 active:translate-y-0"
                                     >
                                         {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
                                         <span className="hidden sm:inline">Deploy</span>
@@ -779,8 +779,8 @@ export const PipelineCanvas: React.FC = () => {
                             </div>
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">Comparison Mode</span>
-                                    <Badge className="h-4 px-1.5 bg-amber-500/20 text-amber-500 border-none text-[9px] font-black">v{diffData?.base_version} → v{diffData?.target_version}</Badge>
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Comparison Mode</span>
+                                    <Badge className="h-4 px-1.5 bg-amber-500/20 text-amber-500 border-none text-[9px] font-bold">v{diffData?.base_version} → v{diffData?.target_version}</Badge>
                                 </div>
                                 <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                                     <InfoIcon size={12} className="text-amber-500/60" />
@@ -792,7 +792,7 @@ export const PipelineCanvas: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => navigate(`/pipelines/${id}`)}
-                            className="h-10 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-500 hover:bg-amber-500 hover:text-white transition-all duration-300 gap-2 text-[10px] font-black uppercase tracking-widest px-4"
+                            className="h-10 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-500 hover:bg-amber-500 hover:text-white transition-all duration-300 gap-2 text-[10px] font-bold uppercase tracking-widest px-4"
                         >
                             Exit Diff <XCircle className="h-3.5 w-3.5" />
                         </Button>
@@ -808,8 +808,8 @@ export const PipelineCanvas: React.FC = () => {
                             </div>
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Read-Only Snapshot</span>
-                                    <Badge className="h-4 px-1.5 bg-primary/20 text-primary border-none text-[9px] font-black">v{versionIdParam}</Badge>
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Read-Only Snapshot</span>
+                                    <Badge className="h-4 px-1.5 bg-primary/20 text-primary border-none text-[9px] font-bold">v{versionIdParam}</Badge>
                                 </div>
                                 <span className="text-xs font-medium text-muted-foreground">You are inspecting a historical state. Edits are disabled.</span>
                             </div>
@@ -818,7 +818,7 @@ export const PipelineCanvas: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => navigate(`/pipelines/${id}`)}
-                            className="h-10 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 gap-2 text-[10px] font-black uppercase tracking-widest px-4 group"
+                            className="h-10 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 gap-2 text-[10px] font-bold uppercase tracking-widest px-4 group"
                         >
                             Exit View <ExternalLink className="h-3.5 w-3.5 group-hover:rotate-45 transition-transform" />
                         </Button>
@@ -920,7 +920,7 @@ export const PipelineCanvas: React.FC = () => {
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button
-                                                className="h-9 rounded-2xl px-4 gap-2 bg-primary text-primary-foreground font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                                className="h-9 rounded-2xl px-4 gap-2 bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:-translate-y-0.5 active:translate-y-0"
                                             >
                                                 <Plus className="h-3.5 w-3.5 stroke-3" /> Add Operator
                                             </Button>
@@ -1037,7 +1037,7 @@ export const PipelineCanvas: React.FC = () => {
                     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                         <AlertDialogContent className="rounded-[2rem] border-border/40 bg-background/95 backdrop-blur-2xl">
                             <AlertDialogHeader>
-                                <AlertDialogTitle className="text-2xl font-black">Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogTitle className="text-2xl font-bold">Are you absolutely sure?</AlertDialogTitle>
                                 <AlertDialogDescription className="text-base font-medium">
                                     This action cannot be undone. This will permanently delete the pipeline
                                     <span className="font-bold text-foreground"> "{pipelineName}" </span>

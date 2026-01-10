@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Table, Layers, FileText, FileCode, Activity,
     MoreHorizontal, Table as TableIcon, Eye, RefreshCw, Terminal,
-    Shield, HardDrive, FileJson, Check, Copy, Minimize2, Maximize2
+    Shield, HardDrive, FileJson, Check, Copy, Minimize2, Maximize2, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +24,7 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { cn, formatNumber } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -204,26 +204,26 @@ export const AssetGridItem: React.FC<AssetGridItemProps> = ({
 
             <div className="grid grid-cols-3 gap-2 mt-auto">
                 <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-muted/30 border border-border/20">
-                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                         <Shield className="h-2 w-2" /> Schema
                     </span>
-                    <span className="text-[10px] font-black text-foreground tabular-nums">
+                    <span className="text-[10px] font-bold text-foreground tabular-nums">
                         v{asset.current_schema_version || '1'}
                     </span>
                 </div>
                 <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-muted/30 border border-border/20">
-                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                         <Zap className="h-2 w-2 text-amber-500" /> Volume
                     </span>
-                    <span className="text-[10px] font-black text-foreground tabular-nums truncate">
+                    <span className="text-[10px] font-bold text-foreground tabular-nums truncate">
                         {asset.row_count_estimate ? formatNumber(asset.row_count_estimate) : '—'}
                     </span>
                 </div>
                 <div className="flex flex-col gap-0.5 p-2 rounded-lg bg-muted/30 border border-border/20">
-                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                         <HardDrive className="h-2 w-2 text-blue-500" /> Size
                     </span>
-                    <span className="text-[10px] font-black text-foreground tabular-nums truncate">
+                    <span className="text-[10px] font-bold text-foreground tabular-nums truncate">
                         {asset.size_bytes_estimate ? (asset.size_bytes_estimate / 1024).toFixed(1) + ' KB' : '—'}
                     </span>
                 </div>

@@ -74,12 +74,12 @@ export const MemberCard: React.FC<MemberCardProps> = ({
                 {isSelf ? <Shield className="h-3.5 w-3.5 text-primary opacity-40" /> : null}
             </div>
             <Avatar className="h-16 w-16 border-4 border-background shadow-xl group-hover:scale-110 transition-transform duration-500">
-                <AvatarFallback className={cn("text-lg font-black", isSelf ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")}>
+                <AvatarFallback className={cn("text-lg font-bold", isSelf ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")}>
                     {member.full_name?.charAt(0) || member.email.charAt(0).toUpperCase()}
                 </AvatarFallback>
             </Avatar>
             <div className="flex flex-col min-w-0 w-full mb-2">
-                <span className="text-sm font-black text-foreground truncate">{member.full_name || 'Active Member'}</span>
+                <span className="text-sm font-bold text-foreground truncate">{member.full_name || 'Active Member'}</span>
                 <span className="text-[10px] text-muted-foreground font-medium truncate opacity-60">{member.email}</span>
             </div>
             <div className="flex items-center justify-center w-full mt-auto gap-2">
@@ -89,7 +89,7 @@ export const MemberCard: React.FC<MemberCardProps> = ({
                             defaultValue={member.role} 
                             onValueChange={(v) => updateRoleMutation.mutate({ role: v })}
                         >
-                            <SelectTrigger className="h-8 flex-1 rounded-xl bg-background/50 border-border/40 text-[9px] font-black uppercase tracking-widest shadow-none">
+                            <SelectTrigger className="h-8 flex-1 rounded-xl bg-background/50 border-border/40 text-[9px] uppercase tracking-widest shadow-none">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-border/60 shadow-2xl">

@@ -16,7 +16,7 @@ export const AgentStatusChart: React.FC<AgentStatusChartProps> = ({ totalAgents,
     return (
         <div className="h-full flex flex-col">
             <div className="pb-4 shrink-0 px-8 pt-8">
-                <h3 className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
+                <h3 className="text-xl font-bold tracking-tighter uppercase flex items-center gap-2">
                     <Server className="h-5 w-5 text-primary" />
                     Agent Fleet
                 </h3>
@@ -31,16 +31,16 @@ export const AgentStatusChart: React.FC<AgentStatusChartProps> = ({ totalAgents,
                     <div className="bg-muted/20 rounded-xl p-3 border border-border/40 flex flex-col justify-between h-20 transition-colors hover:bg-muted/30">
                          <div className="flex items-center gap-2 mb-1">
                             <Users className="h-3.5 w-3.5 text-primary" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Total Agents</span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Total Agents</span>
                          </div>
-                         <span className="text-2xl font-black tracking-tighter tabular-nums">{totalAgents}</span>
+                         <span className="text-2xl font-bold tracking-tighter tabular-nums">{totalAgents}</span>
                     </div>
                      <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20 flex flex-col justify-between h-20 transition-colors hover:bg-emerald-500/15">
                          <div className="flex items-center gap-2 mb-1">
                             <Activity className="h-3.5 w-3.5 text-emerald-500" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Active</span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Active</span>
                          </div>
-                         <span className="text-2xl font-black tracking-tighter text-emerald-600 dark:text-emerald-400 tabular-nums">{activeAgents}</span>
+                         <span className="text-2xl font-bold tracking-tighter text-emerald-600 dark:text-emerald-400 tabular-nums">{activeAgents}</span>
                     </div>
                 </div>
 
@@ -48,7 +48,7 @@ export const AgentStatusChart: React.FC<AgentStatusChartProps> = ({ totalAgents,
                 <div className="flex-1 min-h-0 flex flex-col">
                     <div className="flex items-center gap-2 mb-2 shrink-0">
                         <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Group Distribution</span>
+                         <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Group Distribution</span>
                     </div>
                     
                     <div className="flex-1 w-full min-h-[140px] relative">
@@ -71,7 +71,7 @@ export const AgentStatusChart: React.FC<AgentStatusChartProps> = ({ totalAgents,
                                                 return (
                                                     <div className="z-[1000] rounded-xl border border-border/40 bg-background/95 backdrop-blur-xl p-3 shadow-xl text-xs font-bold ring-1 ring-white/10">
                                                         <span className="text-primary uppercase tracking-wider block mb-1">{payload[0].payload.name}</span>
-                                                        <div className="text-foreground text-lg font-black">{payload[0].value} <span className="text-[10px] text-muted-foreground font-bold uppercase">Nodes</span></div>
+                                                        <div className="text-foreground text-lg font-bold">{payload[0].value} <span className="text-[10px] text-muted-foreground font-bold uppercase">Nodes</span></div>
                                                     </div>
                                                 )
                                             }
@@ -79,7 +79,7 @@ export const AgentStatusChart: React.FC<AgentStatusChartProps> = ({ totalAgents,
                                         }}
                                     />
                                     <Bar dataKey="count" radius={[4, 4, 4, 4]} barSize={32}>
-                                        {groups.map((entry, index) => (
+                                        {groups.map((_, index) => (
                                             <Cell 
                                                 key={`cell-${index}`} 
                                                 fill={theme === 'dark' ? '#6366f1' : '#4f46e5'} 
@@ -91,7 +91,7 @@ export const AgentStatusChart: React.FC<AgentStatusChartProps> = ({ totalAgents,
                             </ResponsiveContainer>
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center opacity-40">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">No agent groups</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">No agent groups</span>
                             </div>
                         )}
                     </div>

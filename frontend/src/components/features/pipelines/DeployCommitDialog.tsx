@@ -49,8 +49,8 @@ export const DeployCommitDialog: React.FC<DeployCommitDialogProps> = ({
                                 <Rocket className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight">Deploy to Production</DialogTitle>
-                                <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary/60">
+                                <DialogTitle className="text-2xl font-bold tracking-tight">Deploy to Production</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-primary/60">
                                     Creating Immutable Version Snapshot
                                 </DialogDescription>
                             </div>
@@ -61,7 +61,7 @@ export const DeployCommitDialog: React.FC<DeployCommitDialogProps> = ({
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <Label htmlFor="notes" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Release Notes</Label>
-                                <span className="text-[10px] text-muted-foreground/60 font-medium italic">Highly Recommended</span>
+                                <span className="text-[10px] text-muted-foreground/60 font-medium ">Highly Recommended</span>
                             </div>
                             <Textarea
                                 id="notes"
@@ -98,7 +98,7 @@ export const DeployCommitDialog: React.FC<DeployCommitDialogProps> = ({
                         <Button 
                             onClick={handleConfirm}
                             disabled={isSaving}
-                            className="flex-1 rounded-xl h-12 font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 bg-primary text-primary-foreground hover:shadow-primary/40 transition-all gap-2"
+                            className="flex-1 rounded-xl h-12 font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 bg-primary text-primary-foreground hover:shadow-primary/40 transition-all gap-2"
                         >
                             {isSaving ? "Processing..." : (
                                 <>

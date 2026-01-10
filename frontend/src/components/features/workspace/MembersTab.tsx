@@ -48,7 +48,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
                     {isLoading ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-20 opacity-40">
                             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-foreground">
                                 Synchronizing Team Directory
                             </span>
                         </div>

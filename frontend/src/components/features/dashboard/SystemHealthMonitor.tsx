@@ -24,7 +24,7 @@ export const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ data }
     return (
         <div className="h-full flex flex-col overflow-hidden">
             <div className="pb-4 shrink-0 px-8 pt-8">
-                <h3 className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
+                <h3 className="text-xl font-bold tracking-tighter uppercase flex items-center gap-2">
                     <Activity className="h-5 w-5 text-primary" />
                     System Infrastructure
                 </h3>
@@ -40,7 +40,7 @@ export const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ data }
                             <Cpu className="h-4 w-4 text-primary" />
                             <span className="font-bold text-muted-foreground/80 uppercase text-[10px] tracking-widest">CPU Load</span>
                         </div>
-                        <span className="font-black tabular-nums">{cpu}%</span>
+                        <span className="font-bold tabular-nums">{cpu}%</span>
                     </div>
                     <Progress value={cpu} className="h-2.5 bg-muted/30" indicatorClassName={getStatusColor(cpu)} />
                 </div>
@@ -52,7 +52,7 @@ export const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ data }
                             <Server className="h-4 w-4 text-primary" />
                             <span className="font-bold text-muted-foreground/80 uppercase text-[10px] tracking-widest">Memory</span>
                         </div>
-                        <span className="font-black tabular-nums">{Math.round(memory)} MB</span>
+                        <span className="font-bold tabular-nums">{Math.round(memory)} MB</span>
                     </div>
                     <Progress value={(memory / 8192) * 100} className="h-2.5 bg-muted/30" indicatorClassName="bg-blue-500" />
                 </div>
@@ -64,7 +64,7 @@ export const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ data }
                             <Zap className="h-5 w-5" />
                         </div>
                         <div className="flex flex-col -space-y-0.5">
-                            <span className="font-black text-foreground uppercase text-xs tracking-tight">Engine Load</span>
+                            <span className="font-bold text-foreground uppercase text-xs tracking-tight">Engine Load</span>
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Threads</span>
                         </div>
                     </div>
@@ -72,7 +72,7 @@ export const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ data }
                         key={activeWorkers}
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="text-4xl font-black font-mono tracking-tighter text-primary"
+                        className="text-4xl font-bold font-mono tracking-tighter text-primary"
                     >
                         {activeWorkers}
                     </motion.div>

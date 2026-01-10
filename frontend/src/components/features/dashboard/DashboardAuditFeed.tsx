@@ -31,7 +31,7 @@ export const DashboardAuditFeed: React.FC<DashboardAuditFeedProps> = ({ logs }) 
                         <div className="p-6 bg-muted/20 rounded-[2rem] border border-border/50 mb-4">
                             <Shield className="h-10 w-10 opacity-20" />
                         </div>
-                        <span className="text-xs font-black uppercase tracking-widest italic">No recent system activity</span>
+                        <span className="text-xs font-bold uppercase tracking-widest ">No recent system activity</span>
                     </div>
                 ) : (
                     <div className="divide-y divide-border/10">
@@ -45,20 +45,20 @@ export const DashboardAuditFeed: React.FC<DashboardAuditFeedProps> = ({ logs }) 
                                         {formatEventName(log.event_type)}
                                     </p>
                                     <div className="flex items-center gap-2">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
                                             {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
                                         </p>
                                         {log.target_type && (
                                             <>
                                                 <div className="h-1 w-1 rounded-full bg-border" />
-                                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/60">
+                                                <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-primary/60">
                                                     {log.target_type}
                                                 </span>
                                             </>
                                         )}
                                         <div className="h-1 w-1 rounded-full bg-border" />
                                         <span className={cn(
-                                            "text-[9px] font-black uppercase tracking-[0.2em]",
+                                            "text-[9px] font-bold uppercase tracking-[0.2em]",
                                             log.status === 'success' ? 'text-emerald-500' : 'text-rose-500'
                                         )}>
                                             {log.status}

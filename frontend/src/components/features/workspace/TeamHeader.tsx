@@ -16,7 +16,7 @@ export const TeamHeader: React.FC = () => {
                         </div>
                         Team Management
                     </h2>
-                    <Badge variant="outline" className="h-7 px-3 rounded-xl bg-primary/5 text-primary border-primary/20 font-black uppercase tracking-widest text-[9px] gap-1.5 hidden sm:flex">
+                    <Badge variant="outline" className="h-7 px-3 rounded-xl bg-primary/5 text-primary border-primary/20 font-bold uppercase tracking-widest text-[9px] gap-1.5 hidden sm:flex">
                         {activeWorkspace?.role} Access
                     </Badge>
                 </div>

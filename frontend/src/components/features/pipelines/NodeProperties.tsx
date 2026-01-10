@@ -121,7 +121,7 @@ const RuleBuilder = ({ watch, setValue }: any) => {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Validation Rules</Label>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Validation Rules</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addRule} className="h-7 text-[9px] font-bold uppercase tracking-wider rounded-lg border-primary/20 hover:bg-primary/5">
                     <Plus className="h-3 w-3 mr-1" /> Add Rule
                 </Button>
@@ -561,12 +561,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                 <div className="px-6 pt-4 shrink-0">
-                    <TabsList className="w-full grid grid-cols-2 h-9 bg-muted/50 p-1 rounded-lg">
-                        <TabsTrigger value="settings" className="text-xs gap-2 rounded-md"><Sliders size={14} /> Basic</TabsTrigger>
+                    <TabsList className="w-full grid grid-cols-2">
+                        <TabsTrigger value="settings" className="gap-2"><Sliders size={14} /> Basic</TabsTrigger>
                         {node.data.diffStatus && node.data.diffStatus !== 'none' ? (
-                            <TabsTrigger value="diff" className="text-xs gap-2 rounded-md bg-amber-500/10 text-amber-500"><GitCompare size={14} /> Diff</TabsTrigger>
+                            <TabsTrigger value="diff" className="gap-2 bg-amber-500/10 text-amber-500"><GitCompare size={14} /> Diff</TabsTrigger>
                         ) : (
-                            <TabsTrigger value="advanced" className="text-xs gap-2 rounded-md"><Code size={14} /> Advanced</TabsTrigger>
+                            <TabsTrigger value="advanced" className="gap-2"><Code size={14} /> Advanced</TabsTrigger>
                         )}
                     </TabsList>
                 </div>
@@ -577,7 +577,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                             <TabsContent value="settings" className="m-0 space-y-6 focus-visible:outline-none">
                                 {/* Identity - Name Only */}
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Node Identity</Label>
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Node Identity</Label>
                                     <Input
                                         {...register('label', { required: true })}
                                         placeholder="Descriptive name..."
@@ -592,7 +592,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                         <div className="space-y-4 p-4 rounded-xl border border-border/40 bg-muted/10">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <Database className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">IO Mapping</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">IO Mapping</span>
                                             </div>
                                             <div className="space-y-2">
                                                 <div className="flex items-center">
@@ -637,7 +637,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                                     <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
                                                                 ))}
                                                                 {filteredAssets.length === 0 && !isLoadingAssets && (
-                                                                    <div className="p-4 text-center text-[10px] text-muted-foreground italic">
+                                                                    <div className="p-4 text-center text-[10px] text-muted-foreground ">
                                                                         No {nodeType === 'sink' ? 'destination' : 'source'} assets found. 
                                                                         Go to Connections to discover and import them.
                                                                     </div>
@@ -670,7 +670,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                             </Select>
                                                         )}
                                                     />
-                                                    <p className="text-[9px] text-muted-foreground italic">Defines how data is committed to the target.</p>
+                                                    <p className="text-[9px] text-muted-foreground ">Defines how data is committed to the target.</p>
                                                 </div>
                                             )}
                                         </div>
@@ -680,7 +680,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                         <div className="space-y-4 p-4 rounded-xl border border-border/40 bg-primary/5">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Sliders className="h-3 w-3 text-primary" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-primary">Operator Properties</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Operator Properties</span>
                                             </div>
                                             {opDef.fields.map(renderField)}
                                         </div>
@@ -691,7 +691,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
 
                                 {/* Reliability */}
                                 <div className="space-y-4">
-                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Orchestration & Reliability</Label>
+                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Orchestration & Reliability</Label>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <div className="flex items-center">
@@ -750,7 +750,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                             
                                                                             {/* Secondary Info */}
                                                                             <div className="space-y-2">
-                                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Documentation</Label>
+                                                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Documentation</Label>
                                                                                 <Textarea
                                                                                     {...register('description')}
                                                                                     placeholder="Optional node description or notes..."
@@ -770,7 +770,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                             <TabsContent value="advanced" className="m-0 h-full focus-visible:outline-none">
                                 <div className="space-y-4 h-full">
                                     <div className="flex items-center justify-between">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Expert Configuration</Label>
+                                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expert Configuration</Label>
                                         <Badge variant="outline" className="text-[9px] font-mono">JSON</Badge>
                                     </div>
                                     <Textarea
@@ -785,14 +785,14 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2">
                                         <Badge className={cn(
-                                            "text-[10px] font-black uppercase tracking-widest",
+                                            "text-[10px] font-bold uppercase tracking-widest",
                                             (node.data as any).diffStatus === 'added' ? "bg-emerald-500/20 text-emerald-500" :
                                                 (node.data as any).diffStatus === 'removed' ? "bg-destructive/20 text-destructive" :
                                                     "bg-amber-500/20 text-amber-500"
                                         )}>
                                             {String((node.data as any).diffStatus || '')}
                                         </Badge>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Change Analysis</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Change Analysis</span>
                                     </div>
 
                                     {(node.data as any).diffInfo?.changes?.name && (
@@ -867,7 +867,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-2xl bg-background/95 shadow-2xl">
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle className="text-xl font-black uppercase tracking-tighter">De-provision Node?</AlertDialogTitle>
+                                                            <AlertDialogTitle className="text-xl font-bold uppercase tracking-tighter">De-provision Node?</AlertDialogTitle>
                                                             <AlertDialogDescription className="font-medium text-sm">This will permanently remove the operator and all its logical connections.</AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter className="gap-2 mt-6">

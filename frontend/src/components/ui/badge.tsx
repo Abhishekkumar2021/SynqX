@@ -25,13 +25,13 @@ const badgeVariants = cva(
 
         // Semantic Status Badges
         success:
-          "border-success/20 bg-success/15 text-success hover:bg-success/25 shadow-[0_0_10px_-4px_rgba(var(--success),0.3)]",
+          "border-success/20 bg-success/15 text-success hover:bg-success/25 shadow-sm shadow-success/10",
 
         warning:
-          "border-warning/20 bg-warning/15 text-warning hover:bg-warning/25 shadow-[0_0_10px_-4px_rgba(var(--warning),0.3)]",
+          "border-warning/20 bg-warning/15 text-warning hover:bg-warning/25 shadow-sm shadow-warning/10",
 
         info:
-          "border-info/20 bg-info/15 text-info hover:bg-info/25 shadow-[0_0_10px_-4px_rgba(var(--info),0.3)]",
+          "border-info/20 bg-info/15 text-info hover:bg-info/25 shadow-sm shadow-info/10",
       },
     },
     defaultVariants: {

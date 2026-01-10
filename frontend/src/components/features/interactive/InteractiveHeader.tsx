@@ -11,34 +11,32 @@ interface InteractiveHeaderProps {
 export const InteractiveHeader: React.FC<InteractiveHeaderProps> = ({ onClear, count = 0 }) => {
     return (
         <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 px-1">
-            <div className="flex items-center gap-5">
-                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary ring-1 ring-primary/20 shadow-inner shrink-0">
-                    <Zap className="h-7 w-7" />
+            <div className="space-y-1.5">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-3xl md:text-4xl font-bold tracking-tighter text-foreground flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-2xl ring-1 ring-border/50 backdrop-blur-md shadow-sm">
+                            <Zap className="h-6 w-6 text-primary" />
+                        </div>
+                        Interactive Lab
+                    </h2>
+                    <Badge variant="outline" className="h-7 px-3 rounded-xl bg-primary/5 border-primary/20 text-[9px] font-bold tracking-widest px-2.5 py-0.5 rounded-lg text-primary uppercase">
+                        {count} ENTRIES
+                    </Badge>
                 </div>
-                <div className="min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                        <h2 className="text-2xl font-black tracking-tight text-foreground uppercase">
-                            Interactive Lab
-                        </h2>
-                        <Badge variant="outline" className="bg-background/50 border-border/40 text-[9px] font-black tracking-[0.2em] px-2 py-0.5 rounded-md">
-                            EPHEMERAL • {count} ENTRIES
-                        </Badge>
-                    </div>
-                    <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider truncate">
-                        Registry of short-lived tasks, explorer queries and ad-hoc executions.
-                    </p>
-                </div>
+                <p className="text-sm md:text-base text-muted-foreground font-medium pl-1">
+                    A high-performance registry for ephemeral short-lived tasks, ad-hoc explorer queries, and real-time execution forensics.
+                </p>
             </div>
 
             <div className="flex items-center gap-3">
                 <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="rounded-xl h-10 px-4 font-black uppercase text-[10px] tracking-widest text-destructive hover:bg-destructive/10 gap-2 transition-all border border-transparent hover:border-destructive/20"
+                    className="rounded-xl h-11 px-5 font-bold uppercase text-[10px] tracking-widest text-destructive hover:bg-destructive/10 gap-2.5 transition-all border border-transparent hover:border-destructive/20"
                     onClick={onClear}
                 >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Clear History
+                    <Trash2 className="h-4 w-4" />
+                    Purge History
                 </Button>
             </div>
         </div>

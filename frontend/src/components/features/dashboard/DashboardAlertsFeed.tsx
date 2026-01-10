@@ -26,7 +26,7 @@ export const DashboardAlertsFeed: React.FC<DashboardAlertsFeedProps> = ({ alerts
                         <div className="p-6 bg-muted/20 rounded-[2rem] border border-border/50 mb-4">
                             <Bell className="h-10 w-10 opacity-20" />
                         </div>
-                        <span className="text-xs font-black uppercase tracking-widest italic">No critical alerts</span>
+                        <span className="text-xs font-bold uppercase tracking-widest ">No critical alerts</span>
                     </div>
                 ) : (
                     <div className="divide-y divide-border/10">
@@ -40,12 +40,12 @@ export const DashboardAlertsFeed: React.FC<DashboardAlertsFeedProps> = ({ alerts
                                         {alert.message}
                                     </p>
                                     <div className="flex items-center gap-2">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
                                             {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
                                         </p>
                                         <div className="h-1 w-1 rounded-full bg-border" />
                                         <span className={cn(
-                                            "text-[9px] font-black uppercase tracking-[0.2em]",
+                                            "text-[9px] font-bold uppercase tracking-[0.2em]",
                                             alert.level === 'error' ? 'text-destructive' : 
                                             alert.level === 'warning' ? 'text-amber-500' : 'text-primary'
                                         )}>{alert.level}</span>

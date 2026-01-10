@@ -250,7 +250,7 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
 
                     {/* --- Breadcrumbs --- */}
                     <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar flex-1 px-2 py-1 bg-background/50 rounded-lg border border-border/40 min-h-9">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 px-2 shrink-0">Path:</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 px-2 shrink-0">Path:</span>
                         {breadcrumbs.length === 0 ? (
                             <span className="text-xs font-bold text-muted-foreground/60 px-1">/ root</span>
                         ) : (
@@ -303,7 +303,7 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-xl border-border/60 shadow-xl p-1">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-2 py-1.5 opacity-50">Sort By</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest px-2 py-1.5 opacity-50">Sort By</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => setSortField('name')} className="rounded-lg text-xs font-bold gap-2.5">
                                     <FileText className={cn("h-4 w-4", sortField === 'name' ? "text-primary" : "opacity-40")} />
                                     Name
@@ -322,7 +322,7 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
                                 
                                 <DropdownMenuSeparator className="bg-border/40 my-1" />
                                 
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-2 py-1.5 opacity-50">Order</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest px-2 py-1.5 opacity-50">Order</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => setSortOrder('asc')} className="rounded-lg text-xs font-bold gap-2.5">
                                     <SortAsc className={cn("h-4 w-4", sortOrder === 'asc' ? "text-primary" : "opacity-40")} />
                                     Ascending
@@ -334,7 +334,7 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
 
                                 <DropdownMenuSeparator className="bg-border/40 my-1" />
 
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-2 py-1.5 opacity-50">Group By</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest px-2 py-1.5 opacity-50">Group By</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => setGroupBy('type')} className="rounded-lg text-xs font-bold gap-2.5">
                                     <Layers className={cn("h-4 w-4", groupBy === 'type' ? "text-primary" : "opacity-40")} />
                                     File Type
@@ -393,9 +393,9 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
                                                     />
                                                 </TableHead>
                                             )}
-                                            <TableHead className={cn("text-[10px] font-black uppercase tracking-widest text-muted-foreground/60", readOnly && "pl-6")}>Asset Name</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Format</TableHead>
-                                            <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 text-right pr-6">Size</TableHead>
+                                            <TableHead className={cn("text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60", readOnly && "pl-6")}>Asset Name</TableHead>
+                                            <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 text-center">Format</TableHead>
+                                            <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 text-right pr-6">Size</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -436,7 +436,7 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
                                                                         </div>
                                                                     </Button>
                                                                 </TooltipTrigger>
-                                                                <TooltipContent side="right" className="text-[9px] font-black uppercase">
+                                                                <TooltipContent side="right" className="text-[9px] font-bold uppercase">
                                                                     Toggle All in Folder
                                                                 </TooltipContent>
                                                             </Tooltip>
@@ -468,18 +468,18 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
                                                 </TableCell>
                                                 <TableCell className="text-center py-2">
                                                     {item.type === 'directory' ? (
-                                                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase tracking-widest border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-500/5">
+                                                        <Badge variant="outline" className="h-5 text-[8px] font-bold uppercase tracking-widest border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-500/5">
                                                             FOLDER
                                                         </Badge>
                                                     ) : (
-                                                        <Badge variant="outline" className="h-5 text-[8px] font-black uppercase tracking-widest bg-muted/50 border-border/40 text-muted-foreground/70">
+                                                        <Badge variant="outline" className="h-5 text-[8px] font-bold uppercase tracking-widest bg-muted/50 border-border/40 text-muted-foreground/70">
                                                             {item.name.split('.').pop() || 'FILE'}
                                                         </Badge>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right pr-6 py-2">
                                                     <div className="flex flex-col items-end">
-                                                        <span className="text-xs font-black font-mono text-foreground/70 tracking-tight">
+                                                        <span className="text-xs font-bold font-mono text-foreground/70 tracking-tight">
                                                             {item.asset?.size_bytes ? (
                                                                 (item.asset.size_bytes / 1024).toFixed(1) + ' KB'
                                                             ) : '-'}
@@ -544,12 +544,12 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
                                                     item.type === 'directory' ? "bg-blue-500/10 text-blue-600" : "bg-muted/50 text-foreground/60",
                                                     isSelected && "bg-primary/20 text-primary"
                                                 )}>
-                                                    {React.cloneElement(getIcon(item) as React.ReactElement, { className: "h-8 w-8" })}
+                                                    {React.cloneElement(getIcon(item) as React.ReactElement<{ className?: string }>, { className: "h-8 w-8" })}
                                                 </div>
                                                 <span className="text-xs font-bold text-center truncate w-full px-1 mb-1">
                                                     {item.name}
                                                 </span>
-                                                <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-tighter">
+                                                <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-tighter">
                                                     {item.type === 'directory' ? 'Folder' : (item.asset?.size_bytes ? (item.asset.size_bytes / 1024).toFixed(1) + ' KB' : '-')}
                                                 </span>
                                             </motion.div>
@@ -566,7 +566,7 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background/50 border border-border/40">
                             <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
-                            <span className="text-[9px] font-black uppercase tracking-tighter text-foreground/70">{items.length} Items</span>
+                            <span className="text-[9px] font-bold uppercase tracking-tighter text-foreground/70">{items.length} Items</span>
                         </div>
                         <div className="h-3 w-px bg-border/40" />
                         <div className="flex items-center gap-1.5 max-w-[150px] sm:max-w-xs overflow-hidden">
@@ -587,7 +587,7 @@ export const AssetFileExplorer: React.FC<AssetFileExplorerProps> = ({
                                 >
                                     {selectedAssets.size === assets.length ? 'Clear Selection' : 'Select All'}
                                 </Button>
-                                <div className="h-5 px-2 flex items-center rounded-full bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase tracking-tighter">
+                                <div className="h-5 px-2 flex items-center rounded-full bg-primary/10 text-primary border border-primary/20 text-[9px] font-bold uppercase tracking-tighter">
                                     {selectedAssets.size} Selected
                                 </div>
                             </>

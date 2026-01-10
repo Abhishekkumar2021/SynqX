@@ -172,7 +172,8 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                     is_source: asset.usageType === 'source',
                     is_destination: asset.usageType === 'destination',
                     is_incremental_capable: asset.is_incremental_capable,
-                    config: config
+                    config: config,
+                    connection_id: connectionId
                 };
             }),
         };
@@ -218,7 +219,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                 <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
                     <ScrollArea className="flex-1">
                         <div className="p-10 pt-6 space-y-4">
-                            <div className="grid grid-cols-12 gap-4 px-4 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+                            <div className="grid grid-cols-12 gap-4 px-4 mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                                 <div className="col-span-3">Display Name</div>
                                 <div className="col-span-3">Technical Identifier (FQN)</div>
                                 <div className="col-span-2">Object Type</div>
@@ -273,7 +274,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                                     setValue(`assets.${index}.usageType`, 'source');
                                                                 }
                                                             }} defaultValue={f.value}>
-                                                                <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-xs font-bold">
+                                                                <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-xs">
                                                                     <SelectValue />
                                                                 </SelectTrigger>
                                                                 <SelectContent className="rounded-2xl shadow-2xl">
@@ -298,7 +299,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                         name={`assets.${index}.usageType`}
                                                         render={({ field: f }) => (
                                                             <Select onValueChange={f.onChange} value={f.value} disabled={isQuery}>
-                                                                <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-xs font-bold uppercase tracking-wider">
+                                                                <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-xs uppercase tracking-wider">
                                                                     <div className="flex items-center justify-center w-full gap-2">
                                                                         <ArrowRightLeft className="h-3.5 w-3.5 text-primary/60" />
                                                                         <SelectValue />
@@ -325,7 +326,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                                     value={f.value ? 'incremental' : 'full'}
                                                                 >
                                                                     <SelectTrigger className={cn(
-                                                                        "h-10 rounded-2xl text-[10px] font-black uppercase tracking-tighter transition-all",
+                                                                        "h-10 rounded-2xl text-[10px] font-bold uppercase tracking-tighter transition-all",
                                                                         f.value ? "bg-primary/10 border-primary/30 text-primary" : "bg-background/50 border-border/40 text-muted-foreground"
                                                                     )}>
                                                                         <SelectValue />
@@ -343,7 +344,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                             name={`assets.${index}.write_mode`}
                                                             render={({ field: f }) => (
                                                                 <Select onValueChange={f.onChange} value={f.value}>
-                                                                    <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-[9px] font-black uppercase tracking-tighter">
+                                                                    <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-[9px] uppercase tracking-tighter">
                                                                         <SelectValue />
                                                                     </SelectTrigger>
                                                                     <SelectContent className="rounded-2xl">
@@ -389,7 +390,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                                                                                         <TrendingUp className="h-4 w-4" />
                                                                                                                     </div>
                                                                                                                     <div className="flex-1 flex items-center gap-3">
-                                                                                                                                                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary/70">Watermark Column</Label>
+                                                                                                                                                                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Watermark Column</Label>
                                                                                                                                                                                                 <Input 
                                                                                                                                                                                                     {...register(`assets.${index}.watermark_column`, { required: isIncremental })} 
                                                                                                                                                                                                     placeholder="e.g. updated_at or id" 
@@ -401,7 +402,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                                                                             {isQuery && (
                                                                                                                 <div className="space-y-3">
                                                                                                                     <div className="flex items-center justify-between px-1">
-                                                                                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                                                                                                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                                                                                                                             <Code className="h-3 w-3 text-primary" /> Logic Definition
                                                                                                                         </Label>
                                                                                                                         <span className="text-[9px] font-bold text-primary/60 bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">
@@ -430,7 +431,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full h-14 rounded-3xl border-dashed border-border/60 bg-background/20 hover:bg-primary/5 hover:border-primary/30 transition-all font-black uppercase tracking-widest text-muted-foreground hover:text-primary gap-3 mt-4 text-[10px]"
+                                className="w-full h-14 rounded-3xl border-dashed border-border/60 bg-background/20 hover:bg-primary/5 hover:border-primary/30 transition-all font-bold uppercase tracking-widest text-muted-foreground hover:text-primary gap-3 mt-4 text-[10px]"
                                 onClick={() => append({ 
                                     name: '', 
                                     asset_type: defaultAssetType, 

@@ -9,7 +9,7 @@ const Card = React.forwardRef<
     ref={ref}
     className={cn(
       // Base Layout & Shape
-      "rounded-[2rem] border relative overflow-hidden group transition-all duration-500",
+      "rounded-2xl border relative overflow-hidden group transition-all duration-500",
 
       // Glass Material (Theme Aware)
       "bg-card/60 backdrop-blur-2xl border-border/50",

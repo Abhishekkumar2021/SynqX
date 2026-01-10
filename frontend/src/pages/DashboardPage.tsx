@@ -163,16 +163,16 @@ export const DashboardPage: React.FC = () => {
             {/* --- Premium Production Header --- */}
             <motion.div variants={item} className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 px-1">
                 <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] shadow-sm">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase tracking-[0.2em] shadow-sm">
                         <ShieldCheck className="h-3 w-3" />
                         Live System Operational
                     </div>
                     
                     <div className="space-y-1.5">
-                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-foreground flex items-center gap-4">
+                        <h2 className="text-4xl md:text-5xl font-bold tracking-tighter text-foreground flex items-center gap-4">
                             Control Center
                             {user?.is_superuser && (
-                                <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-black text-[10px] tracking-widest px-3 py-1 rounded-lg shadow-sm ml-2">
+                                <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-bold text-[10px] tracking-widest px-3 py-1 rounded-lg shadow-sm ml-2">
                                     SUPERUSER
                                 </Badge>
                             )}
@@ -186,13 +186,13 @@ export const DashboardPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3 w-full lg:w-auto">
-                    <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-2xl border border-border/40 shadow-inner">
+                    <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-xl border border-border/40 shadow-inner">
                         <Select value={timeRange} onValueChange={setTimeRange}>
-                            <SelectTrigger className="rounded-xl h-10 border-0 bg-background shadow-sm font-bold text-xs w-44 hover:bg-muted/50 transition-colors">
+                            <SelectTrigger className="rounded-lg h-10 border-0 bg-background shadow-sm font-semibold text-xs w-44 hover:bg-muted/50 transition-colors">
                                 <CalendarDays className="mr-2 h-3.5 w-3.5 text-primary" />
                                 <SelectValue placeholder="Select Range" />
                             </SelectTrigger>
-                            <SelectContent className="rounded-2xl border-border/40 shadow-2xl">
+                            <SelectContent className="rounded-xl border-border/40 shadow-2xl">
                                 <SelectItem value="24h" className="rounded-lg font-medium">Last 24 Hours</SelectItem>
                                 <SelectItem value="7d" className="rounded-lg font-medium">Last 7 Days</SelectItem>
                                 <SelectItem value="30d" className="rounded-lg font-medium">Last 30 Days</SelectItem>
@@ -211,7 +211,7 @@ export const DashboardPage: React.FC = () => {
 
                     <Button 
                         size="lg" 
-                        className="rounded-2xl h-12 px-6 shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-black uppercase text-[11px] tracking-widest gap-2"
+                        className="rounded-xl h-12 px-6 shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-bold uppercase text-[11px] tracking-widest gap-2"
                         onClick={() => setIsRunDialogOpen(true)}
                     >
                         <PlayCircle className="h-4 w-4" />
@@ -223,7 +223,7 @@ export const DashboardPage: React.FC = () => {
             {/* --- Stats Cards Grid (Balanced 3 Columns) --- */}
             <motion.div variants={item} className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {isLoading ? (
-                    Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-[2.5rem] bg-muted/20" />)
+                    Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl bg-muted/20" />)
                 ) : (
                     <>
                         <StatsCard

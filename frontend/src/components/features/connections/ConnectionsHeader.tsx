@@ -23,7 +23,7 @@ export const ConnectionsHeader: React.FC<ConnectionsHeaderProps> = ({ onCreate }
                         Connectivity Hub
                     </h2>
                     {activeWorkspace && isRemoteGroup(activeWorkspace.default_agent_group) && (
-                        <Badge variant="outline" className="h-7 px-3 rounded-xl bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-black uppercase tracking-widest text-[9px] gap-1.5 hidden sm:flex">
+                        <Badge variant="outline" className="h-7 px-3 rounded-xl bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-bold uppercase tracking-widest text-[9px] gap-1.5 hidden sm:flex">
                             <Laptop className="h-3 w-3" />
                             Agent: {activeWorkspace.default_agent_group}
                         </Badge>

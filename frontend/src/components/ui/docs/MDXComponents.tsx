@@ -462,7 +462,7 @@ export const components = {
   
   // Blockquote
   blockquote: (props: any) => (
-    <blockquote className="border-l-4 border-primary rounded-r-xl bg-primary/5 px-6 py-4 italic my-8 text-lg font-medium text-foreground/80 relative overflow-hidden backdrop-blur-sm shadow-lg" {...props} />
+    <blockquote className="border-l-4 border-primary rounded-r-xl bg-primary/5 px-6 py-4  my-8 text-lg font-medium text-foreground/80 relative overflow-hidden backdrop-blur-sm shadow-lg" {...props} />
   ),
   
   // Horizontal rule

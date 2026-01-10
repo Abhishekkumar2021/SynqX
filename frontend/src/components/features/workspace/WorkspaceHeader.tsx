@@ -13,7 +13,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
     return (
         <div className="p-4 md:p-5 border-b border-border/40 bg-muted/10 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4">
             <div className="space-y-0.5">
-                <h3 className="text-base font-black flex items-center gap-3 text-foreground uppercase tracking-tight">
+                <h3 className="text-base font-bold flex items-center gap-3 text-foreground uppercase tracking-tight">
                     <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
                         <Users size={18} />
                     </div>
@@ -27,7 +27,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="h-6 w-px bg-border/40 hidden md:block" />
                 
-                <Badge variant="outline" className="flex bg-primary/5 text-primary border-primary/20 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-md shadow-xs">
+                <Badge variant="outline" className="flex bg-primary/5 text-primary border-primary/20 text-[9px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-md shadow-xs">
                     {activeWorkspace?.role} Access
                 </Badge>
             </div>

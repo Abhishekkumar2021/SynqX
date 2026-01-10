@@ -95,8 +95,8 @@ export const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({ op
                                 <Building2 className="h-7 w-7 text-primary" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black tracking-tight text-foreground">New Workspace</DialogTitle>
-                                <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary/70 flex items-center gap-1.5">
+                                <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">New Workspace</DialogTitle>
+                                <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-primary/70 flex items-center gap-1.5">
                                     <Sparkles className="h-3 w-3" /> Professional Data Environment
                                 </DialogDescription>
                             </div>
@@ -107,7 +107,7 @@ export const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({ op
                         <div className="space-y-6">
                             {/* Name Input */}
                             <div className="space-y-3">
-                                <Label htmlFor="ws-name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 px-1">
+                                <Label htmlFor="ws-name" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 px-1">
                                     Organization Name
                                 </Label>
                                 <Input 
@@ -121,7 +121,7 @@ export const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({ op
 
                             {/* Description Input */}
                             <div className="space-y-3">
-                                <Label htmlFor="ws-desc" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 px-1">
+                                <Label htmlFor="ws-desc" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 px-1">
                                     Workspace Purpose
                                 </Label>
                                 <Textarea 
@@ -157,7 +157,7 @@ export const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({ op
                             type="submit" 
                             disabled={mutation.isPending || !workspaceName}
                             className={cn(
-                                "flex-1 rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-[10px] transition-all duration-500 gap-2",
+                                "flex-1 rounded-2xl h-14 font-bold uppercase tracking-[0.2em] text-[10px] transition-all duration-500 gap-2",
                                 mutation.isPending ? "opacity-80" : "shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0"
                             )}
                         >

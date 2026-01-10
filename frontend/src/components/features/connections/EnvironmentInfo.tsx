@@ -218,7 +218,7 @@ export const EnvironmentInfo: React.FC<EnvironmentInfoProps> = ({ connectionId }
                                                 <FileCode className="h-4 w-4" />
                                                 <span className="text-[10px] font-bold uppercase tracking-widest">Python Version</span>
                                             </div>
-                                            <span className="text-xl font-black">{envInfo.python_version.replace('Python ', '').split(' ')[0]}</span>
+                                            <span className="text-xl font-bold">{envInfo.python_version.replace('Python ', '').split(' ')[0]}</span>
                                         </div>
                                     )}
                                     {envInfo.node_version && (
@@ -227,7 +227,7 @@ export const EnvironmentInfo: React.FC<EnvironmentInfoProps> = ({ connectionId }
                                                 <FileCode className="h-4 w-4" />
                                                 <span className="text-[10px] font-bold uppercase tracking-widest">Node.js Version</span>
                                             </div>
-                                            <span className="text-xl font-black">{envInfo.node_version}</span>
+                                            <span className="text-xl font-bold">{envInfo.node_version}</span>
                                         </div>
                                     )}
                                     <div className="p-4 rounded-2xl bg-muted/20 border border-border/30 flex flex-col gap-2">
@@ -235,7 +235,7 @@ export const EnvironmentInfo: React.FC<EnvironmentInfoProps> = ({ connectionId }
                                             <Cpu className="h-4 w-4" />
                                             <span className="text-[10px] font-bold uppercase tracking-widest">Architecture</span>
                                         </div>
-                                        <span className="text-xl font-black">{envInfo.platform || 'x86_64'}</span>
+                                        <span className="text-xl font-bold">{envInfo.platform || 'x86_64'}</span>
                                     </div>
                                 </div>
 
@@ -390,7 +390,7 @@ export const EnvironmentInfo: React.FC<EnvironmentInfoProps> = ({ connectionId }
                                                     <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600">
                                                         <Cpu className="h-4 w-4" />
                                                     </div>
-                                                    <span className="text-sm font-black uppercase tracking-wider">{tool}</span>
+                                                    <span className="text-sm font-bold uppercase tracking-wider">{tool}</span>
                                                 </div>
                                                 <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] font-bold">
                                                     System

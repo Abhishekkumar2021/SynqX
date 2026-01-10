@@ -88,7 +88,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ pipeline, 
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold">v{v.version}</span>
                                                 {v.is_published && (
-                                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-wider">
+                                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-wider">
                                                         Published
                                                     </span>
                                                 )}
@@ -142,7 +142,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ pipeline, 
                     <div className="flex flex-col w-full gap-4">
                         <Button 
                             onClick={handleRun}
-                            className="w-full rounded-2xl h-14 text-base font-black shadow-2xl shadow-primary/30 gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all bg-linear-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white border-none"
+                            className="w-full rounded-2xl h-14 text-base font-bold shadow-2xl shadow-primary/30 gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all bg-linear-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white border-none"
                         >
                             <Play className="h-5 w-5 fill-current" /> Run Pipeline
                         </Button>

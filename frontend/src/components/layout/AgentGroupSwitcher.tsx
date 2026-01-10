@@ -147,7 +147,7 @@ export const AgentGroupSwitcher: React.FC = () => {
                     </div>
                 ) : (
                     <div className="p-6 text-center">
-                        <p className="text-[10px] text-muted-foreground italic font-medium leading-relaxed">
+                        <p className="text-[10px] text-muted-foreground  font-medium leading-relaxed">
                             No remote agents found. Register one in the Agents tab to enable hybrid routing.
                         </p>
                     </div>

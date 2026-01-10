@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { getConnections, getConnectionSchemaMetadata, getHistory, clearHistory, type EphemeralJobResponse } from '@/lib/api';
+import { getConnections, getConnectionSchemaMetadata, getHistory, clearHistory, type EphemeralJobResponse, type QueryResponse } from '@/lib/api';
 import { PageMeta } from '@/components/common/PageMeta';
 import { Button } from '@/components/ui/button';
 import {
@@ -266,15 +265,17 @@ export const ExplorerPage: React.FC = () => {
     };
 
     // Helper to normalize EphemeralJobResponse to QueryResponse for ResultsGrid
-    const parseJobResponse = (job: EphemeralJobResponse) => {
+    const parseJobResponse = (job: EphemeralJobResponse): QueryResponse => {
         const rows = job.result_sample?.rows || [];
         const backendCols = job.result_summary?.columns || [];
         const derivedCols = rows.length > 0 ? Object.keys(rows[0]) : [];
         const columns = backendCols.length > 0 ? backendCols : derivedCols;
         
+        const isTruncated = (job.result_sample as any)?.is_truncated;
+        
         return {
             results: rows,
-            count: job.result_sample?.is_truncated ? job.result_summary?.count : rows.length,
+            count: isTruncated ? (job.result_summary?.count ?? rows.length) : rows.length,
             total_count: job.result_summary?.total_count || rows.length,
             columns: columns
         };
@@ -404,7 +405,7 @@ export const ExplorerPage: React.FC = () => {
             const formatted = format(activeTab.query, { language: 'postgresql', keywordCase: 'upper' });
             setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, query: formatted } : t));
             toast.success("SQL Formatted");
-        } catch (e) {
+        } catch {
             toast.error("Formatting failed", { description: "Ensure your SQL syntax is correct." });
         }
     };
@@ -515,7 +516,7 @@ export const ExplorerPage: React.FC = () => {
             <div className="h-12 border-b border-border/40 flex items-center justify-between px-4 bg-muted/5 shrink-0 gap-4">
                 <div className="flex items-center gap-2">
                     <Select value={selectedConnectionId || ''} onValueChange={(val) => { setSelectedConnectionId(val); localStorage.setItem('synqx-explorer-last-connection', val); }}>
-                        <SelectTrigger className="w-56 h-8 glass-input rounded-xl text-xs font-bold transition-all shadow-none">
+                        <SelectTrigger className="w-56 h-8 glass-input rounded-xl text-xs transition-all shadow-none">
                             <div className="flex items-center gap-2 truncate">
                                 <Database className="h-3.5 w-3.5 text-primary/60 shrink-0" />
                                 <SelectValue placeholder="Initialize Data Source" />
@@ -525,10 +526,10 @@ export const ExplorerPage: React.FC = () => {
                             {connections?.map(c => {
                                 const supported = SUPPORTED_EXPLORER_TYPES.includes(c.connector_type.toLowerCase());
                                 return (
-                                    <SelectItem key={c.id} value={c.id.toString()} className={cn("rounded-lg", !supported && "opacity-50 italic")}>
+                                    <SelectItem key={c.id} value={c.id.toString()} className={cn("rounded-lg", !supported && "opacity-50 ")}>
                                         <div className="flex items-center gap-2">
                                             {c.name}
-                                            {!supported && <span className="text-[8px] uppercase font-black opacity-40">(Unsupported)</span>}
+                                            {!supported && <span className="text-[8px] uppercase font-bold opacity-40">(Unsupported)</span>}
                                         </div>
                                     </SelectItem>
                                 );
@@ -588,9 +589,9 @@ export const ExplorerPage: React.FC = () => {
                     )}
 
                     <div className="flex items-center gap-1.5 ml-1">
-                        <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/60 ml-1">Limit</span>
+                        <span className="text-[9px] font-bold uppercase tracking-tighter text-muted-foreground/60 ml-1">Limit</span>
                         <Select value={String(queryLimit)} onValueChange={(val) => setQueryLimit(parseInt(val))}>
-                            <SelectTrigger className="h-7 w-20 glass-input rounded-lg text-[10px] font-bold shadow-none border-border/20">
+                            <SelectTrigger className="h-7 w-20 glass-input rounded-lg text-[10px] shadow-none border-border/20">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="glass border-border/40 rounded-xl">
@@ -653,13 +654,13 @@ export const ExplorerPage: React.FC = () => {
                         <div className="p-4 rounded-[2rem] bg-destructive/10 border border-destructive/20 text-destructive mb-6">
                             <AlertTriangle size={48} strokeWidth={1.5} />
                         </div>
-                        <h2 className="text-xl font-black italic uppercase tracking-tighter text-foreground mb-2">
+                        <h2 className="text-xl font-bold  uppercase tracking-tighter text-foreground mb-2">
                             Unsupported Protocol
                         </h2>
                         <p className="text-sm text-muted-foreground font-medium max-w-sm leading-relaxed mb-8">
-                            Interactive Explorer does not support <span className="text-foreground font-black italic">{currentConnection?.connector_type}</span> sources yet.
+                            Interactive Explorer does not support <span className="text-foreground font-bold ">{currentConnection?.connector_type}</span> sources yet.
                         </p>
-                        <Button variant="outline" className="rounded-2xl font-black uppercase text-[10px]" onClick={() => setSelectedConnectionId(null)}>
+                        <Button variant="outline" className="rounded-2xl font-bold uppercase text-[10px]" onClick={() => setSelectedConnectionId(null)}>
                             Return to Registry
                         </Button>
                     </div>
@@ -711,7 +712,7 @@ export const ExplorerPage: React.FC = () => {
                     {activeTab.results.length === 0 ? (
                         <div className="flex items-center gap-2 px-2 text-muted-foreground/50">
                             <TableIcon size={14} />
-                            <span className="text-[10px] font-semibold uppercase tracking-widest italic">No Results</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest ">No Results</span>
                         </div>
                     ) : (
                         activeTab.results.map((res, idx) => (
@@ -812,7 +813,7 @@ export const ExplorerPage: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden bg-background rounded-3xl border border-border/40 shadow-2xl">
+            <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden bg-background rounded-2xl border border-border/40 shadow-2xl">
                 <AnimatePresence>
                     {maximizedView === 'editor' && <MaximizePortal>{renderEditor()}</MaximizePortal>}
                     {maximizedView === 'results' && <MaximizePortal >{renderResults()}</MaximizePortal>}

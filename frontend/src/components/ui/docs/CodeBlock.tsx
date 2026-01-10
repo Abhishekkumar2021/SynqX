@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, Copy, Check, X } from 'lucide-react';
@@ -65,7 +64,7 @@ export const CodeBlock = ({
       try {
         const html = await codeToHtml(code, { lang: language, theme: shikiTheme });
         if (mounted) setHighlightedCode(html);
-      } catch (e) {
+      } catch {
         if (mounted) setHighlightedCode(`<pre><code>${code}</code></pre>`);
       }
     }

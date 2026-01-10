@@ -229,7 +229,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="absolute top-4 right-4 bottom-4 w-100 glass-panel rounded-[2rem] border-border/40 shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden z-50 bg-background/80"
+                        className="absolute top-4 right-4 bottom-4 w-100 glass-panel rounded-2xl border-border/40 shadow-2xl backdrop-blur-2xl flex flex-col overflow-hidden z-50 bg-background/80"
                     >
                         <div className="p-6 border-b border-border/40 bg-muted/20 flex items-start justify-between">
                             <div>
@@ -244,7 +244,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                              {/* Section 1: Asset Details */}
                              <div className="space-y-3">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
                                     <Layers className="h-3 w-3" /> Asset Details
                                 </h3>
                                 <div className="p-4 rounded-xl bg-card/50 border border-border/40 space-y-2">
@@ -271,12 +271,12 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
 
                              {/* Section 1.5: Trace Column (NEW) */}
                              <div className="space-y-3">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
                                     <Search className="h-3 w-3 text-primary" /> Trace Column
                                 </h3>
                                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-4">
                                     <Select value={selectedColumn || ''} onValueChange={setSelectedColumn}>
-                                        <SelectTrigger className="h-9 glass-input rounded-xl text-xs font-bold shadow-none border-border/20 bg-background/50">
+                                        <SelectTrigger className="h-9 glass-input rounded-xl text-xs shadow-none border-border/20 bg-background/50">
                                             <SelectValue placeholder="Select a column to trace..." />
                                         </SelectTrigger>
                                         <SelectContent className="glass border-border/40 rounded-xl">
@@ -284,7 +284,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                                 <SelectItem key={col.name} value={col.name} className="text-xs font-medium">
                                                     {col.name} <span className="opacity-40 text-[10px] ml-1">({col.type})</span>
                                                 </SelectItem>
-                                            )) || <div className="p-2 text-xs text-muted-foreground italic">No schema metadata found.</div>}
+                                            )) || <div className="p-2 text-xs text-muted-foreground ">No schema metadata found.</div>}
                                         </SelectContent>
                                     </Select>
 
@@ -301,9 +301,9 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                                         <Zap className="h-3 w-3 text-white" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-[10px] font-black uppercase text-primary tracking-tighter">Origin</div>
+                                                        <div className="text-[10px] font-bold uppercase text-primary tracking-tighter">Origin</div>
                                                         <div className="text-xs font-bold">{colLineage.origin_column_name}</div>
-                                                        <div className="text-[9px] text-muted-foreground truncate max-w-40 italic">Asset #{colLineage.origin_asset_id}</div>
+                                                        <div className="text-[9px] text-muted-foreground truncate max-w-40 ">Asset #{colLineage.origin_asset_id}</div>
                                                     </div>
                                                 </div>
 
@@ -314,7 +314,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                                             <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
                                                         </div>
                                                         <div>
-                                                            <div className="text-[10px] font-black uppercase text-muted-foreground tracking-tighter flex items-center gap-1">
+                                                            <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter flex items-center gap-1">
                                                                 {flow.transformation_type} <ArrowRight className="h-2 w-2" /> {flow.target_column}
                                                             </div>
                                                             <div className="text-xs font-medium opacity-80">Pipeline #{flow.pipeline_id}</div>
@@ -329,7 +329,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                                         <CheckCircle2 className="h-3 w-3 text-white" />
                                                     </div>
                                                     <div>
-                                                        <div className="text-[10px] font-black uppercase text-emerald-600 tracking-tighter">Terminal</div>
+                                                        <div className="text-[10px] font-bold uppercase text-emerald-600 tracking-tighter">Terminal</div>
                                                         <div className="text-xs font-bold">{colLineage.column_name}</div>
                                                     </div>
                                                 </div>
@@ -341,7 +341,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
 
                              {/* Section 2: Downstream Pipelines */}
                              <div className="space-y-3">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
                                     <Zap className="h-3 w-3 text-amber-500" /> Downstream Pipelines
                                 </h3>
                                 {isLoadingImpact ? (
@@ -370,7 +370,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
 
                              {/* Section 3: Affected Assets */}
                              <div className="space-y-3">
-                                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
                                     <AlertTriangle className="h-3 w-3 text-destructive" /> Affected Assets
                                 </h3>
                                 {impactData?.downstream_assets && impactData.downstream_assets.length > 0 ? (
@@ -385,7 +385,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-xs text-muted-foreground italic px-2">No downstream assets impacted.</div>
+                                    <div className="text-xs text-muted-foreground  px-2">No downstream assets impacted.</div>
                                 )}
                              </div>
                         </div>

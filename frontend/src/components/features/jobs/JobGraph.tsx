@@ -228,7 +228,7 @@ export const JobGraph: React.FC<JobGraphProps> = ({ run }) => {
                                 variant={isDraggable ? "default" : "ghost"} 
                                 size="sm" 
                                 onClick={() => setIsDraggable(!isDraggable)}
-                                className="h-8 rounded-lg gap-2 text-[10px] font-black uppercase tracking-widest"
+                                className="h-8 rounded-lg gap-2 text-[10px] font-bold uppercase tracking-widest"
                             >
                                 {isDraggable ? <Lock className="h-3 w-3" /> : <Move className="h-3 w-3" />}
                                 {isDraggable ? 'Lock' : 'Edit'}
@@ -237,7 +237,7 @@ export const JobGraph: React.FC<JobGraphProps> = ({ run }) => {
                                 variant="ghost" 
                                 size="sm" 
                                 onClick={onAutoLayout}
-                                className="h-8 rounded-lg gap-2 text-[10px] font-black uppercase tracking-widest"
+                                className="h-8 rounded-lg gap-2 text-[10px] font-bold uppercase tracking-widest"
                             >
                                 <Wand2 className="h-3 w-3 text-primary" />
                                 Layout

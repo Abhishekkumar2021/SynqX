@@ -1,16 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
-import { Search, List, LayoutGrid } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { InviteMemberDialog } from './InviteMemberDialog';
+import { ViewToggle, type ViewMode } from '@/components/common/ViewToggle';
 
 interface MembersToolbarProps {
     searchQuery: string;
     setSearchQuery: (query: string) => void;
-    viewMode: 'list' | 'grid';
-    setViewMode: (mode: 'list' | 'grid') => void;
+    viewMode: ViewMode;
+    setViewMode: (mode: ViewMode) => void;
     isAdmin: boolean;
     workspaceId?: number;
     queryClient: any;
@@ -40,30 +39,11 @@ export const MembersToolbar: React.FC<MembersToolbarProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-                <div className="flex items-center bg-background/50 border border-border/40 rounded-lg p-0.5">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                            "h-7 w-7 rounded-md transition-all",
-                            viewMode === 'list' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted"
-                        )}
-                        onClick={() => setViewMode('list')}
-                    >
-                        <List className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                            "h-7 w-7 rounded-md transition-all",
-                            viewMode === 'grid' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted"
-                        )}
-                        onClick={() => setViewMode('grid')}
-                    >
-                        <LayoutGrid className="h-3.5 w-3.5" />
-                    </Button>
-                </div>
+                <ViewToggle 
+                    viewMode={viewMode} 
+                    setViewMode={setViewMode} 
+                    className="bg-background/50 border-border/40 rounded-lg p-0.5"
+                />
 
                 {isAdmin && (
                     <InviteMemberDialog

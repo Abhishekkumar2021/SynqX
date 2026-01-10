@@ -22,7 +22,7 @@ export const WorkspaceStatsSidebar: React.FC<WorkspaceStatsSidebarProps> = ({
             <div className="rounded-[1.5rem] border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden group/card relative">
                 <div className="p-4 border-b border-border/40 bg-muted/10 flex items-center gap-2.5 text-primary relative z-10">
                     <Activity className="h-3.5 w-3.5 group-hover/card:scale-110 transition-transform" />
-                    <h4 className="text-[9px] font-black uppercase tracking-widest">
+                    <h4 className="text-[9px] font-bold uppercase tracking-widest">
                         Ecosystem Vitality
                     </h4>
                 </div>
@@ -30,8 +30,8 @@ export const WorkspaceStatsSidebar: React.FC<WorkspaceStatsSidebarProps> = ({
                     <div className="space-y-3">
                         <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/30 group/item hover:border-primary/20 transition-all duration-300">
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest leading-none mb-1">Total Members</span>
-                                <span className="text-lg font-black text-foreground tabular-nums">
+                                <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-widest leading-none mb-1">Total Members</span>
+                                <span className="text-lg font-bold text-foreground tabular-nums">
                                     {members?.length || 0}
                                 </span>
                             </div>
@@ -42,8 +42,8 @@ export const WorkspaceStatsSidebar: React.FC<WorkspaceStatsSidebarProps> = ({
 
                         <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/30 group/item hover:border-emerald-500/20 transition-all duration-300">
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest leading-none mb-1">Your Authority</span>
-                                <span className="text-xs font-black text-emerald-500 uppercase tracking-tight">
+                                <span className="text-[8px] font-bold text-muted-foreground/50 uppercase tracking-widest leading-none mb-1">Your Authority</span>
+                                <span className="text-xs font-bold text-emerald-500 uppercase tracking-tight">
                                     {activeWorkspace?.role || 'Viewer'}
                                 </span>
                             </div>
@@ -54,7 +54,7 @@ export const WorkspaceStatsSidebar: React.FC<WorkspaceStatsSidebarProps> = ({
                     </div>
 
                     <div className="space-y-3 pt-1 border-t border-border/10">
-                        <div className="flex justify-between items-center text-[8px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                        <div className="flex justify-between items-center text-[8px] font-bold text-muted-foreground uppercase tracking-widest px-1">
                             <span>Identity Context</span>
                             <span className="text-primary font-mono text-[8px] truncate ml-2 max-w-25">{activeWorkspace?.slug}</span>
                         </div>

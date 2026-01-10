@@ -134,7 +134,7 @@ export const ConnectionsPage: React.FC = () => {
             >
                 <div className="relative">
                     <div className="absolute inset-0 bg-destructive/20 blur-3xl rounded-full" />
-                    <div className="relative h-24 w-24 rounded-3xl glass-card flex items-center justify-center mx-auto shadow-2xl">
+                    <div className="relative h-24 w-24 rounded-2xl glass-card flex items-center justify-center mx-auto shadow-2xl">
                         <XCircle className="h-12 w-12 text-destructive" />
                     </div>
                 </div>
@@ -166,7 +166,7 @@ export const ConnectionsPage: React.FC = () => {
 
             <ConnectionsHeader onCreate={isEditor ? handleCreate : undefined} />
 
-            <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
                 <ConnectionsToolbar 
                     filter={filter}
                     setFilter={setFilter}
@@ -187,7 +187,7 @@ export const ConnectionsPage: React.FC = () => {
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-5xl h-175 flex flex-col p-0 gap-0 overflow-hidden rounded-3xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
+                <DialogContent className="max-w-5xl h-175 flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
                     <VisuallyHidden.Root>
                         <DialogTitle>Connection Configuration</DialogTitle>
                         <DialogDescription>Create or edit a data source connection.</DialogDescription>

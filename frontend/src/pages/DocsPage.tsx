@@ -31,7 +31,7 @@ export const DocsPage: React.FC = () => {
       <PageMeta title={title || "Documentation"} description={description || "SynqX Documentation"} />
 
       {/* --- Breadcrumbs --- */}
-      <nav className="flex items-center gap-3 mb-12 text-[11px] font-black uppercase tracking-[0.25em] text-muted-foreground/40">
+      <nav className="flex items-center gap-3 mb-12 text-[11px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
         <Link to="/dashboard" className="hover:text-primary transition-all duration-300 flex items-center gap-2 group">
           <span className="opacity-0 group-hover:opacity-100 transition-opacity">-</span>
           Console
@@ -57,12 +57,12 @@ export const DocsPage: React.FC = () => {
             <BookOpen className="h-6 w-6" />
           </div>
           <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70">Technical Documentation</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-70">Technical Documentation</span>
             <span className="text-xs font-bold text-muted-foreground/60">SynqX Intelligence v1.0.0</span>
           </div>
         </div>
 
-        <h1 className="text-7xl font-black tracking-[calc(-0.05em)] text-foreground leading-[0.95] drop-shadow-sm">
+        <h1 className="text-7xl font-bold tracking-[calc(-0.05em)] text-foreground leading-[0.95] drop-shadow-sm">
           {title || "Untitled Document"}
         </h1>
         
@@ -72,7 +72,7 @@ export const DocsPage: React.FC = () => {
           </p>
         )}
         
-        <div className="flex items-center gap-8 pt-10 text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.25em]">
+        <div className="flex items-center gap-8 pt-10 text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.25em]">
           <div className="flex items-center gap-2.5 group cursor-help">
             <Clock className="h-4 w-4 group-hover:text-primary transition-colors" />
             <span className="group-hover:text-foreground/70 transition-colors">5 min reading time</span>
@@ -95,7 +95,7 @@ export const DocsPage: React.FC = () => {
             <Suspense fallback={
               <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="text-xs font-black uppercase tracking-widest animate-pulse">Rendering Engine...</span>
+                <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Rendering Engine...</span>
               </div>
             }>
               <MDXContent />
@@ -107,11 +107,11 @@ export const DocsPage: React.FC = () => {
       {/* --- Footer Navigation --- */}
       <footer className="mt-20 pt-8 border-t border-border/40 mb-12">
         <div className="flex items-center justify-between">
-          <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
             © 2025 SynqX Intelligence Engine
           </div>
           <div className="flex items-center gap-4">
-            <a href="#" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Edit on GitHub</a>
+            <a href="#" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Edit on GitHub</a>
           </div>
         </div>
       </footer>

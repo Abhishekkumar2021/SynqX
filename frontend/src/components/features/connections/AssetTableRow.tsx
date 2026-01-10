@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { cn, formatNumber } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -153,7 +153,7 @@ export const AssetTableRow: React.FC<AssetTableRowProps> = ({ asset, connectionI
                         v{asset.current_schema_version}
                     </Badge>
                 ) : (
-                    <span className="text-xs text-muted-foreground/50 italic flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground/50  flex items-center gap-1">
                         <RefreshCw className="h-3 w-3 animate-spin" /> Pending
                     </span>
                 )}

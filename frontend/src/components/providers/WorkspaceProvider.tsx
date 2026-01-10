@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getWorkspaces, switchWorkspace, exportWorkspace } from '@/lib/api';
@@ -70,7 +69,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             link.click();
             link.parentNode?.removeChild(link);
             toast.success("Workspace context downloaded");
-        } catch (error) {
+        } catch {
             toast.error("Failed to download workspace context");
         }
     };

@@ -61,7 +61,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                 </div>
                 <div className="flex flex-col gap-1 min-w-0">
                     {/* Breadcrumbs - Hidden on very small screens, truncated on medium */}
-                    <div className="hidden sm:flex items-center gap-2 text-[9px] md:text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] whitespace-nowrap overflow-hidden">
+                    <div className="hidden sm:flex items-center gap-2 text-[9px] md:text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em] whitespace-nowrap overflow-hidden">
                         <span className="hover:text-primary cursor-pointer transition-colors shrink-0" onClick={() => navigate('/jobs')}>Executions</span>
                         <ChevronRight className="h-2.5 w-2.5 shrink-0" />
                         <span className="hover:text-primary cursor-pointer transition-colors truncate max-w-[100px] md:max-w-[200px]" onClick={() => navigate(`/pipelines/${job.pipeline_id}`)}>
@@ -71,7 +71,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                     
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2 md:gap-2.5 group cursor-pointer min-w-0" onClick={() => copyToClipboard(job.id.toString(), 'Job ID')}>
-                            <h3 className="text-lg md:text-xl font-black tracking-tight text-foreground uppercase truncate">
+                            <h3 className="text-lg md:text-xl font-bold tracking-tight text-foreground uppercase truncate">
                                 Run <span className="text-primary">#{job.id}</span>
                             </h3>
                             <Copy className="h-3 w-3 md:h-3.5 md:w-3.5 opacity-0 group-hover:opacity-40 transition-opacity shrink-0" />
@@ -109,7 +109,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                                 <ClipboardList className="h-4 w-4" /> 
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px] font-black uppercase tracking-widest">Execution Summary</TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] font-bold uppercase tracking-widest">Execution Summary</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
@@ -124,7 +124,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                                 <Terminal className="h-4 w-4" /> 
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px] font-black uppercase tracking-widest">System Logs</TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] font-bold uppercase tracking-widest">System Logs</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
@@ -139,7 +139,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                                 <GitBranch className="h-4 w-4" /> 
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px] font-black uppercase tracking-widest">Visual Trace (Graph)</TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] font-bold uppercase tracking-widest">Visual Trace (Graph)</TooltipContent>
                     </Tooltip>
                 </div>
 
@@ -152,7 +152,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                             <Button 
                                 variant="destructive" 
                                 size="sm"
-                                className="h-8 md:h-9 w-auto rounded-lg md:rounded-xl shadow-md shadow-destructive/10 gap-2 px-3 md:px-4 text-[9px] md:text-[10px] font-black uppercase tracking-wider"
+                                className="h-8 md:h-9 w-auto rounded-lg md:rounded-xl shadow-md shadow-destructive/10 gap-2 px-3 md:px-4 text-[9px] md:text-[10px] font-bold uppercase tracking-wider"
                                 onClick={onCancel}
                                 disabled={isCancelPending}
                             >
@@ -166,7 +166,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                             <Button 
                                 variant="outline" 
                                 size="sm"
-                                className="h-8 md:h-9 w-auto rounded-lg md:rounded-xl shadow-sm gap-2 px-3 md:px-4 text-[9px] md:text-[10px] font-black uppercase tracking-wider border-border/60 hover:bg-primary/5 hover:border-primary/30"
+                                className="h-8 md:h-9 w-auto rounded-lg md:rounded-xl shadow-sm gap-2 px-3 md:px-4 text-[9px] md:text-[10px] font-bold uppercase tracking-wider border-border/60 hover:bg-primary/5 hover:border-primary/30"
                                 onClick={onRetry}
                                 disabled={isRetryPending}
                             >
@@ -190,7 +190,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                                     <RotateCw className={cn("h-3.5 w-3.5", isRefetchingRun && "animate-spin")} />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="bottom" className="text-[10px] font-black uppercase tracking-widest">Sync Telemetry</TooltipContent>
+                            <TooltipContent side="bottom" className="text-[10px] font-bold uppercase tracking-widest">Sync Telemetry</TooltipContent>
                         </Tooltip>
 
                         <DropdownMenu>
@@ -206,7 +206,7 @@ export const JobDetailsHeader: React.FC<JobDetailsHeaderProps> = ({
                                         </Button>
                                     </DropdownMenuTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-[10px] font-black uppercase tracking-widest">More Actions</TooltipContent>
+                                <TooltipContent side="bottom" className="text-[10px] font-bold uppercase tracking-widest">More Actions</TooltipContent>
                             </Tooltip>
                             <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5 border-border/60 shadow-2xl backdrop-blur-xl bg-background/90">
                                 <DropdownMenuItem className="rounded-lg gap-2.5 cursor-pointer font-bold text-[10px] uppercase tracking-wider py-2" onClick={() => copyToClipboard(window.location.href, 'Direct Link')}>

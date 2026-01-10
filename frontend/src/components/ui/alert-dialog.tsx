@@ -48,18 +48,20 @@ function AlertDialogContent({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Content = AlertDialogPrimitive.Content as any;
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
-      <AlertDialogPrimitive.Content
+      <Content
         data-slot="alert-dialog-content"
-        onPointerDownOutside={(e) => {
+        onPointerDownOutside={(e: React.PointerEvent) => {
           const target = e.target as HTMLElement;
           if (target?.closest('[data-sonner-toast]') || target?.closest('.sonner')) {
             e.preventDefault();
           }
         }}
-        onInteractOutside={(e) => {
+        onInteractOutside={(e: React.FocusEvent) => {
           const target = e.target as HTMLElement;
           if (target?.closest('[data-sonner-toast]') || target?.closest('.sonner')) {
             e.preventDefault();

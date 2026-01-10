@@ -13,14 +13,6 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 
 import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -221,8 +213,8 @@ export const ApiKeysManager = () => {
                               <Key className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                              <DialogTitle className="text-2xl font-black tracking-tight">Generate API Key</DialogTitle>
-                              <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-primary/60">
+                              <DialogTitle className="text-2xl font-bold tracking-tight">Generate API Key</DialogTitle>
+                              <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-primary/60">
                                 Secure Programmatic Access
                               </DialogDescription>
                             </div>
@@ -231,7 +223,7 @@ export const ApiKeysManager = () => {
 
                         <div className="space-y-6 py-2">
                           <div className="space-y-2.5">
-                            <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70 px-1">
+                            <Label htmlFor="name" className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 px-1">
                               Key Name
                             </Label>
                             <Input
@@ -245,7 +237,7 @@ export const ApiKeysManager = () => {
                           </div>
 
                           <div className="space-y-2.5">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70 px-1">
+                            <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 px-1">
                               Expiration Policy
                             </Label>
                             <Popover>
@@ -263,7 +255,7 @@ export const ApiKeysManager = () => {
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0 rounded-2xl border-border/40 shadow-2xl overflow-hidden bg-background/95 backdrop-blur-xl" align="start">
                                 <div className="p-3 border-b border-border/20 bg-muted/5 flex items-center justify-between">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Expiry Date</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Select Expiry Date</span>
                                     <Button 
                                         variant="ghost" 
                                         size="sm" 
@@ -315,7 +307,7 @@ export const ApiKeysManager = () => {
                         <Button 
                             onClick={handleCreate} 
                             disabled={createMutation.isPending}
-                            className="flex-1 rounded-xl h-12 font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 bg-primary text-primary-foreground hover:shadow-primary/40 transition-all gap-2"
+                            className="flex-1 rounded-xl h-12 font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 bg-primary text-primary-foreground hover:shadow-primary/40 transition-all gap-2"
                         >
                           {createMutation.isPending ? (
                             <>
@@ -339,7 +331,7 @@ export const ApiKeysManager = () => {
                         </div>
                         
                         <div className="space-y-2">
-                          <h3 className="text-2xl font-black tracking-tight text-foreground">Identity Secured</h3>
+                          <h3 className="text-2xl font-bold tracking-tight text-foreground">Identity Secured</h3>
                           <p className="text-sm font-medium text-muted-foreground leading-relaxed px-4">
                             Your API key has been successfully generated. Please store it securely.
                           </p>
@@ -351,8 +343,8 @@ export const ApiKeysManager = () => {
                           </div>
                           
                           <div className="flex flex-col gap-2 relative z-10">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Secret Access Key</span>
-                            <code className="text-sm font-black font-mono break-all text-primary bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Secret Access Key</span>
+                            <code className="text-sm font-bold font-mono break-all text-primary bg-primary/5 p-4 rounded-2xl border border-primary/10">
                               {createdKey}
                             </code>
                           </div>
@@ -377,7 +369,7 @@ export const ApiKeysManager = () => {
                       </div>
 
                       <DialogFooter className="p-8 pt-0">
-                        <Button onClick={closeDialog} className="w-full rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-primary/20">
+                        <Button onClick={closeDialog} className="w-full rounded-2xl h-14 font-bold uppercase tracking-[0.2em] text-[11px] shadow-2xl shadow-primary/20">
                             Done, I've Stored It
                         </Button>
                       </DialogFooter>
@@ -409,38 +401,49 @@ export const ApiKeysManager = () => {
         ) : filteredKeys.length > 0 ? (
           <AnimatePresence mode="popLayout">
             {viewMode === 'list' ? (
-              <Table wrapperClassName="rounded-none border-none shadow-none">
-                <TableHeader className="bg-muted/20 border-b border-border/20">
-                  <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Credential</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Signature</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Status</TableHead>
-                    <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Expiration</TableHead>
-                    <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Control</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-border/30">
+              <div className="flex flex-col">
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
+                  <div className="col-span-12 md:col-span-4">Credential</div>
+                  <div className="col-span-6 md:col-span-3">Signature</div>
+                  <div className="col-span-6 md:col-span-2">Status</div>
+                  <div className="col-span-6 md:col-span-2">Expiration</div>
+                  <div className="col-span-12 md:col-span-1 text-right pr-4">Control</div>
+                </div>
+
+                <div className="divide-y divide-border/30">
                   {filteredKeys.map((key) => (
-                    <TableRow key={key.id} className="group hover:bg-muted/5 transition-colors border-b border-border/10">
-                      <TableCell className="pl-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10 group-hover:scale-110 transition-transform">
-                            <Key className="h-4 w-4 text-primary/60" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-bold text-sm tracking-tight">{key.name}</span>
-                            <span className="text-[10px] text-muted-foreground/60 font-bold">Issued {format(new Date(key.created_at), 'MMM d, yyyy')}</span>
-                          </div>
+                    <div 
+                      key={key.id} 
+                      className={cn(
+                        "group grid grid-cols-12 gap-4 items-center px-6 py-3 transition-all duration-200 cursor-pointer relative",
+                        "hover:bg-muted/40",
+                        "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1",
+                        "before:bg-primary before:scale-y-0 before:transition-transform before:duration-200",
+                        "hover:before:scale-y-100"
+                      )}
+                    >
+                      {/* Credential */}
+                      <div className="col-span-12 md:col-span-4 flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-primary/5 flex items-center justify-center border border-primary/10 group-hover:scale-110 transition-transform shadow-xs">
+                          <Key className="h-4 w-4 text-primary/60" />
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <code className="bg-muted/30 px-2 py-1 rounded text-[10px] font-bold text-muted-foreground font-mono">{key.prefix}••••••••</code>
-                      </TableCell>
-                      <TableCell>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-sm tracking-tight text-foreground truncate">{key.name}</span>
+                          <span className="text-[10px] text-muted-foreground/60 font-bold truncate">Issued {format(new Date(key.created_at), 'MMM d, yyyy')}</span>
+                        </div>
+                      </div>
+
+                      {/* Signature */}
+                      <div className="col-span-6 md:col-span-3 flex items-center">
+                        <code className="bg-muted/30 px-2 py-1 rounded text-[10px] font-bold text-muted-foreground font-mono tracking-tight">{key.prefix}••••••••</code>
+                      </div>
+
+                      {/* Status */}
+                      <div className="col-span-6 md:col-span-2 flex items-center">
                         <Badge
                           variant={key.is_active ? 'default' : 'secondary'}
                           className={cn(
-                            "text-[9px] font-black uppercase tracking-widest px-2 py-0.5",
+                            "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 border w-fit",
                             key.is_active
                               ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                               : 'opacity-50'
@@ -448,8 +451,10 @@ export const ApiKeysManager = () => {
                         >
                           {key.is_active ? 'Active' : 'Inactive'}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
+                      </div>
+
+                      {/* Expiration */}
+                      <div className="col-span-6 md:col-span-2 flex items-center">
                         {key.expires_at ? (
                           <div className="flex flex-col">
                             <span className={cn(
@@ -459,16 +464,18 @@ export const ApiKeysManager = () => {
                               {format(new Date(key.expires_at), 'MMM d, yyyy')}
                             </span>
                             {isBefore(new Date(key.expires_at), new Date()) && (
-                                <span className="text-[9px] font-black text-destructive uppercase tracking-tighter">Expired</span>
+                                <span className="text-[9px] font-bold text-destructive uppercase tracking-tighter">Expired</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-[10px] font-black uppercase tracking-widest opacity-20">Persistent</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest opacity-20">Persistent</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right pr-6">
+                      </div>
+
+                      {/* Control */}
+                      <div className="col-span-12 md:col-span-1 flex items-center justify-end pr-2">
                         {isAdmin && (
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <div className="opacity-0 group-hover:opacity-100 transition-all duration-200">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -481,11 +488,11 @@ export const ApiKeysManager = () => {
                             </Button>
                           </div>
                         )}
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
                 {filteredKeys.map((key) => (
@@ -515,7 +522,7 @@ export const ApiKeysManager = () => {
                         <Badge
                           variant={key.is_active ? 'default' : 'secondary'}
                           className={cn(
-                            "text-[9px] font-black uppercase tracking-widest px-2.5 py-1",
+                            "text-[9px] font-bold uppercase tracking-widest px-2.5 py-1",
                             key.is_active
                               ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-lg shadow-emerald-500/10'
                               : 'opacity-50'
@@ -527,7 +534,7 @@ export const ApiKeysManager = () => {
                     </div>
 
                     <div className="space-y-1 mb-6">
-                      <h4 className="font-black text-base tracking-tight text-foreground group-hover:text-primary transition-colors">{key.name}</h4>
+                      <h4 className="font-bold text-base tracking-tight text-foreground group-hover:text-primary transition-colors">{key.name}</h4>
                       <div className="flex items-center gap-2">
                         <code className="text-[10px] font-bold text-muted-foreground/60 font-mono bg-muted/20 px-1.5 py-0.5 rounded leading-none">{key.prefix}••••••••</code>
                         <Button 
@@ -545,7 +552,7 @@ export const ApiKeysManager = () => {
 
                     <div className="mb-6 space-y-3">
                         <div className="flex flex-col gap-1">
-                            <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none">Last Activity</span>
+                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest leading-none">Last Activity</span>
                             <div className="flex items-center gap-1.5">
                                 <div className={cn("h-1.5 w-1.5 rounded-full", key.last_used_at ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-muted-foreground/20")} />
                                 <span className="text-[11px] font-bold text-foreground/70">
@@ -555,7 +562,7 @@ export const ApiKeysManager = () => {
                         </div>
                         {key.scopes && (
                             <div className="flex flex-col gap-1.5">
-                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none">Authorized Scopes</span>
+                                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest leading-none">Authorized Scopes</span>
                                 <div className="flex flex-wrap gap-1">
                                     {key.scopes.split(',').map((scope, idx) => (
                                         <Badge key={idx} variant="outline" className="bg-muted/10 text-[8px] font-bold px-1.5 py-0 border-border/20 lowercase">{scope.trim()}</Badge>
@@ -630,7 +637,7 @@ export const ApiKeysManager = () => {
             <div className="h-16 w-16 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center mb-2">
                 <AlertCircle size={32} />
             </div>
-            <AlertDialogTitle className="text-2xl font-black tracking-tight">Revoke Credential?</AlertDialogTitle>
+            <AlertDialogTitle className="text-2xl font-bold tracking-tight">Revoke Credential?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm font-medium leading-relaxed opacity-70 px-4">
               Any applications or automated pipelines using this key will lose access immediately. This action cannot be reverted.
             </AlertDialogDescription>
@@ -639,7 +646,7 @@ export const ApiKeysManager = () => {
             <AlertDialogCancel onClick={() => setKeyToRevoke(null)} className="rounded-xl h-12 min-w-30 font-bold uppercase tracking-widest text-[10px]">Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => keyToRevoke && revokeMutation.mutate(keyToRevoke)}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl h-12 min-w-30 font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-destructive/20"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl h-12 min-w-30 font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-destructive/20"
             >
               Confirm Revocation
             </AlertDialogAction>

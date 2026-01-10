@@ -231,7 +231,7 @@ export const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ connectionId, 
                                         name="write_mode"
                                         render={({ field }) => (
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <SelectTrigger className="w-30 h-9 rounded-xl bg-background border-border/40 text-xs font-bold uppercase">
+                                                <SelectTrigger className="w-30 h-9 rounded-xl bg-background border-border/40 text-xs uppercase">
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent className="rounded-xl">

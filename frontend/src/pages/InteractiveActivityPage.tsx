@@ -93,7 +93,7 @@ export const InteractiveActivityPage: React.FC = () => {
                 count={activity?.length} 
             />
 
-            <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
                 <InteractiveToolbar 
                     filter={filter}
                     setFilter={setFilter}
@@ -116,7 +116,7 @@ export const InteractiveActivityPage: React.FC = () => {
 
             {/* Result Inspector */}
             <Dialog open={!!selectedJob} onOpenChange={(v) => !v && setSelectedJob(null)}>
-                <DialogContent className="max-w-6xl rounded-[2.5rem] p-0 overflow-hidden border-border/40 bg-background dark:bg-background/60 backdrop-blur-xl shadow-2xl flex flex-col h-[85vh] outline-none">
+                <DialogContent className="max-w-6xl rounded-2xl p-0 overflow-hidden border-border/40 bg-background dark:bg-background/60 backdrop-blur-xl shadow-2xl flex flex-col h-[85vh] outline-none">
                     <VisuallyHidden.Root>
                         <DialogTitle>Task Forensics: Job #{selectedJob?.id}</DialogTitle>
                         <DialogDescription>Review detailed ad-hoc execution results and agent routing metrics.</DialogDescription>
@@ -135,10 +135,10 @@ export const InteractiveActivityPage: React.FC = () => {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-3 mb-1.5">
-                                                <h3 className="text-2xl font-black tracking-tight text-foreground uppercase">
+                                                <h3 className="text-2xl font-bold tracking-tight text-foreground uppercase">
                                                     Interactive Manifest
                                                 </h3>
-                                                <Badge variant="outline" className="text-[10px] font-black uppercase bg-muted/30 px-2 rounded-md border-border/40">
+                                                <Badge variant="outline" className="text-[10px] font-bold uppercase bg-muted/30 px-2 rounded-md border-border/40">
                                                     JOB #{selectedJob.id}
                                                 </Badge>
                                             </div>
@@ -172,24 +172,24 @@ export const InteractiveActivityPage: React.FC = () => {
                                 <div className="absolute top-0 inset-x-0 h-px bg-linear-to-r from-transparent via-primary/20 to-transparent" />
                                 <div className="flex items-center gap-8">
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">Net Duration</span>
-                                        <span className="text-sm font-black tabular-nums text-primary">{selectedJob.execution_time_ms || 0}ms</span>
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-none">Net Duration</span>
+                                        <span className="text-sm font-bold tabular-nums text-primary">{selectedJob.execution_time_ms || 0}ms</span>
                                     </div>
                                     <div className="flex flex-col gap-0.5">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 leading-none">Payload Volume</span>
-                                        <span className="text-sm font-black uppercase tracking-tight text-foreground">{selectedJob.result_summary?.count || 0} rows materialized</span>
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-none">Payload Volume</span>
+                                        <span className="text-sm font-bold uppercase tracking-tight text-foreground">{selectedJob.result_summary?.count || 0} rows materialized</span>
                                     </div>
                                     {selectedJob.agent_group && (
                                         <div className="flex flex-col gap-0.5 border-l border-border/20 pl-8">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500/40 leading-none">Remote Executor</span>
-                                            <span className="text-sm font-black uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-500/40 leading-none">Remote Executor</span>
+                                            <span className="text-sm font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                                                 <Cpu size={14} /> {selectedJob.worker_id || selectedJob.agent_group}
                                             </span>
                                         </div>
                                     )}
                                 </div>
                                 <Button 
-                                    className="rounded-2xl h-12 px-8 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary text-primary-foreground gap-3 transition-all hover:scale-[1.02] active:scale-95"
+                                    className="rounded-2xl h-12 px-8 font-bold uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary text-primary-foreground gap-3 transition-all hover:scale-[1.02] active:scale-95"
                                     onClick={() => {
                                         toast.info("Integration Logic Incoming", {
                                             description: "Ability to save this query as a reusable pipeline node is currently in development."

@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
     User, Bell, ShieldAlert,
     RefreshCw, Trash2, Moon, Sun, Monitor,
-    Search, List as ListIcon, LayoutGrid,
+    Search,
     Building2,
     Laptop,
     Activity,
@@ -32,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { WorkspaceSettingsForm } from '@/components/features/workspace/WorkspaceSettingsForm';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { ViewToggle, type ViewMode } from '@/components/common/ViewToggle';
 
 type SettingsTab = 'general' | 'workspace' | 'security' | 'notifications';
 
@@ -63,7 +64,7 @@ export const SettingsPage: React.FC = () => {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const [notificationSearchQuery, setNotificationSearchQuery] = useState('');
-    const [notificationViewMode, setNotificationViewMode] = useState<'list' | 'grid'>('list');
+    const [notificationViewMode, setNotificationViewMode] = useState<ViewMode>('list');
 
     // Profile Mutation
     const profileMutation = useMutation({
@@ -164,12 +165,12 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             {/* --- Main Registry Container --- */}
-            <div className="flex-1 min-h-0 flex flex-col md:flex-row rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col md:flex-row rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
                 
                 {/* --- Integrated Navigation Sidebar --- */}
                 <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-border/40 bg-muted/10 shrink-0 flex flex-col overflow-hidden">
                     <div className="p-6 border-b border-border/40 bg-background/20">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Management Console</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Management Console</p>
                     </div>
                     
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1">
@@ -178,7 +179,7 @@ export const SettingsPage: React.FC = () => {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as SettingsTab)}
                                 className={cn(
-                                    "w-full flex flex-col items-start gap-0.5 px-4 py-3.5 rounded-2xl text-sm transition-all duration-300 relative group overflow-hidden",
+                                    "w-full flex flex-col items-start gap-0.5 px-4 py-3.5 rounded-xl text-sm transition-all duration-300 relative group overflow-hidden",
                                     activeTab === tab.id
                                         ? "bg-background border-border/60 text-primary shadow-lg ring-1 ring-white/10 dark:ring-white/5"
                                         : "text-muted-foreground hover:bg-muted/40 hover:border-border/40 border-transparent border"
@@ -192,7 +193,7 @@ export const SettingsPage: React.FC = () => {
                                         <tab.icon className="h-4 w-4" />
                                     </div>
                                     <span className={cn(
-                                        "font-black uppercase tracking-tighter transition-colors duration-300 text-xs",
+                                        "font-bold uppercase tracking-tighter transition-colors duration-300 text-xs",
                                         activeTab === tab.id ? "text-foreground" : "text-muted-foreground group-hover:text-foreground/80"
                                     )}>{tab.label}</span>
                                     {activeTab === tab.id && (
@@ -210,7 +211,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="p-6 border-t border-border/20 bg-background/20 mt-auto">
                         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/10">
                             <Activity size={12} className="text-primary animate-pulse" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">Node Status: Operational</span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-primary/60">Node Status: Operational</span>
                         </div>
                     </div>
                 </aside>
@@ -239,18 +240,18 @@ export const SettingsPage: React.FC = () => {
                                                     <div className="relative">
                                                         <Avatar className="h-32 w-32 rounded-[2rem] border-4 border-background shadow-2xl relative z-10">
                                                             <AvatarImage src={`https://api.dicebear.com/7.x/notionists/svg?seed=${user?.email || 'synqx'}`} />
-                                                            <AvatarFallback className="bg-primary/10 text-primary text-4xl font-black">
+                                                            <AvatarFallback className="bg-primary/10 text-primary text-4xl font-bold">
                                                                 {user?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                     </div>
                                                     <div className="flex-1 space-y-1 mb-2">
-                                                        <h3 className="text-3xl font-black tracking-tight text-foreground leading-none">{user?.full_name || 'User Identity'}</h3>
+                                                        <h3 className="text-3xl font-bold tracking-tight text-foreground leading-none">{user?.full_name || 'User Identity'}</h3>
                                                         <div className="flex items-center gap-2">
-                                                            <Badge variant="secondary" className="rounded-lg px-2 py-0.5 text-[9px] font-black uppercase tracking-widest bg-primary/5 text-primary border-primary/10">
+                                                            <Badge variant="secondary" className="rounded-lg px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest bg-primary/5 text-primary border-primary/10">
                                                                 ROOT ACCOUNT
                                                             </Badge>
-                                                            <span className="text-[11px] text-muted-foreground font-bold opacity-60 italic">{user?.email}</span>
+                                                            <span className="text-[11px] text-muted-foreground font-bold opacity-60 ">{user?.email}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -259,20 +260,20 @@ export const SettingsPage: React.FC = () => {
                                             <CardContent className="p-8 pt-10 space-y-8">
                                                 <div className="grid gap-8 md:grid-cols-2">
                                                     <div className="space-y-3">
-                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Display Name</Label>
+                                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Display Name</Label>
                                                         <Input
                                                             value={displayName}
                                                             onChange={(e) => setDisplayName(e.target.value)}
-                                                            className="h-14 rounded-2xl bg-muted/20 border-border/40 focus:bg-background transition-all px-6 font-bold text-base shadow-inner border-2"
+                                                            className="h-14 rounded-xl bg-muted/20 border-border/40 focus:bg-background transition-all px-6 font-medium text-base shadow-sm border-2"
                                                         />
                                                     </div>
                                                     <div className="space-y-3">
-                                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Account Email</Label>
+                                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Account Email</Label>
                                                         <Input
                                                             id="email"
                                                             value={email}
                                                             onChange={(e) => setEmail(e.target.value)}
-                                                            className="h-14 rounded-2xl bg-muted/20 border-border/40 focus:bg-background transition-all px-6 font-bold text-base shadow-inner border-2"
+                                                            className="h-14 rounded-xl bg-muted/20 border-border/40 focus:bg-background transition-all px-6 font-medium text-base shadow-sm border-2"
                                                         />
                                                     </div>
                                                 </div>
@@ -281,12 +282,12 @@ export const SettingsPage: React.FC = () => {
                                             <div className="px-8 py-5 bg-muted/10 border-t border-border/20 flex items-center justify-between">
                                                 <div className="flex items-center gap-2 text-muted-foreground">
                                                     <RefreshCw className={cn("h-3.5 w-3.5", profileMutation.isPending && "animate-spin")} />
-                                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40">Persistence Layer Ready</span>
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-40">Persistence Layer Ready</span>
                                                 </div>
                                                 <Button 
                                                     onClick={handleSaveProfile} 
                                                     disabled={profileMutation.isPending || (displayName === user?.full_name && email === user?.email)} 
-                                                    className="rounded-xl h-11 px-8 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all"
+                                                    className="rounded-xl h-11 px-8 font-bold uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/20 bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all"
                                                 >
                                                     Confirm Manifest
                                                 </Button>
@@ -298,7 +299,7 @@ export const SettingsPage: React.FC = () => {
                                     <div className="space-y-6">
                                         <div className="flex items-center gap-3 px-1">
                                             <div className="h-1.5 w-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_var(--color-purple-500)]" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Interface Preference</h4>
+                                            <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Interface Preference</h4>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -313,19 +314,19 @@ export const SettingsPage: React.FC = () => {
                                                     whileTap={{ scale: 0.98 }}
                                                     onClick={() => setTheme(t.id as any)}
                                                     className={cn(
-                                                        "group relative flex flex-col items-center gap-4 p-6 rounded-[2.5rem] border-2 transition-all duration-500 outline-none",
+                                                        "group relative flex flex-col items-center gap-4 p-6 rounded-2xl border-2 transition-all duration-500 outline-none",
                                                         theme === t.id 
                                                             ? "border-primary bg-primary/5 shadow-2xl shadow-primary/10" 
                                                             : "border-border/40 bg-muted/5 hover:border-primary/20"
                                                     )}
                                                 >
                                                     <div className={cn(
-                                                        "p-4 rounded-2xl transition-all duration-500 group-hover:scale-110",
+                                                        "p-4 rounded-xl transition-all duration-500 group-hover:scale-110",
                                                         theme === t.id ? "bg-primary text-primary-foreground shadow-xl" : "bg-muted/50 text-muted-foreground"
                                                     )}>
                                                         <t.icon className="h-6 w-6" />
                                                     </div>
-                                                    <span className="text-xs font-black uppercase tracking-widest">{t.label}</span>
+                                                    <span className="text-xs font-bold uppercase tracking-widest">{t.label}</span>
                                                 </motion.button>
                                             ))}
                                         </div>
@@ -348,12 +349,12 @@ export const SettingsPage: React.FC = () => {
                                                 <Building2 className="h-7 w-7" />
                                             </div>
                                             <div>
-                                                <h3 className="font-black text-xl leading-none text-foreground uppercase tracking-tight">Workspace Governance</h3>
+                                                <h3 className="font-bold text-xl leading-none text-foreground uppercase tracking-tight">Workspace Governance</h3>
                                                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-2 opacity-60">Identity, routing and shared protocols.</p>
                                             </div>
                                         </div>
                                         {activeWorkspace?.default_agent_group && activeWorkspace.default_agent_group !== 'internal' && (
-                                            <Badge variant="outline" className="rounded-xl px-4 py-2 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-black uppercase text-[10px] gap-2 shadow-xl backdrop-blur-md">
+                                            <Badge variant="outline" className="rounded-xl px-4 py-2 bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-bold uppercase text-[10px] gap-2 shadow-xl backdrop-blur-md">
                                                 <Laptop size={14} /> Agent Mode: {activeWorkspace.default_agent_group}
                                             </Badge>
                                         )}
@@ -379,7 +380,7 @@ export const SettingsPage: React.FC = () => {
                                     <div className="space-y-6">
                                         <div className="flex items-center gap-3 px-1">
                                             <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_var(--color-blue-500)]" />
-                                            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Security Architecture</h4>
+                                            <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Security Architecture</h4>
                                         </div>
                                         <ApiKeysManager />
                                     </div>
@@ -389,21 +390,21 @@ export const SettingsPage: React.FC = () => {
                                             <ShieldAlert size={140} className="text-destructive" />
                                         </div>
                                         <CardHeader className="p-8">
-                                            <CardTitle className="text-destructive text-xl font-black uppercase flex items-center gap-3">
+                                            <CardTitle className="text-destructive text-xl font-bold uppercase flex items-center gap-3">
                                                 <ShieldAlert className="h-6 w-6" /> Irreversible Protocols
                                             </CardTitle>
                                             <CardDescription className="font-bold text-xs uppercase opacity-60">Permanently terminate your SynqX deployment and associated data.</CardDescription>
                                         </CardHeader>
                                         <CardContent className="p-8 pt-0 flex flex-col md:flex-row md:items-center justify-between gap-8">
                                             <div className="space-y-2">
-                                                <p className="text-sm font-black uppercase tracking-tight text-foreground">Account Decommission</p>
-                                                <p className="text-xs text-muted-foreground font-medium max-w-sm italic leading-relaxed">
+                                                <p className="text-sm font-bold uppercase tracking-tight text-foreground">Account Decommission</p>
+                                                <p className="text-xs text-muted-foreground font-medium max-w-sm  leading-relaxed">
                                                     Initiating this protocol will purge all pipelines, history, and metadata. This action is atomic and terminal.
                                                 </p>
                                             </div>
                                             <Button
                                                 variant="destructive"
-                                                className="h-12 px-8 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-destructive/20 hover:scale-[1.02] active:scale-95 transition-all gap-2"
+                                                className="h-12 px-8 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-destructive/20 hover:scale-[1.02] active:scale-95 transition-all gap-2"
                                                 onClick={() => setIsDeleteDialogOpen(true)}
                                             >
                                                 <Trash2 className="h-4 w-4" /> Purge Account
@@ -413,16 +414,16 @@ export const SettingsPage: React.FC = () => {
                                         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                                             <AlertDialogContent className="rounded-[2.5rem] border-destructive/20 bg-background/95 backdrop-blur-3xl shadow-2xl">
                                                 <AlertDialogHeader>
-                                                    <AlertDialogTitle className="text-2xl font-black uppercase tracking-tighter">Confirm Termination</AlertDialogTitle>
-                                                    <AlertDialogDescription className="text-muted-foreground font-medium italic">
+                                                    <AlertDialogTitle className="text-2xl font-bold uppercase tracking-tighter">Confirm Termination</AlertDialogTitle>
+                                                    <AlertDialogDescription className="text-muted-foreground font-medium ">
                                                         This will permanently destroy your SynqX identity and all associated virtual assets. This procedure cannot be aborted once confirmed.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter className="mt-6 gap-3">
-                                                    <AlertDialogCancel className="rounded-xl font-black uppercase text-[10px] tracking-widest">Abort</AlertDialogCancel>
+                                                    <AlertDialogCancel className="rounded-xl font-bold uppercase text-[10px] tracking-widest">Abort</AlertDialogCancel>
                                                     <AlertDialogAction
                                                         onClick={() => deleteAccountMutation.mutate()}
-                                                        className={cn(buttonVariants({ variant: "destructive" }), "rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-destructive/20")}
+                                                        className={cn(buttonVariants({ variant: "destructive" }), "rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-destructive/20")}
                                                     >
                                                         {deleteAccountMutation.isPending ? "Purging..." : "Confirm Termination"}
                                                     </AlertDialogAction>
@@ -444,13 +445,13 @@ export const SettingsPage: React.FC = () => {
                                 >
                                     <div className="p-8 border-b border-border/40 bg-muted/10 flex flex-col lg:flex-row items-center justify-between shrink-0 gap-6">
                                         <div className="space-y-1 relative z-10">
-                                            <h3 className="text-xl font-black flex items-center gap-3 text-foreground uppercase tracking-tight">
+                                            <h3 className="text-xl font-bold flex items-center gap-3 text-foreground uppercase tracking-tight">
                                                 <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-inner">
                                                     <Bell className="h-5 w-5" />
                                                 </div>
                                                 Notification Registry
                                             </h3>
-                                            <p className="text-[9px] text-muted-foreground font-black tracking-[0.2em] uppercase opacity-60 pl-1">
+                                            <p className="text-[9px] text-muted-foreground font-bold tracking-[0.2em] uppercase opacity-60 pl-1">
                                                 <span className="text-foreground">{alerts?.length || 0}</span> ACTIVE RULES • SYSTEM-WIDE MONITORING
                                             </p>
                                         </div>
@@ -460,37 +461,17 @@ export const SettingsPage: React.FC = () => {
                                                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors z-20" />
                                                 <Input
                                                     placeholder="Search registry..."
-                                                    className="pl-10 h-10 rounded-2xl bg-background/50 border-border/40 focus:bg-background focus:ring-4 focus:ring-primary/5 transition-all text-xs font-bold shadow-none"
+                                                    className="pl-10 h-10 rounded-2xl bg-background/50 border-border/40 focus:bg-background focus:ring-4 focus:ring-primary/5 transition-all text-xs shadow-none"
                                                     value={notificationSearchQuery}
                                                     onChange={(e) => setNotificationSearchQuery(e.target.value)}
                                                 />
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                <div className="flex items-center bg-background/50 border border-border/40 rounded-2xl p-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className={cn(
-                                                            "h-8 w-8 rounded-xl transition-all",
-                                                            notificationViewMode === 'list' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted"
-                                                        )}
-                                                        onClick={() => setNotificationViewMode('list')}
-                                                    >
-                                                        <ListIcon size={16} />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className={cn(
-                                                            "h-8 w-8 rounded-xl transition-all",
-                                                            notificationViewMode === 'grid' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted"
-                                                        )}
-                                                        onClick={() => setNotificationViewMode('grid')}
-                                                    >
-                                                        <LayoutGrid size={16} />
-                                                    </Button>
-                                                </div>
+                                                <ViewToggle 
+                                                    viewMode={notificationViewMode} 
+                                                    setViewMode={setNotificationViewMode} 
+                                                />
                                                 <AlertConfigDialog />
                                             </div>
                                         </div>
@@ -518,10 +499,10 @@ export const SettingsPage: React.FC = () => {
                                                     <Table className="rounded-none border-none shadow-none">
                                                         <TableHeader className="bg-muted/20 border-b border-border/20">
                                                             <TableRow className="hover:bg-transparent border-none">
-                                                                <TableHead className="pl-8 font-black text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 py-4">Rule Configuration</TableHead>
-                                                                <TableHead className="font-black text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 py-4">Trigger</TableHead>
-                                                                <TableHead className="font-black text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 py-4 text-center">State</TableHead>
-                                                                <TableHead className="text-right pr-8 font-black text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 py-4">Control</TableHead>
+                                                                <TableHead className="pl-8 font-bold text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 py-4">Rule Configuration</TableHead>
+                                                                <TableHead className="font-bold text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 py-4">Trigger</TableHead>
+                                                                <TableHead className="font-bold text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 py-4 text-center">State</TableHead>
+                                                                <TableHead className="text-right pr-8 font-bold text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50 py-4">Control</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody className="divide-y divide-border/10">
@@ -533,13 +514,13 @@ export const SettingsPage: React.FC = () => {
                                                                                 <Bell size={18} />
                                                                             </div>
                                                                             <div className="flex flex-col gap-0.5">
-                                                                                <span className="font-black text-sm tracking-tight text-foreground">{alert.name}</span>
-                                                                                <span className="text-[9px] text-muted-foreground font-bold tracking-tight opacity-60 italic">{alert.delivery_method} • {alert.recipient || 'INTERNAL'}</span>
+                                                                                <span className="font-bold text-sm tracking-tight text-foreground">{alert.name}</span>
+                                                                                <span className="text-[9px] text-muted-foreground font-bold tracking-tight opacity-60 ">{alert.delivery_method} • {alert.recipient || 'INTERNAL'}</span>
                                                                             </div>
                                                                         </div>
                                                                     </TableCell>
                                                                     <TableCell>
-                                                                        <Badge variant="outline" className="text-[8px] font-black uppercase tracking-widest bg-muted/30 border-border/40 px-2 py-0.5 rounded-md">
+                                                                        <Badge variant="outline" className="text-[8px] font-bold uppercase tracking-widest bg-muted/30 border-border/40 px-2 py-0.5 rounded-md">
                                                                             {alert.alert_type}
                                                                         </Badge>
                                                                     </TableCell>
@@ -599,12 +580,12 @@ export const SettingsPage: React.FC = () => {
                                                                     </div>
                                                                 </div>
                                                                 <div className="space-y-1">
-                                                                    <h4 className="font-black text-base tracking-tight text-foreground uppercase truncate">{alert.name}</h4>
-                                                                    <p className="text-[10px] font-bold text-muted-foreground/60 line-clamp-2 italic leading-relaxed uppercase tracking-tighter">{alert.alert_type} Protocol</p>
+                                                                    <h4 className="font-bold text-base tracking-tight text-foreground uppercase truncate">{alert.name}</h4>
+                                                                    <p className="text-[10px] font-bold text-muted-foreground/60 line-clamp-2  leading-relaxed uppercase tracking-tighter">{alert.alert_type} Protocol</p>
                                                                 </div>
                                                                 <div className="mt-6 pt-4 border-t border-border/20 flex items-center justify-between">
-                                                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/40">{alert.delivery_method}</span>
-                                                                    <span className="text-[9px] font-bold text-emerald-500/60 font-mono italic">{alert.recipient || 'INTERNAL'}</span>
+                                                                    <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-foreground/40">{alert.delivery_method}</span>
+                                                                    <span className="text-[9px] font-bold text-emerald-500/60 font-mono ">{alert.recipient || 'INTERNAL'}</span>
                                                                 </div>
                                                             </motion.div>
                                                         ))}
@@ -627,10 +608,10 @@ export const SettingsPage: React.FC = () => {
                                                         )}
                                                     </div>
                                                 </motion.div>
-                                                <h3 className="font-black text-xl text-foreground uppercase tracking-tight">
+                                                <h3 className="font-bold text-xl text-foreground uppercase tracking-tight">
                                                     {notificationSearchQuery ? "No Matching Rules" : "Registry Empty"}
                                                 </h3>
-                                                <p className="text-xs mt-3 max-w-sm leading-relaxed text-muted-foreground font-bold italic opacity-60">
+                                                <p className="text-xs mt-3 max-w-sm leading-relaxed text-muted-foreground font-bold  opacity-60">
                                                     {notificationSearchQuery
                                                         ? `We couldn't find any rules matching "${notificationSearchQuery}".`
                                                         : "You haven't configured any notification rules yet. Create one to establish surveillance."}
@@ -647,10 +628,10 @@ export const SettingsPage: React.FC = () => {
                                     <div className="p-5 bg-muted/10 border-t border-border/40 flex items-center justify-between shrink-0">
                                         <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-background/50 border border-border/20 opacity-60">
                                             <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                            <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none">Real-time surveillance active</span>
+                                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Real-time surveillance active</span>
                                         </div>
                                         <div className="flex items-center gap-4">
-                                            <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">Global Announcements</span>
+                                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">Global Announcements</span>
                                             <Switch defaultChecked disabled className="scale-75 opacity-40 shadow-none" />
                                         </div>
                                     </div>

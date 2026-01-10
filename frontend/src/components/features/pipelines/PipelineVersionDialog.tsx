@@ -107,7 +107,7 @@ export const PipelineVersionDialog: React.FC<PipelineVersionDialogProps> = ({
                     <HistoryIcon className="h-6 w-6 text-primary" />
                 </div>
                 <div className="pr-4">
-                    <DialogTitle className="text-2xl font-black tracking-tight">Snapshot Registry</DialogTitle>
+                    <DialogTitle className="text-2xl font-bold tracking-tight">Snapshot Registry</DialogTitle>
                     <DialogDescription className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                         {pipelineName} • Version Control System
                     </DialogDescription>
@@ -120,13 +120,13 @@ export const PipelineVersionDialog: React.FC<PipelineVersionDialogProps> = ({
                         navigate(`/pipelines/${pipelineId}?diff=true&base=${compareBaseId}&target=${compareTargetId}`);
                         onOpenChange(false);
                     }}
-                    className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 animate-in zoom-in duration-300 gap-2 shrink-0"
+                    className="h-11 px-6 rounded-xl bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 animate-in zoom-in duration-300 gap-2 shrink-0"
                 >
                     <GitCompare className="h-4 w-4" /> Compare Selected
                 </Button>
             ) : (
                 <div className="hidden md:flex flex-col items-end gap-1 px-4 py-2 rounded-xl bg-muted/20 border border-border/40 shrink-0">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">Comparison Mode</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Comparison Mode</span>
                     <span className="text-[9px] font-medium text-muted-foreground whitespace-nowrap">Select two snapshots to visualize changes</span>
                 </div>
             )}
@@ -138,7 +138,7 @@ export const PipelineVersionDialog: React.FC<PipelineVersionDialogProps> = ({
           {isLoading ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 opacity-50">
               <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-[10px] font-black tracking-[0.3em] uppercase">Synchronizing Snapshots</p>
+              <p className="text-[10px] font-bold tracking-[0.3em] uppercase">Synchronizing Snapshots</p>
             </div>
           ) : versions?.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
@@ -178,17 +178,17 @@ export const PipelineVersionDialog: React.FC<PipelineVersionDialogProps> = ({
                         version.is_published ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20" : 
                                              "bg-muted/30 text-muted-foreground border-border/40 group-hover:border-primary/40"
                     )}>
-                        <span className="text-base font-black italic">v{version.version}</span>
+                        <span className="text-base font-bold ">v{version.version}</span>
                     </div>
 
                     {/* Metadata */}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-1.5">
                             {version.is_published && (
-                                <Badge className="bg-primary text-[8px] font-black uppercase tracking-widest h-4">Live Now</Badge>
+                                <Badge className="bg-primary text-[8px] font-bold uppercase tracking-widest h-4">Live Now</Badge>
                             )}
                             {isSelected && (
-                                <Badge variant="outline" className="border-primary text-primary text-[8px] font-black uppercase tracking-widest h-4">
+                                <Badge variant="outline" className="border-primary text-primary text-[8px] font-bold uppercase tracking-widest h-4">
                                     {selectionType}
                                 </Badge>
                             )}
@@ -210,12 +210,12 @@ export const PipelineVersionDialog: React.FC<PipelineVersionDialogProps> = ({
                     {/* Stats Pill */}
                     <div className="hidden lg:flex items-center gap-4 px-4 py-2 rounded-xl bg-muted/20 border border-border/40">
                         <div className="flex flex-col items-center">
-                            <span className="text-[10px] font-black text-primary">{version.node_count}</span>
+                            <span className="text-[10px] font-bold text-primary">{version.node_count}</span>
                             <span className="text-[8px] font-bold uppercase tracking-widest opacity-40">Nodes</span>
                         </div>
                         <div className="w-px h-4 bg-border/40" />
                         <div className="flex flex-col items-center">
-                            <span className="text-[10px] font-black text-primary">{version.edge_count}</span>
+                            <span className="text-[10px] font-bold text-primary">{version.edge_count}</span>
                             <span className="text-[8px] font-bold uppercase tracking-widest opacity-40">Edges</span>
                         </div>
                     </div>

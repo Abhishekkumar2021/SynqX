@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -8,7 +8,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { cn } from '@/lib/utils';
 
 import { PageMeta } from '@/components/common/PageMeta';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 
 import { AgentsHeader } from '@/components/features/agents/AgentsHeader';
@@ -71,7 +71,7 @@ export const AgentsPage = () => {
             
             <AgentsHeader onCreate={isEditor ? () => setIsRegisterOpen(true) : undefined} />
 
-            <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
                 <AgentsToolbar 
                     filter={filter}
                     setFilter={setFilter}
@@ -98,10 +98,10 @@ export const AgentsPage = () => {
 
             {/* Inspection Dialog */}
             <Dialog open={!!inspectingAgent} onOpenChange={(v) => !v && setInspectingAgent(null)}>
-                <DialogContent className="sm:max-w-[850px] rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl ring-1 ring-white/10 dark:ring-white/5 max-h-[85vh] flex flex-col">
+                <DialogContent className="sm:max-w-[850px] rounded-2xl p-0 overflow-hidden border-none shadow-2xl ring-1 ring-white/10 dark:ring-white/5 max-h-[85vh] flex flex-col">
                     <VisuallyHidden.Root>
-                        <title>Agent Details</title>
-                        <description>View setup instructions and configuration for this agent.</description>
+                        <DialogTitle>Agent Details</DialogTitle>
+                        <DialogDescription>View setup instructions and configuration for this agent.</DialogDescription>
                     </VisuallyHidden.Root>
                     {inspectingAgent && (
                         <SetupInstructions 

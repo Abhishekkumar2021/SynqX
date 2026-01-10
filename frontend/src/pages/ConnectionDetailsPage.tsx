@@ -401,10 +401,10 @@ export const ConnectionDetailsPage: React.FC = () => {
             {/* --- Content Tabs --- */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                 <div className="flex items-center justify-between mb-4 px-1 shrink-0">
-                    <TabsList className="h-10 bg-muted/50 border border-border/40 rounded-xl p-1 shadow-inner gap-1">
+                    <TabsList className="w-full justify-start gap-1">
                         <TabsTrigger
                             value="assets"
-                            className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold ring-offset-background transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                            className="gap-2"
                         >
                             <Layers className="h-3.5 w-3.5" />
                             Assets
@@ -413,7 +413,7 @@ export const ConnectionDetailsPage: React.FC = () => {
                         {isFileBased && (
                             <TabsTrigger
                                 value="explorer"
-                                className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold ring-offset-background transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                                className="gap-2"
                             >
                                 <HardDrive className="h-3.5 w-3.5" />
                                 Explore
@@ -422,7 +422,7 @@ export const ConnectionDetailsPage: React.FC = () => {
 
                         <TabsTrigger
                             value="configuration"
-                            className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold ring-offset-background transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                            className="gap-2"
                         >
                             <Server className="h-3.5 w-3.5" />
                             Configuration
@@ -431,7 +431,7 @@ export const ConnectionDetailsPage: React.FC = () => {
                         {hasEnvironment && (
                             <TabsTrigger
                                 value="environment"
-                                className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-1.5 text-xs font-bold ring-offset-background transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                                className="gap-2"
                             >
                                 <Terminal className="h-3.5 w-3.5" />
                                 Environment

@@ -49,7 +49,7 @@ const LogLevelBadge: React.FC<{ level: string }> = ({ level }) => {
 
     return (
         <span className={cn(
-            "w-16 inline-flex items-center justify-center py-0.5 rounded-full text-[7px] font-black border uppercase tracking-[0.12em] shadow-sm shrink-0 select-none",
+            "w-16 inline-flex items-center justify-center py-0.5 rounded-full text-[7px] font-bold border uppercase tracking-[0.12em] shadow-sm shrink-0 select-none",
             style
         )}>
             {l}
@@ -57,7 +57,7 @@ const LogLevelBadge: React.FC<{ level: string }> = ({ level }) => {
     );
 };
 
-export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
+export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId, status, queueName }) => {
     const [isAutoScroll, setIsAutoScroll] = useState(true);
     const [wordWrap, setWordWrap] = useState(false);
     const [showTimestamps, setShowTimestamps] = useState(true);
@@ -176,7 +176,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                 <div className="flex items-center justify-between px-5 py-2.5 bg-muted/20 border-b border-border/40 backdrop-blur-md shrink-0">
                     <div className="flex items-center gap-5">
                         <div className={cn(
-                            "flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all duration-500",
+                            "flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest border transition-all duration-500",
                             isConnected ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20" : "bg-destructive/10 text-destructive border-destructive/20"
                         )}>
                             {isConnected && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
@@ -206,7 +206,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                                             </Button>
                                         </DropdownMenuTrigger>
                                     </TooltipTrigger>
-                                    <TooltipContent className="text-[10px] font-black uppercase tracking-widest">Severities</TooltipContent>
+                                    <TooltipContent className="text-[10px] font-bold uppercase tracking-widest">Severities</TooltipContent>
                                 </Tooltip>
                                 <DropdownMenuContent align="end" className="w-48 glass-card border-border/40 rounded-xl p-1 shadow-2xl">
                                     {['INFO', 'SUCCESS', 'WARNING', 'ERROR', 'DEBUG'].map(level => (
@@ -235,7 +235,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                                         {isAutoScroll ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent className="text-[10px] font-black uppercase tracking-widest">{isAutoScroll ? 'Lock Scroll' : 'Follow'}</TooltipContent>
+                                <TooltipContent className="text-[10px] font-bold uppercase tracking-widest">{isAutoScroll ? 'Lock Scroll' : 'Follow'}</TooltipContent>
                             </Tooltip>
 
                             <div className="w-px h-3 bg-border/40 mx-0.5" />
@@ -251,7 +251,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                                         {isFullScreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent className="text-[10px] font-black uppercase tracking-widest">{isFullScreen ? 'Exit Full Screen' : 'Full Screen'}</TooltipContent>
+                                <TooltipContent className="text-[10px] font-bold uppercase tracking-widest">{isFullScreen ? 'Exit Full Screen' : 'Full Screen'}</TooltipContent>
                             </Tooltip>
                         </div>
 
@@ -265,10 +265,10 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                                         </Button>
                                     </DropdownMenuTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent className="text-[10px] font-black uppercase tracking-widest">Display</TooltipContent>
+                                <TooltipContent className="text-[10px] font-bold uppercase tracking-widest">Display</TooltipContent>
                             </Tooltip>
                             <DropdownMenuContent align="end" className="w-56 glass-card border-border/40 rounded-xl p-1 shadow-2xl">
-                                <DropdownMenuLabel className="text-[9px] font-black uppercase opacity-40 px-3 py-2">Terminal Config</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[9px] font-bold uppercase opacity-40 px-3 py-2">Terminal Config</DropdownMenuLabel>
                                 <DropdownMenuCheckboxItem checked={wordWrap} onCheckedChange={setWordWrap} className="text-[10px] font-bold uppercase rounded-lg cursor-pointer">
                                     <WrapText className="h-3.5 w-3.5 mr-2 opacity-60" /> Word Wrap
                                 </DropdownMenuCheckboxItem>
@@ -288,7 +288,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                                         </Button>
                                     </DropdownMenuTrigger>
                                 </TooltipTrigger>
-                                <TooltipContent className="text-[10px] font-black uppercase tracking-widest">Actions</TooltipContent>
+                                <TooltipContent className="text-[10px] font-bold uppercase tracking-widest">Actions</TooltipContent>
                             </Tooltip>
                             <DropdownMenuContent align="end" className="w-56 glass-card border-white/10 rounded-xl p-1 shadow-2xl">
                                 <DropdownMenuItem onClick={handleClearView} className="text-[10px] font-bold uppercase rounded-lg py-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/5">
@@ -324,7 +324,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                                         <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="font-black uppercase tracking-[0.3em] block">Waiting for Agent</span>
+                                        <span className="font-bold uppercase tracking-[0.3em] block">Waiting for Agent</span>
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">
                                             Cluster Queue: {queueName || 'Default'}
                                         </span>
@@ -333,7 +333,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                             ) : (
                                 <>
                                     <Terminal size={40} />
-                                    <span className="font-black uppercase tracking-[0.3em]">Awaiting Buffers...</span>
+                                    <span className="font-bold uppercase tracking-[0.3em]">Awaiting Buffers...</span>
                                 </>
                             )}
                         </div>
@@ -360,7 +360,7 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
 
                                         <div className="flex gap-4 items-start flex-1 min-w-0 pl-4 py-0.5 transition-colors">
                                             {showTimestamps && (
-                                                <span className="text-[9px] font-black text-muted-foreground/30 shrink-0 select-none uppercase tracking-tighter w-24 pt-0.5">
+                                                <span className="text-[9px] font-bold text-muted-foreground/30 shrink-0 select-none uppercase tracking-tighter w-24 pt-0.5">
                                                     {log.timestamp ? format(new Date(log.timestamp), 'HH:mm:ss.SSS') : '00:00:00.000'}
                                                 </span>
                                             )}
@@ -392,20 +392,20 @@ export const JobLogViewer: React.FC<JobLogViewerProps> = ({ jobId }) => {
                 {/* --- Compact Footer --- */}
                 <div className="px-5 py-1.5 bg-muted/30 border-t border-border/40 flex items-center justify-between text-[9px] text-muted-foreground/40 backdrop-blur-md">
                     <div className="flex items-center gap-4">
-                        <span className="font-black uppercase tracking-widest flex items-center gap-1.5">
+                        <span className="font-bold uppercase tracking-widest flex items-center gap-1.5">
                             <Activity className="h-3 w-3" /> {filteredLogs.length} Events
                         </span>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={() => scrollViewportRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-primary font-black uppercase tracking-tighter">Top</button>
-                        <button onClick={() => setIsAutoScroll(true)} className="hover:text-primary font-black uppercase tracking-tighter">Tail</button>
+                        <button onClick={() => scrollViewportRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} className="hover:text-primary font-bold uppercase tracking-tighter">Top</button>
+                        <button onClick={() => setIsAutoScroll(true)} className="hover:text-primary font-bold uppercase tracking-tighter">Tail</button>
                     </div>
                 </div>
 
                 {!isAutoScroll && filteredLogs.length > 0 && (
                     <button
                         onClick={() => setIsAutoScroll(true)}
-                        className="absolute bottom-12 left-1/2 -translate-x-1/2 px-5 py-2 bg-primary text-primary-foreground rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl animate-in fade-in slide-in-from-bottom-2 hover:scale-105 transition-all flex items-center gap-2"
+                        className="absolute bottom-12 left-1/2 -translate-x-1/2 px-5 py-2 bg-primary text-primary-foreground rounded-full text-[10px] font-bold uppercase tracking-widest shadow-2xl animate-in fade-in slide-in-from-bottom-2 hover:scale-105 transition-all flex items-center gap-2"
                     >
                         <ArrowDown className="h-3 w-3 animate-bounce" /> Resume Tail
                     </button>

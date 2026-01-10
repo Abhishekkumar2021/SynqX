@@ -52,9 +52,9 @@ export const StatsCard: React.FC<StatsCardProps> = ({
             whileHover={{ y: -4 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-                "relative group overflow-hidden rounded-[2.5rem] border border-border/40 p-1",
+                "relative group overflow-hidden rounded-2xl border border-border/40 p-1",
                 "bg-card/95 dark:bg-card/98 backdrop-blur-3xl transition-all duration-500",
-                "shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_32px_64px_rgba(0,0,0,0.12)] hover:border-primary/30",
+                "shadow-sm hover:shadow-xl hover:border-primary/30",
                 active && "border-primary/40 ring-1 ring-primary/10 shadow-primary/5",
                 className
             )}
@@ -66,7 +66,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div className="space-y-1.5">
-                        <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">{title}</p>
+                        <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">{title}</p>
                         <div className="h-0.5 w-4 bg-muted-foreground/20 rounded-full group-hover:w-10 group-hover:bg-primary/40 transition-all duration-500" />
                     </div>
                     <div className={cn(
@@ -80,7 +80,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                 {/* Value Section */}
                 <div className="space-y-4">
                     <div className="flex flex-col gap-1">
-                        <h3 className="text-4xl md:text-5xl font-black tracking-tight tabular-nums text-foreground leading-none">
+                        <h3 className="text-4xl md:text-5xl font-bold tracking-tight tabular-nums text-foreground leading-none">
                             {value}
                         </h3>
                     </div>
@@ -89,7 +89,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                         <div className="flex items-center gap-3 flex-wrap">
                             {trend && (
                                 <div className={cn(
-                                    "flex items-center px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wider shadow-xs backdrop-blur-sm",
+                                    "flex items-center px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider shadow-xs backdrop-blur-sm",
                                     trendUp
                                         ? "text-success bg-success/10 border-success/20"
                                         : "text-destructive bg-destructive/10 border-destructive/20"

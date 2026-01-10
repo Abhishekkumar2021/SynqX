@@ -1,14 +1,13 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Search, LayoutGrid, List, Activity } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Search, Activity } from 'lucide-react';
+import { ViewToggle, type ViewMode } from '@/components/common/ViewToggle';
 
 interface AgentsToolbarProps {
     filter: string;
     setFilter: (filter: string) => void;
-    viewMode: 'grid' | 'list';
-    setViewMode: (mode: 'grid' | 'list') => void;
+    viewMode: ViewMode;
+    setViewMode: (mode: ViewMode) => void;
     count: number;
 }
 
@@ -43,30 +42,7 @@ export const AgentsToolbar: React.FC<AgentsToolbarProps> = ({
                 <div className="h-6 w-px bg-border/40 mx-1" />
 
                 {/* View Toggle */}
-                <div className="flex items-center gap-1 bg-muted/50 border border-border/40 rounded-2xl p-1.5 shadow-inner">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                            "h-8 w-8 rounded-xl transition-all",
-                            viewMode === 'grid' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
-                        )}
-                        onClick={() => setViewMode('grid')}
-                    >
-                        <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                            "h-8 w-8 rounded-xl transition-all",
-                            viewMode === 'list' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
-                        )}
-                        onClick={() => setViewMode('list')}
-                    >
-                        <List className="h-4 w-4" />
-                    </Button>
-                </div>
+                <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
             </div>
         </div>
     );

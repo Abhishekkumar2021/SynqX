@@ -103,7 +103,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
         <>
             <div
                 className={cn(
-                    "group grid grid-cols-12 gap-4 items-center px-6 py-3.5 transition-all duration-200 cursor-pointer relative",
+                    "group grid grid-cols-12 gap-4 items-center px-6 py-3 transition-all duration-200 cursor-pointer relative",
                     "border-b border-border/30 last:border-0",
                     "hover:bg-muted/40",
                     "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1",
@@ -128,7 +128,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                             </span>
                         </div>
                         <div className="text-[10px] text-muted-foreground truncate max-w-[90%] font-medium">
-                            {pipeline.description || <span className="italic opacity-50 text-[9px]">No description</span>}
+                            {pipeline.description || <span className=" opacity-50 text-[9px]">No description</span>}
                         </div>
                     </div>
                 </div>
@@ -143,7 +143,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                     <div className="flex items-center gap-2">
                         {successRate !== null ? (
                             <span className={cn(
-                                "text-xs font-black tabular-nums",
+                                "text-xs font-bold tabular-nums",
                                 successRate > 90 ? "text-emerald-500" : successRate > 70 ? "text-amber-500" : "text-destructive"
                             )}>{successRate}%</span>
                         ) : (
@@ -159,7 +159,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                     <div className="flex items-center gap-1.5">
                         <ShieldAlert className="h-2.5 w-2.5 text-amber-500/60" />
                         <span className={cn(
-                            "text-[9px] font-black uppercase tracking-tighter",
+                            "text-[9px] font-bold uppercase tracking-tighter",
                             pipeline.stats?.total_quarantined === 0 ? "text-emerald-500/60" : "text-amber-600/80"
                         )}>
                             {pipeline.stats ? formatNumber(pipeline.stats.total_quarantined) : 0} rejected
@@ -171,10 +171,10 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                 <div className="col-span-6 md:col-span-2 flex flex-col justify-center gap-1">
                     <div className="flex items-center gap-1.5">
                         <Database className="h-2.5 w-2.5 text-blue-500/60" />
-                        <span className="text-[10px] font-black text-foreground/80 tabular-nums">
+                        <span className="text-[10px] font-bold text-foreground/80 tabular-nums">
                             {pipeline.stats ? formatNumber(pipeline.stats.total_records_processed) : '—'}
                         </span>
-                        <span className="text-[8px] text-muted-foreground font-black uppercase tracking-tighter opacity-40">rows</span>
+                        <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-tighter opacity-40">rows</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-muted-foreground/60">
                         <Clock className="h-2.5 w-2.5" />
@@ -191,7 +191,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                         <div className="flex flex-col">
                             <div className="flex items-center gap-1.5">
                                 <div className={cn(
-                                    "flex items-center gap-1 text-[8px] font-black uppercase tracking-widest",
+                                    "flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest",
                                     isSuccess ? "text-emerald-500" :
                                     isFailed ? "text-destructive" :
                                     isRunning ? "text-blue-500" : "text-amber-500"
@@ -207,14 +207,14 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                             </div>
                         </div>
                     ) : (
-                        <span className="text-[9px] text-muted-foreground/40 font-black uppercase tracking-widest italic">Never Sync'd</span>
+                        <span className="text-[9px] text-muted-foreground/40 font-bold uppercase tracking-widest ">Never Sync'd</span>
                     )}
 
                     {/* Next Run Info (Prominent) */}
                     {pipeline.schedule_enabled && pipeline.stats?.next_scheduled_run && (
                         <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-primary/5 border border-primary/10 w-fit">
                             <Zap className="h-2 w-2 text-primary fill-current" />
-                            <span className="text-[8px] font-black text-primary uppercase tracking-tighter">
+                            <span className="text-[8px] font-bold text-primary uppercase tracking-tighter">
                                 Next {formatDistanceToNow(new Date(pipeline.stats.next_scheduled_run), { addSuffix: true })}
                             </span>
                         </div>
@@ -226,7 +226,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                     <Button
                         variant="default"
                         size="sm"
-                        className="h-8 rounded-xl px-4 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/10 bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 transition-all active:scale-95 shrink-0"
+                        className="h-8 rounded-xl px-4 text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-primary/10 bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 transition-all active:scale-95 shrink-0"
                         onClick={(e) => { e.stopPropagation(); onRun?.(pipeline.id); }}
                         disabled={isRunningMutation || !onRun}
                     >
@@ -281,7 +281,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent className="rounded-[2rem]">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-2xl font-black">Confirm Deletion</AlertDialogTitle>
+                        <AlertDialogTitle className="text-2xl font-bold">Confirm Deletion</AlertDialogTitle>
                         <AlertDialogDescription className="text-base font-medium">
                             Are you sure you want to permanently delete <span className="font-bold text-foreground">"{pipeline.name}"</span>?
                         </AlertDialogDescription>

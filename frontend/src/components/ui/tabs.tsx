@@ -12,10 +12,10 @@ const TabsList = React.forwardRef<
     ref={ref}
     className={cn(
       // Layout & Shape
-      "inline-flex items-center justify-center rounded-2xl p-1.5",
+      "inline-flex h-11 items-center justify-center rounded-xl p-1",
 
-      // Colors & Glass Effect (Theme Aware)
-      "bg-background/20 backdrop-blur-xl border border-border/60 shadow-sm",
+      // Colors & Glass Effect
+      "bg-muted/30 text-muted-foreground border border-border/40 backdrop-blur-md",
       
       className
     )}
@@ -32,15 +32,13 @@ const TabsTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // Base Layout
-      "inline-flex items-center justify-center whitespace-nowrap rounded-xl px-5 py-2 text-[10px] font-extrabold uppercase tracking-widest ring-offset-background transition-all duration-300 ease-out",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-[11px] font-bold uppercase tracking-wider ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
       
-      // Active State (Primary Pill)
-      "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:scale-[1.02]",
-      "data-[state=active]:ring-1 data-[state=active]:ring-primary/20 dark:data-[state=active]:ring-primary/30",
+      // Active State
+      "data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/40",
 
-      // Inactive/Hover State
-      "text-muted-foreground hover:text-foreground data-[state=inactive]:hover:bg-muted/50 dark:data-[state=inactive]:hover:bg-muted/30 active:scale-95",
+      // Hover/Inactive
+      "text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 active:scale-95",
 
       className
     )}

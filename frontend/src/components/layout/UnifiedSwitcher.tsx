@@ -12,7 +12,8 @@ import {
     Search,
     Laptop,
     Box,
-    Cpu
+    Cpu,
+    Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -61,30 +62,25 @@ export const UnifiedSwitcher: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
             queryClient.invalidateQueries({ queryKey: ['pipelines'] }); 
             toast.success(variables === 'internal' 
-                ? "Workspace reverted to Internal Cloud Mode" 
+                ? "Reverted to Internal Cloud Mode" 
                 : `Execution routed to ${variables}`
             );
         }
     });
 
-    // --- Derived State ---
     const agentGroups = useMemo(() => {
+        if (!agents || !Array.isArray(agents)) return [];
         const groups = new Set<string>();
-        if (agents && Array.isArray(agents)) {
-            agents.forEach((a: any) => {
-                if (a.tags) {
-                    if (Array.isArray(a.tags.groups)) {
-                        a.tags.groups.forEach((g: string) => {
-                            if (g !== 'internal') groups.add(String(g));
-                        });
-                    } else if (Array.isArray(a.tags)) {
-                        a.tags.forEach((g: any) => {
-                            if (g !== 'internal') groups.add(String(g));
-                        });
-                    }
-                }
+        agents.forEach((a: any) => {
+            const tags = a.tags;
+            if (!tags) return;
+            
+            const groupList = Array.isArray(tags.groups) ? tags.groups : (Array.isArray(tags) ? tags : []);
+            groupList.forEach((g: any) => {
+                const groupName = String(g);
+                if (groupName !== 'internal') groups.add(groupName);
             });
-        }
+        });
         return Array.from(groups).sort();
     }, [agents]);
 
@@ -97,171 +93,188 @@ export const UnifiedSwitcher: React.FC = () => {
     if (!activeWorkspace) return null;
 
     const currentAgentGroup = activeWorkspace.default_agent_group || 'internal';
+    const isInternal = currentAgentGroup === 'internal';
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <motion.button 
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ y: -1 }}
                         whileTap={{ scale: 0.98 }}
                         className={cn(
-                            "flex items-center gap-3 px-4 h-10 rounded-2xl transition-all duration-500 outline-none group border border-border/60 bg-background/40 hover:bg-background/60 hover:border-primary/40 shadow-xs hover:shadow-md",
-                            currentAgentGroup !== 'internal' && "ring-1 ring-emerald-500/20"
+                            "flex items-center gap-3 px-4 h-11 rounded-xl transition-all duration-300 outline-none group border border-border/40 bg-muted/20 hover:bg-muted/30 hover:border-primary/30 shadow-xs",
+                            !isInternal && "ring-1 ring-emerald-500/20 border-emerald-500/30 bg-emerald-500/5"
                         )}
                     >
                         <div className={cn(
-                            "flex shrink-0 items-center justify-center rounded-xl transition-all duration-500 h-6 w-6",
-                            currentAgentGroup !== 'internal' ? "bg-emerald-500/10 text-emerald-600 shadow-emerald-500/10" : "bg-primary/10 text-primary shadow-primary/10"
+                            "flex shrink-0 items-center justify-center rounded-lg h-7 w-7 border shadow-inner transition-all duration-500",
+                            !isInternal 
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                                : "bg-primary/10 text-primary border-primary/20"
                         )}>
                             {isSwitching || loadingWs || updateRoutingMutation.isPending ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : currentAgentGroup !== 'internal' ? (
-                                <Laptop className="h-3.5 w-3.5" />
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : !isInternal ? (
+                                <Zap className="h-4 w-4 fill-emerald-500/20" />
                             ) : (
-                                <Building2 className="h-3.5 w-3.5" />
+                                <Building2 className="h-4 w-4 fill-primary/20" />
                             )}
                         </div>
 
-                        <div className="flex flex-col items-start overflow-hidden whitespace-nowrap min-w-25 max-w-45">
-                            <span className="text-[9px] font-medium uppercase tracking-widest text-muted-foreground/60 leading-none mb-0.5">
+                        <div className="flex flex-col items-start min-w-[120px] max-w-[180px] overflow-hidden">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-foreground truncate w-full leading-tight">
                                 {activeWorkspace.name}
                             </span>
-                            <span className={cn(
-                                "text-[10px] font-semibold uppercase tracking-tight truncate",
-                                currentAgentGroup !== 'internal' ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
-                            )}>
-                                {currentAgentGroup !== 'internal' ? `Agent: ${currentAgentGroup}` : "Internal Cloud Mode"}
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <div className={cn(
+                                    "h-1 w-1 rounded-full", 
+                                    !isInternal ? "bg-emerald-500 animate-pulse" : "bg-primary/60"
+                                )} />
+                                <span className={cn(
+                                    "text-[9px] font-bold uppercase tracking-tight",
+                                    !isInternal ? "text-emerald-600/80 dark:text-emerald-400/80" : "text-muted-foreground/50"
+                                )}>
+                                    {!isInternal ? currentAgentGroup : "Internal Cloud"}
+                                </span>
+                            </div>
                         </div>
 
-                        <ChevronsUpDown className="h-3.5 w-3.5 ml-auto opacity-30 group-hover:opacity-100 transition-opacity" />
+                        <ChevronsUpDown className="h-3.5 w-3.5 ml-1 opacity-20 group-hover:opacity-100 group-hover:text-primary transition-all" />
                     </motion.button>
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent 
-                    align="center" 
-                    sideOffset={8}
-                    className="w-[320px] p-0 rounded-[2rem] glass-panel shadow-2xl border-border/40 overflow-hidden bg-background/95 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
+                    align="end" 
+                    sideOffset={12}
+                    className="w-[320px] p-0 rounded-2xl border-border/40 bg-background/95 backdrop-blur-xl shadow-2xl overflow-hidden"
                 >
                     <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
-                        <div className="p-4 pb-2">
-                            <TabsList className="grid w-full grid-cols-2 h-10 p-1 bg-muted/30 rounded-xl border border-border/40 shadow-inner">
-                                <TabsTrigger value="workspace" className="rounded-lg text-[9px] font-semibold uppercase tracking-widest gap-2 transition-all data-[state=active]:shadow-md">
+                        <div className="p-4 pb-2 bg-muted/20">
+                            <TabsList className="w-full h-9 bg-background/50 border border-border/40 p-1 rounded-xl">
+                                <TabsTrigger value="workspace" className="flex-1 text-[10px] font-bold uppercase tracking-widest gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                                     <Building2 className="h-3 w-3" /> Environments
                                 </TabsTrigger>
-                                <TabsTrigger value="execution" className="rounded-lg text-[9px] font-semibold uppercase tracking-widest gap-2 transition-all data-[state=active]:shadow-md">
+                                <TabsTrigger value="execution" className="flex-1 text-[10px] font-bold uppercase tracking-widest gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                                     <Cpu className="h-3 w-3" /> Routing
                                 </TabsTrigger>
                             </TabsList>
                         </div>
 
-                        <TabsContent value="workspace" className="m-0 focus-visible:outline-none">
-                            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="p-2 space-y-1">
-                                <div className="px-2 pb-2">
-                                    <div className="relative group">
-                                        <Search className="z-20 absolute left-2.5 top-2.5 h-3 w-3 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                        <Input 
-                                            placeholder="Find environment..." 
-                                            value={search}
-                                            onChange={(e) => setSearch(e.target.value)}
-                                            className="h-8 pl-8 rounded-lg bg-muted/20 border-border/40 focus-visible:ring-primary/20 text-[10px] font-medium"
-                                        />
+                        <div className="max-h-100 overflow-y-auto custom-scrollbar">
+                            <TabsContent value="workspace" className="m-0 focus-visible:outline-none outline-none">
+                                <div className="p-3 space-y-1">
+                                    <div className="px-1 pb-2">
+                                        <div className="relative group">
+                                            <Search className="z-20 absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+                                            <Input 
+                                                placeholder="Search environments..." 
+                                                value={search}
+                                                onChange={(e) => setSearch(e.target.value)}
+                                                className="h-9 pl-9"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="max-h-60 overflow-y-auto custom-scrollbar px-1 space-y-1">
                                     {filteredWorkspaces.map((ws) => (
                                         <DropdownMenuItem 
                                             key={ws.id} 
                                             className={cn(
-                                                "flex items-center gap-3 p-2 rounded-xl cursor-pointer group transition-all duration-200",
-                                                activeWorkspace.id === ws.id ? "bg-primary/10 text-primary border border-primary/20" : "focus:bg-muted/50 border border-transparent"
+                                                "flex items-center gap-3 p-2 rounded-xl cursor-pointer group transition-all relative overflow-hidden mb-1",
+                                                activeWorkspace.id === ws.id ? "bg-primary/5 border border-primary/10" : "hover:bg-muted/50 border border-transparent"
                                             )}
                                             onClick={() => switchActiveWorkspace(ws.id)}
                                         >
                                             <div className={cn(
-                                                "h-8 w-8 rounded-lg flex items-center justify-center border transition-all duration-300",
-                                                activeWorkspace.id === ws.id ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 border-primary" : "bg-muted border-border/40"
+                                                "h-8 w-8 rounded-lg flex items-center justify-center border transition-all shrink-0",
+                                                activeWorkspace.id === ws.id ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-muted/50 border-border/40 group-hover:bg-background"
                                             )}>
-                                                <Building2 className="h-3.5 w-3.5" />
+                                                <Building2 className="h-4 w-4" />
                                             </div>
-                                            <div className="flex flex-col flex-1 overflow-hidden">
-                                                <span className="text-[11px] font-semibold truncate leading-none mb-0.5">{ws.name}</span>
-                                                <span className="text-[8px] opacity-50 uppercase font-medium tracking-tighter">{ws.role}</span>
+                                            <div className="flex flex-col flex-1 min-w-0">
+                                                <span className="text-xs font-bold tracking-tight truncate leading-none mb-1">{ws.name}</span>
+                                                <span className="text-[9px] opacity-40 uppercase font-black tracking-widest leading-none">{ws.role}</span>
                                             </div>
-                                            {activeWorkspace.id === ws.id && <Check className="h-3.5 w-3.5" />}
+                                            {activeWorkspace.id === ws.id && (
+                                                <div className="absolute right-3">
+                                                    <Check className="h-3.5 w-3.5 text-primary" />
+                                                </div>
+                                            )}
                                         </DropdownMenuItem>
                                     ))}
                                 </div>
-                            </motion.div>
-                        </TabsContent>
+                            </TabsContent>
 
-                        <TabsContent value="execution" className="m-0 focus-visible:outline-none">
-                            <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="p-3 space-y-1">
-                                <DropdownMenuItem 
-                                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer group"
-                                    onClick={() => updateRoutingMutation.mutate('internal')}
-                                >
-                                    <div className={cn(
-                                        "h-9 w-9 rounded-lg flex items-center justify-center border transition-all",
-                                        currentAgentGroup === 'internal' ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted border-border/40"
-                                    )}>
-                                        <Box className="h-4 w-4" />
+                            <TabsContent value="execution" className="m-0 focus-visible:outline-none outline-none">
+                                <div className="p-3 space-y-2">
+                                    <div className="px-2 py-1">
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Select Target Agent Group</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-xs font-semibold leading-none mb-0.5">Internal Worker</span>
-                                        <span className="text-[9px] opacity-50 font-medium uppercase tracking-tighter italic">Native Cloud Mode</span>
-                                    </div>
-                                    {currentAgentGroup === 'internal' && <Check className="h-4 w-4 ml-auto text-primary" />}
-                                </DropdownMenuItem>
-
-                                <div className="h-px bg-border/20 my-2 mx-2" />
-
-                                {agentGroups.map(group => (
+                                    
                                     <DropdownMenuItem 
-                                        key={group}
-                                        className="flex items-center gap-3 p-3 rounded-xl cursor-pointer group"
-                                        onClick={() => updateRoutingMutation.mutate(group)}
+                                        className={cn(
+                                            "flex items-center gap-4 p-3 rounded-xl cursor-pointer group transition-all border relative overflow-hidden",
+                                            isInternal ? "bg-primary/5 border-primary/20 shadow-sm" : "hover:bg-muted/50 border-transparent"
+                                        )}
+                                        onClick={() => updateRoutingMutation.mutate('internal')}
                                     >
                                         <div className={cn(
-                                            "h-9 w-9 rounded-lg flex items-center justify-center border transition-all",
-                                            currentAgentGroup === group ? "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "bg-muted border-border/40"
+                                            "h-10 w-10 rounded-lg flex items-center justify-center border transition-all shrink-0",
+                                            isInternal ? "bg-primary border-primary text-primary-foreground shadow-sm" : "bg-muted/50 border-border/40 group-hover:bg-background"
                                         )}>
-                                            <Laptop className="h-4 w-4" />
+                                            <Box className="h-5 w-5" />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-semibold leading-none mb-0.5">{group}</span>
-                                            <span className="text-[9px] opacity-50 font-medium uppercase tracking-tighter italic">Secure Agent Mode</span>
+                                            <span className="text-xs font-bold tracking-tight mb-1 leading-none">Native Cloud</span>
+                                            <span className="text-[9px] opacity-40 font-black uppercase tracking-widest leading-none">Internal Managed</span>
                                         </div>
-                                        {currentAgentGroup === group && <Check className="h-4 w-4 ml-auto text-emerald-500" />}
+                                        {isInternal && <Check className="h-4 w-4 ml-auto text-primary" />}
                                     </DropdownMenuItem>
-                                ))}
-                            </motion.div>
-                        </TabsContent>
+
+                                    {agentGroups.map(group => (
+                                        <DropdownMenuItem 
+                                            key={group}
+                                            className={cn(
+                                                "flex items-center gap-4 p-3 rounded-xl cursor-pointer group transition-all border relative overflow-hidden",
+                                                currentAgentGroup === group ? "bg-emerald-500/5 border-emerald-500/20 shadow-sm" : "hover:bg-muted/50 border-transparent"
+                                            )}
+                                            onClick={() => updateRoutingMutation.mutate(group)}
+                                        >
+                                            <div className={cn(
+                                                "h-10 w-10 rounded-lg flex items-center justify-center border transition-all shrink-0",
+                                                currentAgentGroup === group ? "bg-emerald-500 border-emerald-500 text-white shadow-sm" : "bg-muted/50 border-border/40 group-hover:bg-background"
+                                            )}>
+                                                <Laptop className="h-5 w-5" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-bold tracking-tight mb-1 leading-none">{group}</span>
+                                                <span className="text-[9px] opacity-40 font-black uppercase tracking-widest leading-none">Secure Remote</span>
+                                            </div>
+                                            {currentAgentGroup === group && <Check className="h-4 w-4 ml-auto text-emerald-500" />}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </div>
+                            </TabsContent>
+                        </div>
                     </Tabs>
 
-                    <DropdownMenuSeparator className="bg-border/40" />
+                    <DropdownMenuSeparator className="bg-border/20" />
                     
-                    <div className="bg-muted/10 p-2 grid grid-cols-2 gap-1.5">
+                    <div className="p-3 grid grid-cols-2 gap-2 bg-muted/10">
                         <DropdownMenuItem 
-                            className="flex flex-col items-center gap-1.5 p-3 rounded-2xl focus:bg-primary/10 focus:text-primary cursor-pointer text-center group transition-all"
+                            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-emerald-500/5 hover:text-emerald-600 transition-all group border border-transparent hover:border-emerald-500/10 cursor-pointer focus:bg-emerald-500/5"
                             onClick={() => setCreateWsOpen(true)}
                         >
-                            <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all shadow-sm">
-                                <PlusCircle size={16} />
-                            </div>
-                            <span className="text-[9px] font-medium uppercase tracking-[0.15em] opacity-70">New Env</span>
+                            <PlusCircle size={18} className="text-emerald-500/60 group-hover:text-emerald-600 transition-colors" />
+                            <span className="text-[9px] font-black uppercase tracking-[0.15em] opacity-40 group-hover:opacity-100 transition-opacity">Provision</span>
                         </DropdownMenuItem>
 
                         <DropdownMenuItem 
-                            className="flex flex-col items-center gap-1.5 p-3 rounded-2xl focus:bg-primary/10 focus:text-primary cursor-pointer text-center group transition-all"
+                            className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-primary/5 hover:text-primary transition-all group border border-transparent hover:border-primary/10 cursor-pointer focus:bg-primary/5"
                             onClick={() => navigate('/settings?tab=workspace')}
                         >
-                            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 group-hover:-rotate-12 transition-all shadow-sm">
-                                <Settings2 size={16} />
-                            </div>
-                            <span className="text-[9px] font-medium uppercase tracking-[0.15em] opacity-70">Governance</span>
+                            <Settings2 size={18} className="text-primary/60 group-hover:text-primary transition-colors" />
+                            <span className="text-[9px] font-black uppercase tracking-[0.15em] opacity-40 group-hover:opacity-100 transition-opacity">Settings</span>
                         </DropdownMenuItem>
                     </div>
                 </DropdownMenuContent>

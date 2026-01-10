@@ -96,7 +96,8 @@ export const AssetsTabContent = ({
                     asset_type: discovered?.type || discovered?.asset_type || 'table',
                     is_source: !asDestination,
                     is_destination: asDestination,
-                    schema_metadata: discovered?.schema_metadata
+                    schema_metadata: discovered?.schema_metadata,
+                    connection_id: connectionId
                 };
             });
             return bulkCreateAssets(connectionId, { assets: assetsToCreate });

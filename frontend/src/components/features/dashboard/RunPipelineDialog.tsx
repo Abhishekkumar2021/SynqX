@@ -140,7 +140,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
                                             key={filter}
                                             onClick={() => setActiveFilter(filter)}
                                             className={cn(
-                                                "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                                                "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
                                                 activeFilter === filter 
                                                     ? "bg-background text-primary shadow-sm ring-1 ring-border/10" 
                                                     : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
@@ -231,7 +231,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
                                                     <div className="mt-auto pt-2 flex items-center justify-between w-full border-t border-border/30">
                                                         <div className="flex items-center gap-2 mt-2">
                                                             <div className={cn("h-2 w-2 rounded-full", statusColor.split(' ')[0])} />
-                                                            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">{p.status}</span>
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{p.status}</span>
                                                         </div>
                                                         <div className={cn(
                                                             "h-8 w-8 rounded-full flex items-center justify-center transition-all",
@@ -282,7 +282,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
                                                         <div className="col-span-2 flex justify-end">
                                                             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-background/50 border border-border/50">
                                                                 <div className={cn("h-1.5 w-1.5 rounded-full", statusColor.split(' ')[0])} />
-                                                                <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">{p.status}</span>
+                                                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{p.status}</span>
                                                             </div>
                                                         </div>
                                                     </div>

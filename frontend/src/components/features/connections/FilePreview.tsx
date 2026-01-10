@@ -169,8 +169,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ connectionId, path, fi
                 </div>
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-black tracking-tight truncate max-w-[200px] sm:max-w-md uppercase">{filename}</h3>
-                        <Badge variant="outline" className="h-4 text-[8px] font-black uppercase tracking-tighter bg-background/50 border-border/40">
+                        <h3 className="text-sm font-bold tracking-tight truncate max-w-[200px] sm:max-w-md uppercase">{filename}</h3>
+                        <Badge variant="outline" className="h-4 text-[8px] font-bold uppercase tracking-tighter bg-background/50 border-border/40">
                             {extension || 'FILE'}
                         </Badge>
                     </div>
@@ -206,7 +206,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ connectionId, path, fi
                             <Button 
                                 variant="default" 
                                 size="sm" 
-                                className="h-7 px-3 text-[10px] font-black bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 gap-1.5 animate-in slide-in-from-right-2"
+                                className="h-7 px-3 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 gap-1.5 animate-in slide-in-from-right-2"
                                 onClick={handleSave}
                                 disabled={isSaving}
                             >
@@ -247,7 +247,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ connectionId, path, fi
                         <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
                         <Loader2 className="h-12 w-12 animate-spin text-primary relative z-10" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary animate-pulse">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary animate-pulse">
                         Syncing Remote Data...
                     </p>
                 </div>
@@ -261,7 +261,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ connectionId, path, fi
                         <AlertCircle className="h-12 w-12" />
                     </div>
                     <div className="space-y-2">
-                        <h3 className="font-black text-xl uppercase tracking-tight">Stream Interrupted</h3>
+                        <h3 className="font-bold text-xl uppercase tracking-tight">Stream Interrupted</h3>
                         <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">{error}</p>
                     </div>
                     <Button variant="outline" className="rounded-xl px-8 h-11 font-bold gap-2 hover:bg-destructive/5 hover:text-destructive hover:border-destructive/30 transition-all" onClick={() => window.location.reload()}>
@@ -350,13 +350,13 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ connectionId, path, fi
                                 </div>
                             </div>
                             <div className="space-y-3">
-                                <h3 className="text-2xl font-black uppercase tracking-tight">Binary Format Detected</h3>
+                                <h3 className="text-2xl font-bold uppercase tracking-tight">Binary Format Detected</h3>
                                 <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed font-medium">
                                     Rich preview is unavailable for this specific format. Download the resource to inspect locally.
                                 </p>
                             </div>
                             <Button 
-                                className="rounded-2xl gap-2 font-black uppercase tracking-widest px-10 h-12 shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+                                className="rounded-2xl gap-2 font-bold uppercase tracking-widest px-10 h-12 shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95"
                                 onClick={() => {
                                     const link = document.createElement('a');
                                     link.href = content || '#';
@@ -381,7 +381,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ connectionId, path, fi
                         >
                             <div className="p-6 space-y-8">
                                 <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
                                         <Info className="h-3 w-3" /> File Specifications
                                     </h4>
                                     <div className="space-y-4">
@@ -394,7 +394,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ connectionId, path, fi
                                 <Separator className="bg-border/40" />
 
                                 <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
                                         <Database className="h-3 w-3" /> Path context
                                     </h4>
                                     <div className="bg-muted/30 p-3 rounded-xl border border-border/40 overflow-hidden">
@@ -447,6 +447,6 @@ const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: stri
             <div className="p-1 rounded-md bg-muted group-hover/item:text-primary transition-colors">{icon}</div>
             <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
         </div>
-        <span className="text-xs font-black text-foreground">{value}</span>
+        <span className="text-xs font-bold text-foreground">{value}</span>
     </div>
 );

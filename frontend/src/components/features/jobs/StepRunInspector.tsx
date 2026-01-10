@@ -59,7 +59,7 @@ const MaximizePortal = ({ children, onClose, title, subtitle }: { children: Reac
                         <Table size={20} />
                     </div>
                     <div className="flex flex-col">
-                        <h3 className="text-xl font-black uppercase tracking-tight leading-none">{title}</h3>
+                        <h3 className="text-xl font-bold uppercase tracking-tight leading-none">{title}</h3>
                         <span className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1">{subtitle}</span>
                     </div>
                 </div>
@@ -67,7 +67,7 @@ const MaximizePortal = ({ children, onClose, title, subtitle }: { children: Reac
                     variant="ghost" 
                     size="sm" 
                     onClick={onClose}
-                    className="h-10 rounded-xl gap-2 font-black uppercase text-[10px] tracking-widest bg-muted/50 hover:bg-destructive/10 hover:text-destructive transition-all px-4"
+                    className="h-10 rounded-xl gap-2 font-bold uppercase text-[10px] tracking-widest bg-muted/50 hover:bg-destructive/10 hover:text-destructive transition-all px-4"
                 >
                     <Minimize2 size={16} /> Exit Full Screen
                 </Button>
@@ -186,7 +186,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
         return (
             <div className="h-full w-full flex flex-col bg-background/95 backdrop-blur-3xl border-l border-border/40 shadow-2xl animate-in slide-in-from-right duration-500 overflow-hidden">
                 <div className="p-6 border-b border-border/10 flex items-center justify-between">
-                    <h3 className="font-black text-xl tracking-tighter uppercase">{nodeLabel}</h3>
+                    <h3 className="font-bold text-xl tracking-tighter uppercase">{nodeLabel}</h3>
                     <Button variant="ghost" size="icon" onClick={onClose} className="rounded-2xl h-10 w-10">
                         <X size={20} />
                     </Button>
@@ -242,10 +242,10 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 <Activity size={28} strokeWidth={1.5} />}
                             </div>
                             <div className="space-y-1">
-                                <h3 className="font-black text-xl tracking-tighter text-foreground leading-none uppercase">{nodeLabel}</h3>
+                                <h3 className="font-bold text-xl tracking-tighter text-foreground leading-none uppercase">{nodeLabel}</h3>
                                 <div className="flex items-center gap-2">
                                     <Badge variant="outline" className={cn(
-                                        "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 border-0 bg-background/50",
+                                        "text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 border-0 bg-background/50",
                                         isSuccess ? "text-emerald-500" :
                                         isFailed ? "text-destructive" :
                                         isRunning ? "text-primary" :
@@ -268,12 +268,12 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="px-6 pt-4 shrink-0">
-                        <TabsList className="w-full grid grid-cols-2 h-12 bg-muted/50">
+                        <TabsList className="w-full grid grid-cols-2">
                             <TabsTrigger value="telemetry" className="gap-2">
-                                <Activity size={12} /> Telemetry
+                                <Activity size={14} /> Telemetry
                             </TabsTrigger>
                             <TabsTrigger value="data" className="gap-2">
-                                <Table size={12} /> Buffer Sniff
+                                <Table size={14} /> Buffer Sniff
                             </TabsTrigger>
                         </TabsList>
                     </div>
@@ -285,24 +285,24 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 px-1">
                                         <ArrowRight size={14} className="text-primary/60" />
-                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Data Lifecycle</Label>
+                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Data Lifecycle</Label>
                                     </div>
                                     
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="p-5 rounded-[2rem] bg-blue-500/5 border border-blue-500/10 flex flex-col gap-1 shadow-sm">
                                             <div className="flex items-center gap-2 text-blue-500/60 mb-1">
                                                 <ArrowDownToLine size={12} />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Ingress</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-widest">Ingress</span>
                                             </div>
-                                            <p className="text-3xl font-black tracking-tighter text-blue-500">{formatNumber(step.records_in || 0)}</p>
+                                            <p className="text-3xl font-bold tracking-tighter text-blue-500">{formatNumber(step.records_in || 0)}</p>
                                             <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">Total Records In</span>
                                         </div>
                                         <div className="p-5 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10 flex flex-col gap-1 shadow-sm">
                                             <div className="flex items-center gap-2 text-emerald-500/60 mb-1">
                                                 <ArrowUpFromLine size={12} />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Egress</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-widest">Egress</span>
                                             </div>
-                                            <p className="text-3xl font-black tracking-tighter text-emerald-500">{formatNumber(step.records_out || 0)}</p>
+                                            <p className="text-3xl font-bold tracking-tighter text-emerald-500">{formatNumber(step.records_out || 0)}</p>
                                             <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">Successfully Processed</span>
                                         </div>
                                     </div>
@@ -312,16 +312,16 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                             <div className="px-5 py-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex items-center justify-between">
                                                 <div className="flex items-center gap-2 text-amber-500/60">
                                                     <Filter size={12} />
-                                                    <span className="text-[9px] font-black uppercase tracking-widest">Filtered</span>
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest">Filtered</span>
                                                 </div>
-                                                <span className="text-sm font-black font-mono text-amber-600">{formatNumber(recordsFiltered)}</span>
+                                                <span className="text-sm font-bold font-mono text-amber-600">{formatNumber(recordsFiltered)}</span>
                                             </div>
                                             <div className="px-5 py-3 rounded-2xl bg-destructive/5 border border-destructive/10 flex items-center justify-between">
                                                 <div className="flex items-center gap-2 text-destructive/60">
                                                     <AlertTriangle size={12} />
-                                                    <span className="text-[9px] font-black uppercase tracking-widest">Quarantine</span>
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest">Quarantine</span>
                                                 </div>
-                                                <span className="text-sm font-black font-mono text-destructive">{formatNumber(recordsError)}</span>
+                                                <span className="text-sm font-bold font-mono text-destructive">{formatNumber(recordsError)}</span>
                                             </div>
                                         </div>
                                     )}
@@ -332,16 +332,16 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 px-1">
                                         <Clock size={14} className="text-primary/60" />
-                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Performance Profile</Label>
+                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Performance Profile</Label>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-4 rounded-2xl bg-muted/10 border border-border/20 space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Execution Latency</span>
-                                            <p className="text-xl font-black tracking-tight text-foreground">{formatDuration(step.duration_seconds * 1000)}</p>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Execution Latency</span>
+                                            <p className="text-xl font-bold tracking-tight text-foreground">{formatDuration(step.duration_seconds * 1000)}</p>
                                         </div>
                                         <div className="p-4 rounded-2xl bg-muted/10 border border-border/20 space-y-1">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Data Volume</span>
-                                            <p className="text-xl font-black tracking-tight text-foreground">{formatBytes(step.bytes_processed)}</p>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Data Volume</span>
+                                            <p className="text-xl font-bold tracking-tight text-foreground">{formatBytes(step.bytes_processed)}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -351,21 +351,21 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 px-1">
                                         <Cpu size={14} className="text-primary/60" />
-                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Worker Resources</Label>
+                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Worker Resources</Label>
                                     </div>
                                     <div className="grid grid-cols-1 gap-4">
                                         <div className="p-5 rounded-[2rem] bg-muted/5 border border-border/20 space-y-5">
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Processor Load</span>
-                                                    <span className="text-xs font-black font-mono text-primary">{step.cpu_percent || 0}%</span>
+                                                    <span className="text-xs font-bold font-mono text-primary">{step.cpu_percent || 0}%</span>
                                                 </div>
                                                 <Progress value={step.cpu_percent || 0} className="h-1 bg-primary/10" />
                                             </div>
                                             <div className="space-y-2">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Memory Usage</span>
-                                                    <span className="text-xs font-black font-mono text-blue-500">{step.memory_mb || 0} MB</span>
+                                                    <span className="text-xs font-bold font-mono text-blue-500">{step.memory_mb || 0} MB</span>
                                                 </div>
                                                 <Progress value={Math.min(((step.memory_mb || 0) / 8192) * 100, 100)} className="h-1 bg-blue-500/10" />
                                             </div>
@@ -377,7 +377,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                     <div className="space-y-4 animate-in zoom-in-95">
                                         <div className="flex items-center gap-2 px-1 text-destructive">
                                             <AlertCircle size={14} />
-                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em]">Critical Fault Trace</Label>
+                                            <Label className="text-[10px] font-bold uppercase tracking-[0.2em]">Critical Fault Trace</Label>
                                         </div>
                                         <div className="p-6 rounded-[2rem] bg-destructive/5 border border-destructive/20 shadow-xl">
                                             <pre className="text-[10px] font-bold text-destructive/90 leading-relaxed font-mono whitespace-pre-wrap break-all bg-black/20 p-4 rounded-xl shadow-inner border border-destructive/10">
@@ -385,7 +385,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                             </pre>
                                             <div className="mt-4 flex items-center gap-2 text-destructive/60">
                                                 <RefreshCcw size={12} />
-                                                <span className="text-[9px] font-black uppercase tracking-widest">Retried {step.retry_count || 0} times</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-widest">Retried {step.retry_count || 0} times</span>
                                             </div>
                                         </div>
                                     </div>
@@ -398,17 +398,17 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                     <TabsContent value="data" className="flex-1 min-h-0 m-0 focus-visible:outline-none animate-in fade-in duration-500 flex flex-col overflow-hidden">
                         <Tabs defaultValue="egress" className="flex-1 flex flex-col min-h-0">
                             <div className="px-6 py-2 bg-muted/10 border-b border-border/10 shrink-0 flex items-center justify-between">
-                                <TabsList className="h-10 bg-background/50 p-1 rounded-xl">
+                                <TabsList className="gap-1">
                                     {!isSource && (
-                                        <TabsTrigger value="ingress" className="text-[9px] h-8 px-4 gap-2">
+                                        <TabsTrigger value="ingress" className="gap-2">
                                             <ArrowDownToLine size={12} /> Ingress
                                         </TabsTrigger>
                                     )}
-                                    <TabsTrigger value="egress" className="text-[9px] h-8 px-4 gap-2">
+                                    <TabsTrigger value="egress" className="gap-2">
                                         <ArrowUpFromLine size={12} /> Egress
                                     </TabsTrigger>
                                     {hasQuarantine && (
-                                        <TabsTrigger value="quarantine" className="text-[9px] h-8 px-4 gap-2 data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground transition-all duration-300">
+                                        <TabsTrigger value="quarantine" className="gap-2 data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground">
                                             <ShieldAlert size={12} /> Rejected
                                         </TabsTrigger>
                                     )}
@@ -419,7 +419,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                         <Button 
                                             variant="ghost" 
                                             size="sm" 
-                                            className="h-8 rounded-lg gap-2 text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary hover:bg-primary/10 transition-all" 
+                                            className="h-8 rounded-lg gap-2 text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:text-primary hover:bg-primary/10 transition-all" 
                                             onClick={() => setMaximizedDirection('in')}
                                         >
                                             <Maximize2 size={12} /> Maximize
@@ -429,7 +429,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                         <Button 
                                             variant="ghost" 
                                             size="sm" 
-                                            className="h-8 rounded-lg gap-2 text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary hover:bg-primary/10 transition-all" 
+                                            className="h-8 rounded-lg gap-2 text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:text-primary hover:bg-primary/10 transition-all" 
                                             onClick={() => setMaximizedDirection('out')}
                                         >
                                             <Maximize2 size={12} /> Maximize
@@ -439,7 +439,7 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                         <Button 
                                             variant="ghost" 
                                             size="sm" 
-                                            className="h-8 rounded-lg gap-2 text-[10px] font-black uppercase tracking-widest text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all" 
+                                            className="h-8 rounded-lg gap-2 text-[10px] font-bold uppercase tracking-widest text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-all" 
                                             onClick={() => setMaximizedDirection('quarantine')}
                                         >
                                             <Maximize2 size={12} /> Maximize

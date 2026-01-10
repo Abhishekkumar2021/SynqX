@@ -73,11 +73,11 @@ export function DateRangePicker({
         >
           <div className="glass-panel p-4 shadow-2xl ring-1 ring-white/10 dark:ring-white/5 border border-white/10 overflow-hidden">
             <div className="mb-4 px-2 py-1 flex items-center justify-between min-h-[32px] border-b border-border/20 pb-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/90">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/90">
                     Range Selection
                 </p>
                 {date?.from && date?.to ? (
-                    <div className="px-3 py-1 rounded-full bg-primary/15 border border-primary/20 text-[9px] font-black text-primary uppercase tracking-tight animate-in fade-in zoom-in-95 duration-200">
+                    <div className="px-3 py-1 rounded-full bg-primary/15 border border-primary/20 text-[9px] font-bold text-primary uppercase tracking-tight animate-in fade-in zoom-in-95 duration-200">
                         {Math.ceil((date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24)) + 1} Days
                     </div>
                 ) : (

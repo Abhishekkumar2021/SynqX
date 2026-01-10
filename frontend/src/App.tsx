@@ -145,8 +145,8 @@ const FullPageLoader = () => {
       >
         {/* Brand Identity */}
         <div className="relative group">
-          <h2 className="text-5xl font-black tracking-[0.8em] uppercase text-foreground flex items-center transition-all duration-500 group-hover:tracking-[1em]">
-            Synq<span className="text-primary italic animate-pulse">X</span>
+          <h2 className="text-5xl font-bold tracking-[0.8em] uppercase text-foreground flex items-center transition-all duration-500 group-hover:tracking-[1em]">
+            Synq<span className="text-primary  animate-pulse">X</span>
           </h2>
           <motion.div
             className="absolute -bottom-4 left-0 h-1 bg-linear-to-r from-transparent via-primary to-transparent w-full"
@@ -181,7 +181,7 @@ const FullPageLoader = () => {
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 exit={{ opacity: 0, y: -15, filter: "blur(8px)" }}
                 transition={{ duration: 0.5 }}
-                className="text-xs font-black font-mono tracking-[0.25em] text-foreground uppercase min-w-[320px] text-center relative z-10"
+                className="text-xs font-bold font-mono tracking-[0.25em] text-foreground uppercase min-w-[320px] text-center relative z-10"
               >
                 {statusMessages[messageIndex]}
               </motion.span>

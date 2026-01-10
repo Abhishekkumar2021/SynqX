@@ -44,7 +44,7 @@ export const WorkspaceTeamPage: React.FC = () => {
             <TeamHeader />
 
             {/* --- Unified Registry Container --- */}
-            <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden relative">
+            <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden relative">
                 <div className="flex-1 min-h-0 flex flex-col relative">
                     <MembersTab
                         key="members-tab"

@@ -43,7 +43,7 @@ export const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
         }
 
         const update = () => {
-            setElapsed(formatDuration(job.started_at, job.completed_at || null));
+            setElapsed(formatDuration(job.started_at!, job.completed_at || null));
         };
 
         update();
@@ -58,7 +58,7 @@ export const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
         queryKey: ['job-run', job?.id],
         queryFn: () => getJobRun(job!.id),
         enabled: !!job,
-        refetchInterval: (data) => (data?.status === 'running' || data?.status === 'pending' ? 3000 : false)
+        refetchInterval: () => (job?.status === 'running' || job?.status === 'pending' ? 3000 : false)
     });
 
     const cancelMutation = useMutation({
@@ -113,7 +113,7 @@ export const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
                             isLoadingRun ? (
                                 <div className="flex-1 flex flex-col items-center justify-center gap-4 opacity-40">
                                     <RefreshCw className="h-8 w-8 animate-spin" />
-                                    <span className="text-xs font-black uppercase tracking-widest">Collating Execution Metrics...</span>
+                                    <span className="text-xs font-bold uppercase tracking-widest">Collating Execution Metrics...</span>
                                 </div>
                             ) : (
                                 <JobSummary job={job} run={run} />

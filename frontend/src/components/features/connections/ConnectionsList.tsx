@@ -14,7 +14,8 @@ import {
     Activity, Loader2, ArrowRight, Play,
     Clock,
     Workflow,
-    Zap
+    Zap,
+    Cpu
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -99,7 +100,7 @@ const ConnectionCard = ({
                                 <Badge
                                     variant="outline"
                                     className={cn(
-                                        "text-[9px] font-black uppercase tracking-wider px-1.5 py-0 rounded-md border",
+                                        "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0 rounded-md border",
                                         connection.health_status === 'healthy'
                                             ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                                             : connection.health_status === 'unhealthy' 
@@ -110,7 +111,7 @@ const ConnectionCard = ({
                                     {connection.health_status || 'Unknown'}
                                 </Badge>
                                 {connection.default_agent_group && connection.default_agent_group !== 'internal' && (
-                                    <Badge variant="outline" className="text-[8px] font-black uppercase bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-1 py-0 rounded flex items-center gap-1">
+                                    <Badge variant="outline" className="text-[8px] font-bold uppercase bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-1 py-0 rounded flex items-center gap-1">
                                         <Cpu size={8} /> {connection.default_agent_group}
                                     </Badge>
                                 )}
@@ -160,11 +161,11 @@ const ConnectionCard = ({
                         <div className="grid grid-cols-3 gap-2">
                             {/* Sync Success */}
                             <div className="flex flex-col gap-1">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
                                     <Zap className="h-2 w-2 text-amber-500" /> Success
                                 </span>
                                 <span className={cn(
-                                    "text-xs font-black tabular-nums",
+                                    "text-xs font-bold tabular-nums",
                                     stats?.sync_success_rate !== undefined 
                                         ? stats.sync_success_rate > 90 ? "text-emerald-500" : stats.sync_success_rate > 70 ? "text-amber-500" : "text-destructive"
                                         : "text-muted-foreground/40"
@@ -175,21 +176,21 @@ const ConnectionCard = ({
 
                             {/* Latency */}
                             <div className="flex flex-col gap-1 border-l border-border/20 pl-2">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
                                     <Clock className="h-2 w-2 text-blue-500" /> Latency
                                 </span>
-                                <span className="text-xs font-black tabular-nums truncate">
+                                <span className="text-xs font-bold tabular-nums truncate">
                                     {stats?.average_latency_ms !== undefined ? `${Math.round(stats.average_latency_ms)}ms` : "—"}
                                 </span>
                             </div>
 
                             {/* Impact */}
                             <div className="flex flex-col gap-1 border-l border-border/20 pl-2">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
                                     <Workflow className="h-2 w-2 text-purple-500" /> Impact
                                 </span>
-                                <span className="text-xs font-black tabular-nums">
-                                    {impact?.pipeline_count ?? 0} <span className="text-[8px] opacity-40 uppercase font-black">flows</span>
+                                <span className="text-xs font-bold tabular-nums">
+                                    {impact?.pipeline_count ?? 0} <span className="text-[8px] opacity-40 uppercase font-bold">flows</span>
                                 </span>
                             </div>
                         </div>
@@ -264,9 +265,9 @@ const ConnectionRow = ({
                             {connection.name}
                         </h3>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-60">{connection.connector_type}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-60">{connection.connector_type}</span>
                             {connection.default_agent_group && connection.default_agent_group !== 'internal' && (
-                                <Badge variant="outline" className="text-[7px] font-black uppercase bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-1 py-0 rounded flex items-center gap-1 leading-none">
+                                <Badge variant="outline" className="text-[7px] font-bold uppercase bg-emerald-500/5 text-emerald-600 border-emerald-500/20 px-1 py-0 rounded flex items-center gap-1 leading-none">
                                     <Cpu size={7} /> {connection.default_agent_group}
                                 </Badge>
                             )}
@@ -280,7 +281,7 @@ const ConnectionRow = ({
                         <Badge
                             variant="outline"
                             className={cn(
-                                "text-[8px] font-black uppercase tracking-widest px-1.5 py-0 rounded border",
+                                "text-[8px] font-bold uppercase tracking-widest px-1.5 py-0 rounded border",
                                 connection.health_status === 'healthy' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-destructive/10 text-destructive border-destructive/20"
                             )}
                         >
@@ -288,7 +289,7 @@ const ConnectionRow = ({
                         </Badge>
                         {stats?.sync_success_rate !== undefined && (
                             <span className={cn(
-                                "text-[10px] font-black tabular-nums",
+                                "text-[10px] font-bold tabular-nums",
                                 stats.sync_success_rate > 90 ? "text-emerald-500" : stats.sync_success_rate > 70 ? "text-amber-500" : "text-destructive"
                             )}>{stats.sync_success_rate}%</span>
                         )}
@@ -305,7 +306,7 @@ const ConnectionRow = ({
                     </div>
                     <div className="flex items-center gap-1.5">
                         <Activity className="h-2.5 w-2.5 text-muted-foreground/40" />
-                        <span className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground/60">
+                        <span className="text-[9px] font-bold uppercase tracking-tighter text-muted-foreground/60">
                             {stats?.last_24h_runs ?? 0} runs <span className="opacity-40">/ 24h</span>
                         </span>
                     </div>
@@ -316,7 +317,7 @@ const ConnectionRow = ({
                     <div className="flex items-center gap-1.5">
                         <Workflow className="h-2.5 w-2.5 text-purple-500/60" />
                         <span className="text-[10px] font-bold text-foreground/70">
-                            {impact?.pipeline_count ?? 0} <span className="text-[8px] opacity-40 font-black uppercase">flows</span>
+                            {impact?.pipeline_count ?? 0} <span className="text-[8px] opacity-40 font-bold uppercase">flows</span>
                         </span>
                     </div>
                 </div>
@@ -444,7 +445,7 @@ export const ConnectionsList: React.FC<ConnectionsListProps> = ({
     return (
         <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-border/50 hover:scrollbar-thumb-border/80 scrollbar-track-transparent">
             {viewMode === 'list' && (
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
                     <div className="col-span-12 md:col-span-4">Connection</div>
                     <div className="col-span-2 hidden md:block">Health & Sync</div>
                     <div className="col-span-2 hidden md:block">Performance</div>

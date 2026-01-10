@@ -115,7 +115,7 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                         </p>
                     </div>
                 </div>
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 tracking-widest px-2.5 py-0.5 font-black rounded-lg text-[8px] uppercase">
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 tracking-widest px-2.5 py-0.5 font-bold rounded-lg text-[8px] uppercase">
                     {activeWorkspace?.role} Permissions
                 </Badge>
             </div>
@@ -125,7 +125,7 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
                         <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                        <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-primary/80 flex items-center gap-2 whitespace-nowrap">
+                        <h4 className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary/80 flex items-center gap-2 whitespace-nowrap">
                             <Globe className="h-2.5 w-2.5" /> Identity & Branding
                         </h4>
                         <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
@@ -133,7 +133,7 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
 
                     <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
                         <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
+                            <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
                                 Workspace Name
                             </Label>
                             <Input 
@@ -145,11 +145,11 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                             />
                         </div>
                         <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
+                            <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
                                 Resource Slug
                             </Label>
                             <div className="h-11 flex items-center px-5 rounded-xl border border-border/40 bg-muted/5 backdrop-blur-sm cursor-not-allowed group/slug relative">
-                                <code className="text-xs font-mono font-black text-primary/60 tracking-wider">
+                                <code className="text-xs font-mono font-bold text-primary/60 tracking-wider">
                                     {activeWorkspace?.slug}
                                 </code>
                                 <Button 
@@ -172,14 +172,14 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
                         <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                        <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-500/80 flex items-center gap-2 whitespace-nowrap">
+                        <h4 className="text-[9px] font-bold uppercase tracking-[0.3em] text-amber-500/80 flex items-center gap-2 whitespace-nowrap">
                             <RefreshCw className="h-2.5 w-2.5" /> Agent Routing
                         </h4>
                         <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
                     </div>
 
                     <div className="space-y-2.5">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
                             Default Agent Group
                         </Label>
                         
@@ -188,7 +188,7 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                             value={agentGroup || 'internal'} 
                             onValueChange={(val) => setAgentGroup(val)}
                         >
-                            <SelectTrigger className="h-11 bg-muted/20 border-border/40 rounded-xl font-bold text-sm focus:ring-primary/20 transition-all px-5 shadow-sm text-foreground">
+                            <SelectTrigger className="h-11 bg-muted/20 border-border/40 rounded-xl font-semibold text-sm focus:ring-primary/20 transition-all px-5 shadow-sm text-foreground">
                                 <SelectValue placeholder="Select execution target..." />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-border/40 glass-panel shadow-2xl">
@@ -213,7 +213,7 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                             </SelectContent>
                         </Select>
 
-                        <p className="text-[10px] text-muted-foreground px-1 font-medium italic opacity-70">
+                        <p className="text-[10px] text-muted-foreground px-1 font-medium  opacity-70">
                             Setting a default group routes all operations in this workspace to your private agents.
                         </p>
                     </div>
@@ -223,14 +223,14 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
                         <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                        <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-500/80 flex items-center gap-2 whitespace-nowrap">
+                        <h4 className="text-[9px] font-bold uppercase tracking-[0.3em] text-emerald-500/80 flex items-center gap-2 whitespace-nowrap">
                             <Info className="h-2.5 w-2.5" /> Governance & Purpose
                         </h4>
                         <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
                     </div>
 
                     <div className="space-y-2.5">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
                             Mission Statement & Description
                         </Label>
                         <Textarea 
@@ -255,7 +255,7 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                         Discard
                     </Button>
                     <Button 
-                        className="rounded-xl h-11 px-10 font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all gap-2 bg-primary text-primary-foreground"
+                        className="rounded-xl h-11 px-10 font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all gap-2 bg-primary text-primary-foreground"
                         onClick={handleSave}
                         disabled={updateWsMutation.isPending || !hasChanges}
                     >

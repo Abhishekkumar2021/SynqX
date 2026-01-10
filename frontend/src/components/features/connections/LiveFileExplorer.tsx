@@ -306,7 +306,7 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                                 <FileUp className="h-12 w-12" />
                             </div>
                             <div className="text-center">
-                                <h3 className="text-xl font-black uppercase tracking-tighter text-primary">Drop to Upload</h3>
+                                <h3 className="text-xl font-bold uppercase tracking-tighter text-primary">Drop to Upload</h3>
                                 <p className="text-xs font-bold text-primary/60">Release files to start remote transfer</p>
                             </div>
                         </motion.div>
@@ -403,7 +403,7 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-xl border-border/60 shadow-xl p-1">
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-2 py-1.5 opacity-50">Sort By</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest px-2 py-1.5 opacity-50">Sort By</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => setSortField('name')} className="rounded-lg text-xs font-bold gap-2.5">
                                     <FileText className={cn("h-4 w-4", sortField === 'name' ? "text-primary" : "opacity-40")} />
                                     Name
@@ -422,7 +422,7 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                                 
                                 <DropdownMenuSeparator className="bg-border/40 my-1" />
                                 
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-2 py-1.5 opacity-50">Order</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest px-2 py-1.5 opacity-50">Order</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => setSortOrder('asc')} className="rounded-lg text-xs font-bold gap-2.5">
                                     <SortAsc className={cn("h-4 w-4", sortOrder === 'asc' ? "text-primary" : "opacity-40")} />
                                     Ascending
@@ -434,7 +434,7 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
 
                                 <DropdownMenuSeparator className="bg-border/40 my-1" />
 
-                                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest px-2 py-1.5 opacity-50">Group By</DropdownMenuLabel>
+                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest px-2 py-1.5 opacity-50">Group By</DropdownMenuLabel>
                                 <DropdownMenuItem onClick={() => setGroupBy('type')} className="rounded-lg text-xs font-bold gap-2.5">
                                     <Layers className={cn("h-4 w-4", groupBy === 'type' ? "text-primary" : "opacity-40")} />
                                     File Type
@@ -527,9 +527,9 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                                     <HardDrive className="h-10 w-10 text-muted-foreground/30" />
                                 </div>
                             </motion.div>
-                            <h3 className="text-base font-black uppercase tracking-widest text-foreground">No Items in Directory</h3>
+                            <h3 className="text-base font-bold uppercase tracking-widest text-foreground">No Items in Directory</h3>
                             <p className="text-xs font-bold text-muted-foreground mt-1 uppercase opacity-60 tracking-tighter">Directory is empty or filters are too restrictive.</p>
-                            <Button variant="outline" size="sm" className="mt-8 gap-2 font-bold rounded-xl" onClick={() => fileInputRef.current?.click()}>
+                            <Button variant="outline" size="sm" className="mt-8 gap-2 rounded-xl" onClick={() => fileInputRef.current?.click()}>
                                 <Upload className="h-3.5 w-3.5" /> Upload First File
                             </Button>
                         </div>
@@ -537,10 +537,10 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                         <Table wrapperClassName="rounded-none border-none shadow-none">
                             <TableHeader className="bg-muted/10 sticky top-0 z-30 backdrop-blur-md border-b border-border/40">
                                 <TableRow className="hover:bg-transparent border-none">
-                                    <TableHead className="pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Name</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Size</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Modified</TableHead>
-                                    <TableHead className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 text-center">Type</TableHead>
+                                    <TableHead className="pl-6 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Name</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Size</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Modified</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 text-center">Type</TableHead>
                                     <TableHead className="w-12 pr-6"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -569,14 +569,14 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                                                     )}>
                                                         {item.name}
                                                     </span>
-                                                    <span className="text-[9px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                                                    <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
                                                         {item.type === 'directory' ? 'System Directory' : 'Remote Resource'}
                                                     </span>
                                                 </div>
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <span className="text-xs font-black font-mono text-foreground/70 tracking-tight">
+                                            <span className="text-xs font-bold font-mono text-foreground/70 tracking-tight">
                                                 {item.type === 'file' ? (
                                                     item.size > 1024 * 1024 
                                                         ? (item.size / (1024 * 1024)).toFixed(1) + ' MB'
@@ -589,14 +589,14 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                                                 <span className="text-xs font-bold text-foreground/70 whitespace-nowrap">
                                                     {item.modified_at ? format(new Date(item.modified_at * 1000), 'MMM dd, yyyy') : '—'}
                                                 </span>
-                                                <span className="text-[9px] font-black text-muted-foreground/40 uppercase">
+                                                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">
                                                     {item.modified_at ? formatDistanceToNow(new Date(item.modified_at * 1000), { addSuffix: true }) : ''}
                                                 </span>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <Badge variant="outline" className={cn(
-                                                "h-5 text-[8px] font-black uppercase tracking-widest",
+                                                "h-5 text-[8px] font-bold uppercase tracking-widest",
                                                 item.type === 'directory' ? "border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-500/10" : "bg-muted/50 border-border/40 text-muted-foreground/70"
                                             )}>
                                                 {item.type === 'directory' ? 'DIR' : (item.name.split('.').pop() || 'FILE')}
@@ -663,12 +663,12 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                                         "w-16 h-16 rounded-2xl flex items-center justify-center mb-3 transition-all duration-300 group-hover:scale-110 shadow-sm",
                                         item.type === 'directory' ? "bg-blue-500/10 text-blue-600" : "bg-muted/50 text-foreground/60"
                                     )}>
-                                        {React.cloneElement(getIcon(item) as React.ReactElement, { className: "h-8 w-8" })}
+                                        {React.cloneElement(getIcon(item) as React.ReactElement<{ className?: string }>, { className: "h-8 w-8" })}
                                     </div>
                                     <span className="text-xs font-bold text-center truncate w-full px-1 mb-1">
                                         {item.name}
                                     </span>
-                                    <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-tighter">
+                                    <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-tighter">
                                         {item.type === 'directory' ? 'Folder' : (item.size > 1024 * 1024 
                                             ? (item.size / (1024 * 1024)).toFixed(1) + ' MB'
                                             : (item.size / 1024).toFixed(1) + ' KB')}
@@ -746,7 +746,7 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                         
                     <DialogContent className="sm:max-w-md rounded-3xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
                         <DialogHeader>
-                            <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
+                            <DialogTitle className="text-xl font-bold uppercase tracking-tight flex items-center gap-2">
                                 <FolderPlus className="h-5 w-5 text-primary" />
                                 Create New Folder
                             </DialogTitle>
@@ -757,7 +757,7 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                         <form onSubmit={handleMkdir}>
                             <div className="grid gap-4 py-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="name" className="text-xs font-black uppercase tracking-widest pl-1">Directory Name</Label>
+                                    <Label htmlFor="name" className="text-xs font-bold uppercase tracking-widest pl-1">Directory Name</Label>
                                     <Input
                                         id="name"
                                         placeholder="e.g. exports_2024"
@@ -789,7 +789,7 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                                     <div className="p-4 rounded-2xl bg-destructive/10 text-destructive border border-destructive/20 shadow-inner">
                                         <Trash2 className="h-6 w-6" />
                                     </div>
-                                    <AlertDialogTitle className="text-xl font-black uppercase tracking-tight">
+                                    <AlertDialogTitle className="text-xl font-bold uppercase tracking-tight">
                                         Irreversible Action
                                     </AlertDialogTitle>
                                 </div>
@@ -799,12 +799,12 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                             </AlertDialogHeader>
                         </div>
                         <AlertDialogFooter className="bg-muted/30 p-6 flex items-center gap-3">
-                            <AlertDialogCancel className="rounded-xl h-11 px-6 font-black text-[10px] uppercase tracking-widest border-border/40 bg-background/50 hover:bg-background transition-all mt-0 sm:mt-0">
+                            <AlertDialogCancel className="rounded-xl h-11 px-6 font-bold text-[10px] uppercase tracking-widest border-border/40 bg-background/50 hover:bg-background transition-all mt-0 sm:mt-0">
                                 Abort Operation
                             </AlertDialogCancel>
                             <AlertDialogAction 
                                 onClick={confirmDelete}
-                                className="rounded-xl h-11 px-8 font-black text-[10px] uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white transition-all hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-destructive/50 border border-destructive/20"
+                                className="rounded-xl h-11 px-8 font-bold text-[10px] uppercase tracking-widest bg-destructive hover:bg-destructive/90 text-white transition-all hover:scale-[1.02] active:scale-[0.98] focus-visible:ring-destructive/50 border border-destructive/20"
                             >
                                 Confirm Purge
                             </AlertDialogAction>
@@ -817,7 +817,7 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-background/50 border border-border/40">
                             <div className={cn("w-1.5 h-1.5 rounded-full", isLoading ? "bg-amber-500 animate-pulse" : "bg-emerald-500")} />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-foreground/70">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">
                                 {isLoading ? 'Synchronizing...' : `${filteredItems.length} Element${filteredItems.length !== 1 ? 's' : ''}`}
                             </span>
                         </div>
@@ -833,12 +833,12 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                         {isUploading && (
                             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary animate-pulse">
                                 <RefreshCw className="h-3 w-3 animate-spin" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Uploading...</span>
+                                <span className="text-[9px] font-bold uppercase tracking-widest">Uploading...</span>
                             </div>
                         )}
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 px-2 cursor-help group-hover:text-primary transition-colors">
+                                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 px-2 cursor-help group-hover:text-primary transition-colors">
                                     <Info className="h-3.5 w-3.5" />
                                     Secure Live Management Mode
                                 </div>

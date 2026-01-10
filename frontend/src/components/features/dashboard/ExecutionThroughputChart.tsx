@@ -5,8 +5,9 @@ import {
     ResponsiveContainer, BarChart, Bar
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTheme } from '@/hooks/useTheme';
-import { cn, formatNumber } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { TrendingUp } from 'lucide-react';
 
 interface ExecutionThroughputChartProps {
@@ -40,7 +41,7 @@ const CustomTooltip = ({ active, payload, label, viewType }: any) => {
     if (active && payload && payload.length) {
         return (
             <div className="rounded-2xl border border-white/20 bg-background/95 backdrop-blur-3xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ring-1 ring-white/20 min-w-56 z-[1000] animate-in fade-in zoom-in duration-200">
-                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-white/10 pb-2">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-white/10 pb-2">
                     {label}
                 </p>
                 <div className="space-y-3">
@@ -56,7 +57,7 @@ const CustomTooltip = ({ active, payload, label, viewType }: any) => {
                                 />
                                 <span className="text-muted-foreground/80 uppercase tracking-tight">{entry.name}:</span>
                             </div>
-                            <span className="font-mono text-foreground font-black text-sm">
+                            <span className="font-mono text-foreground font-bold text-sm">
                                 {viewType === 'bytes' ? formatBytes(entry.value) : formatNumber(entry.value)}
                             </span>
                         </div>
@@ -79,7 +80,7 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
             <div className="px-8 pt-8 pb-4 flex flex-row items-center justify-between shrink-0">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                        <h3 className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
+                        <h3 className="text-xl font-bold tracking-tighter uppercase flex items-center gap-2">
                             <TrendingUp className="h-5 w-5 text-primary" />
                             Execution Throughput
                         </h3>
@@ -92,22 +93,13 @@ export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> =
                     </p>
                 </div>
 
-                <div className="flex bg-muted/30 p-1 rounded-xl border border-border/40">
-                    {(['jobs', 'rows', 'bytes'] as ViewType[]).map((v) => (
-                        <button
-                            key={v}
-                            onClick={() => setView(v)}
-                            className={cn(
-                                "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300",
-                                view === v
-                                    ? "bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                            )}
-                        >
-                            {v}
-                        </button>
-                    ))}
-                </div>
+                <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
+                    <TabsList>
+                        <TabsTrigger value="jobs" className="gap-2">Jobs</TabsTrigger>
+                        <TabsTrigger value="rows" className="gap-2">Rows</TabsTrigger>
+                        <TabsTrigger value="bytes" className="gap-2">Bytes</TabsTrigger>
+                    </TabsList>
+                </Tabs>
             </div>
 
             <div className="flex-1 px-6 pt-4 pb-8 min-h-87.5">

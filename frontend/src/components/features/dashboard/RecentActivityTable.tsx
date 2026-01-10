@@ -20,7 +20,7 @@ export const RecentActivityTable: React.FC<RecentActivityTableProps> = ({ jobs }
         <div className="flex flex-col h-full overflow-hidden">
             <div className="flex flex-row items-center justify-between py-6 px-8 shrink-0">
                 <div className="space-y-1">
-                    <h3 className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
+                    <h3 className="text-xl font-bold tracking-tighter uppercase flex items-center gap-2">
                         <Activity className="h-5 w-5 text-primary" />
                         Recent Activity
                     </h3>
@@ -41,7 +41,7 @@ export const RecentActivityTable: React.FC<RecentActivityTableProps> = ({ jobs }
 
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {/* Custom Grid Header */}
-                <div className="grid grid-cols-12 gap-4 px-8 py-3 border-y border-border/20 bg-muted/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 backdrop-blur-md">
+                <div className="grid grid-cols-12 gap-4 px-8 py-3 border-y border-border/20 bg-muted/30 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 backdrop-blur-md">
                     <div className="col-span-12 md:col-span-5">Pipeline / Job ID</div>
                     <div className="col-span-2 hidden md:block">Status</div>
                     <div className="col-span-2 hidden md:block">Duration</div>
@@ -61,7 +61,7 @@ export const RecentActivityTable: React.FC<RecentActivityTableProps> = ({ jobs }
                             <div className="p-6 rounded-[2rem] bg-muted/20 border border-border/50">
                                 <Database className="h-10 w-10 opacity-20" />
                             </div>
-                            <span className="text-xs font-black uppercase tracking-widest">No activity recorded</span>
+                            <span className="text-xs font-bold uppercase tracking-widest">No activity recorded</span>
                         </div>
                     )}
                 </div>

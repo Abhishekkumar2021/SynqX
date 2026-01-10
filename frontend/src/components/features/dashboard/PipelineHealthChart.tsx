@@ -31,7 +31,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 
         return (
             <div className="z-1000 rounded-2xl border border-white/20 bg-background/95 backdrop-blur-3xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ring-1 ring-white/20 min-w-45 animate-in fade-in zoom-in duration-200">
-                <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                     {item.name}
                 </p>
                 <div className="flex items-center gap-3">
@@ -40,7 +40,7 @@ const CustomTooltip = ({ active, payload }: any) => {
                         style={{ backgroundColor: item.payload.fill, boxShadow: `0 0 20px ${item.payload.fill}66` }}
                     />
                     <div className="flex flex-col">
-                        <span className="text-base font-black text-foreground tracking-tight">{item.value} Entities</span>
+                        <span className="text-base font-bold text-foreground tracking-tight">{item.value} Entities</span>
                         <span className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">
                             {percentage.toFixed(1)}% OF TOTAL FLEET
                         </span>
@@ -72,7 +72,7 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
             <div className="px-8 pt-8 pb-2 flex items-center justify-between shrink-0">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                        <h3 className="text-xl font-black tracking-tighter uppercase mb-1">Status Distribution</h3>
+                        <h3 className="text-xl font-bold tracking-tighter uppercase mb-1">Status Distribution</h3>
                         <div className={cn(
                             "h-2 w-2 rounded-full animate-pulse",
                             healthScore > 90 ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : 
@@ -84,8 +84,8 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
                 </div>
 
                 <div className="text-right">
-                    <span className="text-2xl font-black tracking-tighter text-foreground">{healthScore}%</span>
-                    <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Health Score</p>
+                    <span className="text-2xl font-bold tracking-tighter text-foreground">{healthScore}%</span>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Health Score</p>
                 </div>
             </div>
             
@@ -126,10 +126,10 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
 
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-2">
                                 <div className="flex flex-col items-center justify-center bg-background/60 backdrop-blur-xl h-24 w-24 rounded-full border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.2)] ring-1 ring-white/5">
-                                    <span className="text-4xl font-black tabular-nums text-foreground tracking-tighter">
+                                    <span className="text-4xl font-bold tabular-nums text-foreground tracking-tighter">
                                         {totalPipelines}
                                     </span>
-                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                                    <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
                                         Total
                                     </span>
                                 </div>
@@ -149,7 +149,7 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
                                         />
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{item.name}</span>
                                     </div>
-                                    <span className="text-xs font-black text-foreground">{item.value}</span>
+                                    <span className="text-xs font-bold text-foreground">{item.value}</span>
                                 </div>
                             ))}
                         </div>
@@ -159,7 +159,7 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
                         <div className="p-6 bg-muted/20 rounded-[2rem] border border-border/50">
                             <AlertTriangle className="h-8 w-8 opacity-20" />
                         </div>
-                        <span className="text-xs font-black uppercase tracking-widest">No Active Entities</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">No Active Entities</span>
                     </div>
                 )}
             </div>

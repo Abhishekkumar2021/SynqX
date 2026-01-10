@@ -21,7 +21,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
           // Interactions (Hover & Focus)
           "hover:bg-accent/5 hover:border-accent/50",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-primary/50 focus-visible:bg-background",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/50 focus-visible:bg-background",
 
           // Disabled State
           "disabled:cursor-not-allowed disabled:opacity-50",

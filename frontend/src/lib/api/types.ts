@@ -164,6 +164,7 @@ export interface PipelineCreate {
   execution_timeout_seconds?: number;
   agent_group?: string;
   tags?: Record<string, any>;
+  initial_version?: PipelineVersionCreate;
 }
 
 export interface PipelineUpdate {
@@ -504,6 +505,7 @@ export interface ConnectionEnvironmentInfo {
 export interface QueryResponse {
   results: Record<string, any>[];
   count: number;
+  total_count?: number;
   columns: string[];
 }
 
@@ -645,6 +647,7 @@ export interface PipelineVersionSummary {
   version: number;
   is_published: boolean;
   published_at?: string;
+  version_notes?: string;
   node_count: number;
   edge_count: number;
   created_at: string;

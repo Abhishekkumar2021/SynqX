@@ -90,12 +90,12 @@ const GlowEdge = ({
                     className="nodrag nopan"
                 >
                     {isRemoved && (
-                        <div className="bg-destructive text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded-sm shadow-lg border border-white/20">
+                        <div className="bg-destructive text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm shadow-lg border border-white/20">
                             Removed
                         </div>
                     )}
                     {isAdded && (
-                        <div className="bg-emerald-500 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded-sm shadow-lg border border-white/20">
+                        <div className="bg-emerald-500 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-sm shadow-lg border border-white/20">
                             Added
                         </div>
                     )}

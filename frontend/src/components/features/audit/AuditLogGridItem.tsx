@@ -79,7 +79,7 @@ export const AuditLogGridItem: React.FC<AuditLogGridItemProps> = ({ log, users }
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 whileHover={{ y: -4 }}
-                className="group relative flex flex-col p-5 rounded-[2rem] border border-border/40 bg-card/40 hover:bg-card/60 hover:border-primary/30 hover:shadow-2xl transition-all duration-500 overflow-hidden"
+                className="group relative flex flex-col p-5 rounded-3xl border border-border/60 bg-card/60 backdrop-blur-md hover:border-primary/30 hover:shadow-xl transition-all duration-300 overflow-hidden"
             >
                 {/* Status Indicator Bar */}
                 <div className={cn(
@@ -92,18 +92,18 @@ export const AuditLogGridItem: React.FC<AuditLogGridItemProps> = ({ log, users }
                         {eventInfo.icon}
                     </div>
                     <div className="flex flex-col items-end">
-                        <div className="flex items-center gap-1.5 text-muted-foreground/40 font-black text-[9px] uppercase tracking-tighter mb-1">
+                        <div className="flex items-center gap-1.5 text-muted-foreground/40 font-bold text-[9px] uppercase tracking-tighter mb-1">
                             <Clock className="h-3 w-3" />
                             {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
                         </div>
-                        <Badge variant="outline" className={cn("h-4 px-1.5 text-[8px] font-black uppercase tracking-widest", log.status === 'success' ? 'text-emerald-500 border-emerald-500/20' : 'text-destructive border-destructive/20')}>
+                        <Badge variant="outline" className={cn("h-4 px-1.5 text-[8px] font-bold uppercase tracking-widest", log.status === 'success' ? 'text-emerald-500 border-emerald-500/20' : 'text-destructive border-destructive/20')}>
                             {log.status}
                         </Badge>
                     </div>
                 </div>
 
                 <div className="space-y-1 mb-6">
-                    <h4 className="text-[11px] font-black uppercase tracking-widest text-foreground/90 group-hover:text-primary transition-colors">
+                    <h4 className="text-[11px] font-bold uppercase tracking-widest text-foreground/90 group-hover:text-primary transition-colors">
                         {formatEventName(log.event_type)}
                     </h4>
                     <p className="text-[11px] text-muted-foreground line-clamp-2 font-medium opacity-60 group-hover:opacity-100 transition-opacity">
@@ -113,7 +113,7 @@ export const AuditLogGridItem: React.FC<AuditLogGridItemProps> = ({ log, users }
 
                 <div className="mt-auto pt-4 border-t border-border/10 flex items-center justify-between">
                     <div className="flex items-center gap-2 max-w-[70%]">
-                        <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-black text-primary shrink-0">
+                        <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
                             {user?.full_name?.charAt(0) || user?.email.charAt(0).toUpperCase() || '?'}
                         </div>
                         <span className="text-[10px] font-bold text-foreground/70 truncate">{user?.full_name || user?.email || 'System'}</span>

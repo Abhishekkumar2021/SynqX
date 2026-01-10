@@ -39,7 +39,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
         const breadcrumbs = [
             <BreadcrumbItem key="home">
                 <BreadcrumbLink asChild>
-                    <Link to="/dashboard" className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all group">
+                    <Link to="/dashboard" className="flex items-center justify-center h-8 w-8 rounded-lg hover:bg-muted/40 text-muted-foreground/50 hover:text-foreground transition-all group">
                         <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
                     </Link>
                 </BreadcrumbLink>
@@ -57,16 +57,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
                  name = name.charAt(0).toUpperCase() + name.slice(1);
             }
 
-            breadcrumbs.push(<BreadcrumbSeparator key={`sep-${index}`} className="opacity-20" />);
+            breadcrumbs.push(<BreadcrumbSeparator key={`sep-${index}`} className="opacity-10 mx-0.5" />);
             breadcrumbs.push(
                 <BreadcrumbItem key={to}>
                     {isLast ? (
-                        <BreadcrumbPage className="font-semibold text-foreground tracking-tight px-2 py-1 rounded-md bg-primary/10 border border-primary/20 text-[9px] uppercase text-primary">
+                        <BreadcrumbPage className="font-bold text-foreground tracking-tight px-2.5 py-1 rounded-lg bg-muted/30 border border-border/40 text-[10px] uppercase shadow-xs">
                             {name}
                         </BreadcrumbPage>
                     ) : (
                         <BreadcrumbLink asChild>
-                            <Link to={to} className="hover:text-primary transition-all font-semibold tracking-tight text-[10px] uppercase opacity-40 hover:opacity-100">
+                            <Link to={to} className="hover:text-foreground transition-all font-bold tracking-tight text-[10px] uppercase text-muted-foreground/40 hover:bg-muted/20 px-2 py-1 rounded-md">
                                 {name}
                             </Link>
                         </BreadcrumbLink>
@@ -85,20 +85,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
                     initial={{ y: -100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: -100, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                    className="h-16 mx-4 mt-4 flex items-center justify-between shrink-0 z-40 relative px-4 rounded-3xl border border-border/50 bg-card/30 backdrop-blur-2xl shadow-lg dark:shadow-none"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    className="h-16 mx-4 mt-4 flex items-center justify-between shrink-0 z-40 relative px-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-xl shadow-lg transition-all duration-500"
                 >
                     {/* Left: Interactive Breadcrumbs */}
                     <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                            <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 rounded-xl border border-border/40 bg-background/40" onClick={() => setIsMobileMenuOpen(true)}>
+                            <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 rounded-xl border border-border/40 bg-background/40 shadow-sm" onClick={() => setIsMobileMenuOpen(true)}>
                                 <Menu className="h-5 w-5" />
                             </Button>
                         </motion.div>
                         
                         <div className="hidden md:flex items-center">
                             <Breadcrumb>
-                                <BreadcrumbList className="gap-1.5 sm:gap-2">
+                                <BreadcrumbList className="gap-1.5">
                                     {generateBreadcrumbs()}
                                 </BreadcrumbList>
                             </Breadcrumb>
@@ -106,62 +106,62 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
                     </div>
 
                     {/* Right: Premium Action Hub */}
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-3">
                         
-                        {/* Search Bar - Stable & Professional */}
+                        {/* Search Bar - Theme-Aware Omni-Search Trigger */}
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <motion.button 
                                         onClick={() => setIsSearchOpen(true)}
-                                        whileHover={{ scale: 1.01, backgroundColor: "var(--background-hover)" }}
-                                        whileTap={{ scale: 0.98 }}
-                                        className="h-10 w-52 hidden lg:flex items-center gap-3 px-4 rounded-xl border border-border/40 bg-muted/20 text-muted-foreground transition-all group overflow-hidden relative"
+                                        whileHover={{ scale: 1.01 }}
+                                        whileTap={{ scale: 0.99 }}
+                                        className="h-10 w-60 hidden xl:flex items-center gap-3 px-4 rounded-xl border border-border/40 bg-muted/20 text-muted-foreground/60 transition-all group relative shadow-xs hover:shadow-md hover:border-primary/40 hover:bg-muted/30 active:bg-muted/50"
                                     >
-                                        <Search className="h-3.5 w-3.5 shrink-0 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                                        <span className="text-[11px] font-medium uppercase tracking-wider opacity-40 group-hover:opacity-100 transition-opacity">Search</span>
+                                        <Search className="h-3.5 w-3.5 shrink-0 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all duration-300" />
+                                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-40 group-hover:opacity-100 group-hover:text-foreground transition-all duration-300">Command Palette</span>
                                         <div className="ml-auto flex items-center gap-1">
-                                            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border/40 bg-background/50 px-1.5 font-mono text-[9px] font-medium opacity-40 group-hover:opacity-80 transition-opacity">
+                                            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded-md border border-border/40 bg-background/50 px-1.5 font-mono text-[9px] font-bold opacity-30 group-hover:opacity-100 group-hover:text-primary transition-all shadow-xs">
                                                 <span className="text-[8px]">⌘</span>K
                                             </kbd>
                                         </div>
                                     </motion.button>
                                 </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-[10px] font-medium">Omni-Search</TooltipContent>
+                                <TooltipContent side="bottom" className="text-[10px] font-bold uppercase tracking-widest py-2 px-3">Omni-Search Hub</TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
 
-                        <div className="h-8 w-px bg-border/20 mx-1 hidden lg:block" />
+                        <div className="h-7 w-px bg-border/20 mx-0.5 hidden xl:block" />
 
                         {/* Integrated Switcher Hub */}
                         <UnifiedSwitcher />
 
-                        <div className="h-8 w-px bg-border/20 mx-1 hidden sm:block" />
+                        <div className="h-7 w-px bg-border/20 mx-0.5 hidden sm:block" />
 
                         {/* Action Stack */}
                         <div className="flex items-center gap-1.5">
                             <TooltipProvider>
-                                <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 500 }}>
+                                <motion.div whileHover={{ y: -1 }} transition={{ type: "spring", stiffness: 500 }}>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <Link to="/docs/intro">
-                                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/10 text-muted-foreground hover:text-primary border border-transparent hover:border-primary/20 transition-all">
-                                                    <HelpCircle className="h-5 w-5" />
+                                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/5 text-muted-foreground/50 hover:text-primary border border-transparent hover:border-primary/20 transition-all">
+                                                    <HelpCircle className="h-4.5 w-4.5" />
                                                 </Button>
                                             </Link>
                                         </TooltipTrigger>
-                                        <TooltipContent>Resources</TooltipContent>
+                                        <TooltipContent className="text-[10px] font-bold uppercase tracking-widest py-2 px-3">Knowledge Base</TooltipContent>
                                     </Tooltip>
                                 </motion.div>
 
-                                <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 500 }}>
+                                <motion.div whileHover={{ y: -1 }} transition={{ type: "spring", stiffness: 500 }}>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => setIsZenMode(true)} className="h-10 w-10 rounded-xl hover:bg-primary/10 text-muted-foreground hover:text-primary border border-transparent hover:border-primary/20 hidden sm:flex transition-all">
-                                                <Maximize2 className="h-5 w-5" />
+                                            <Button variant="ghost" size="icon" onClick={() => setIsZenMode(true)} className="h-10 w-10 rounded-xl hover:bg-primary/5 text-muted-foreground/50 hover:text-primary border border-transparent hover:border-primary/20 hidden sm:flex transition-all">
+                                                <Maximize2 className="h-4.5 w-4.5" />
                                             </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent>Focus Mode</TooltipContent>
+                                        <TooltipContent className="text-[10px] font-bold uppercase tracking-widest py-2 px-3">Immersive Mode</TooltipContent>
                                     </Tooltip>
                                 </motion.div>
                             </TooltipProvider>
@@ -171,7 +171,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
 
                         {user && (
                             <>
-                                <div className="h-8 w-px bg-border/20 mx-1 hidden sm:block" />
+                                <div className="h-7 w-px bg-border/20 mx-0.5 hidden sm:block" />
                                 <div className="scale-90 origin-right">
                                     <NotificationsBell />
                                 </div>

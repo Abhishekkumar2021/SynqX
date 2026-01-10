@@ -172,7 +172,7 @@ export function UserAutocomplete({
                       onClick={() => handleSelect(user.email)}
                       onMouseEnter={() => setActiveIndex(index)}
                     >
-                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-black uppercase text-primary border border-primary/20 shrink-0">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold uppercase text-primary border border-primary/20 shrink-0">
                         {user.full_name?.charAt(0) || user.email.charAt(0)}
                       </div>
                       <div className="flex flex-col overflow-hidden">

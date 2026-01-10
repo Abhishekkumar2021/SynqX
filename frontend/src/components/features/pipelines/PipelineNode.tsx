@@ -100,14 +100,14 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                     <div className="flex flex-1 flex-col min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                             <span className={cn(
-                                "text-[9px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border backdrop-blur-md shadow-xs",
+                                "text-[9px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 rounded-md border backdrop-blur-md shadow-xs",
                                 isRunning ? "bg-primary/10 border-primary/20 text-primary" : "bg-muted/50 border-border/40 text-muted-foreground"
                             )}>
                                 {config.label}
                             </span>
                             {diffStatus !== 'none' && (
                                 <Badge className={cn(
-                                    "text-[8px] font-black uppercase tracking-widest h-4 px-1.5",
+                                    "text-[8px] font-bold uppercase tracking-widest h-4 px-1.5",
                                     isAdded && "bg-emerald-500/20 text-emerald-500 border-emerald-500/30",
                                     isRemoved && "bg-destructive/20 text-destructive border-destructive/30",
                                     isModified && "bg-amber-500/20 text-amber-500 border-amber-500/30",
@@ -131,10 +131,10 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                                     <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-muted/20 border border-border/40 shadow-inner group/metric transition-colors hover:bg-muted/30">
                                         <div className="flex items-center gap-2 text-muted-foreground/60">
                                             <Activity className="h-3 w-3" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest">Velocity</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest">Velocity</span>
                                         </div>
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-sm font-black tabular-nums text-foreground group-hover/metric:text-primary transition-colors">
+                                            <span className="text-sm font-bold tabular-nums text-foreground group-hover/metric:text-primary transition-colors">
                                                 {formatNumber(nodeData.throughput)}
                                             </span>
                                             <span className="text-[10px] font-bold opacity-40">ops/s</span>
@@ -146,10 +146,10 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                                     <div className="flex flex-col gap-1.5 p-3 rounded-2xl bg-primary/5 border border-primary/10 shadow-inner group/metric transition-colors hover:bg-primary/10">
                                         <div className="flex items-center gap-2 text-primary/60">
                                             <Layers className="h-3 w-3" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest">Dataset</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest">Dataset</span>
                                         </div>
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-sm font-black tabular-nums text-primary">
+                                            <span className="text-sm font-bold tabular-nums text-primary">
                                                 {formatNumber(nodeData.rowsProcessed)}
                                             </span>
                                             <span className="text-[10px] font-bold opacity-40 text-primary/60">rows</span>
@@ -173,7 +173,7 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                                     "h-2 w-2 rounded-full",
                                     isRunning ? "bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary),0.6)]" : "bg-current opacity-60"
                                 )} />
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none">
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] leading-none">
                                     {isRunning ? "Active" : status}
                                 </span>
                             </div>
@@ -192,7 +192,7 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                             <div className="p-4 rounded-2xl bg-destructive/5 border-2 border-destructive/10 animate-in slide-in-from-top-2 duration-500 group/error">
                                 <div className="flex items-center gap-2 text-destructive mb-2.5">
                                     <Zap className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.15em]">Execution Fault</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.15em]">Execution Fault</span>
                                 </div>
                                 
                                 {nodeData.error.length > 140 ? (

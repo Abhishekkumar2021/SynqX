@@ -171,6 +171,7 @@ class PipelineVersionSummary(BaseModel):
     version: int
     is_published: bool
     published_at: Optional[datetime]
+    version_notes: Optional[str] = None
     node_count: int
     edge_count: int
     created_at: datetime

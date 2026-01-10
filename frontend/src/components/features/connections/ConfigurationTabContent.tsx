@@ -47,7 +47,7 @@ export const ConfigurationTabContent = ({
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 tracking-widest px-3 py-1 font-black rounded-lg text-[9px]">
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 tracking-widest px-3 py-1 font-bold rounded-lg text-[9px]">
                         {connection.connector_type.toUpperCase()} ENGINE
                     </Badge>
                 </div>
@@ -63,7 +63,7 @@ export const ConfigurationTabContent = ({
                             <div className="space-y-6">
                                 <div className="flex items-center gap-3">
                                     <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/80 flex items-center gap-2 whitespace-nowrap">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/80 flex items-center gap-2 whitespace-nowrap">
                                         <Wifi className="h-3 w-3" /> Connectivity
                                     </h4>
                                     <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
@@ -82,7 +82,7 @@ export const ConfigurationTabContent = ({
                             <div className="space-y-6">
                                 <div className="flex items-center gap-3">
                                     <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/80 flex items-center gap-2 whitespace-nowrap">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-500/80 flex items-center gap-2 whitespace-nowrap">
                                         <Database className="h-3 w-3" /> Storage & Workspace
                                     </h4>
                                     <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
@@ -101,17 +101,17 @@ export const ConfigurationTabContent = ({
                             <div className="space-y-6">
                                 <div className="flex items-center gap-3">
                                     <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2 whitespace-nowrap">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2 whitespace-nowrap">
                                         <Shield className="h-3 w-3" /> Security & Identity
                                     </h4>
                                     <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
                                 </div>
                                 <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 px-1">Access Credentials</label>
+                                        <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 px-1">Access Credentials</label>
                                         <div className="h-11 flex items-center justify-between px-4 rounded-xl border border-border/40 bg-muted/5 backdrop-blur-sm">
                                             <div className="font-mono text-xs tracking-[0.4em] text-foreground/20">••••••••</div>
-                                            <Badge variant="outline" className="text-[8px] bg-emerald-500/5 text-emerald-600 dark:text-emerald-500 border-emerald-500/20 font-black px-1.5 py-0 uppercase">
+                                            <Badge variant="outline" className="text-[8px] bg-emerald-500/5 text-emerald-600 dark:text-emerald-500 border-emerald-500/20 font-bold px-1.5 py-0 uppercase">
                                                 Encrypted
                                             </Badge>
                                         </div>
@@ -125,7 +125,7 @@ export const ConfigurationTabContent = ({
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3">
                                         <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-500/80 flex items-center gap-2 whitespace-nowrap">
+                                        <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-amber-500/80 flex items-center gap-2 whitespace-nowrap">
                                             <Globe className="h-3 w-3" /> Extended Properties
                                         </h4>
                                         <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
@@ -147,7 +147,7 @@ export const ConfigurationTabContent = ({
                             <div className="space-y-6 pt-4">
                                 <div className="flex items-center gap-3">
                                     <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex items-center gap-2 whitespace-nowrap">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/40 flex items-center gap-2 whitespace-nowrap">
                                         Metadata
                                     </h4>
                                     <div className="h-px flex-1 bg-linear-to-r from-transparent via-border/40 to-transparent" />
@@ -165,13 +165,13 @@ export const ConfigurationTabContent = ({
                         {/* Side Panel Info */}
                         <div className="space-y-6 lg:border-l lg:border-border/20 lg:pl-8">
                             <div className="space-y-2 mb-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">Health & Activity</h4>
+                                <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 px-1">Health & Activity</h4>
                             </div>
                             {/* Usage Stats Section */}
                             <div className="rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-sm overflow-hidden">
                                 <div className="p-4 border-b border-border/40 bg-muted/10 flex items-center gap-2 text-primary">
                                     <Activity className="h-3.5 w-3.5" />
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-widest">
                                         Usage Statistics
                                     </h4>
                                 </div>
@@ -184,7 +184,7 @@ export const ConfigurationTabContent = ({
                                     ) : (
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="p-3 rounded-xl bg-muted/20 border border-border/30 text-center">
-                                                <div className="text-xl font-black text-primary">
+                                                <div className="text-xl font-bold text-primary">
                                                     {usageStats?.last_24h_runs || 0}
                                                 </div>
                                                 <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5 opacity-60">
@@ -192,7 +192,7 @@ export const ConfigurationTabContent = ({
                                                 </div>
                                             </div>
                                             <div className="p-3 rounded-xl bg-muted/20 border border-border/30 text-center">
-                                                <div className="text-xl font-black text-emerald-500">
+                                                <div className="text-xl font-bold text-emerald-500">
                                                     {usageStats?.sync_success_rate ? `${usageStats.sync_success_rate.toFixed(0)}%` : '100%'}
                                                 </div>
                                                 <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5 opacity-60">
@@ -202,7 +202,7 @@ export const ConfigurationTabContent = ({
                                         </div>
                                     )}
                                     <div className="space-y-3 pt-1">
-                                        <div className="flex justify-between items-center text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                                        <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
                                             <span>Weekly Volume</span>
                                             <span className="text-foreground">{usageStats?.last_7d_runs || 0} runs</span>
                                         </div>
@@ -223,7 +223,7 @@ export const ConfigurationTabContent = ({
                             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 backdrop-blur-sm shadow-sm overflow-hidden">
                                 <div className="p-4 border-b border-amber-500/20 bg-amber-500/10 flex items-center gap-2 text-amber-600">
                                     <AlertTriangle className="h-3.5 w-3.5" />
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-widest">
                                         Impact Analysis
                                     </h4>
                                 </div>
@@ -237,7 +237,7 @@ export const ConfigurationTabContent = ({
                                         ) : (
                                             <>
                                                 This connection is actively utilized by{' '}
-                                                <span className="text-amber-700 dark:text-amber-500 font-black underline decoration-amber-500/30 underline-offset-4">
+                                                <span className="text-amber-700 dark:text-amber-500 font-bold underline decoration-amber-500/30 underline-offset-4">
                                                     {impactData?.pipeline_count || 0} pipelines
                                                 </span>.
                                                 <br /><br />

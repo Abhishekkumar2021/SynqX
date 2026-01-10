@@ -16,8 +16,6 @@ import {
   Activity,
   ChevronRight,
   DatabaseZap,
-  LayoutGrid,
-  List as ListIcon,
   FileSearch,
   Eye,
   Maximize2,
@@ -39,6 +37,7 @@ import { cn, formatNumber, formatRelativeTime } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { ResultsGrid } from '@/components/features/explorer/ResultsGrid';
+import { ViewToggle } from '@/components/common/ViewToggle';
 
 // --- Sub-components ---
 
@@ -58,7 +57,7 @@ const QuarantineGridItem = ({ item, onInspect }: { item: any, onInspect: (item: 
             whileHover={{ y: -4 }}
             className="group relative"
         >
-            <div className="relative flex flex-col rounded-3xl border border-border/60 bg-card/60 backdrop-blur-md p-5 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 h-full">
+            <div className="relative flex flex-col rounded-2xl border border-border/60 bg-card/60 backdrop-blur-md p-5 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 h-full">
                 {/* Status Glow */}
                 <div className="absolute -right-10 -top-10 h-32 w-32 bg-destructive/5 blur-3xl rounded-full transition-opacity group-hover:opacity-40" />
                 
@@ -96,12 +95,12 @@ const QuarantineGridItem = ({ item, onInspect }: { item: any, onInspect: (item: 
                     <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-muted/30 border border-border/20 shadow-inner">
                         <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Rejection Rate</span>
-                                <span className="text-xl font-black tabular-nums text-destructive tracking-tighter">{percentage}%</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Rejection Rate</span>
+                                <span className="text-xl font-bold tabular-nums text-destructive tracking-tighter">{percentage}%</span>
                             </div>
                             <div className="text-right flex flex-col items-end">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Total Rejected</span>
-                                <span className="text-sm font-black tabular-nums text-foreground">{formatNumber(item.row_count)}</span>
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Total Rejected</span>
+                                <span className="text-sm font-bold tabular-nums text-foreground">{formatNumber(item.row_count)}</span>
                             </div>
                         </div>
                         <div className="w-full bg-destructive/10 h-1.5 rounded-full mt-2 overflow-hidden ring-1 ring-destructive/5">
@@ -135,16 +134,21 @@ const QuarantineListItem = ({ item, onInspect }: { item: any, onInspect: (item: 
         <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="group relative grid grid-cols-12 gap-4 items-center px-6 py-4 hover:bg-muted/40 transition-all border-b border-border/30 last:border-0 cursor-pointer"
+            className={cn(
+                "group relative grid grid-cols-12 gap-4 items-center px-6 py-3 hover:bg-muted/40 transition-all border-b border-border/30 last:border-0 cursor-pointer",
+                "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1",
+                "before:bg-primary before:scale-y-0 before:transition-transform before:duration-200",
+                "hover:before:scale-y-100"
+            )}
             onClick={() => onInspect(item)}
         >
             <div className="col-span-12 md:col-span-4 flex items-center gap-4 min-w-0">
-                <div className="h-10 w-10 rounded-xl border flex items-center justify-center bg-destructive/10 border-destructive/20 text-destructive group-hover:scale-105 transition-transform shrink-0">
+                <div className="h-10 w-10 rounded-xl border flex items-center justify-center bg-destructive/10 border-destructive/20 text-destructive group-hover:scale-105 transition-transform shrink-0 shadow-xs">
                     <ShieldAlert className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm text-foreground tracking-tight truncate">STEP-{item.step_id}</h3>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <h3 className="font-bold text-sm text-foreground tracking-tight truncate mb-0.5">STEP-{item.step_id}</h3>
+                    <div className="flex items-center gap-2">
                         <span 
                             className="text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
                             onClick={(e) => { e.stopPropagation(); navigate(`/pipelines/${item.pipeline_id}`); }}
@@ -155,27 +159,29 @@ const QuarantineListItem = ({ item, onInspect }: { item: any, onInspect: (item: 
                 </div>
             </div>
 
-            <div className="col-span-3 hidden md:flex flex-col">
-                <span className="text-xs font-bold text-foreground/80">{item.node_name}</span>
+            <div className="col-span-3 hidden md:flex flex-col border-l border-border/20 pl-4">
+                <span className="text-xs font-bold text-foreground/80 truncate">{item.node_name}</span>
                 <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Database className="h-2.5 w-2.5" /> Source Node
+                    <Database className="h-2.5 w-2.5 opacity-60" /> Source Node
                 </span>
             </div>
 
-            <div className="col-span-2 hidden md:flex flex-col items-center">
-                <span className="text-sm font-black tabular-nums text-destructive">{formatNumber(item.row_count)}</span>
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Records</span>
+            <div className="col-span-2 hidden md:flex flex-col items-center border-l border-border/20 pl-4">
+                <span className="text-sm font-bold tabular-nums text-destructive tracking-tight">{formatNumber(item.row_count)}</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Records</span>
             </div>
 
-            <div className="col-span-2 hidden md:flex flex-col items-end">
-                <span className="text-[10px] font-bold text-muted-foreground whitespace-nowrap">{formatRelativeTime(item.created_at)}</span>
+            <div className="col-span-2 hidden md:flex flex-col items-end border-l border-border/20 pl-4">
+                <span className="text-[10px] font-bold text-foreground/70 whitespace-nowrap">{formatRelativeTime(item.created_at)}</span>
                 <span className="text-[9px] text-muted-foreground/40 font-mono">{format(new Date(item.created_at), 'MMM d, HH:mm')}</span>
             </div>
 
-            <div className="col-span-1 flex justify-end">
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-primary hover:bg-primary/10">
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
+            <div className="col-span-1 flex justify-end pr-2">
+                <div className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-200">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-primary hover:bg-primary/10 transition-colors">
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
         </motion.div>
     );
@@ -247,8 +253,8 @@ export const QuarantinePage = () => {
                     <ShieldAlert className="h-4 w-4 text-destructive" />
                 </div>
                 <div className="flex flex-col -space-y-0.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Rejected</span>
-                    <span className="text-base font-black tabular-nums text-destructive tracking-tighter">{formatNumber(stats?.total_rejected_rows || 0)}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Rejected</span>
+                    <span className="text-base font-bold tabular-nums text-destructive tracking-tighter">{formatNumber(stats?.total_rejected_rows || 0)}</span>
                 </div>
             </div>
             
@@ -257,8 +263,8 @@ export const QuarantinePage = () => {
                     <AlertTriangle className="h-4 w-4 text-amber-500" />
                 </div>
                 <div className="flex flex-col -space-y-0.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Issues</span>
-                    <span className="text-base font-black tabular-nums text-amber-500 tracking-tighter">{stats?.active_issues || 0}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Issues</span>
+                    <span className="text-base font-bold tabular-nums text-amber-500 tracking-tighter">{stats?.active_issues || 0}</span>
                 </div>
             </div>
 
@@ -267,8 +273,8 @@ export const QuarantinePage = () => {
                     <Activity className="h-4 w-4 text-emerald-500" />
                 </div>
                 <div className="flex flex-col -space-y-0.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Resolution</span>
-                    <span className="text-base font-black tabular-nums text-emerald-500 tracking-tighter">{stats?.resolution_rate || 0}%</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Resolution</span>
+                    <span className="text-base font-bold tabular-nums text-emerald-500 tracking-tighter">{stats?.resolution_rate || 0}%</span>
                 </div>
             </div>
 
@@ -277,8 +283,8 @@ export const QuarantinePage = () => {
                     <Workflow className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex flex-col -space-y-0.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Active Flows</span>
-                    <span className="text-base font-black tabular-nums text-primary tracking-tighter">{stats?.active_pipelines || 0}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Active Flows</span>
+                    <span className="text-base font-bold tabular-nums text-primary tracking-tighter">{stats?.active_pipelines || 0}</span>
                 </div>
             </div>
           </div>
@@ -293,7 +299,7 @@ export const QuarantinePage = () => {
       </div>
 
       {/* Main Content Pane */}
-      <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
         
         {/* Toolbar */}
         <div className="p-4 md:p-6 border-b border-border/40 bg-muted/20 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4 md:gap-6">
@@ -308,24 +314,7 @@ export const QuarantinePage = () => {
           </div>
 
           <div className="flex items-center gap-4 w-full md:w-auto justify-between">
-            <div className="flex items-center gap-1 bg-muted/50 border border-border/40 rounded-2xl p-1 shadow-inner">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn("h-8 w-8 rounded-xl transition-all", viewMode === 'grid' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:bg-background/50")}
-                    onClick={() => setViewMode('grid')}
-                >
-                    <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn("h-8 w-8 rounded-xl transition-all", viewMode === 'list' ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:bg-background/50")}
-                    onClick={() => setViewMode('list')}
-                >
-                    <ListIcon className="h-4 w-4" />
-                </Button>
-            </div>
+            <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
             <Button variant="outline" size="icon" className="rounded-xl h-10 w-10 shrink-0">
               <Filter className="h-4 w-4" />
             </Button>
@@ -335,7 +324,7 @@ export const QuarantinePage = () => {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-thumb-border/50 hover:scrollbar-thumb-border/80 scrollbar-track-transparent">
             {viewMode === 'list' && filteredItems.length > 0 && (
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/40 bg-muted text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 sticky top-0 z-20 shadow-sm">
                     <div className="col-span-12 md:col-span-4">Step & Pipeline</div>
                     <div className="col-span-3 hidden md:block">Node Source</div>
                     <div className="col-span-2 hidden md:block text-center">Rejected Records</div>
@@ -384,7 +373,7 @@ export const QuarantinePage = () => {
       <Dialog open={!!inspectingItem} onOpenChange={(open) => { if(!open) { setInspectingItem(null); setIsMaximized(false); } }}>
         <DialogContent className={cn(
             "flex flex-col p-0 gap-0 overflow-hidden border-border/40 transition-all duration-300",
-            isMaximized ? "max-w-[100vw] h-screen sm:rounded-none" : "max-w-7xl h-[90vh] sm:rounded-[2.5rem]"
+            isMaximized ? "max-w-[100vw] h-screen sm:rounded-none" : "max-w-7xl h-[90vh] sm:rounded-2xl"
         )}>
           <DialogHeader className="p-6 border-b border-border/40 bg-muted/30 shrink-0 relative pr-20">
             <div className="flex items-center gap-4">
@@ -393,7 +382,7 @@ export const QuarantinePage = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                    <DialogTitle className="text-2xl font-black tracking-tighter">
+                    <DialogTitle className="text-2xl font-bold tracking-tighter">
                         Inspect Quarantined Data
                     </DialogTitle>
                     <div 
@@ -413,7 +402,7 @@ export const QuarantinePage = () => {
                     <Database className="h-3.5 w-3.5" /> {inspectingItem?.node_name}
                   </span>
                   <span className="h-3 w-px bg-border/60" />
-                  <span className="text-destructive font-black">
+                  <span className="text-destructive font-bold">
                     {formatNumber(inspectingItem?.row_count || 0)} Rejected Records
                   </span>
                 </DialogDescription>

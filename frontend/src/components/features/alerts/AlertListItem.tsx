@@ -46,9 +46,9 @@ export const AlertListItem: React.FC<AlertListItemProps> = ({ alert }) => {
     return (
         <div
             className={cn(
-                "group grid grid-cols-12 gap-4 items-center px-6 py-4 transition-all duration-200 relative",
+                "group grid grid-cols-12 gap-4 items-center px-6 py-3.5 transition-all duration-200 relative",
                 "border-b border-border/30 last:border-0",
-                "hover:bg-muted/30",
+                "hover:bg-muted/40",
                 alert.status === 'pending' && "bg-primary/[0.02]",
                 "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1",
                 "before:bg-primary before:scale-y-0 before:transition-transform before:duration-200",
@@ -66,13 +66,13 @@ export const AlertListItem: React.FC<AlertListItemProps> = ({ alert }) => {
                 <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2">
                         <span className={cn(
-                            "font-semibold text-sm leading-tight",
+                            "font-bold text-sm leading-tight",
                             alert.status === 'pending' ? "text-foreground" : "text-muted-foreground"
                         )}>
                             {alert.message}
                         </span>
                         {alert.status === 'pending' && (
-                            <Badge variant="outline" className="text-[9px] font-black text-primary border-primary/20 bg-primary/5 uppercase tracking-wider px-1.5 py-0 h-5">
+                            <Badge variant="outline" className="text-[9px] font-bold text-primary border-primary/20 bg-primary/5 uppercase tracking-wider px-1.5 py-0 h-5">
                                 New
                             </Badge>
                         )}
@@ -85,13 +85,13 @@ export const AlertListItem: React.FC<AlertListItemProps> = ({ alert }) => {
                 {alert.pipeline_id ? (
                     <Link 
                         to={`/pipelines/${alert.pipeline_id}`} 
-                        className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-primary transition-colors group/link w-fit"
+                        className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors group/link w-fit"
                     >
                         <Workflow className="h-3.5 w-3.5 opacity-70 group-hover/link:opacity-100" />
                         <span className="truncate">Pipeline #{alert.pipeline_id}</span>
                     </Link>
                 ) : (
-                    <span className="text-xs text-muted-foreground/30 italic flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground/30 font-bold  flex items-center gap-2">
                         <Workflow className="h-3.5 w-3.5 opacity-30" /> No Pipeline
                     </span>
                 )}
@@ -102,28 +102,28 @@ export const AlertListItem: React.FC<AlertListItemProps> = ({ alert }) => {
                 {alert.job_id ? (
                     <Link 
                         to={`/jobs/${alert.job_id}`} 
-                        className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-primary transition-colors group/link w-fit"
+                        className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors group/link w-fit"
                     >
                         <Activity className="h-3.5 w-3.5 opacity-70 group-hover/link:opacity-100" />
                         <span className="truncate">Job #{alert.job_id}</span>
                         <ExternalLink className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity -ml-1" />
                     </Link>
                 ) : (
-                    <span className="text-xs text-muted-foreground/30 italic flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground/30 font-bold  flex items-center gap-2">
                         <Activity className="h-3.5 w-3.5 opacity-30" /> No Job
                     </span>
                 )}
             </div>
 
             {/* --- Column 4: Timestamp (2 cols) --- */}
-            <div className="col-span-6 md:col-span-2">
-                <span className="text-[10px] font-mono font-bold text-muted-foreground whitespace-nowrap">
+            <div className="col-span-6 md:col-span-2 flex flex-col justify-center gap-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-tighter text-muted-foreground whitespace-nowrap">
                     {formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}
                 </span>
             </div>
 
             {/* --- Column 5: Actions (1 col) --- */}
-            <div className="col-span-12 md:col-span-1 flex items-center justify-end gap-1 pr-2">
+            <div className="col-span-12 md:col-span-1 flex items-center justify-end gap-1 pr-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
                 {alert.status === 'pending' && (
                     <Button
                         variant="ghost"

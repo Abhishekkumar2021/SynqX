@@ -190,13 +190,13 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                         <div className="grid grid-cols-3 gap-2">
                             {/* Success Rate */}
                             <div className="flex flex-col gap-1">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
                                     <Zap className="h-2 w-2 text-amber-500" /> Success
                                 </span>
                                 <div className="flex items-center gap-1.5">
                                     {successRate !== null ? (
                                         <span className={cn(
-                                            "text-xs font-black tabular-nums",
+                                            "text-xs font-bold tabular-nums",
                                             successRate > 90 ? "text-emerald-500" : successRate > 70 ? "text-amber-500" : "text-destructive"
                                         )}>{successRate}%</span>
                                     ) : (
@@ -207,21 +207,21 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
 
                             {/* Total Volume */}
                             <div className="flex flex-col gap-1 border-l border-border/20 pl-2">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
                                     <Database className="h-2 w-2 text-blue-500" /> Volume
                                 </span>
-                                <span className="text-xs font-black tabular-nums truncate">
+                                <span className="text-xs font-bold tabular-nums truncate">
                                     {stats ? formatNumber(stats.total_records_processed) : "—"}
                                 </span>
                             </div>
 
                             {/* Stability / Rejections */}
                             <div className="flex flex-col gap-1 border-l border-border/20 pl-2">
-                                <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1">
                                     <ShieldAlert className="h-2 w-2 text-amber-500" /> Stability
                                 </span>
                                 <span className={cn(
-                                    "text-xs font-black tabular-nums",
+                                    "text-xs font-bold tabular-nums",
                                     stats?.total_quarantined === 0 ? "text-emerald-500" : "text-amber-500"
                                 )}>
                                     {stats ? formatNumber(stats.total_quarantined) : "—"}
@@ -257,12 +257,12 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                                     <div className="p-1 rounded-md bg-muted/50 text-muted-foreground/60">
                                         <History className="h-2.5 w-2.5" />
                                     </div>
-                                    <span className="text-[8px] text-muted-foreground font-black uppercase tracking-wider">Last Sync</span>
+                                    <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider">Last Sync</span>
                                 </div>
                                 {stats?.last_run_at ? (
                                     <div className="flex items-center gap-1.5">
                                         <div className={cn(
-                                            "text-[9px] font-black uppercase tracking-tighter flex items-center gap-1",
+                                            "text-[9px] font-bold uppercase tracking-tighter flex items-center gap-1",
                                             isSuccess ? "text-emerald-500" : isFailed ? "text-destructive" : "text-amber-500"
                                         )}>
                                             {isSuccess && <CheckCircle2 className="h-2 w-2" />}
@@ -274,7 +274,7 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                                         </span>
                                     </div>
                                 ) : (
-                                    <span className="text-[9px] font-black text-muted-foreground/30 uppercase">Never</span>
+                                    <span className="text-[9px] font-bold text-muted-foreground/30 uppercase">Never</span>
                                 )}
                             </div>
 
@@ -283,9 +283,9 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                                 <div className="flex items-center justify-between bg-primary/5 p-2 rounded-xl border border-primary/10">
                                     <div className="flex items-center gap-2">
                                         <Calendar className="h-2.5 w-2.5 text-primary" />
-                                        <span className="text-[8px] text-primary/70 font-black uppercase tracking-wider">Next Sync</span>
+                                        <span className="text-[8px] text-primary/70 font-bold uppercase tracking-wider">Next Sync</span>
                                     </div>
-                                    <span className="text-[9px] font-black text-primary animate-pulse-slow">
+                                    <span className="text-[9px] font-bold text-primary animate-pulse-slow">
                                         {formatDistanceToNow(new Date(stats.next_scheduled_run), { addSuffix: true })}
                                     </span>
                                 </div>

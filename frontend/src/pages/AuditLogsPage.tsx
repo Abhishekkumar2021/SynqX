@@ -12,7 +12,7 @@ import {
     Logs, Search, ArrowRight, ShieldAlert, XCircle, 
     Calendar as CalendarIcon, FilterX, Filter, 
     ArrowUpDown, ArrowUp, ArrowDown, Download,
-    RotateCcw, LayoutGrid, List
+    RotateCcw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AuditLogListItem } from '@/components/features/audit/AuditLogListItem';
 import { AuditLogGridItem } from '@/components/features/audit/AuditLogGridItem';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ViewToggle } from '@/components/common/ViewToggle';
 import { toast } from 'sonner';
 
 export const AuditLogsPage: React.FC = () => {
@@ -135,7 +136,7 @@ export const AuditLogsPage: React.FC = () => {
                     <div className="p-6 bg-yellow-500/10 rounded-full mb-6 ring-1 ring-yellow-500/20">
                         <ShieldAlert className="w-12 h-12 text-yellow-500" />
                     </div>
-                    <h2 className="text-2xl font-black tracking-tight uppercase">Admin Access Required</h2>
+                    <h2 className="text-2xl font-bold tracking-tight uppercase">Admin Access Required</h2>
                     <p className="text-muted-foreground mt-2 max-w-md font-medium opacity-70">
                         Audit logs contain sensitive workspace data. Only users with administrative privileges can access the execution trail.
                     </p>
@@ -148,7 +149,7 @@ export const AuditLogsPage: React.FC = () => {
         return (
             <div className="h-full flex flex-col items-center justify-center text-center p-4">
                 <XCircle className="w-16 h-16 text-destructive mb-4" />
-                <h2 className="text-2xl font-black tracking-tight uppercase">Failed to Load Logs</h2>
+                <h2 className="text-2xl font-bold tracking-tight uppercase">Failed to Load Logs</h2>
                 <p className="text-muted-foreground mt-2 max-w-md">{message}</p>
                 <Button variant="outline" className="mt-6" onClick={() => refetch()}>Retry Connection</Button>
             </div>
@@ -208,7 +209,7 @@ export const AuditLogsPage: React.FC = () => {
             </div>
 
             {/* --- Registry Container --- */}
-            <div className="flex-1 min-h-0 flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden relative group">
+            <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden relative group">
                 
                 {/* --- Toolbar --- */}
                 <div className="p-3 md:p-4 border-b border-border/40 bg-muted/20 flex flex-col lg:flex-row items-center justify-between shrink-0 gap-3 md:gap-4 relative z-30">
@@ -253,7 +254,7 @@ export const AuditLogsPage: React.FC = () => {
                         </Popover>
                         
                         <Select value={filters.userId} onValueChange={(v) => setFilters(f => ({...f, userId: v}))}>
-                            <SelectTrigger className="h-10 border-border/50 rounded-xl bg-background/50 w-35 text-[10px] font-black uppercase tracking-widest shadow-sm transition-all hover:border-primary/30">
+                            <SelectTrigger className="h-10 border-border/50 rounded-xl bg-background/50 w-35 text-[10px] uppercase tracking-widest shadow-sm transition-all hover:border-primary/30">
                                 <Filter className="h-3 w-3 mr-1.5 opacity-40" />
                                 <SelectValue placeholder="Actor" />
                             </SelectTrigger>
@@ -268,7 +269,7 @@ export const AuditLogsPage: React.FC = () => {
                         </Select>
 
                         <Select value={filters.status} onValueChange={(v) => setFilters(f => ({...f, status: v}))}>
-                            <SelectTrigger className="h-10 border-border/40 rounded-xl bg-background/50 w-27.5 text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm transition-all hover:border-primary/30">
+                            <SelectTrigger className="h-10 border-border/40 rounded-xl bg-background/50 w-27.5 text-[10px] uppercase tracking-widest text-foreground shadow-sm transition-all hover:border-primary/30">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-border/60 shadow-2xl">
@@ -279,7 +280,7 @@ export const AuditLogsPage: React.FC = () => {
                         </Select>
 
                         <Select value={filters.eventType} onValueChange={(v) => setFilters(f => ({...f, eventType: v}))}>
-                            <SelectTrigger className="h-10 border-border/40 rounded-xl bg-background/50 w-32.5 text-[10px] font-black uppercase tracking-widest text-foreground shadow-sm transition-all hover:border-primary/30">
+                            <SelectTrigger className="h-10 border-border/40 rounded-xl bg-background/50 w-32.5 text-[10px] uppercase tracking-widest text-foreground shadow-sm transition-all hover:border-primary/30">
                                 <SelectValue placeholder="Type" />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-border/60 shadow-2xl">
@@ -293,32 +294,7 @@ export const AuditLogsPage: React.FC = () => {
                             </SelectContent>
                         </Select>
 
-                        <div className="flex items-center bg-background/50 border border-border/40 rounded-xl p-0.5 shadow-sm shrink-0">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                    "h-8 w-8 rounded-lg transition-all",
-                                    viewMode === 'list' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted"
-                                )}
-                                onClick={() => setViewMode('list')}
-                                title="Tabular View"
-                            >
-                                <List className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                    "h-8 w-8 rounded-lg transition-all",
-                                    viewMode === 'grid' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted"
-                                )}
-                                onClick={() => setViewMode('grid')}
-                                title="Grid View"
-                            >
-                                <LayoutGrid className="h-3.5 w-3.5" />
-                            </Button>
-                        </div>
+                        <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
 
                         {hasActiveFilters && (
                             <Button 
@@ -336,7 +312,7 @@ export const AuditLogsPage: React.FC = () => {
 
                 {/* --- Table Header (Visible only in List mode) --- */}
                 {viewMode === 'list' && (
-                    <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-border/20 bg-muted/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 shrink-0 sticky top-0 z-20 shadow-sm">
+                    <div className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border/20 bg-muted/30 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50 shrink-0 sticky top-0 z-20 shadow-sm">
                         <div className="col-span-12 md:col-span-5 flex items-center cursor-pointer select-none group/col" onClick={() => toggleSort('event_type')}>
                             Event Signature {getSortIcon('event_type')}
                         </div>
@@ -370,11 +346,11 @@ export const AuditLogsPage: React.FC = () => {
                             <div className="h-full flex flex-col items-center justify-center p-24 text-center">
                                 <div className="relative mb-8">
                                     <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
-                                    <div className="relative h-24 w-24 glass-card rounded-[2rem] border-border/40 flex items-center justify-center shadow-2xl">
+                                    <div className="relative h-24 w-24 glass-card rounded-2xl border-border/40 flex items-center justify-center shadow-2xl">
                                         <Logs className="h-12 w-12 text-muted-foreground/30" />
                                     </div>
                                 </div>
-                                <h3 className="text-xl font-black text-foreground uppercase tracking-tight">No Events Captured</h3>
+                                <h3 className="text-xl font-bold text-foreground uppercase tracking-tight">No Events Captured</h3>
                                 <p className="text-sm mt-2 max-w-sm leading-relaxed text-muted-foreground font-medium opacity-70">
                                     {hasActiveFilters 
                                         ? "No logs match your current filter parameters. Try expanding your search criteria."
@@ -393,7 +369,7 @@ export const AuditLogsPage: React.FC = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
                                 {finalLogs.map((log) => (
                                     <AuditLogGridItem key={log.id} log={log} users={users || []} />
                                 ))}
@@ -406,17 +382,17 @@ export const AuditLogsPage: React.FC = () => {
                 <div className="p-4 border-t border-border/20 bg-muted/10 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-3 px-3 py-1.5 bg-background/50 rounded-xl border border-border/40 shadow-sm">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Entries</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Entries</span>
                             <div className="h-4 w-px bg-border/40" />
-                            <span className="text-[11px] font-black text-foreground tabular-nums">
+                            <span className="text-[11px] font-bold text-foreground tabular-nums">
                                 {Math.min(page * limit + 1, total)}-{Math.min((page + 1) * limit, total)} <span className="text-muted-foreground/40 font-bold mx-1">of</span> {total}
                             </span>
                         </div>
                         
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider hidden sm:inline">Limit</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">Limit</span>
                             <Select value={limit.toString()} onValueChange={(val) => { setLimit(Number(val)); setPage(0); }}>
-                                <SelectTrigger className="h-8 w-20 rounded-xl bg-background/50 text-[10px] font-black border-border/40">
+                                <SelectTrigger className="h-8 w-20 rounded-xl bg-background/50 text-[10px] border-border/40">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl border-border/60">
@@ -435,7 +411,7 @@ export const AuditLogsPage: React.FC = () => {
                             size="sm" 
                             disabled={page === 0} 
                             onClick={() => { setPage(p => Math.max(0, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
-                            className="rounded-xl h-8 px-4 text-[10px] font-black uppercase tracking-widest disabled:opacity-20"
+                            className="rounded-xl h-8 px-4 text-[10px] font-bold uppercase tracking-widest disabled:opacity-20"
                         >
                             Prev
                         </Button>
@@ -453,7 +429,7 @@ export const AuditLogsPage: React.FC = () => {
                                         key={pageNum}
                                         onClick={() => setPage(pageNum)}
                                         className={cn(
-                                            "h-7 w-7 rounded-lg text-[10px] font-black transition-all",
+                                            "h-7 w-7 rounded-lg text-[10px] font-bold transition-all",
                                             page === pageNum 
                                                 ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
                                                 : "text-muted-foreground hover:bg-muted"
@@ -469,7 +445,7 @@ export const AuditLogsPage: React.FC = () => {
                             size="sm" 
                             disabled={page >= totalPages - 1} 
                             onClick={() => { setPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
-                            className="rounded-xl h-8 px-4 text-[10px] font-black uppercase tracking-widest disabled:opacity-20 flex items-center gap-2"
+                            className="rounded-xl h-8 px-4 text-[10px] font-bold uppercase tracking-widest disabled:opacity-20 flex items-center gap-2"
                         >
                             Next
                             <ArrowRight className="h-3 w-3" />

@@ -71,7 +71,7 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
                     <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 ring-1 ring-primary/20">
                         <UserPlus className="h-6 w-6 text-primary" />
                     </div>
-                    <DialogTitle className="text-2xl font-black tracking-tight">
+                    <DialogTitle className="text-2xl font-bold tracking-tight">
                         Expand the Team
                     </DialogTitle>
                     <DialogDescription className="text-xs font-medium opacity-70">
@@ -80,7 +80,7 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
                 </DialogHeader>
                 <div className="space-y-6">
                     <div className="space-y-2.5">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-1">
                             Email Identity
                         </Label>
                         <UserAutocomplete 
@@ -91,11 +91,11 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
                         />
                     </div>
                     <div className="space-y-2.5">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-1">
                             Initial Permissions
                         </Label>
                         <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)}>
-                            <SelectTrigger className="h-12 bg-muted/20 border-border/40 rounded-2xl font-bold text-foreground focus:ring-primary/20 transition-all">
+                            <SelectTrigger className="h-12 bg-muted/20 border-border/40 rounded-2xl font-semibold text-foreground focus:ring-primary/20 transition-all">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-border/60 shadow-2xl">
@@ -123,7 +123,7 @@ export const InviteMemberDialog: React.FC<InviteMemberDialogProps> = ({
                     <Button 
                         onClick={() => inviteMutation.mutate()} 
                         disabled={inviteMutation.isPending || !inviteEmail}
-                        className="rounded-2xl h-12 flex-1 font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 bg-primary text-primary-foreground hover:shadow-primary/40 transition-all gap-2"
+                        className="rounded-2xl h-12 flex-1 font-bold uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-primary/20 bg-primary text-primary-foreground hover:shadow-primary/40 transition-all gap-2"
                     >
                         {inviteMutation.isPending ? (
                             <Loader2 className="animate-spin h-4 w-4" />

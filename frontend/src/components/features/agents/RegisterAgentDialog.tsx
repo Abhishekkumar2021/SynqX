@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, 
@@ -14,7 +13,6 @@ import {
   ShieldAlert,
   ChevronDown,
   X,
-  Search,
   Download,
   Laptop,
   ArrowDownToLine,
@@ -38,7 +36,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert } from '@/components/ui/alert';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,10 +109,10 @@ const GroupSelector = ({
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1 leading-none flex items-center gap-2">
+                <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1 leading-none flex items-center gap-2">
                     <Tags className="h-3 w-3" /> Groups / Labels
                 </label>
-                <span className="text-[9px] font-bold text-primary/60 italic leading-none">Multiselect enabled</span>
+                <span className="text-[9px] font-bold text-primary/60  leading-none">Multiselect enabled</span>
             </div>
 
             <div className="space-y-3">
@@ -148,7 +146,7 @@ const GroupSelector = ({
                                                         toggleGroup(group);
                                                     }}
                                                 >
-                                                    <span className="font-black text-[10px] uppercase tracking-tight">{group}</span>
+                                                    <span className="font-bold text-[10px] uppercase tracking-tight">{group}</span>
                                                     <X className="h-3 w-3 text-muted-foreground/60 group-hover/badge:text-destructive transition-colors" />
                                                 </Badge>
                                             </motion.div>
@@ -185,13 +183,13 @@ const GroupSelector = ({
                                             <Tags className="h-8 w-8" />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <p className="text-sm font-black text-foreground uppercase tracking-tight">No matching groups</p>
+                                            <p className="text-sm font-bold text-foreground uppercase tracking-tight">No matching groups</p>
                                             <p className="text-[10px] font-medium text-muted-foreground/60 leading-relaxed max-w-[180px] mx-auto">Create a unique processing label for this agent.</p>
                                         </div>
                                         {inputValue.trim() && (
                                             <Button 
                                                 size="sm" 
-                                                className="rounded-xl h-11 px-8 font-black text-[10px] uppercase tracking-[0.2em] gap-3 shadow-2xl shadow-primary/20 bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all"
+                                                className="rounded-xl h-11 px-8 font-bold text-[10px] uppercase tracking-[0.2em] gap-3 shadow-2xl shadow-primary/20 bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all"
                                                 onClick={handleCreateNew}
                                             >
                                                 <div className="p-1 rounded-md bg-white/20">
@@ -205,7 +203,7 @@ const GroupSelector = ({
                                 
                                 <CommandGroup 
                                     heading="Existing Groups" 
-                                    className="[&_[cmdk-group-heading]]:text-[9px] [&_[cmdk-group-heading]]:font-black [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.2em] [&_[cmdk-group-heading]]:text-muted-foreground/50 [&_[cmdk-group-heading]]:mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:mt-2"
+                                    className="[&_[cmdk-group-heading]]:text-[9px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.2em] [&_[cmdk-group-heading]]:text-muted-foreground/50 [&_[cmdk-group-heading]]:mb-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:mt-2"
                                 >
                                     {existingGroups.map((group) => (
                                         <CommandItem
@@ -232,10 +230,10 @@ const GroupSelector = ({
                                                         )}
                                                     </AnimatePresence>
                                                 </div>
-                                                <span className="text-xs font-black uppercase tracking-tight">{group}</span>
+                                                <span className="text-xs font-bold uppercase tracking-tight">{group}</span>
                                             </div>
                                             {selectedGroups.includes(group) ? (
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">Selected</span>
+                                                <span className="text-[9px] font-bold uppercase tracking-widest text-primary/60">Selected</span>
                                             ) : (
                                                 <Plus className="h-3.5 w-3.5 opacity-0 group-hover/item:opacity-40 transition-opacity" />
                                             )}
@@ -248,7 +246,7 @@ const GroupSelector = ({
                                         <CommandSeparator className="my-2 bg-border/20" />
                                         <CommandGroup 
                                             heading="Quick Create"
-                                            className="[&_[cmdk-group-heading]]:text-[9px] [&_[cmdk-group-heading]]:font-black [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.2em] [&_[cmdk-group-heading]]:text-emerald-500/60 [&_[cmdk-group-heading]]:mb-2 [&_[cmdk-group-heading]]:px-2"
+                                            className="[&_[cmdk-group-heading]]:text-[9px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.2em] [&_[cmdk-group-heading]]:text-emerald-500/60 [&_[cmdk-group-heading]]:mb-2 [&_[cmdk-group-heading]]:px-2"
                                         >
                                             <CommandItem
                                                 onSelect={handleCreateNew}
@@ -259,7 +257,7 @@ const GroupSelector = ({
                                                         <Plus className="h-3.5 w-3.5 stroke-[4]" />
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-black uppercase tracking-tight">New Group: {inputValue}</span>
+                                                        <span className="text-xs font-bold uppercase tracking-tight">New Group: {inputValue}</span>
                                                         <span className="text-[9px] font-bold opacity-60">Add to processing queue</span>
                                                     </div>
                                                 </div>
@@ -306,7 +304,7 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
             link.click();
             link.remove();
             toast.success("Developer Kit Downloaded");
-        } catch (e) {
+        } catch {
             toast.error("Package Generation Failed");
         } finally {
             setIsDownloading(false);
@@ -331,12 +329,12 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
         toast.success("Credentials saved as JSON");
     };
 
-    const dockerCommand = `docker run -d \
-  --name synqx-agent-${agentName.toLowerCase().replace(/\s+/g, '-')} \
-  -e SYNQX_API_URL="${API_URL}" \
-  -e SYNQX_CLIENT_ID="${clientId}" \
-  -e SYNQX_API_KEY="${apiKey}" \
-  -e SYNQX_TAGS="${tags}" \
+    const dockerCommand = `docker run -d \\
+  --name synqx-agent-${agentName.toLowerCase().replace(/\s+/g, '-')} \\
+  -e SYNQX_API_URL="${API_URL}" \\
+  -e SYNQX_CLIENT_ID="${clientId}" \\
+  -e SYNQX_API_KEY="${apiKey}" \\
+  -e SYNQX_TAGS="${tags}" \\
   synqx/agent:latest`;
 
     const shellCommand = platform === 'windows' 
@@ -370,35 +368,35 @@ synqx-agent configure --api-url "${API_URL}" --client-id "${clientId}" --api-key
 synqx-agent start`;
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-hidden text-foreground">
+        <div className="flex flex-col h-full bg-background/95 backdrop-blur-3xl overflow-hidden text-foreground">
             <div className={cn(
                 "p-8 pb-6 border-b border-border/40 shrink-0",
                 isNew 
-                    ? "bg-linear-to-br from-emerald-500/10 via-emerald-500/5 to-transparent dark:from-emerald-500/15 dark:via-background" 
-                    : "bg-linear-to-br from-primary/10 via-primary/5 to-transparent dark:from-primary/15 dark:via-background"
+                    ? "bg-emerald-500/5" 
+                    : "bg-primary/5"
             )}>
-                <div className="flex items-center justify-between mb-4 pr-10">
-                    <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-5">
                         <div className={cn(
-                            "p-3 rounded-2xl ring-1 shadow-sm",
+                            "p-4 rounded-2xl ring-1 shadow-sm",
                             isNew 
-                                ? "bg-emerald-500/10 text-emerald-600 ring-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-400 dark:ring-emerald-400/20" 
-                                : "bg-primary/10 text-primary ring-primary/30 dark:bg-blue-500/20 dark:text-blue-400 dark:ring-blue-400/20"
+                                ? "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20" 
+                                : "bg-primary/10 text-primary ring-primary/20"
                         )}>
                             {isNew ? <ShieldCheck className="h-7 w-7" /> : <Terminal className="h-7 w-7" />}
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black tracking-tighter text-foreground leading-none text-balance">
+                            <h2 className="text-2xl font-bold tracking-tight text-foreground leading-none">
                                 {isNew ? "Agent Authorized" : "Agent Setup"}
                             </h2>
-                            <p className="text-sm text-muted-foreground font-semibold mt-1">
+                            <p className="text-sm text-muted-foreground font-medium mt-1.5 opacity-80">
                                 {isNew ? "Credentials generated. Save them before closing." : `Re-install agent for ${agentName}`}
                             </p>
                         </div>
                     </div>
-                    <Badge className={cn(
-                        "font-black px-3 py-1 rounded-full text-[9px] tracking-widest shadow-lg shrink-0",
-                        isNew ? "bg-emerald-500 hover:bg-emerald-500 shadow-emerald-500/20 text-white" : "bg-primary hover:bg-primary shadow-primary/20 text-white"
+                    <Badge variant="outline" className={cn(
+                        "font-bold px-3 py-1 rounded-lg text-[10px] tracking-wider shrink-0",
+                        isNew ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/5" : "border-primary/30 text-primary bg-primary/5"
                     )}>
                         {isNew ? "PRIVATE" : "CONFIG"}
                     </Badge>
@@ -409,35 +407,35 @@ synqx-agent start`;
                 {/* --- Unified Utility Row --- */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
                     {/* Backup Module */}
-                    <div className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-2xl shadow-sm">
+                    <div className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-xl shadow-sm">
                         <div className="flex items-center gap-3">
                             <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
                             <div className="space-y-0.5">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-900/60 dark:text-emerald-400/60 leading-none">Backup Identity</p>
-                                <p className="text-[10px] font-bold text-emerald-800/80 dark:text-emerald-500/80 leading-tight">Save key to avoid re-registration.</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-900/60 dark:text-emerald-400/60 leading-none">Backup Identity</p>
+                                <p className="text-[11px] font-bold text-emerald-800/80 dark:text-emerald-500/80 leading-tight">Save key for re-registration.</p>
                             </div>
                         </div>
-                        <Button size="sm" onClick={handleDownloadJson} variant="outline" className="h-9 rounded-xl text-[10px] font-black uppercase border-emerald-500/20 bg-background hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-2 shadow-sm shrink-0">
+                        <Button size="sm" onClick={handleDownloadJson} variant="outline" className="h-9 rounded-lg text-[10px] font-bold uppercase border-emerald-500/20 bg-background hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 gap-2 shadow-sm shrink-0">
                             <FileJson className="h-3.5 w-3.5" /> JSON
                         </Button>
                     </div>
 
                     {/* Platform Selector Module */}
-                    <div className="flex items-center justify-between bg-muted/20 p-4 rounded-2xl border border-border/40 shadow-sm">
+                    <div className="flex items-center justify-between bg-muted/20 p-4 rounded-xl border border-border/40 shadow-sm">
                         <div className="flex items-center gap-3">
                             <Laptop className="h-5 w-5 text-primary shrink-0" />
                             <div className="space-y-0.5">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 leading-none">Target Platform</p>
-                                <p className="text-[10px] font-bold text-foreground leading-tight truncate max-w-[120px]">Active OS: <span className="text-primary capitalize">{platform}</span></p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 leading-none">Target Platform</p>
+                                <p className="text-[11px] font-bold text-foreground leading-tight truncate max-w-[120px]">OS: <span className="text-primary capitalize">{platform}</span></p>
                             </div>
                         </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="h-9 rounded-xl font-bold text-[10px] uppercase gap-2 shadow-xs bg-background shrink-0 text-foreground">
+                                <Button variant="outline" size="sm" className="h-9 rounded-lg font-bold text-[10px] uppercase gap-2 shadow-sm bg-background shrink-0 text-foreground border-border/40">
                                     Change <ChevronDown className="h-3 w-3" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40 rounded-xl border-border/40 backdrop-blur-xl bg-background/80">
+                            <DropdownMenuContent align="end" className="w-40 rounded-xl border-border/40 backdrop-blur-xl bg-background/95">
                                 <DropdownMenuItem onClick={() => setPlatform('macos')} className="rounded-lg font-bold py-2 cursor-pointer text-xs">macOS</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setPlatform('linux')} className="rounded-lg font-bold py-2 cursor-pointer text-xs">Linux</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setPlatform('windows')} className="rounded-lg font-bold py-2 cursor-pointer text-xs">Windows</DropdownMenuItem>
@@ -453,53 +451,53 @@ synqx-agent start`;
 
                 <div className="space-y-5">
                     <div className="flex items-center gap-3">
-                        <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black shadow-sm">2</div>
-                        <h3 className="font-black text-base tracking-tight uppercase opacity-80 text-foreground leading-none">Installation Path</h3>
-                        <div className="h-px flex-1 bg-border/50 ml-2" />
+                        <div className="h-6 w-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shadow-sm border border-primary/20">2</div>
+                        <h3 className="font-bold text-sm tracking-widest uppercase opacity-80 text-foreground leading-none">Installation Path</h3>
+                        <div className="h-px flex-1 bg-border/20 ml-2" />
                     </div>
 
                     <Tabs value={installMethod} onValueChange={setInstallTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 h-12 px-2 rounded-2xl bg-muted/30 border border-border/40 dark:bg-muted/20 shadow-inner">
-                            <TabsTrigger value="one-liner" className="rounded-xl gap-2 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
+                        <TabsList className="grid w-full grid-cols-3 bg-muted/30 border border-border/40 rounded-xl p-1 h-11">
+                            <TabsTrigger value="one-liner" className="gap-2 text-[11px] font-bold uppercase tracking-tight rounded-lg">
                                 <Terminal className="h-3.5 w-3.5" /> CLI One-Liner
                             </TabsTrigger>
-                            <TabsTrigger value="docker" className="rounded-xl gap-2 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
+                            <TabsTrigger value="docker" className="gap-2 text-[11px] font-bold uppercase tracking-tight rounded-lg">
                                 <Box className="h-3.5 w-3.5" /> Docker
                             </TabsTrigger>
-                            <TabsTrigger value="manual" className="rounded-xl gap-2 font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:shadow-lg data-[state=active]:text-primary transition-all">
+                            <TabsTrigger value="manual" className="gap-2 text-[11px] font-bold uppercase tracking-tight rounded-lg">
                                 <Code2 className="h-3.5 w-3.5" /> Manual steps
                             </TabsTrigger>
                         </TabsList>
                         
                         <div className="mt-6">
                             <TabsContent value="one-liner" className="mt-0 space-y-4 animate-in fade-in-50 duration-300">
-                                <p className="text-[11px] font-medium text-muted-foreground px-1 italic leading-relaxed">Automatic {platform} setup. Handles virtual environment & dependencies.</p>
-                                <CodeBlock language="bash" code={shellCommand} rounded wrap maxHeight="120px" className="border-border/40 bg-muted/5 dark:bg-slate-950/50 shadow-xs" />
+                                <p className="text-[11px] font-medium text-muted-foreground px-1 leading-relaxed">Automatic {platform} setup. Handles virtual environment & dependencies.</p>
+                                <CodeBlock language="bash" code={shellCommand} rounded wrap maxHeight="120px" className="border-border/40 bg-muted/10 shadow-sm" />
                             </TabsContent>
 
                             <TabsContent value="docker" className="mt-0 space-y-4 animate-in fade-in-50 duration-300">
-                                <p className="text-[11px] font-medium text-muted-foreground px-1 italic leading-relaxed">Isolated container execution. The preferred method for production servers.</p>
-                                <CodeBlock language="bash" code={dockerCommand} rounded wrap maxHeight="120px" className="border-border/40 bg-muted/5 dark:bg-slate-950/50 shadow-xs" />
+                                <p className="text-[11px] font-medium text-muted-foreground px-1 leading-relaxed">Isolated container execution. The preferred method for production servers.</p>
+                                <CodeBlock language="bash" code={dockerCommand} rounded wrap maxHeight="120px" className="border-border/40 bg-muted/10 shadow-sm" />
                             </TabsContent>
 
                             <TabsContent value="manual" className="mt-0 space-y-8 animate-in fade-in-50 duration-300">
                                 {/* ZIP Download Hero Section */}
-                                <div className="p-8 rounded-[2.5rem] border border-primary/20 bg-primary/5 dark:bg-primary/10 flex items-center justify-between gap-8 group hover:border-primary/40 transition-all shadow-sm">
+                                <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex items-center justify-between gap-6 group hover:border-primary/40 transition-all shadow-sm">
                                     <div className="flex items-center gap-5">
-                                        <div className="p-4 rounded-2xl bg-background border border-primary/10 shadow-xl group-hover:scale-110 transition-transform">
-                                            <ArrowDownToLine className={cn("h-8 w-8 text-primary", isDownloading && "animate-bounce")} />
+                                        <div className="p-4 rounded-xl bg-background border border-primary/10 shadow-md group-hover:scale-110 transition-transform">
+                                            <ArrowDownToLine className={cn("h-7 w-7 text-primary", isDownloading && "animate-bounce")} />
                                         </div>
                                         <div className="space-y-1">
-                                            <h4 className="font-black text-lg tracking-tight text-foreground">Source Package</h4>
-                                            <p className="text-xs text-muted-foreground font-medium leading-relaxed max-w-70">Pre-configured agent with full source code and credentials.</p>
+                                            <h4 className="font-bold text-base tracking-tight text-foreground">Source Package</h4>
+                                            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed max-w-70">Pre-configured agent with full source code.</p>
                                         </div>
                                     </div>
                                     <Button 
                                         onClick={handleDownloadZip} 
                                         disabled={isDownloading || !isNew} 
-                                        className="rounded-2xl h-14 px-8 font-black gap-2 shadow-2xl shadow-primary/20 shrink-0 transition-all hover:scale-[1.02] active:scale-95 bg-primary text-primary-foreground"
+                                        className="rounded-xl h-12 px-6 font-bold gap-2 shadow-lg shadow-primary/20 shrink-0 transition-all hover:scale-[1.02] active:scale-95 bg-primary text-primary-foreground"
                                     >
-                                        {isDownloading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+                                        {isDownloading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Download className="h-4.5 w-4.5" />}
                                         Download ZIP
                                     </Button>
                                 </div>
@@ -507,8 +505,8 @@ synqx-agent start`;
                                 {/* Manual Reference Section */}
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3 px-1">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_var(--color-blue-500)]" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Custom Configuration Reference</h4>
+                                        <div className="h-1.5 w-1.5 rounded-full bg-primary/40 shadow-[0_0_8px_var(--color-primary)]" />
+                                        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Custom Configuration Reference</h4>
                                     </div>
                                     <CodeBlock 
                                         language="bash" 
@@ -516,9 +514,9 @@ synqx-agent start`;
                                         rounded 
                                         wrap 
                                         maxHeight="220px" 
-                                        className="border-border/40 bg-muted/5 dark:bg-slate-950/50 shadow-inner" 
+                                        className="border-border/40 bg-muted/10 shadow-inner" 
                                     />
-                                    <p className="text-[10px] text-center text-muted-foreground italic opacity-60">Use this if you prefer to clone the repository manually or use an existing environment.</p>
+                                    <p className="text-[10px] text-center text-muted-foreground opacity-60 font-medium uppercase tracking-tight">Manual setup with uv isolation</p>
                                 </div>
                             </TabsContent>
                         </div>
@@ -526,22 +524,22 @@ synqx-agent start`;
                 </div>
 
                 {isNew && (
-                    <Alert className="rounded-2xl bg-amber-500/10 border-amber-500/30 py-4 px-6 border-dashed dark:bg-amber-500/5 dark:border-amber-500/20">
+                    <Alert className="rounded-xl bg-amber-500/10 border-amber-500/20 py-4 px-6 border-dashed dark:bg-amber-500/5">
                         <ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-500" />
                         <div className="text-[11px] text-amber-900 dark:text-amber-400 font-bold ml-2 leading-none">
-                            Awaiting initial heartbeat. Status will turn <span className="underline decoration-amber-500/50 underline-offset-4">online</span> automatically.
+                            Awaiting initial heartbeat. Status will turn <span className="underline decoration-amber-500/40 underline-offset-4">online</span> automatically.
                         </div>
                     </Alert>
                 )}
             </div>
 
-            <div className="p-6 border-t bg-muted/30 dark:bg-muted/10 flex items-center justify-between shrink-0 backdrop-blur-xl">
+            <div className="p-6 border-t border-border/40 bg-muted/30 dark:bg-muted/10 flex items-center justify-between shrink-0 backdrop-blur-xl">
                 <div className="flex items-center gap-2 text-muted-foreground px-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                    <span className="text-[9px] font-black uppercase tracking-widest opacity-60">Real-time Listener Active</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">Real-time Listener Active</span>
                 </div>
-                <Button onClick={onClose} variant="ghost" className="rounded-xl font-black h-10 px-6 hover:bg-background border border-transparent hover:border-border transition-all text-foreground shadow-sm">
-                    Done <ArrowRight className="h-4 w-4 ml-2" />
+                <Button onClick={onClose} variant="ghost" className="rounded-xl font-bold h-10 px-6 hover:bg-background border border-border/40 transition-all text-foreground shadow-sm">
+                    Done <ArrowRight className="h-4 w-4 ml-2 text-primary" />
                 </Button>
             </div>
         </div>
@@ -585,35 +583,35 @@ export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-            <DialogContent className="sm:max-w-212.5 rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl ring-1 ring-white/10 dark:ring-white/5 max-h-[85vh] flex flex-col">
+            <DialogContent className="sm:max-w-4xl rounded-2xl p-0 overflow-hidden border-border/40 bg-background/95 shadow-2xl backdrop-blur-3xl ring-1 ring-white/10 dark:ring-white/5 max-h-[85vh] flex flex-col gap-0">
                 <VisuallyHidden.Root>
                     <DialogTitle>Register New Remote Agent</DialogTitle>
                     <DialogDescription>Input agent details and generate credentials.</DialogDescription>
                 </VisuallyHidden.Root>
 
                 {!generatedCreds ? (
-                    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="p-10 space-y-8 overflow-y-auto custom-scrollbar bg-background text-foreground">
+                    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="p-10 space-y-10 overflow-y-auto custom-scrollbar bg-background text-foreground flex-1">
                         <DialogHeader className="space-y-4">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3.5 rounded-2xl bg-primary/10 text-primary shadow-inner shadow-primary/5 dark:bg-primary/20 ring-1 ring-primary/20">
+                            <div className="flex items-center gap-5">
+                                <div className="p-4 rounded-2xl bg-primary/10 text-primary shadow-sm border border-primary/20">
                                     <Zap className="h-8 w-8" />
                                 </div>
                                 <div>
-                                    <h2 className="text-3xl font-black tracking-tighter text-foreground uppercase leading-none">Register Agent</h2>
-                                    <p className="text-base font-medium text-muted-foreground/60 mt-1">Provision a new execution slot for your private environment.</p>
+                                    <h2 className="text-3xl font-bold tracking-tight text-foreground leading-none">Register Agent</h2>
+                                    <p className="text-sm font-medium text-muted-foreground mt-2 opacity-80">Provision a new execution slot for your private environment.</p>
                                 </div>
                             </div>
                         </DialogHeader>
                         
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
+                        <div className="space-y-8 max-w-3xl">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
                                 <div className="space-y-3">
-                                    <label className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1 leading-none">Friendly Name</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ml-1 leading-none">Friendly Name</label>
                                     <Input 
                                         placeholder="e.g. West-Cloud-Prod" 
                                         value={newAgentName} 
                                         onChange={(e) => setNewAgentName(e.target.value)}
-                                        className="rounded-[1.5rem] h-16 text-lg px-8 font-bold placeholder:text-muted-foreground/30 text-foreground shadow-sm shadow-black/5 bg-muted/20 border-border/40 focus-visible:ring-primary/20 focus-visible:bg-background transition-all"
+                                        className="rounded-xl h-14 text-base px-6 font-bold placeholder:text-muted-foreground/30 text-foreground shadow-sm bg-muted/20 border-border/40 focus:bg-background transition-all"
                                     />
                                 </div>
                                 
@@ -624,38 +622,38 @@ export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div className="p-6 rounded-[2rem] bg-muted/10 border border-border/50 space-y-3 dark:bg-muted/5 group hover:bg-muted/20 transition-all shadow-sm">
-                                    <div className="p-2.5 w-fit rounded-xl bg-background shadow-lg border border-border/50 group-hover:scale-110 transition-transform">
+                            <div className="grid grid-cols-2 gap-6 pt-4">
+                                <div className="p-6 rounded-2xl bg-muted/20 border border-border/40 space-y-3 group hover:bg-muted/30 transition-all shadow-sm">
+                                    <div className="p-2.5 w-fit rounded-xl bg-background shadow-md border border-border/40 group-hover:scale-105 transition-transform">
                                         <ShieldCheck className="h-5 w-5 text-emerald-500" />
                                     </div>
-                                    <div className="space-y-1">
-                                        <p className="text-xs font-black uppercase tracking-widest text-foreground">Secure Tunnels</p>
-                                        <p className="text-xs text-muted-foreground font-medium leading-relaxed opacity-70">Outbound-only connectivity via HTTPS. Zero firewall configuration needed.</p>
+                                    <div className="space-y-1.5">
+                                        <p className="text-[11px] font-bold uppercase tracking-widest text-foreground">Secure Tunnels</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium leading-relaxed opacity-80">Outbound-only connectivity via HTTPS. Zero firewall setup.</p>
                                     </div>
                                 </div>
-                                <div className="p-6 rounded-[2rem] bg-muted/10 border border-border/40 space-y-3 dark:bg-muted/5 group hover:bg-muted/20 transition-all shadow-sm">
-                                    <div className="p-2.5 w-fit rounded-xl bg-background shadow-lg border border-border/50 group-hover:scale-110 transition-transform">
+                                <div className="p-6 rounded-2xl bg-muted/20 border border-border/40 space-y-3 group hover:bg-muted/30 transition-all shadow-sm">
+                                    <div className="p-2.5 w-fit rounded-xl bg-background shadow-md border border-border/40 group-hover:scale-105 transition-transform">
                                         <Box className="h-5 w-5 text-blue-500" />
                                     </div>
-                                    <div className="space-y-1">
-                                        <p className="text-xs font-black uppercase tracking-widest text-foreground">Unified Compute</p>
-                                        <p className="text-xs text-muted-foreground font-medium leading-relaxed opacity-70">Deploy on Docker, Windows, or Linux. All agents join your global pool.</p>
+                                    <div className="space-y-1.5">
+                                        <p className="text-[11px] font-bold uppercase tracking-widest text-foreground">Unified Compute</p>
+                                        <p className="text-[11px] text-muted-foreground font-medium leading-relaxed opacity-80">Deploy on Docker, Windows, or Linux. Joins global pool.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="pt-6 border-t border-border/40">
+                        <div className="pt-8 border-t border-border/40 flex justify-end">
                             <Button 
                                 onClick={() => createMutation.mutate({
                                     name: newAgentName, 
                                     tags: { groups: selectedGroups } 
                                 })}
                                 disabled={!newAgentName || createMutation.isPending}
-                                className="w-full h-16 rounded-[1.5rem] font-black text-xl shadow-2xl shadow-primary/20 dark:shadow-none gap-3 transition-all hover:scale-[1.01] active:scale-95 bg-primary text-primary-foreground"
+                                className="h-14 px-10 rounded-xl font-bold text-lg shadow-xl shadow-primary/20 gap-3 transition-all hover:scale-[1.01] active:scale-95 bg-primary text-primary-foreground min-w-[240px]"
                             >
-                                {createMutation.isPending ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /> Create & Generate Credentials</>}</Button>
+                                {createMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Plus className="h-5 w-5" /> Generate Identity</>}</Button>
                         </div>
                     </motion.div>
                 ) : (

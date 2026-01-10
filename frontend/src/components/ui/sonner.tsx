@@ -37,13 +37,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toaster]:ring-1 group-[.toaster]:ring-inset group-[.toaster]:ring-white/40 dark:group-[.toaster]:ring-white/10",
 
           title:
-            "group-[.toast]:text-[13px] group-[.toast]:font-black group-[.toast]:uppercase group-[.toast]:tracking-[0.1em] !text-foreground",
+            "group-[.toast]:text-[13px] group-[.toast]:font-bold group-[.toast]:uppercase group-[.toast]:tracking-[0.1em] !text-foreground",
 
           description:
             "group-[.toast]:text-[11px] group-[.toast]:font-medium group-[.toast]:leading-relaxed !text-muted-foreground group-[.toast]:mt-1",
 
           actionButton:
-            "group-[.toast]:!bg-primary group-[.toast]:!text-primary-foreground group-[.toast]:font-black group-[.toast]:uppercase group-[.toast]:text-[10px] group-[.toast]:rounded-xl group-[.toast]:h-8 group-[.toast]:px-4 group-[.toast]:hover:scale-105 group-[.toast]:transition-transform group-[.toast]:shadow-lg group-[.toast]:shadow-primary/20 group-[.toast]:border-none",
+            "group-[.toast]:!bg-primary group-[.toast]:!text-primary-foreground group-[.toast]:font-bold group-[.toast]:uppercase group-[.toast]:text-[10px] group-[.toast]:rounded-xl group-[.toast]:h-8 group-[.toast]:px-4 group-[.toast]:hover:scale-105 group-[.toast]:transition-transform group-[.toast]:shadow-lg group-[.toast]:shadow-primary/20 group-[.toast]:border-none",
 
           cancelButton:
             "group-[.toast]:!bg-muted/50 group-[.toast]:!text-muted-foreground group-[.toast]:font-bold group-[.toast]:uppercase group-[.toast]:text-[10px] group-[.toast]:rounded-xl group-[.toast]:h-8 group-[.toast]:px-4 group-[.toast]:hover:bg-muted group-[.toast]:transition-colors group-[.toast]:border-none",
