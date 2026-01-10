@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { NavItem } from '../navigation/NavItem';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { DocsSidebar } from '../navigation/DocsSidebar';
 import { NAV_STRUCTURE } from '@/lib/main-nav';
@@ -95,7 +94,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isMobileMenuOpen, 
                                     <Workflow className="h-4 w-4 stroke-[1.5]" />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="font-semibold text-lg tracking-tight leading-none text-foreground">SynqX</span>
+                                    <span className="font-bold text-xl tracking-tight leading-none text-foreground">SynqX</span>
                                     <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mt-1">Enterprise</span>
                                 </div>
                             </Link>
@@ -127,8 +126,11 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isMobileMenuOpen, 
                                 </div>
                             ) : (
                                 <nav className="flex flex-col w-full gap-2" aria-label="Main navigation">
-                                    {NAV_STRUCTURE.map((group, groupIndex) => (
-                                        <div key={group.title} className="flex flex-col">
+                                    {NAV_STRUCTURE.map((group) => (
+                                        <div key={group.title} className="flex flex-col mb-2">
+                                            <h4 className="px-3 mb-2 text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
+                                                {group.title}
+                                            </h4>
                                             <div className="flex flex-col">
                                                 {group.items.map((item) => (
                                                     <NavItem 
@@ -141,9 +143,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isMobileMenuOpen, 
                                                     />
                                                 ))}
                                             </div>
-                                            {groupIndex < NAV_STRUCTURE.length - 1 && (
-                                                <Separator className="my-2 bg-border/40" />
-                                            )}
                                         </div>
                                     ))}
                                 </nav>

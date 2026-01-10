@@ -147,7 +147,7 @@ doctor() {
 
     if command -v python >/dev/null 2>&1; then
         ok "Python found: $(python --version)"
-    elif command -v python3 >/dev/null 2>&1;
+    elif command -v python3 >/dev/null 2>&1; then
         ok "Python3 found: $(python3 --version)"
     else
         error "Neither python nor python3 found"

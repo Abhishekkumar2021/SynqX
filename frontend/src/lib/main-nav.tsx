@@ -1,8 +1,8 @@
 import React from 'react';
 import {
-    LayoutDashboard, Cable, Workflow, Activity, Settings,
-    Search, Sparkles, Users, Logs, ShieldAlert, Share2, Server,
-    Zap} from 'lucide-react';
+    LayoutDashboard, Database, Workflow, Activity, Settings2,
+    Search, Component, Users, FileText, ShieldAlert, GitMerge, Cpu,
+    FlaskConical} from 'lucide-react';
 
 export interface NavItemDef {
     label: string;
@@ -18,41 +18,36 @@ export interface NavGroupDef {
 
 export const NAV_STRUCTURE: NavGroupDef[] = [
     {
-        title: "Core",
+        title: "Monitor",
         items: [
             { label: "Dashboard", to: "/dashboard", icon: <LayoutDashboard />, end: true },
+            { label: "Activity", to: "/jobs", icon: <Activity /> },
+            { label: "Lineage", to: "/map", icon: <GitMerge /> },
+        ]
+    },
+    {
+        title: "Build",
+        items: [
             { label: "Pipelines", to: "/pipelines", icon: <Workflow /> },
-            { label: "Connectivity Hub", to: "/connections", icon: <Cable /> },
+            { label: "Connections", to: "/connections", icon: <Database /> },
+            { label: "Explorer", to: "/explorer", icon: <Search /> },
+            { label: "Lab", to: "/interactive-lab", icon: <FlaskConical /> },
         ]
     },
     {
-        title: "Observability",
+        title: "Manage",
         items: [
-            { label: "Execution Logs", to: "/jobs", icon: <Activity /> },
-            { label: "Topology Map", to: "/map", icon: <Share2 /> },
-        ]
-    },
-    {
-        title: "Compute",
-        items: [
-            { label: "Execution Agents", to: "/agents", icon: <Server /> },
-            { label: "Interactive Lab", to: "/interactive-lab", icon: <Zap /> },
-        ]
-    },
-    {
-        title: "Discovery",
-        items: [
-            { label: "Data Explorer", to: "/explorer", icon: <Search /> },
-            { label: "Standard Library", to: "/operators", icon: <Sparkles /> },
-        ]
-    },
-    {
-        title: "Governance",
-        items: [
+            { label: "Agents", to: "/agents", icon: <Cpu /> },
+            { label: "Operators", to: "/operators", icon: <Component /> },
             { label: "Quarantine", to: "/quarantine", icon: <ShieldAlert /> },
-            { label: "Audit Trail", to: "/audit-logs", icon: <Logs /> },
-            { label: "Workspace Team", to: "/team", icon: <Users /> },
-            { label: "Settings", to: "/settings?tab=general", icon: <Settings />, end: true },
+        ]
+    },
+    {
+        title: "System",
+        items: [
+            { label: "Audit", to: "/audit-logs", icon: <FileText /> },
+            { label: "Team", to: "/team", icon: <Users /> },
+            { label: "Settings", to: "/settings?tab=general", icon: <Settings2 />, end: true },
         ]
     }
 ];

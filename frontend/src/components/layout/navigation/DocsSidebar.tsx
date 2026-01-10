@@ -16,7 +16,7 @@ export const DocsSidebar = ({ collapsed }: { collapsed: boolean }) => {
             </h4>
           )}
           {collapsed && (
-             <div className="h-px bg-border/40 w-8 mx-auto mb-2" />
+             <div className="h-px bg-border/40 w-10 mx-auto mb-2" />
           )}
           <div className={cn("flex flex-col gap-1 w-full", collapsed ? "items-center" : "")}>
             {section.items.map((item) => (

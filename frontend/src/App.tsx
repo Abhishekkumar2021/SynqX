@@ -16,6 +16,7 @@ import { useAuth } from './hooks/useAuth';
 import { Toaster } from './components/ui/sonner';
 import { useTheme } from './hooks/useTheme';
 import { cn } from './lib/utils';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 // Lazy Load Pages (Handling Named Exports)
 const LandingPage = lazy(() => import('./pages/LandingPage').then(module => ({ default: module.LandingPage })));
@@ -321,18 +322,20 @@ function App() {
   return (
     <HelmetProvider>
       <ThemeProvider defaultTheme="dark" storageKey="synqx-theme">
-        <ZenProvider>
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <WorkspaceProvider>
-                <BrowserRouter>
-                  <AppRoutes />
-                  <Toaster position='top-right' closeButton />
-                </BrowserRouter>
-              </WorkspaceProvider>
-            </AuthProvider>
-          </QueryClientProvider>
-        </ZenProvider>
+        <TooltipProvider>
+          <ZenProvider>
+            <QueryClientProvider client={queryClient}>
+              <AuthProvider>
+                <WorkspaceProvider>
+                  <BrowserRouter>
+                    <AppRoutes />
+                    <Toaster position='top-right' closeButton />
+                  </BrowserRouter>
+                </WorkspaceProvider>
+              </AuthProvider>
+            </QueryClientProvider>
+          </ZenProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </HelmetProvider>
   );
