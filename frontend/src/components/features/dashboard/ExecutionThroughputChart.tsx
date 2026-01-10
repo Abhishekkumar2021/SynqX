@@ -1,17 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, BarChart, Bar
 } from 'recharts';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTheme } from '@/hooks/useTheme';
 import { formatNumber } from '@/lib/utils';
-import { TrendingUp } from 'lucide-react';
 
 interface ExecutionThroughputChartProps {
     data: any[];
+    view?: ViewType;
 }
 
 type ViewType = 'jobs' | 'rows' | 'bytes';
@@ -40,24 +38,23 @@ const formatBytes = (bytes: number) => {
 const CustomTooltip = ({ active, payload, label, viewType }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-2xl border border-white/20 bg-background/95 backdrop-blur-3xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ring-1 ring-white/20 min-w-56 z-[1000] animate-in fade-in zoom-in duration-200">
-                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-white/10 pb-2">
+            <div className="rounded-xl border border-border/40 bg-background/95 backdrop-blur-xl p-3 shadow-xl animate-in fade-in-0 zoom-in-95 min-w-48 z-[1000] ring-1 ring-white/10">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-border/10 pb-1.5">
                     {label}
                 </p>
-                <div className="space-y-3">
+                <div className="space-y-2">
                     {payload.map((entry: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between gap-8 text-xs font-bold">
-                            <div className="flex items-center gap-2.5">
+                        <div key={index} className="flex items-center justify-between gap-6 text-[11px] font-bold">
+                            <div className="flex items-center gap-2">
                                 <div
-                                    className="h-2.5 w-2.5 rounded-full shadow-[0_0_12px_rgba(0,0,0,0.3)]"
+                                    className="h-2 w-2 rounded-full shadow-sm"
                                     style={{ 
                                         backgroundColor: entry.color || entry.fill,
-                                        boxShadow: `0 0 15px ${entry.color || entry.fill}44`
                                     }}
                                 />
-                                <span className="text-muted-foreground/80 uppercase tracking-tight">{entry.name}:</span>
+                                <span className="text-muted-foreground uppercase tracking-tight">{entry.name}:</span>
                             </div>
-                            <span className="font-mono text-foreground font-bold text-sm">
+                            <span className="font-mono text-foreground font-bold">
                                 {viewType === 'bytes' ? formatBytes(entry.value) : formatNumber(entry.value)}
                             </span>
                         </div>
@@ -69,41 +66,33 @@ const CustomTooltip = ({ active, payload, label, viewType }: any) => {
     return null;
 };
 
-export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> = ({ data }) => {
+export const ExecutionThroughputChart: React.FC<ExecutionThroughputChartProps> = ({
+
+    data, 
+
+    view = 'jobs',
+
+}) => {
+
     const { theme } = useTheme();
+
     const isDark = theme === 'dark';
-    const [view, setView] = useState<ViewType>('jobs');
+
+
+
     const colors = useMemo(() => getThemeColors(theme), [theme]);
 
+
+
     return (
+
         <div className="flex flex-col h-full">
-            <div className="px-8 pt-8 pb-4 flex flex-row items-center justify-between shrink-0">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                        <h3 className="text-xl font-bold tracking-tighter uppercase flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-primary" />
-                            Execution Throughput
-                        </h3>
-                        <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest text-emerald-500 border-emerald-500/20 bg-emerald-500/5 animate-pulse px-2 py-0.5 rounded-full">
-                            Live
-                        </Badge>
-                    </div>
-                    <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
-                        Processing performance across temporal buckets
-                    </p>
-                </div>
 
-                <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
-                    <TabsList>
-                        <TabsTrigger value="jobs" className="gap-2">Jobs</TabsTrigger>
-                        <TabsTrigger value="rows" className="gap-2">Rows</TabsTrigger>
-                        <TabsTrigger value="bytes" className="gap-2">Bytes</TabsTrigger>
-                    </TabsList>
-                </Tabs>
-            </div>
+            <div className="flex-1 px-6 pb-8 min-h-87.5 pt-4">
 
-            <div className="flex-1 px-6 pt-4 pb-8 min-h-87.5">
                 <ResponsiveContainer width="100%" height="100%" key={`${theme}-${view}`}>
+
+
                     {view === 'jobs' ? (
                         <AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                             <defs>

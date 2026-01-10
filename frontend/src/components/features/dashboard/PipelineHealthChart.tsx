@@ -5,7 +5,6 @@ import {
 } from 'recharts';
 import { AlertTriangle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import { cn } from '@/lib/utils';
 
 interface PipelineHealthChartProps {
     data: any[];
@@ -30,19 +29,19 @@ const CustomTooltip = ({ active, payload }: any) => {
         const percentage = (item.value / total) * 100;
 
         return (
-            <div className="z-1000 rounded-2xl border border-white/20 bg-background/95 backdrop-blur-3xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.4)] ring-1 ring-white/20 min-w-45 animate-in fade-in zoom-in duration-200">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <div className="z-1000 rounded-xl border border-border/40 bg-background/95 backdrop-blur-xl p-3 shadow-xl animate-in fade-in-0 zoom-in-95 min-w-40 ring-1 ring-white/10">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-border/10 pb-1.5">
                     {item.name}
                 </p>
                 <div className="flex items-center gap-3">
                     <div
-                        className="h-3 w-3 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.3)] animate-pulse"
-                        style={{ backgroundColor: item.payload.fill, boxShadow: `0 0 20px ${item.payload.fill}66` }}
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: item.payload.fill }}
                     />
                     <div className="flex flex-col">
-                        <span className="text-base font-bold text-foreground tracking-tight">{item.value} Entities</span>
-                        <span className="text-[10px] font-bold text-primary/80 uppercase tracking-wider">
-                            {percentage.toFixed(1)}% OF TOTAL FLEET
+                        <span className="text-sm font-bold text-foreground tracking-tight">{item.value} Entities</span>
+                        <span className="text-[9px] font-bold text-primary/80 uppercase tracking-wider">
+                            {percentage.toFixed(1)}% OF TOTAL
                         </span>
                     </div>
                 </div>
@@ -64,32 +63,12 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
         }));
     }, [data, totalPipelines, colors]);
 
-    const activeCount = data.find(d => d.name === 'Active')?.value || 0;
-    const healthScore = totalPipelines > 0 ? Math.round((activeCount / totalPipelines) * 100) : 0;
+    // const activeCount = data.find(d => d.name === 'Active')?.value || 0; // Unused without header
+    // const healthScore = totalPipelines > 0 ? Math.round((activeCount / totalPipelines) * 100) : 0; // Unused without header
 
     return (
         <div className="flex flex-col h-full">
-            <div className="px-8 pt-8 pb-2 flex items-center justify-between shrink-0">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                        <h3 className="text-xl font-bold tracking-tighter uppercase mb-1">Status Distribution</h3>
-                        <div className={cn(
-                            "h-2 w-2 rounded-full animate-pulse",
-                            healthScore > 90 ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : 
-                            healthScore > 70 ? "bg-amber-500 shadow-[0_0_8px_#f59e0b]" : 
-                            "bg-destructive shadow-[0_0_8px_#f43f5e]"
-                        )} />
-                    </div>
-                    <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">Global pipeline health topology</p>
-                </div>
-
-                <div className="text-right">
-                    <span className="text-2xl font-bold tracking-tighter text-foreground">{healthScore}%</span>
-                    <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Health Score</p>
-                </div>
-            </div>
-            
-            <div className="flex-1 flex flex-col items-center justify-center relative px-6 pb-8 pt-0">
+            <div className="flex-1 flex flex-col items-center justify-center relative px-6 pb-8 pt-4">
                 {data.length > 0 && totalPipelines > 0 ? (
                     <>
                         <div className="w-full h-full min-h-65 relative">

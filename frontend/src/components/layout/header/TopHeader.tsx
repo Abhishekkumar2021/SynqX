@@ -23,6 +23,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { useZenMode } from '@/hooks/useZenMode';
+import { HEADER_VARIANTS } from '@/lib/animations';
 
 interface TopHeaderProps {
     setIsMobileMenuOpen: (isOpen: boolean) => void;
@@ -82,10 +83,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
         <AnimatePresence>
             {!isZenMode && (
                 <motion.header
-                    initial={{ y: -100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -100, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    variants={HEADER_VARIANTS}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
                     className="h-16 mx-4 mt-4 flex items-center justify-between shrink-0 z-40 relative px-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-xl shadow-lg transition-all duration-500"
                 >
                     {/* Left: Interactive Breadcrumbs */}

@@ -3,7 +3,8 @@ import React from 'react';
 import { format } from 'date-fns';
 import { 
     User, Clock, 
-    Terminal, Box
+    Terminal, Box,
+    Globe, Fingerprint
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -82,6 +83,28 @@ export const AuditLogDetail: React.FC<AuditLogDetailProps> = ({
                         <div className="p-3 rounded-2xl border border-border/40 bg-muted/5 flex flex-col gap-0.5">
                             <span className="text-[7px] font-bold uppercase tracking-widest text-muted-foreground/50">Context</span>
                             <span className="text-[10px] font-bold text-foreground uppercase tracking-tighter">{log.target_type || 'Global'}</span>
+                        </div>
+                    </div>
+
+                    {/* Security Context */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="p-3 rounded-2xl border border-border/40 bg-muted/5 flex items-center gap-3">
+                            <div className="p-2 bg-background rounded-lg border border-border/40">
+                                <Globe className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[7px] font-bold uppercase tracking-widest text-muted-foreground/50">IP Address</span>
+                                <span className="text-[10px] font-mono font-bold text-foreground">{log.ip_address || '0.0.0.0 (internal)'}</span>
+                            </div>
+                        </div>
+                        <div className="p-3 rounded-2xl border border-border/40 bg-muted/5 flex items-center gap-3 overflow-hidden">
+                            <div className="p-2 bg-background rounded-lg border border-border/40 shrink-0">
+                                <Fingerprint className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-[7px] font-bold uppercase tracking-widest text-muted-foreground/50">Client Signature</span>
+                                <span className="text-[10px] font-medium text-foreground truncate" title={log.user_agent}>{log.user_agent || 'Direct API / Agent'}</span>
+                            </div>
                         </div>
                     </div>
 

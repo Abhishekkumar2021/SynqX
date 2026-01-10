@@ -89,7 +89,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                         <div className="flex items-center gap-3 flex-wrap">
                             {trend && (
                                 <div className={cn(
-                                    "flex items-center px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider shadow-xs backdrop-blur-sm",
+                                    "flex items-center px-2.5 py-1 rounded-xl border text-[10px] font-bold uppercase tracking-wider shadow-xs backdrop-blur-sm",
                                     trendUp
                                         ? "text-success bg-success/10 border-success/20"
                                         : "text-destructive bg-destructive/10 border-destructive/20"

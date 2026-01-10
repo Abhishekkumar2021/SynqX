@@ -33,6 +33,8 @@ const GlowEdge = ({
 
     const isRunning = (data as any)?.status === 'running' || animated;
     const isError = (data as any)?.status === 'failed';
+    const isHighlighted = (data as any)?.isHighlighted;
+    const hasActiveHighlight = (data as any)?.hasActiveHighlight;
     const diffStatus = (data as any)?.diffStatus || 'none';
     const isAdded = diffStatus === 'added';
     const isRemoved = diffStatus === 'removed';
@@ -41,6 +43,7 @@ const GlowEdge = ({
         if (isError) return 'var(--color-destructive)';
         if (isAdded) return '#10b981';
         if (isRemoved) return '#ef4444';
+        if (isHighlighted) return 'var(--color-primary)';
         return 'var(--color-primary)';
     };
 
@@ -52,11 +55,11 @@ const GlowEdge = ({
                 markerEnd={markerEnd}
                 style={{
                     ...style,
-                    strokeWidth: isAdded || isRemoved ? 3 : 2,
+                    strokeWidth: isHighlighted ? 4 : (isAdded || isRemoved ? 3 : 2),
                     stroke: getEdgeColor(),
                     strokeDasharray: isRemoved ? '8,8' : undefined,
-                    opacity: selected || isAdded || isRemoved ? 1 : 0.4,
-                    transition: 'opacity 0.3s ease, stroke 0.3s ease',
+                    opacity: isHighlighted || selected || isAdded || isRemoved ? 1 : (hasActiveHighlight ? 0.05 : 0.4),
+                    transition: 'opacity 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease',
                 }}
             />
 

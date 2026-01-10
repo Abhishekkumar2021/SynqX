@@ -45,3 +45,13 @@ export const deleteUser = async () => {
   await api.delete("/auth/me");
 };
 
+export const getOIDCLoginUrl = async () => {
+  const { data } = await api.get<{ url: string }>("/auth/oidc/login_url");
+  return data;
+};
+
+export const oidcCallback = async (code: string) => {
+  const { data } = await api.post<AuthToken>(`/auth/oidc/callback?code=${code}`);
+  return data;
+};
+

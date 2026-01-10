@@ -223,8 +223,22 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                         tooltip: 'List of validation rules to apply. Each rule target a column and performs a check (not_null, unique, regex, min_value, max_value, in_list, data_type).'
                     },
                     {
-                        name: 'strict', label: 'Strict Mode', type: 'boolean', configKey: 'strict',
-                        tooltip: 'If enabled, the entire pipeline will fail if any row fails validation. If disabled, invalid rows are dropped (and optionally quarantined).'
+                        name: 'error_threshold_percent', label: 'Error Threshold (%)', type: 'number', configKey: 'error_threshold_percent',
+                        placeholder: '100',
+                        tooltip: 'Percentage of rows that can fail validation before the pipeline terminates (0-100).'
+                    },
+                    {
+                        name: 'error_threshold_rows', label: 'Error Threshold (Rows)', type: 'number', configKey: 'error_threshold_rows',
+                        placeholder: '0',
+                        tooltip: 'Absolute number of rows that can fail validation before the pipeline terminates. 0 means disabled.'
+                    },
+                    {
+                        name: 'allow_extra_columns', label: 'Allow Schema Drift', type: 'boolean', configKey: 'allow_extra_columns',
+                        tooltip: 'If disabled, any column found in the source that is not defined in the contract will trigger a validation failure.'
+                    },
+                    {
+                        name: 'strict', label: 'Terminal Failure', type: 'boolean', configKey: 'strict',
+                        tooltip: 'If enabled, the entire pipeline will fail if threshold is exceeded. If disabled, invalid rows are simply quarantined and the pipeline continues.'
                     },
                     {
                         name: 'quarantine', label: 'Forensic Capture', type: 'boolean', configKey: 'quarantine',

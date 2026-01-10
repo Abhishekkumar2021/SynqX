@@ -567,6 +567,19 @@ export interface SlowestPipeline {
   avg_duration: number;
 }
 
+export interface QualityTrendDataPoint {
+  timestamp: string;
+  valid_rows: number;
+  failed_rows: number;
+  compliance_score: number;
+}
+
+export interface QualityViolation {
+  rule_type: string;
+  column_name: string;
+  count: number;
+}
+
 export interface DashboardAlert {
   id: number;
   message: string;
@@ -578,12 +591,14 @@ export interface AuditLog {
   id: number;
   workspace_id: number;
   user_id: number;
-  event_type: string;
+  event_type: AuditEvent | string;
   target_type?: string;
   target_id?: number;
   details?: Record<string, any>;
   status: string;
   created_at: string;
+  ip_address?: string;
+  user_agent?: string;
 }
 
 export interface ConnectorHealth {
@@ -623,6 +638,8 @@ export interface DashboardStats {
   system_health: SystemHealth;
   top_failing_pipelines: FailingPipeline[];
   slowest_pipelines: SlowestPipeline[];
+  quality_trend: QualityTrendDataPoint[];
+  top_violations: QualityViolation[];
   recent_alerts: DashboardAlert[];
   recent_audit_logs: AuditLog[];
   recent_ephemeral_jobs: EphemeralJobResponse[];
@@ -684,18 +701,6 @@ export interface PipelineTriggerResponse {
   task_id?: string;
   pipeline_id: number;
   version_id: number;
-}
-
-export interface AuditLog {
-  id: number;
-  workspace_id: number;
-  user_id: number;
-  event_type: AuditEvent | string;
-  target_type?: string;
-  target_id?: number;
-  details?: Record<string, any>;
-  status: string;
-  created_at: string;
 }
 
 export interface AuditLogsResponse {

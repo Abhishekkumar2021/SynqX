@@ -18,6 +18,8 @@ class AuditService:
         target_id: Optional[int] = None,
         details: Optional[dict] = None,
         notify: bool = False,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
     ):
         """
         Logs a generic audit event and optionally creates a system-wide notification.
@@ -29,7 +31,9 @@ class AuditService:
             status=status,
             target_type=target_type,
             target_id=target_id,
-            details=details
+            details=details,
+            ip_address=ip_address,
+            user_agent=user_agent
         )
         db.add(log_entry)
         db.commit()

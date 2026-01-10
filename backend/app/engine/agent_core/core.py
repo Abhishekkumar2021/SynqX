@@ -4,7 +4,7 @@ FILE 1: pipeline_agent.py - Enhanced DAG Agent
 =================================================================================
 """
 
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 import pandas as pd
 from sqlalchemy.orm import Session
 import concurrent.futures
@@ -23,6 +23,8 @@ from app.engine.agent_core.data_cache import DataCache
 from app.engine.agent_core.execution_metrics import ExecutionMetrics
 from app.engine.agent_core.sql_generator import StaticOptimizer
 from app.db.session import SessionLocal
+from app.core.config import settings
+import os
 
 logger = get_logger(__name__)
 
@@ -30,8 +32,15 @@ logger = get_logger(__name__)
 class ParallelExecutionLayer:
     """Manages parallel execution of independent nodes within the same DAG layer"""
 
-    def __init__(self, max_workers: int = 4):
-        self.max_workers = max_workers
+    def __init__(self, max_workers: Optional[int] = None):
+        # Auto-calculate workers if not provided or 0
+        if not max_workers or max_workers == 0:
+            cpu_count = os.cpu_count() or 2
+            self.max_workers = cpu_count * 2
+            logger.info(f"ParallelExecutionLayer initialized with auto-scaled {self.max_workers} workers (CPUs: {cpu_count})")
+        else:
+            self.max_workers = max_workers
+            logger.info(f"ParallelExecutionLayer initialized with {self.max_workers} workers")
 
     def execute_layer(
         self,
@@ -228,9 +237,9 @@ class PipelineAgent:
     - Detailed execution logging with visual indicators
     """
 
-    def __init__(self, max_parallel_nodes: int = 4, max_cache_memory_mb: int = 2048):
-        self.max_parallel_nodes = max_parallel_nodes
-        self.max_cache_memory_mb = max_cache_memory_mb
+    def __init__(self, max_parallel_nodes: Optional[int] = None, max_cache_memory_mb: Optional[int] = None):
+        self.max_parallel_nodes = max_parallel_nodes or settings.ENGINE_MAX_WORKERS
+        self.max_cache_memory_mb = max_cache_memory_mb or settings.ENGINE_MAX_CACHE_MB
         self.metrics = ExecutionMetrics()
 
     def _build_dag(self, pipeline_version: PipelineVersion) -> DAG:

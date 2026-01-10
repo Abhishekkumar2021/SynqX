@@ -1,5 +1,5 @@
 import React from 'react';
-import { Server, Users, Layers, Activity } from 'lucide-react';
+import { Users, Layers, Activity } from 'lucide-react';
 import { BarChart, Bar, Tooltip, ResponsiveContainer, Cell, XAxis } from 'recharts';
 import { useTheme } from '@/hooks/useTheme';
 import type { AgentGroupStats } from '@/lib/api';
@@ -15,17 +15,7 @@ export const AgentStatusChart: React.FC<AgentStatusChartProps> = ({ totalAgents,
 
     return (
         <div className="h-full flex flex-col">
-            <div className="pb-4 shrink-0 px-8 pt-8">
-                <h3 className="text-xl font-bold tracking-tighter uppercase flex items-center gap-2">
-                    <Server className="h-5 w-5 text-primary" />
-                    Agent Fleet
-                </h3>
-                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">
-                    Worker nodes & capacity
-                </p>
-            </div>
-
-            <div className="flex-1 flex flex-col gap-4 px-8 pb-6">
+            <div className="flex-1 flex flex-col gap-4 px-8 pt-8 pb-6">
                 {/* Stats Row */}
                 <div className="grid grid-cols-2 gap-3 shrink-0">
                     <div className="bg-muted/20 rounded-xl p-3 border border-border/40 flex flex-col justify-between h-20 transition-colors hover:bg-muted/30">
@@ -69,9 +59,9 @@ export const AgentStatusChart: React.FC<AgentStatusChartProps> = ({ totalAgents,
                                         content={({ active, payload }) => {
                                             if (active && payload && payload.length) {
                                                 return (
-                                                    <div className="z-[1000] rounded-xl border border-border/40 bg-background/95 backdrop-blur-xl p-3 shadow-xl text-xs font-bold ring-1 ring-white/10">
-                                                        <span className="text-primary uppercase tracking-wider block mb-1">{payload[0].payload.name}</span>
-                                                        <div className="text-foreground text-lg font-bold">{payload[0].value} <span className="text-[10px] text-muted-foreground font-bold uppercase">Nodes</span></div>
+                                                    <div className="z-[1000] rounded-xl border border-border/40 bg-background/95 backdrop-blur-xl p-3 shadow-xl animate-in fade-in-0 zoom-in-95 text-xs font-bold ring-1 ring-white/10 min-w-32">
+                                                        <span className="text-primary/70 uppercase tracking-widest block mb-1.5 border-b border-border/10 pb-1 text-[9px]">{payload[0].payload.name}</span>
+                                                        <div className="text-foreground text-lg font-bold tracking-tighter">{payload[0].value} <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest ml-1">Nodes</span></div>
                                                     </div>
                                                 )
                                             }

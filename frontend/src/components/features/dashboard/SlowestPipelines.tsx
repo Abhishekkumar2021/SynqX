@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import type { SlowestPipeline } from '@/lib/api';
 
 interface SlowestPipelinesProps {
@@ -9,16 +9,7 @@ interface SlowestPipelinesProps {
 export const SlowestPipelines: React.FC<SlowestPipelinesProps> = ({ pipelines }) => {
     return (
         <div className="h-full flex flex-col overflow-hidden">
-            <div className="pb-6 shrink-0 px-8 pt-8">
-                <h3 className="text-xl font-bold tracking-tighter uppercase text-warning flex items-center gap-2">
-                    <Activity className="h-5 w-5" />
-                    Latency Bottlenecks
-                </h3>
-                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">
-                    Slowest performing execution threads
-                </p>
-            </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar border-t border-border/20">
+            <div className="flex-1 overflow-y-auto custom-scrollbar border-t-0">
                 {pipelines.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center p-12 text-center opacity-40  text-sm">
                         <span className="text-xs font-bold uppercase tracking-widest">No execution data available.</span>
@@ -35,7 +26,7 @@ export const SlowestPipelines: React.FC<SlowestPipelinesProps> = ({ pipelines })
                                         {pipeline.name}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 rounded-lg bg-warning/10 border border-warning/20 px-3 py-1.5 text-[10px] font-bold text-warning shadow-xs">
+                                <div className="flex items-center gap-2 rounded-xl bg-warning/10 border border-warning/20 px-3 py-1.5 text-[10px] font-bold text-warning shadow-xs">
                                     <Clock className="h-3 w-3" />
                                     {pipeline.avg_duration.toFixed(1)}s AVG
                                 </div>

@@ -2,19 +2,11 @@ import React from 'react';
 import {
     Tabs,
     TabsContent,
-    TabsList,
-    TabsTrigger,
 } from "@/components/ui/tabs";
 import { 
-    Activity, 
-    ShieldAlert, 
-    History, 
     Terminal, 
     Database, 
-    ArrowUpRight 
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { RecentActivityItem } from './RecentActivityItem';
 import { DashboardAlertsFeed } from './DashboardAlertsFeed';
 import { DashboardAuditFeed } from './DashboardAuditFeed';
@@ -28,6 +20,8 @@ interface UnifiedActivityPanelProps {
     alerts: DashboardAlert[];
     auditLogs: AuditLog[];
     ephemeralJobs: EphemeralJobResponse[];
+    activeTab?: string;
+    onTabChange?: (value: string) => void;
 }
 
 const EphemeralJobsList: React.FC<{ jobs: EphemeralJobResponse[] }> = ({ jobs }) => {
@@ -88,68 +82,15 @@ const EphemeralJobsList: React.FC<{ jobs: EphemeralJobResponse[] }> = ({ jobs })
 };
 
 export const UnifiedActivityPanel: React.FC<UnifiedActivityPanelProps> = ({ 
-    jobs, alerts, auditLogs, ephemeralJobs 
+    jobs, alerts, auditLogs, ephemeralJobs, activeTab: externalTab, onTabChange 
 }) => {
-    const navigate = useNavigate();
-    const [activeTab, setActiveTab] = React.useState('runs');
+    const [internalTab, setInternalTab] = React.useState('runs');
+    const activeTab = externalTab || internalTab;
+    const setActiveTab = onTabChange || setInternalTab;
 
     return (
         <Tabs defaultValue="runs" value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full overflow-hidden">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between py-5 px-8 shrink-0 gap-4">
-                <div className="flex items-center gap-6">
-                    <div className="space-y-1">
-                        <h3 className="text-xl font-bold tracking-tighter uppercase flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-primary" />
-                            System Activity
-                        </h3>
-                        <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
-                            Unified operational timeline
-                        </p>
-                    </div>
-
-                    {activeTab === 'runs' && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate('/jobs')}
-                            className="hidden md:flex text-[10px] font-bold uppercase tracking-widest h-9 gap-2 rounded-xl px-4 border-border/60 hover:bg-muted/50 transition-all group shadow-sm animate-in fade-in slide-in-from-left-2 duration-300"
-                        >
-                            History <ArrowUpRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                        </Button>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <TabsList className="w-full md:w-auto overflow-x-auto no-scrollbar justify-start">
-                        <TabsTrigger 
-                            value="runs" 
-                            className="gap-2 min-w-fit"
-                        >
-                            <Database className="h-3.5 w-3.5 opacity-70" /> Pipeline Runs
-                        </TabsTrigger>
-                        <TabsTrigger 
-                            value="alerts" 
-                            className="gap-2 min-w-fit"
-                        >
-                            <ShieldAlert className="h-3.5 w-3.5 opacity-70" /> Alerts
-                        </TabsTrigger>
-                        <TabsTrigger 
-                            value="audit" 
-                            className="gap-2 min-w-fit"
-                        >
-                            <History className="h-3.5 w-3.5 opacity-70" /> Audit
-                        </TabsTrigger>
-                        <TabsTrigger 
-                            value="ephemeral" 
-                            className="gap-2 min-w-fit"
-                        >
-                            <Terminal className="h-3.5 w-3.5 opacity-70" /> Remote Tasks
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
-            </div>
-
-            <div className="flex-1 min-h-0 border-t border-border/20 bg-background/30 relative">
+            <div className="flex-1 min-h-0 border-t-0 bg-background/30 relative">
                 <TabsContent value="runs" className="h-full m-0 data-[state=inactive]:hidden flex flex-col absolute inset-0">
                      <div className="grid grid-cols-12 gap-4 px-8 py-3 border-b border-border/20 bg-muted/30 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 shrink-0 z-20 backdrop-blur-md">
                         <div className="col-span-12 md:col-span-5">Pipeline / Job ID</div>

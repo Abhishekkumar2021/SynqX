@@ -19,7 +19,7 @@ export const ConnectionsToolbar: React.FC<ConnectionsToolbarProps> = ({
     count,
 }) => {
     return (
-        <div className="p-4 md:p-6 border-b border-border/40 bg-muted/20 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4 md:gap-6">
+        <div className="p-4 md:p-4 border-b border-border/40 bg-muted/20 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4 md:gap-6">
             {/* Search Bar */}
             <div className="relative w-full md:max-w-md group">
                 <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-20" />

@@ -59,6 +59,7 @@ class SynqxAgent:
         self.client_id = os.getenv("SYNQX_CLIENT_ID")
         self.api_key = os.getenv("SYNQX_API_KEY")
         self.tags = os.getenv("SYNQX_TAGS", "default").split(",")
+        self.max_workers = int(os.getenv("SYNQX_MAX_WORKERS", "0"))
         self.headless = headless
 
         if not self.client_id or not self.api_key:
@@ -147,7 +148,7 @@ class SynqxAgent:
             
             # 2. Parallel Execution Lifecycle
             executor = NodeExecutor(connections=connections)
-            runner = ParallelAgent(executor=executor, max_workers=4)
+            runner = ParallelAgent(executor=executor, max_workers=self.max_workers)
             
             def log_callback(msg, node_id=None):
                 self.send_logs(job_id, "INFO", msg, node_id)

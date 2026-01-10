@@ -33,7 +33,7 @@ export const RecentActivityItem: React.FC<RecentActivityItemProps> = ({ job }) =
     return (
         <div
             className={cn(
-                "group grid grid-cols-12 gap-4 items-center px-6 py-4 transition-all duration-200 cursor-pointer relative",
+                "group grid grid-cols-12 gap-4 items-center px-6 py-2 transition-all duration-200 cursor-pointer relative",
                 "border-b border-border/30 last:border-0 hover:bg-muted/40",
                 "hover:pl-7 transition-[padding] duration-200" // Subtle shift interaction
             )}
@@ -41,7 +41,7 @@ export const RecentActivityItem: React.FC<RecentActivityItemProps> = ({ job }) =
         >
             {/* Identity */}
             <div className="col-span-12 md:col-span-5 flex items-center gap-4 min-w-0">
-                <div className="h-9 w-9 rounded-lg bg-primary/5 border border-primary/10 text-primary flex items-center justify-center shrink-0 shadow-sm group-hover:bg-primary/10 transition-colors">
+                <div className="h-9 w-9 rounded-xl bg-primary/5 border border-primary/10 text-primary flex items-center justify-center shrink-0 shadow-sm group-hover:bg-primary/10 transition-colors">
                     <Workflow className="h-4.5 w-4.5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -77,19 +77,19 @@ export const RecentActivityItem: React.FC<RecentActivityItemProps> = ({ job }) =
             <div className="col-span-12 md:col-span-1 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                             <MoreVertical className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/60 shadow-xl p-1">
-                        <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => navigate(`/jobs/${job.id}`)}>
+                        <DropdownMenuItem className="cursor-pointer gap-2 rounded-xl font-medium text-xs py-2" onClick={() => navigate(`/jobs/${job.id}`)}>
                             <Terminal className="h-3.5 w-3.5 opacity-70" /> Inspect Logic
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => navigate(`/jobs/${job.id}/logs`)}>
+                        <DropdownMenuItem className="cursor-pointer gap-2 rounded-xl font-medium text-xs py-2" onClick={() => navigate(`/jobs/${job.id}/logs`)}>
                             <FileText className="h-3.5 w-3.5 opacity-70" /> Audit Logs
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-border/40 my-1" />
-                        <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2">
+                        <DropdownMenuItem className="cursor-pointer gap-2 rounded-xl font-medium text-xs py-2">
                             <RefreshCw className="h-3.5 w-3.5 opacity-70" /> Re-execute
                         </DropdownMenuItem>
                     </DropdownMenuContent>

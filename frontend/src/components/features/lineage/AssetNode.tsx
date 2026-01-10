@@ -42,8 +42,8 @@ import { formatDistanceToNow } from 'date-fns';
 // ... (AssetIcon definition remains same)
 
 export const AssetNode = memo(({ data, selected }: NodeProps) => {
-  const nodeData = data as unknown as LineageNode['data'] & { label: string };
-  const { label, connection_type, fqn, last_updated } = nodeData;
+  const nodeData = data as unknown as LineageNode['data'] & { label: string, isHighlighted?: boolean, hasActiveHighlight?: boolean };
+  const { label, connection_type, fqn, last_updated, isHighlighted, hasActiveHighlight } = nodeData;
   
   // Safely parse numbers, preserving 0
   const row_count = (nodeData.row_count !== undefined && nodeData.row_count !== null) ? Number(nodeData.row_count) : null;
@@ -57,7 +57,9 @@ export const AssetNode = memo(({ data, selected }: NodeProps) => {
       "group relative min-w-[280px] max-w-[320px] rounded-xl border transition-all duration-300 backdrop-blur-2xl overflow-hidden",
       selected 
         ? "bg-background/80 border-primary ring-1 ring-primary/30 shadow-2xl shadow-primary/10 scale-105 z-50" 
-        : "bg-card/40 border-border/40 hover:border-border/80 hover:bg-card/60 hover:shadow-lg hover:-translate-y-1"
+        : "bg-card/40 border-border/40 hover:border-border/80 hover:bg-card/60 hover:shadow-lg hover:-translate-y-1",
+      hasActiveHighlight && !isHighlighted && "opacity-20 grayscale grayscale-50 scale-95",
+      isHighlighted && "border-primary shadow-[0_0_20px_rgba(var(--color-primary),0.2)] ring-2 ring-primary/40 z-40 scale-105"
     )}>
       {/* Selection Glow */}
       {selected && (

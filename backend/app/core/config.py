@@ -29,6 +29,24 @@ class Settings(BaseSettings):
 
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # Orchestration & Execution
+    # Number of parallel worker threads for node execution within a single job
+    ENGINE_MAX_WORKERS: int = 0  # 0 means auto-calculate (CPU cores * 2)
+    ENGINE_MAX_CACHE_MB: int = 2048
+
+    # Celery Tuning
+    CELERY_WORKER_CONCURRENCY: int = 0  # 0 means auto (number of CPUs)
+    CELERY_TASK_ACKS_LATE: bool = True
+    CELERY_WORKER_PREFETCH_MULTIPLIER: int = 1
+
+    # OIDC / SSO Integration
+    OIDC_ENABLED: bool = False
+    OIDC_CLIENT_ID: str = ""
+    OIDC_CLIENT_SECRET: str = ""
+    OIDC_DISCOVERY_URL: str = ""  # e.g. https://accounts.google.com/.well-known/openid-configuration
+    OIDC_REDIRECT_URI: str = "http://localhost:3000/callback"
+    OIDC_SCOPE: str = "openid email profile"
+
     # Email / SMTP
     SMTP_TLS: bool = True
     SMTP_PORT: int = 587

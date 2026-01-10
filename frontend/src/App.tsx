@@ -39,6 +39,7 @@ const QuarantinePage = lazy(() => import('./pages/QuarantinePage').then(module =
 const LineagePage = lazy(() => import('./pages/LineagePage').then(module => ({ default: module.LineagePage })));
 const AgentsPage = lazy(() => import('./pages/AgentsPage').then(module => ({ default: module.AgentsPage })));
 const InteractiveActivityPage = lazy(() => import('./pages/InteractiveActivityPage').then(module => ({ default: module.InteractiveActivityPage })));
+const CallbackPage = lazy(() => import('./pages/CallbackPage').then(module => ({ default: module.CallbackPage })));
 
 // React Query Configuration
 const queryClient = new QueryClient({
@@ -278,6 +279,7 @@ const AppRoutes = () => (
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/callback" element={<CallbackPage />} />
     </Route>
 
     {/* Public Docs (Accessible without login) */}

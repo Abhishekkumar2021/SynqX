@@ -68,6 +68,7 @@ interface ResultsGridProps {
     onSelectRows?: (indices: Set<number>) => void;
     selectedRows?: Set<number>;
     hideHeader?: boolean;
+    className?: string;
 }
 
 type Density = 'compact' | 'standard' | 'comfortable';
@@ -80,7 +81,8 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     description,
     onSelectRows,
     selectedRows,
-    hideHeader = false
+    hideHeader = false,
+    className
 }) => {
     // --- Table State ---
     const [sorting, setSorting] = useState<SortingState>([]);
@@ -177,7 +179,21 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
             cols.push({
                 accessorKey: colName,
                 header: ({ column }) => <DataTableColumnHeader column={column} title={colName} />,
-                cell: ({ getValue }) => <DataTableCell value={getValue()} density={density} />,
+                cell: ({ getValue }) => {
+                    const value = getValue();
+                    if (colName === '__synqx_quarantine_reason__' && typeof value === 'string' && value) {
+                        return (
+                            <div className="flex flex-wrap gap-1">
+                                {value.split('; ').map((reason, i) => (
+                                    <Badge key={i} variant="destructive" className="text-[9px] font-bold uppercase tracking-tight h-5 px-1.5 bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20 transition-colors">
+                                        {reason}
+                                    </Badge>
+                                ))}
+                            </div>
+                        );
+                    }
+                    return <DataTableCell value={value} density={density} />;
+                },
                 minSize: 100,
             });
         });
@@ -296,7 +312,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     };
 
     return (
-        <div className="flex-1 flex flex-col min-h-0 h-full bg-background/60 dark:bg-background/40 backdrop-blur-2xl backdrop-saturate-150 relative overflow-hidden isolate text-foreground">
+        <div className={cn("flex-1 flex flex-col min-h-0 h-full bg-background/60 dark:bg-background/40 backdrop-blur-2xl backdrop-saturate-150 relative overflow-hidden isolate text-foreground", className)}>
             <div className="absolute inset-x-0 top-0 h-px bg-white/40 dark:bg-white/10 pointer-events-none z-50" />
 
             {/* Header Control Bar */}

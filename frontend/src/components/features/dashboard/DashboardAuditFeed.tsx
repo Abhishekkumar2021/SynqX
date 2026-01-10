@@ -37,7 +37,7 @@ export const DashboardAuditFeed: React.FC<DashboardAuditFeedProps> = ({ logs }) 
                     <div className="divide-y divide-border/10">
                         {logs.map((log) => (
                             <div key={log.id} className="p-4 hover:bg-muted/20 transition-colors flex gap-4 items-start group">
-                                <div className="mt-1 shrink-0 p-2 bg-muted/30 rounded-lg group-hover:scale-110 transition-transform">
+                                <div className="mt-1 shrink-0 p-2 bg-muted/30 rounded-xl group-hover:scale-110 transition-transform">
                                     {getIcon(log.event_type)}
                                 </div>
                                 <div className="space-y-1 overflow-hidden flex-1">

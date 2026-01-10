@@ -82,8 +82,8 @@ export const InteractiveActivityPage: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-                "flex flex-col gap-6 md:gap-8",
-                isZenMode ? "h-[calc(100vh-3rem)]" : "h-full"
+                "flex flex-col h-full",
+                isZenMode ? "h-[calc(100vh-4rem)] gap-4" : "gap-6 md:gap-8"
             )}
         >
             <PageMeta title="Interactive Lab" description="Registry of ephemeral ad-hoc tasks." />
@@ -116,7 +116,7 @@ export const InteractiveActivityPage: React.FC = () => {
 
             {/* Result Inspector */}
             <Dialog open={!!selectedJob} onOpenChange={(v) => !v && setSelectedJob(null)}>
-                <DialogContent className="max-w-6xl rounded-2xl p-0 overflow-hidden border-border/40 bg-background dark:bg-background/60 backdrop-blur-xl shadow-2xl flex flex-col h-[85vh] outline-none">
+                <DialogContent className="max-w-[95vw] xl:max-w-7xl rounded-3xl p-0 overflow-hidden border-border/40 bg-background/95 dark:bg-background/60 backdrop-blur-2xl shadow-2xl flex flex-col h-[90vh] outline-none">
                     <VisuallyHidden.Root>
                         <DialogTitle>Task Forensics: Job #{selectedJob?.id}</DialogTitle>
                         <DialogDescription>Review detailed ad-hoc execution results and agent routing metrics.</DialogDescription>
@@ -124,35 +124,35 @@ export const InteractiveActivityPage: React.FC = () => {
                     
                     {selectedJob && (
                         <>
-                            <div className="p-8 border-b border-border/40 bg-muted/10 shrink-0">
-                                <div className="flex items-start justify-between">
+                            <div className="px-10 py-6 border-b border-border/40 bg-muted/5 shrink-0">
+                                <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-6">
                                         <div className={cn(
-                                            "h-16 w-16 rounded-2xl flex items-center justify-center ring-1 shadow-inner",
+                                            "h-12 w-12 rounded-xl flex items-center justify-center ring-1 shadow-inner",
                                             selectedJob.status === 'success' ? "bg-emerald-500/10 text-emerald-600 ring-emerald-500/20" : "bg-destructive/10 text-destructive ring-destructive/20"
                                         )}>
-                                            <PlayCircle size={32} />
+                                            <PlayCircle size={24} />
                                         </div>
                                         <div>
-                                            <div className="flex items-center gap-3 mb-1.5">
-                                                <h3 className="text-2xl font-bold tracking-tight text-foreground uppercase">
-                                                    Interactive Manifest
+                                            <div className="flex items-center gap-3 mb-0.5">
+                                                <h3 className="text-xl font-bold tracking-tight text-foreground uppercase">
+                                                    Task Forensics
                                                 </h3>
-                                                <Badge variant="outline" className="text-[10px] font-bold uppercase bg-muted/30 px-2 rounded-md border-border/40">
+                                                <Badge variant="outline" className="text-[9px] font-bold uppercase bg-muted/30 px-2 rounded-md border-border/40">
                                                     JOB #{selectedJob.id}
                                                 </Badge>
                                             </div>
-                                            <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground/60 uppercase tracking-widest">
-                                                <span className="flex items-center gap-2"><Activity size={12} className="text-primary" /> {selectedJob.job_type}</span>
-                                                <span className="h-1 w-1 rounded-full bg-border" />
-                                                <span className="flex items-center gap-1.5 text-foreground/80"><Clock size={12} /> {format(new Date(selectedJob.created_at), 'MMMM d, yyyy • HH:mm:ss')}</span>
+                                            <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                                                <span className="flex items-center gap-2"><Activity size={10} className="text-primary" /> {selectedJob.job_type}</span>
+                                                <span className="h-0.5 w-0.5 rounded-full bg-border" />
+                                                <span className="flex items-center gap-1.5 text-foreground/80"><Clock size={10} /> {format(new Date(selectedJob.created_at), 'MMMM d, yyyy • HH:mm:ss')}</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex-1 min-h-0 relative bg-muted/5 flex flex-col">
+                            <div className="flex-1 min-h-0 flex flex-col">
                                 <ResultsGrid 
                                     data={selectedJob.result_sample ? {
                                         results: selectedJob.result_sample.rows,
@@ -165,6 +165,7 @@ export const InteractiveActivityPage: React.FC = () => {
                                     isLoading={false}
                                     title="Materialized Data Fragment"
                                     description={selectedJob.payload.query || selectedJob.payload.action}
+                                    className="bg-transparent backdrop-blur-none"
                                 />
                             </div>
 

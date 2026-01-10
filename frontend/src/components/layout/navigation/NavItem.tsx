@@ -91,20 +91,6 @@ export const NavItem: React.FC<NavItemProps> = ({
           {badge}
         </div>
       )}
-
-      {/* Active Indicator (Left Pill) */}
-      {isActive && !collapsed && (
-        <motion.div
-          layoutId="nav-indicator"
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full"
-          initial={false}
-          transition={{
-            type: "spring",
-            stiffness: 500,
-            damping: 30
-          }}
-        />
-      )}
     </>
   );
 

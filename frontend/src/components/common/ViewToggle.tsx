@@ -13,12 +13,12 @@ interface ViewToggleProps {
 
 export const ViewToggle: React.FC<ViewToggleProps> = ({ viewMode, setViewMode, className }) => {
     return (
-        <div className={cn("flex items-center gap-1 bg-muted/30 border border-border/40 rounded-xl p-1 backdrop-blur-md h-11", className)}>
+        <div className={cn("flex items-center gap-1 bg-muted/30 border border-border/40 rounded-xl p-1 backdrop-blur-md w-fit", className)}>
             <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 className={cn(
-                    "h-9 w-9 rounded-lg transition-all duration-200",
+                    "rounded-lg transition-all duration-200",
                     viewMode === 'grid' 
                         ? "bg-background shadow-sm text-primary ring-1 ring-border/40 scale-100" 
                         : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 scale-95 hover:scale-100"
@@ -30,9 +30,9 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({ viewMode, setViewMode, c
             </Button>
             <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 className={cn(
-                    "h-9 w-9 rounded-lg transition-all duration-200",
+                    "rounded-lg transition-all duration-200",
                     viewMode === 'list' 
                         ? "bg-background shadow-sm text-primary ring-1 ring-border/40 scale-100" 
                         : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 scale-95 hover:scale-100"

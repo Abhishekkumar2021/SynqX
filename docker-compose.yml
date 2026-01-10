@@ -50,7 +50,7 @@ services:
 
   worker:
     build: ./backend
-    command: celery -A app.core.celery_app worker --loglevel=info --pool=solo
+    command: celery -A app.core.celery_app worker --loglevel=info
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/synqx_database
       REDIS_URL: redis://redis:6379/0

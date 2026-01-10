@@ -18,6 +18,9 @@ class AuditLog(Base, TimestampMixin):
     details: Mapped[dict] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(20)) # "success" or "failure"
 
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45))
+    user_agent: Mapped[Optional[str]] = mapped_column(String(255))
+
     user = relationship("User")
     workspace = relationship("Workspace")
 

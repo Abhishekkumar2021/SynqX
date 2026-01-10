@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useZenMode } from '@/hooks/useZenMode';
 import { NAV_STRUCTURE } from '@/lib/main-nav';
+import { SIDEBAR_VARIANTS, LAYOUT_TRANSITION } from '@/lib/animations';
 import {
     TooltipProvider,
 } from "@/components/ui/tooltip";
@@ -41,25 +42,15 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ isSidebarCollaps
 
     return (
         <TooltipProvider>
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
                 {!isZenMode && (
                     <motion.aside
-                        initial={{ x: -300, opacity: 0 }}
-                        animate={{ 
-                            x: 0, 
-                            opacity: 1,
-                            width: isSidebarCollapsed ? 72 : 260,
-                        }}
-                        exit={{ 
-                            x: -300, 
-                            opacity: 0,
-                        }}
-                        transition={{ 
-                            type: "spring", 
-                            stiffness: 300, 
-                            damping: 30,
-                            mass: 0.8
-                        }}
+                        variants={SIDEBAR_VARIANTS}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        style={{ width: isSidebarCollapsed ? 72 : 260 }}
+                        transition={LAYOUT_TRANSITION}
                         className="relative hidden md:flex flex-col z-30 my-4 ml-4 overflow-visible shrink-0"
                     >
                         {/* Toggle Button - Enhanced with better positioning */}

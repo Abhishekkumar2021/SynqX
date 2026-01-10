@@ -54,6 +54,17 @@ class ConnectorHealth(BaseModel):
     status: str
     count: int
 
+class QualityTrendDataPoint(BaseModel):
+    timestamp: datetime
+    valid_rows: int
+    failed_rows: int
+    compliance_score: float # 0-100
+
+class QualityViolation(BaseModel):
+    rule_type: str # e.g. "not_null", "unique"
+    column_name: str
+    count: int
+
 class AgentGroupStats(BaseModel):
     name: str
     count: int
@@ -92,6 +103,11 @@ class DashboardStats(BaseModel):
     system_health: Optional[SystemHealth] = None
     top_failing_pipelines: List[FailingPipeline] = []
     slowest_pipelines: List[SlowestPipeline] = []
+    
+    # Data Quality
+    quality_trend: List[QualityTrendDataPoint] = []
+    top_violations: List[QualityViolation] = []
+    
     recent_alerts: List[DashboardAlert] = []
     recent_audit_logs: List[AuditLogRead] = []
     recent_ephemeral_jobs: List[EphemeralJobResponse] = []

@@ -149,6 +149,7 @@ class PipelineNode(Base, AuditMixin):
     operator_type: Mapped[OperatorType] = mapped_column(SQLEnum(OperatorType), nullable=False)
     operator_class: Mapped[str] = mapped_column(String(255), nullable=False)
     config: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    column_mapping: Mapped[Optional[dict]] = mapped_column(JSON, default=dict) # Track source_col -> dest_col
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
 
     source_asset_id: Mapped[Optional[int]] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"))

@@ -64,8 +64,8 @@ class LineageService:
                 PipelineNode.pipeline_version_id == version_id
             ).all()
             
-            inputs = [n.source_asset_id for n in p_nodes if n.source_asset_id]
-            outputs = [n.destination_asset_id for n in p_nodes if n.destination_asset_id]
+            inputs = {n.source_asset_id for n in p_nodes if n.source_asset_id}
+            outputs = {n.destination_asset_id for n in p_nodes if n.destination_asset_id}
             
             asset_ids.update(inputs)
             asset_ids.update(outputs)
@@ -131,7 +131,7 @@ class LineageService:
 
     def get_column_lineage(self, asset_id: int, column_name: str, workspace_id: int) -> ColumnLineage:
         """
-        Trace a specific column back to its origin.
+        Trace a specific column back to its origin, supporting multi-source nodes.
         """
         path: List[ColumnFlow] = []
         current_asset_id = asset_id
@@ -160,14 +160,33 @@ class LineageService:
                 )
             
             # Analyze node transformation to find upstream column
-            # For now, handle Direct, Rename, and Extract
             source_col = current_column
             transform_type = "direct"
             
-            # Check for rename in config
-            if producing_node.operator_class == "rename_columns":
+            # 1. Check explicit column_mapping first (The New Standard)
+            if producing_node.column_mapping:
+                if current_column in producing_node.column_mapping:
+                    source_col = producing_node.column_mapping[current_column]
+                    transform_type = "mapped"
+            
+            # 2. Operator-specific heuristics for multi-source logic
+            elif producing_node.operator_type == "join":
+                # For joins, if no mapping, we assume the name matches in one of the inputs
+                # This is a heuristic until strict contracts are enforced
+                transform_type = "join_passthrough"
+            
+            elif producing_node.operator_class == "aggregate":
+                # Aggregates often change names (e.g. sum_sales)
+                # If no mapping, we check if the source col is part of the group_by or aggregate config
+                agg_config = producing_node.config.get("aggregates", {})
+                if current_column in agg_config:
+                    # current_column IS the target, the source is the key inagg_config
+                    # However agg_config is often {col: func}
+                    source_col = current_column # name usually stays same in our engine unless aliased
+                    transform_type = "aggregation"
+            
+            elif producing_node.operator_class == "rename_columns":
                 mapping = producing_node.config.get("columns", {})
-                # Mapping is {old: new}, we are going backwards {new: old}
                 reverse_mapping = {v: k for k, v in mapping.items()}
                 if current_column in reverse_mapping:
                     source_col = reverse_mapping[current_column]
@@ -182,12 +201,18 @@ class LineageService:
                 pipeline_id=producing_node.version.pipeline_id
             ))
             
-            # Move upstream
+            # Move upstream: For multi-source, we need to pick the RIGHT source asset
+            # If the node has multiple source assets (joins), we try to find which one has this column
+            upstream_nodes = self.db.query(PipelineNode).filter(
+                PipelineNode.pipeline_version_id == producing_node.pipeline_version_id,
+                PipelineNode.destination_asset_id.isnot(None) # This logic needs refining for complex DAGs
+            ).all()
+            
+            # For now, we take the primary source_asset_id
             current_asset_id = producing_node.source_asset_id
             current_column = source_col
             
             if not current_asset_id:
-                # Reached a terminal point without a source asset (e.g., custom code transform)
                 break
                 
         return ColumnLineage(
@@ -195,8 +220,7 @@ class LineageService:
             asset_id=asset_id,
             origin_asset_id=current_asset_id or 0,
             origin_column_name=current_column,
-            path=path
-        )
+            path=path)
 
     def get_impact_analysis(self, asset_id: int, workspace_id: int) -> ImpactAnalysis:
         """

@@ -5,13 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
-import { loginUser } from '@/lib/api';
+import { loginUser, getOIDCLoginUrl } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import {
     Loader2, Mail, Lock, Eye, EyeOff,
     ArrowRight, Sparkles, Shield, AlertCircle,
     Zap,
-    Workflow
+    Workflow,
+    Fingerprint
 } from 'lucide-react';
 import { PageMeta } from '@/components/common/PageMeta';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,20 @@ export const LoginPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSSOLoading, setIsSSOLoading] = useState(false);
+
+    const handleSSO = async () => {
+        setIsSSOLoading(true);
+        try {
+            const { url } = await getOIDCLoginUrl();
+            window.location.href = url;
+        } catch {
+            toast.error('SSO initialization failed', {
+                description: "Corporate SSO might be temporarily unavailable or disabled."
+            });
+            setIsSSOLoading(false);
+        }
+    };
 
     // Performance: Use ref for mouse tracking to avoid re-renders
     const containerRef = useRef<HTMLDivElement>(null);
@@ -76,38 +91,38 @@ export const LoginPage: React.FC = () => {
         <div ref={containerRef} className="relative min-h-screen grid lg:grid-cols-2 overflow-hidden bg-background font-sans selection:bg-primary/20">
             <PageMeta title="Login" description="Sign in to your SynqX account." />
 
-            {/* --- RIGHT PANEL: Brand Visuals (Locked Dark Mode) --- */}
-            <div className="relative hidden h-full flex-col bg-[#020204] p-12 text-white lg:flex border-r border-white/10 overflow-hidden justify-between select-none">
+            {/* --- RIGHT PANEL: Brand Visuals (Theme Aware) --- */}
+            <div className="relative hidden h-full flex-col bg-zinc-50 dark:bg-[#020204] p-12 text-zinc-900 dark:text-white lg:flex border-r border-border overflow-hidden justify-between select-none">
 
                 {/* 1. Dynamic Background Layers */}
                 <div className="absolute inset-0 z-0">
-                    <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-soft-light pointer-events-none"></div>
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-size-[40px_40px] opacity-[0.15]"></div>
+                    <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-soft-light dark:mix-blend-soft-light pointer-events-none"></div>
+                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-size-[40px_40px] opacity-[0.3] dark:opacity-[0.15]"></div>
 
                     {/* Mouse Follow Spotlight */}
                     <div
-                        className="absolute inset-0 opacity-40 transition-opacity duration-500 will-change-transform"
+                        className="absolute inset-0 opacity-20 dark:opacity-40 transition-opacity duration-500 will-change-transform"
                         style={{
                             background: `radial-gradient(800px circle at var(--cursor-x) var(--cursor-y), rgba(59, 130, 246, 0.15), transparent 80%)`
                         }}
                     ></div>
 
                     {/* Ambient Orbs */}
-                    <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] opacity-40 animate-pulse-slow"></div>
-                    <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] opacity-30 animate-pulse-slow delay-1000"></div>
+                    <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-primary/10 dark:bg-primary/20 rounded-full blur-[120px] opacity-40 animate-pulse-slow"></div>
+                    <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[120px] opacity-30 animate-pulse-slow delay-1000"></div>
                 </div>
 
                 {/* 2. Top Brand */}
                 <div className="relative z-20 flex items-center gap-3 animate-in fade-in slide-in-from-top-8 duration-1000">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-primary to-indigo-600 shadow-lg shadow-primary/20 ring-1 ring-white/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-primary to-indigo-600 shadow-lg shadow-primary/20 ring-1 ring-black/5 dark:ring-white/10">
                         <Zap className="h-5 w-5 text-white" />
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-white">SynqX</span>
+                    <span className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">SynqX</span>
                 </div>
 
                 {/* 3. Feature Highlights (Middle) */}
                 <div className="relative z-20 space-y-10 max-w-lg animate-in fade-in slide-in-from-left-8 duration-1000 delay-200">
-                    <h2 className="text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight text-transparent bg-clip-text bg-linear-to-b from-white to-white/50">
+                    <h2 className="text-4xl md:text-5xl font-bold leading-[1.1] tracking-tight text-transparent bg-clip-text bg-linear-to-b from-zinc-900 to-zinc-500 dark:from-white dark:to-white/50">
                         Orchestrate data,<br /> control the future.
                     </h2>
 
@@ -117,13 +132,13 @@ export const LoginPage: React.FC = () => {
                             { icon: Zap, title: "Zero Latency", desc: "Real-time stream processing engine" },
                             { icon: Sparkles, title: "AI Optimized", desc: "Self-healing pipeline capabilities" }
                         ].map((feature, idx) => (
-                            <div key={idx} className="group flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-300 hover:translate-x-1">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5 text-indigo-300 ring-1 ring-white/10 group-hover:bg-primary/20 group-hover:text-white transition-colors">
+                            <div key={idx} className="group flex items-center gap-4 p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 backdrop-blur-sm hover:bg-black/10 dark:hover:bg-white/10 transition-all duration-300 hover:translate-x-1">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-200/50 dark:bg-white/5 text-primary dark:text-indigo-300 ring-1 ring-black/5 dark:ring-white/10 group-hover:bg-primary/20 group-hover:text-primary dark:group-hover:text-white transition-colors">
                                     <feature.icon className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-white text-sm">{feature.title}</h3>
-                                    <p className="text-xs text-zinc-400 mt-0.5">{feature.desc}</p>
+                                    <h3 className="font-semibold text-zinc-900 dark:text-white text-sm">{feature.title}</h3>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{feature.desc}</p>
                                 </div>
                             </div>
                         ))}
@@ -132,21 +147,21 @@ export const LoginPage: React.FC = () => {
 
                 {/* 4. Footer/Testimonial */}
                 <div className="relative z-20 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
-                    <div className="p-6 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/5 shadow-2xl relative overflow-hidden group">
+                    <div className="p-6 bg-black/5 dark:bg-white/5 backdrop-blur-xl rounded-2xl border border-black/5 dark:border-white/5 shadow-2xl relative overflow-hidden group">
                         <div className="absolute inset-0 bg-linear-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <blockquote className="space-y-4 relative z-10">
-                            <p className="text-base font-medium leading-relaxed text-zinc-200 ">
+                            <p className="text-base font-medium leading-relaxed text-zinc-700 dark:text-zinc-200 ">
                                 &ldquo;The real-time forensic logging capabilities alone have saved us hundreds of engineering hours.&rdquo;
                             </p>
                             <footer className="flex items-center gap-4">
                                 <div className="h-10 w-10 rounded-full bg-linear-to-br from-blue-400 to-primary p-0.5">
-                                    <div className="h-full w-full rounded-full bg-black flex items-center justify-center text-xs font-bold text-white">
+                                    <div className="h-full w-full rounded-full bg-zinc-100 dark:bg-black flex items-center justify-center text-xs font-bold text-zinc-900 dark:text-white">
                                         SD
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-sm font-semibold text-white">Sofia Davis</div>
-                                    <div className="text-xs text-zinc-400">Lead Data Architect</div>
+                                    <div className="text-sm font-semibold text-zinc-900 dark:text-white">Sofia Davis</div>
+                                    <div className="text-xs text-zinc-500 dark:text-zinc-400">Lead Data Architect</div>
                                 </div>
                             </footer>
                         </blockquote>
@@ -261,13 +276,27 @@ export const LoginPage: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                            <Button variant="outline" className="h-11 bg-background/50" type="button">
-                                <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                                </svg>
-                                GitHub
+                            <Button 
+                                variant="outline" 
+                                className="h-11 bg-background/50" 
+                                type="button"
+                                onClick={handleSSO}
+                                disabled={isLoading || isSSOLoading}
+                            >
+                                {isSSOLoading ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Fingerprint className="mr-2 h-4 w-4" />
+                                )}
+                                Corporate SSO
                             </Button>
-                            <Button variant="outline" className="h-11 bg-background/50" type="button">
+                            <Button 
+                                variant="outline" 
+                                className="h-11 bg-background/50" 
+                                type="button"
+                                onClick={handleSSO}
+                                disabled={isLoading || isSSOLoading}
+                            >
                                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />

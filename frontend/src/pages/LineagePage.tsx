@@ -47,6 +47,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useZenMode } from '@/hooks/useZenMode';
 import { useTheme } from '@/hooks/useTheme';
+import { useLineagePathHighlight } from '@/hooks/useLineagePathHighlight';
 import type { LineageGraph, LineageNode } from '@/lib/api/types';
 
 // --- Types & Constants ---
@@ -115,31 +116,32 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
 
     const flowTheme = useMemo(() => (theme === 'dark' ? 'dark' : 'light'), [theme]);
 
-    // Fetch Impact Analysis when a node is selected
+    // 1. Fetch Impact Analysis when a node is selected
     const { data: impactData, isLoading: isLoadingImpact } = useQuery({
         queryKey: ['impact-analysis', selectedAsset?.data?.asset_id],
         queryFn: () => getImpactAnalysis(selectedAsset?.data?.asset_id as number),
         enabled: !!selectedAsset?.data?.asset_id,
     });
 
-    // Fetch Column Lineage when a column is selected
+    // 2. Fetch Column Lineage when a column is selected
     const { data: colLineage, isLoading: isLoadingColLineage } = useQuery({
         queryKey: ['column-lineage', selectedAsset?.data?.asset_id, selectedColumn],
         queryFn: () => getColumnLineage(selectedAsset?.data?.asset_id as number, selectedColumn as string),
         enabled: !!selectedAsset?.data?.asset_id && !!selectedColumn,
     });
+
+    // 3. Calculate highlights based on source data (prevents infinite loops with state)
+    const { highlightedNodes, highlightedEdges } = useLineagePathHighlight(graphData?.edges || [], colLineage);
     
-    // Build & Layout Graph
+    // 4. Build & Layout Graph (Only on graphData or searchQuery changes)
     useEffect(() => {
         if (!graphData) return;
 
-        // Filter based on search (basic visibility filter)
         const filteredNodes = graphData.nodes.filter(n => 
             searchQuery ? n.label.toLowerCase().includes(searchQuery.toLowerCase()) : true
         );
         const nodeIds = new Set(filteredNodes.map(n => n.id));
         
-        // Transform API nodes
         const rfNodes: Node[] = filteredNodes.map((n) => ({
             id: n.id,
             type: 'asset',
@@ -147,7 +149,6 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
             position: { x: 0, y: 0 } 
         }));
 
-        // Transform API edges (only if both source/target exist)
         const rfEdges: Edge[] = graphData.edges
             .filter(e => nodeIds.has(e.source) && nodeIds.has(e.target))
             .map((e) => ({
@@ -157,7 +158,10 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                 label: e.label,
                 type: 'glow',
                 animated: true,
-                data: { status: 'active' }, // Default to active look
+                data: { 
+                    status: 'active',
+                    pipeline_id: e.data.pipeline_id
+                },
                 style: { strokeWidth: 2 },
             }));
 
@@ -166,10 +170,39 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
         setNodes(layoutedNodes);
         setEdges(layoutedEdges);
 
-        // Fit view after a brief delay
         setTimeout(() => fitView({ padding: 0.2, duration: 800 }), 100);
-
     }, [graphData, searchQuery, setNodes, setEdges, fitView]);
+
+    // 5. Apply highlights to existing state (prevents layout jumping & loops)
+    useEffect(() => {
+        setNodes((nds) => 
+            nds.map((node) => ({
+                ...node,
+                data: {
+                    ...node.data,
+                    isHighlighted: highlightedNodes.has(node.id),
+                    hasActiveHighlight: highlightedNodes.size > 0
+                }
+            }))
+        );
+
+        setEdges((eds) => 
+            eds.map((edge) => ({
+                ...edge,
+                animated: highlightedEdges.has(edge.id),
+                data: {
+                    ...edge.data,
+                    isHighlighted: highlightedEdges.has(edge.id),
+                    hasActiveHighlight: highlightedEdges.size > 0
+                },
+                style: {
+                    ...edge.style,
+                    strokeWidth: highlightedEdges.has(edge.id) ? 4 : 2,
+                    zIndex: highlightedEdges.has(edge.id) ? 1000 : 0
+                }
+            }))
+        );
+    }, [highlightedNodes, highlightedEdges, setNodes, setEdges]);
 
     const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
         // Cast node to our specific type safely or assert it

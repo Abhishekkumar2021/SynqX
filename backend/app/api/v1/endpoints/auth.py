@@ -1,22 +1,128 @@
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.core import security
 from app.core.config import settings
+from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.models.user import User
 from app.schemas.auth import Token, UserCreate, UserRead, UserUpdate
 from app.services.audit_service import AuditService
 
+from app.services.oidc_service import OIDCService
+
 router = APIRouter()
 logger = get_logger(__name__)
 
+@router.get("/oidc/login_url")
+async def get_oidc_login_url():
+    """Returns the OIDC authorization URL to redirect the user."""
+    if not settings.OIDC_ENABLED:
+        raise HTTPException(status_code=400, detail="OIDC is disabled")
+    
+    config = await OIDCService.get_oidc_config()
+    auth_endpoint = config.get("authorization_endpoint")
+    
+    params = {
+        "client_id": settings.OIDC_CLIENT_ID,
+        "response_type": "code",
+        "scope": settings.OIDC_SCOPE,
+        "redirect_uri": settings.OIDC_REDIRECT_URI,
+        # In production, state should be a CSRF token
+        "state": "random_string" 
+    }
+    
+    query = "&".join([f"{k}={v}" for k, v in params.items()])
+    return {"url": f"{auth_endpoint}?{query}"}
+
+@router.post("/oidc/callback", response_model=Token)
+async def oidc_callback(
+    code: str,
+    request: Request,
+    db: Session = Depends(deps.get_db)
+) -> Any:
+    """
+    Handle OIDC callback after user authorization.
+    Exchanges code for tokens, creates/updates user, and returns SynqX JWT.
+    """
+    if not settings.OIDC_ENABLED:
+        raise HTTPException(status_code=400, detail="OIDC is disabled")
+
+    try:
+        # 1. Exchange code for tokens
+        tokens = await OIDCService.get_token_from_code(code)
+        access_token = tokens.get("access_token")
+        
+        # 2. Get User Info
+        user_info = await OIDCService.get_user_info(access_token)
+        email = user_info.get("email")
+        oidc_id = str(user_info.get("sub"))
+        full_name = user_info.get("name")
+
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not provided by OIDC provider")
+
+        # 3. Find or Create User
+        user = db.query(User).filter(User.oidc_id == oidc_id).first()
+        if not user:
+            # Fallback to email search (if user registered with password first)
+            user = db.query(User).filter(User.email == email.lower()).first()
+            if user:
+                # Link existing user to OIDC
+                user.oidc_id = oidc_id
+                user.oidc_provider = "external" # Can be more specific if multiple providers supported
+            else:
+                # Create new user
+                user = User(
+                    email=email.lower(),
+                    full_name=full_name,
+                    oidc_id=oidc_id,
+                    oidc_provider="external",
+                    is_active=True,
+                    hashed_password=None # OIDC users don't have a password
+                )
+                db.add(user)
+            
+            db.commit()
+            db.refresh(user)
+
+        if not user.is_active:
+            raise HTTPException(status_code=403, detail="Inactive user")
+
+        # 4. Create SynqX Token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        synqx_token = security.create_access_token(
+            user.id, expires_delta=access_token_expires
+        )
+        
+        AuditService.log_event(
+            db,
+            user_id=user.id,
+            workspace_id=user.active_workspace_id,
+            event_type="user.login.oidc",
+            status="success",
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent")
+        )
+
+        return {
+            "access_token": synqx_token,
+            "token_type": "bearer",
+        }
+
+    except AppError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"OIDC Login failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during OIDC login")
+
 @router.post("/login", response_model=Token)
 def login_access_token(
+    request: Request,
     db: Session = Depends(deps.get_db),
     form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:
@@ -54,7 +160,9 @@ def login_access_token(
         user_id=user.id,
         workspace_id=user.active_workspace_id,
         event_type="user.login",
-        status="success"
+        status="success",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent")
     )
 
     return {
@@ -65,6 +173,7 @@ def login_access_token(
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def register_user(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     user_in: UserCreate,
 ) -> Any:
@@ -103,7 +212,9 @@ def register_user(
             workspace_id=db_user.active_workspace_id, # This will be set by ensure_active_workspace
             event_type="user.create",
             status="success",
-            target_id=db_user.id
+            target_id=db_user.id,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent")
         )
 
         return db_user

@@ -15,7 +15,7 @@ from app.models.enums import PipelineStatus, JobStatus, OperatorRunStatus, Alert
 from app.schemas.dashboard import (
     DashboardStats, ThroughputDataPoint, PipelineDistribution, RecentActivity,
     SystemHealth, FailingPipeline, SlowestPipeline, DashboardAlert, ConnectorHealth,
-    AgentGroupStats
+    AgentGroupStats, QualityTrendDataPoint, QualityViolation
 )
 from app.schemas.audit import AuditLogRead
 from app.schemas.ephemeral import EphemeralJobResponse
@@ -292,6 +292,134 @@ class DashboardService:
                 
                 current_bucket += delta
 
+            # 3.1 Quality Trends
+            quality_trend = []
+            try:
+                # We specifically look for VALIDATE operators to get Contract Compliance
+                # If no VALIDATE operators exist, we use generic out vs error from all nodes as a proxy
+                quality_query = self.db.query(
+                    time_col.label('time_bucket'),
+                    func.sum(StepRun.records_out).label("valid_rows"),
+                    func.sum(StepRun.records_error).label("failed_rows")
+                ).select_from(StepRun).join(PipelineRun).join(Job, PipelineRun.job_id == Job.id).join(Pipeline, Job.pipeline_id == Pipeline.id).filter(
+                    and_(*period_filters, StepRun.operator_type == "validate")
+                ).group_by(time_col).order_by(time_col)
+
+                quality_stats = quality_query.all()
+                
+                # Fallback: if no VALIDATE nodes found, aggregate from all nodes 
+                # (some extracts/loads might report errors too)
+                if not quality_stats:
+                    quality_query = self.db.query(
+                        time_col.label('time_bucket'),
+                        func.sum(StepRun.records_out).label("valid_rows"),
+                        func.sum(StepRun.records_error).label("failed_rows")
+                    ).select_from(StepRun).join(PipelineRun).join(Job, PipelineRun.job_id == Job.id).join(Pipeline, Job.pipeline_id == Pipeline.id).filter(
+                        and_(*period_filters)
+                    ).group_by(time_col).order_by(time_col)
+                    quality_stats = quality_query.all()
+
+                quality_map = {
+                    (row.time_bucket if isinstance(row.time_bucket, datetime) else 
+                     datetime.strptime(row.time_bucket, '%Y-%m-%d %H:00:00' if len(row.time_bucket) > 10 else '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                     if isinstance(row.time_bucket, str) else row.time_bucket): row
+                    for row in quality_stats
+                }
+
+                if group_interval == 'hour':
+                    it_bucket = actual_start_date.replace(minute=0, second=0, microsecond=0)
+                else:
+                    it_bucket = actual_start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+                q_buckets_count = 0
+                while it_bucket <= actual_end_date and q_buckets_count < max_buckets:
+                    q_buckets_count += 1
+                    match = None
+                    for key, row in quality_map.items():
+                        k = key.replace(tzinfo=timezone.utc) if key.tzinfo is None else key.astimezone(timezone.utc)
+                        c = it_bucket.replace(tzinfo=timezone.utc) if it_bucket.tzinfo is None else it_bucket.astimezone(timezone.utc)
+                        
+                        if group_interval == 'hour':
+                            if k.year == c.year and k.month == c.month and k.day == c.day and k.hour == c.hour:
+                                match = row
+                                break
+                        else:
+                            if k.year == c.year and k.month == c.month and k.day == c.day:
+                                match = row
+                                break
+                    
+                    if match:
+                        v = int(match.valid_rows or 0)
+                        f = int(match.failed_rows or 0)
+                        score = (v / (v + f) * 100) if (v + f) > 0 else 100.0
+                        quality_trend.append(QualityTrendDataPoint(
+                            timestamp=it_bucket,
+                            valid_rows=v,
+                            failed_rows=f,
+                            compliance_score=round(score, 1)
+                        ))
+                    else:
+                        quality_trend.append(QualityTrendDataPoint(
+                            timestamp=it_bucket,
+                            valid_rows=0,
+                            failed_rows=0,
+                            compliance_score=100.0
+                        ))
+                    it_bucket += delta
+            except Exception as e:
+                self.db.rollback()
+                logger.error(f"Error calculating quality trend: {e}")
+
+            # 3.2 Top DQ Violations
+            top_violations = []
+            try:
+                # We prioritize nodes of type VALIDATE that have recorded errors
+                violation_query = self.db.query(
+                    StepRun.error_message,
+                    func.sum(StepRun.records_error).label("count")
+                ).join(PipelineRun).join(Job, PipelineRun.job_id == Job.id).join(Pipeline, Job.pipeline_id == Pipeline.id).filter(
+                    and_(
+                        *period_filters, 
+                        StepRun.records_error > 0,
+                        StepRun.operator_type == "validate"
+                    )
+                ).group_by(StepRun.error_message).order_by(desc("count")).limit(10)
+
+                v_results = violation_query.all()
+                
+                # Fallback: if no validate errors, check all error-reporting nodes
+                if not v_results:
+                    violation_query = self.db.query(
+                        StepRun.error_message,
+                        func.sum(StepRun.records_error).label("count")
+                    ).join(PipelineRun).join(Job, PipelineRun.job_id == Job.id).join(Pipeline, Job.pipeline_id == Pipeline.id).filter(
+                        and_(*period_filters, StepRun.records_error > 0)
+                    ).group_by(StepRun.error_message).order_by(desc("count")).limit(10)
+                    v_results = violation_query.all()
+
+                for row in v_results:
+                    if not row.error_message:
+                        continue
+                    # Extract "col:check" from common patterns if possible, else use raw
+                    msg = row.error_message
+                    if ":" in msg:
+                        # Simple heuristic for now
+                        parts = msg.split(":")
+                        top_violations.append(QualityViolation(
+                            rule_type=parts[1].split()[0] if len(parts) > 1 else "validation",
+                            column_name=parts[0].split()[-1],
+                            count=int(row.count or 0)
+                        ))
+                    else:
+                        top_violations.append(QualityViolation(
+                            rule_type="failure",
+                            column_name="generic",
+                            count=int(row.count or 0)
+                        ))
+            except Exception as e:
+                self.db.rollback()
+                logger.error(f"Error calculating top violations: {e}")
+
             # 4. Recent Activity
             recent_jobs_query = self.db.query(Job).join(Pipeline)
             recent_jobs_query = scope_query(recent_jobs_query, Pipeline)
@@ -513,6 +641,10 @@ class DashboardService:
                 throughput=throughput,
                 pipeline_distribution=distribution,
                 recent_activity=activity,
+                
+                # Data Quality
+                quality_trend=quality_trend,
+                top_violations=top_violations,
                 
                 system_health=system_health,
                 top_failing_pipelines=top_failing,

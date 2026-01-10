@@ -283,9 +283,18 @@ class NodeExecutor:
 
 class ParallelAgent:
     """Standardized multi-threaded executor matching backend standard."""
-    def __init__(self, executor: NodeExecutor, max_workers: int = 4):
+    def __init__(self, executor: NodeExecutor, max_workers: Optional[int] = None):
         self.executor = executor
-        self.max_workers = max_workers
+        
+        # Auto-calculate workers based on CPU core count
+        if not max_workers or max_workers == 0:
+            cpu_count = os.cpu_count() or 2
+            self.max_workers = cpu_count * 2
+            logger.info(f"Agent ParallelExecutor auto-scaled to {self.max_workers} threads (Cores: {cpu_count})")
+        else:
+            self.max_workers = max_workers
+            logger.info(f"Agent ParallelExecutor initialized with {self.max_workers} threads")
+            
         self.cache = DataCache()
         self.metrics = ExecutionMetrics()
 

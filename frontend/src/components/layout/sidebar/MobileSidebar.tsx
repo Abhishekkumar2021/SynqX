@@ -10,6 +10,7 @@ import { NavItem } from '../navigation/NavItem';
 import { useAuth } from '@/hooks/useAuth';
 import { DocsSidebar } from '../navigation/DocsSidebar';
 import { NAV_STRUCTURE } from '@/lib/main-nav';
+import { LAYOUT_TRANSITION } from '@/lib/animations';
 
 interface MobileSidebarProps {
     isMobileMenuOpen: boolean;
@@ -19,21 +20,11 @@ interface MobileSidebarProps {
 const mobileMenuVariants: Variants = {
     closed: { 
         x: "-100%",
-        transition: { 
-            type: "spring" as const,
-            stiffness: 400, 
-            damping: 40,
-            mass: 1
-        }
+        transition: LAYOUT_TRANSITION
     },
     open: { 
         x: "0%",
-        transition: { 
-            type: "spring" as const,
-            stiffness: 400, 
-            damping: 40,
-            mass: 1
-        }
+        transition: LAYOUT_TRANSITION
     }
 };
 
