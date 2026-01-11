@@ -185,63 +185,18 @@ def update_step_status(
         # Should not happen if protocol is followed (run created at poll)
         raise HTTPException(400, "Pipeline run not initialized")
 
-    # Use StateManager for consistency with internal worker logic
-    state_manager = StateManager(db, job_id)
+    # ASYNC OPTIMIZATION: Offload telemetry processing to Celery
+    # This ensures the Agent gets an immediate response while the DB heavy-lifting
+    # happens in the background.
+    from app.worker.tasks import process_step_telemetry_task
     
-    # Resolve step run
-    from synqx_core.models.execution import StepRun
-    step_run = db.query(StepRun).filter(
-        StepRun.pipeline_run_id == job.run.id,
-        StepRun.node_id == step_update.node_id
-    ).first()
-    
-    # Map status string to enum
-    status_map = {
-        "pending": OperatorRunStatus.PENDING,
-        "running": OperatorRunStatus.RUNNING,
-        "success": OperatorRunStatus.SUCCESS,
-        "failed": OperatorRunStatus.FAILED,
-        "skipped": OperatorRunStatus.SKIPPED
-    }
-    op_status = status_map.get(step_update.status.lower(), OperatorRunStatus.RUNNING)
-
-    if not step_run:
-        # Create on the fly if missing (Agent might be first to report)
-        # Note: We don't know the operator type/index easily here without looking up the DAG
-        # But StateManager.create_step_run needs them.
-        # Fallback: Look up node in pipeline version
-        pipeline_version = job.pipeline_version
-        node = next((n for n in pipeline_version.nodes if n.node_id == step_update.node_id), None)
-        if node:
-            step_run = state_manager.create_step_run(
-                job.run.id, 
-                node.id, 
-                node.operator_type, 
-                node.order_index
-            )
-        else:
-             logger.warning(f"Node {step_update.node_id} not found in version {pipeline_version.id}")
-             # We can't create it properly without metadata, so we might skip or fail.
-             # Let's fail for data integrity.
-             raise HTTPException(400, f"Unknown node {step_update.node_id}")
-
-    # Pass data to StateManager
-    # This handles metrics, timing, and WebSocket broadcasting automatically
-    state_manager.update_step_status(
-        step_run=step_run,
-        status=op_status,
-        records_in=step_update.records_in,
-        records_out=step_update.records_out,
-        records_filtered=step_update.records_filtered,
-        records_error=step_update.records_error,
-        bytes_processed=step_update.bytes_processed,
-        cpu_percent=step_update.cpu_percent,
-        memory_mb=step_update.memory_mb,
-        sample_data=step_update.sample_data,
-        error=Exception(step_update.error_message) if step_update.error_message else None
+    # We pass the data as a dict for easy serialization
+    process_step_telemetry_task.delay(
+        job_id=job_id,
+        step_update_data=step_update.model_dump()
     )
 
-    return {"status": "ok"}
+    return {"status": "queued"}
 
 @router.post("/jobs/{job_id}/logs")
 def upload_job_logs(

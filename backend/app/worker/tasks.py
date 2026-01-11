@@ -511,6 +511,75 @@ def cleanup_old_jobs(days_to_keep: int = 30) -> str:
         raise
 
 
+@celery_app.task(
+    name="app.worker.tasks.process_step_telemetry_task",
+    queue="telemetry",  # Use a dedicated queue for telemetry to avoid blocking execution tasks
+    acks_late=True,
+)
+def process_step_telemetry_task(job_id: int, step_update_data: dict) -> str:
+    """
+    Process granular step telemetry asynchronously.
+    Offloading this from the API ensures high throughput for agents.
+    """
+    from app.engine.agent_core.state_manager import StateManager
+    from synqx_core.models.execution import StepRun
+    from synqx_core.models.enums import OperatorRunStatus
+
+    try:
+        with session_scope() as session:
+            # Resolve step run
+            # Note: The data already contains node_id, we need to find the StepRun
+            # We fetch job to get the run_id
+            job = session.query(Job).get(job_id)
+            if not job or not job.run:
+                return "Job or Run not found"
+
+            step_run = session.query(StepRun).filter(
+                StepRun.pipeline_run_id == job.run.id,
+                StepRun.node_id == step_update_data["node_id"]
+            ).first()
+
+            if not step_run:
+                # If step run doesn't exist, we might need to create it
+                # But creation is safer in the API or handled by StateManager
+                # For now, if it's missing, we skip or could use StateManager.create_step_run
+                return "StepRun not found"
+
+            state_manager = StateManager(session, job_id)
+            
+            # Map status string to enum if it's still a string
+            status = step_update_data["status"]
+            if isinstance(status, str):
+                status_map = {
+                    "pending": OperatorRunStatus.PENDING,
+                    "running": OperatorRunStatus.RUNNING,
+                    "success": OperatorRunStatus.SUCCESS,
+                    "failed": OperatorRunStatus.FAILED,
+                    "skipped": OperatorRunStatus.SKIPPED
+                }
+                status = status_map.get(status.lower(), OperatorRunStatus.RUNNING)
+
+            # Extract metrics from payload
+            state_manager.update_step_status(
+                step_run=step_run,
+                status=status,
+                records_in=step_update_data.get("records_in", 0),
+                records_out=step_update_data.get("records_out", 0),
+                records_filtered=step_update_data.get("records_filtered", 0),
+                records_error=step_update_data.get("records_error", 0),
+                bytes_processed=step_update_data.get("bytes_processed", 0),
+                cpu_percent=step_update_data.get("cpu_percent"),
+                memory_mb=step_update_data.get("memory_mb"),
+                sample_data=step_update_data.get("sample_data"),
+                error=Exception(step_update_data["error_message"]) if step_update_data.get("error_message") else None
+            )
+
+            return "Telemetry processed"
+    except Exception as e:
+        logger.error(f"Failed to process telemetry for job {job_id}: {e}")
+        raise
+
+
 # Helper functions
 
 

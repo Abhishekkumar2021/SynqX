@@ -81,6 +81,7 @@ class SynqxAgent:
             "Content-Type": "application/json"
         }
         self.running = True
+        self._telemetry_cache = {} # node_id -> last_report_time
         
         # Register signals
         signal.signal(signal.SIGINT, self._handle_exit)
@@ -374,7 +375,18 @@ class SynqxAgent:
             pass
 
     def report_step_status(self, job_id: int, node_id: str, status: str, data: Dict[str, Any] = None):
-        """Send granular step telemetry to the backend."""
+        """
+        Send granular step telemetry to the backend with intelligent throttling.
+        Terminal states (success, failed) are always sent immediately.
+        Progress updates are throttled to once every 2 seconds per node.
+        """
+        now = time.time()
+        is_terminal = status.lower() in ["success", "failed"]
+        last_report = self._telemetry_cache.get(node_id, 0)
+        
+        if not is_terminal and (now - last_report < 2):
+            return
+
         data = data or {}
         payload = {
             "node_id": node_id,
@@ -396,7 +408,9 @@ class SynqxAgent:
             pass
 
         try: 
-            requests.post(f"{self.api_url}/agents/jobs/{job_id}/steps", json=payload, headers=self.headers, timeout=2)
+            resp = requests.post(f"{self.api_url}/agents/jobs/{job_id}/steps", json=payload, headers=self.headers, timeout=2)
+            if resp.status_code == 200:
+                self._telemetry_cache[node_id] = now
         except Exception as e: 
             logger.debug(f"Failed to report step status: {e}")
 

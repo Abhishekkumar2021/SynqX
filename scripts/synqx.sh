@@ -45,6 +45,7 @@ get_svc_name() {
     case "$1" in
         api) echo "Backend API" ;; 
         worker) echo "Celery Worker" ;; 
+        telemetry) echo "Telemetry Worker" ;; 
         beat) echo "Celery Beat" ;; 
         frontend) echo "Frontend" ;; 
         agent) echo "SynqX Agent" ;; 
@@ -137,7 +138,11 @@ start_svc() {
             ;;
         worker)
             cd "$PROJECT_ROOT/backend"
-            nohup "$PROJECT_ROOT/backend/.venv/bin/celery" -A app.core.celery_app worker --loglevel=info --pool=solo >"$log_file" 2>&1 &
+            nohup "$PROJECT_ROOT/backend/.venv/bin/celery" -A app.core.celery_app worker -Q celery --loglevel=info --pool=solo >"$log_file" 2>&1 &
+            ;;
+        telemetry)
+            cd "$PROJECT_ROOT/backend"
+            nohup "$PROJECT_ROOT/backend/.venv/bin/celery" -A app.core.celery_app worker -Q telemetry --loglevel=info --pool=solo >"$log_file" 2>&1 &
             ;;
         beat)
             cd "$PROJECT_ROOT/backend"
@@ -188,7 +193,7 @@ status() {
     echo -e "----------------------------------------"
     printf "% -20s %-10s %-10s\n" "Service" "Status" "PID"
     
-    for svc in "api" "worker" "beat" "frontend" "agent"; do
+    for svc in "api" "worker" "telemetry" "beat" "frontend" "agent"; do
         local name=$(get_svc_name "$svc")
         if is_running "$svc"; then
             local pid
@@ -209,6 +214,7 @@ start_all() {
 
     start_svc "api"
     start_svc "worker"
+    start_svc "telemetry"
     start_svc "beat"
     start_svc "frontend"
     
@@ -223,7 +229,7 @@ start_all() {
 
 stop_all() {
     info "${ICON_STOP}  Shutting down SynqX Ecosystem..."
-    for svc in "agent" "frontend" "beat" "worker" "api"; do
+    for svc in "agent" "frontend" "beat" "telemetry" "worker" "api"; do
         stop_svc "$svc"
     done
     
@@ -245,7 +251,7 @@ show_logs() {
             info "Tailing logs for $name..."
             tail -f "$LOG_DIR/$svc.log"
         else
-            error "Unknown service: $svc. Available: api, worker, beat, frontend, agent"
+            error "Unknown service: $svc. Available: api, worker, telemetry, beat, frontend, agent"
         fi
     fi
 }

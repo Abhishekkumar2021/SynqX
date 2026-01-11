@@ -233,51 +233,62 @@ class StateManager:
                 t_step_run.error_type = type(error).__name__
             
             self.db.add(t_step_run)
+            
+            # PERFORMANCE OPTIMIZATION:
+            # Only recalculate pipeline aggregates on terminal states (Success/Failure)
+            # and NOT on every progress/running update.
+            is_terminal = status in [OperatorRunStatus.SUCCESS, OperatorRunStatus.FAILED]
+            
+            if is_terminal:
+                self.db.flush() # Ensure t_step_run is written before aggregation
+                
+                # Re-fetch pipeline run to compute aggregates accurately
+                t_pipeline_run = self.db.query(PipelineRun).filter(
+                    PipelineRun.id == t_step_run.pipeline_run_id
+                ).first()
+                
+                if t_pipeline_run:
+                    # Fetch fresh step runs to avoid stale relationship data
+                    fresh_steps = self.db.query(StepRun).filter(StepRun.pipeline_run_id == t_pipeline_run.id).all()
+                    
+                    # Aggregate metrics
+                    total_extracted = sum(s.records_out for s in fresh_steps if s.operator_type == OperatorType.EXTRACT)
+                    total_loaded = sum(s.records_out for s in fresh_steps if s.operator_type == OperatorType.LOAD)
+                    total_failed = sum(s.records_error for s in fresh_steps)
+                    total_bytes = sum(s.bytes_processed for s in fresh_steps)
+                    
+                    completed_steps = len([s for s in fresh_steps if s.status == OperatorRunStatus.SUCCESS])
+                    failed_steps = len([s for s in fresh_steps if s.status == OperatorRunStatus.FAILED])
+                    
+                    t_pipeline_run.total_extracted = total_extracted
+                    t_pipeline_run.total_loaded = total_loaded
+                    t_pipeline_run.total_failed = total_failed
+                    t_pipeline_run.bytes_processed = total_bytes
+                    
+                    self.db.add(t_pipeline_run)
+
+            # Final commit for all changes
             self.db.commit()
             
-            # Re-fetch pipeline run to compute aggregates accurately
-            t_pipeline_run = self.db.query(PipelineRun).filter(
-                PipelineRun.id == t_step_run.pipeline_run_id
-            ).first()
-            
-            if t_pipeline_run:
-                # Force refresh of step_runs relationship to get latest records_error
-                self.db.refresh(t_pipeline_run)
-                
-                # Fetch fresh step runs to avoid stale relationship data
-                fresh_steps = self.db.query(StepRun).filter(StepRun.pipeline_run_id == t_pipeline_run.id).all()
-                
-                # Aggregate metrics
-                total_extracted = sum(s.records_out for s in fresh_steps if s.operator_type == OperatorType.EXTRACT)
-                total_loaded = sum(s.records_out for s in fresh_steps if s.operator_type == OperatorType.LOAD)
-                total_failed = sum(s.records_error for s in fresh_steps)
-                total_bytes = sum(s.bytes_processed for s in fresh_steps)
-                
-                completed_steps = len([s for s in t_pipeline_run.step_runs if s.status == OperatorRunStatus.SUCCESS])
-                failed_steps = len([s for s in t_pipeline_run.step_runs if s.status == OperatorRunStatus.FAILED])
-                
-                t_pipeline_run.total_extracted = total_extracted
-                t_pipeline_run.total_loaded = total_loaded
-                t_pipeline_run.total_failed = total_failed
-                t_pipeline_run.bytes_processed = total_bytes
-                
-                self.db.add(t_pipeline_run)
-                self.db.commit()
-                
-                self._broadcast_telemetry({
-                    "type": "step_update",
-                    "step_run_id": t_step_run.id,
-                    "node_id": t_step_run.node_id,
-                    "status": status.value,
-                    "records_in": records_in,
-                    "records_out": records_out,
-                    "records_filtered": records_filtered,
-                    "records_error": records_error,
-                    "bytes_processed": bytes_processed,
-                    "cpu_percent": cpu_percent,
-                    "memory_mb": memory_mb,
-                    "completed_at": t_step_run.completed_at.isoformat() if t_step_run.completed_at else None,
-                    "duration_seconds": t_step_run.duration_seconds,
+            # Broadcast telemetry (includes aggregates if they were updated)
+            telemetry_payload = {
+                "type": "step_update",
+                "step_run_id": t_step_run.id,
+                "node_id": t_step_run.node_id,
+                "status": status.value,
+                "records_in": records_in,
+                "records_out": records_out,
+                "records_filtered": records_filtered,
+                "records_error": records_error,
+                "bytes_processed": bytes_processed,
+                "cpu_percent": cpu_percent,
+                "memory_mb": memory_mb,
+                "completed_at": t_step_run.completed_at.isoformat() if t_step_run.completed_at else None,
+                "duration_seconds": t_step_run.duration_seconds
+            }
+
+            if is_terminal and t_pipeline_run:
+                telemetry_payload.update({
                     "total_extracted": total_extracted,
                     "total_loaded": total_loaded,
                     "total_failed": total_failed,
@@ -286,6 +297,8 @@ class StateManager:
                     "failed_steps": failed_steps,
                     "progress_pct": (completed_steps / t_pipeline_run.total_nodes * 100) if t_pipeline_run.total_nodes > 0 else 0
                 })
+            
+            self._broadcast_telemetry(telemetry_payload)
         
         except Exception as e:
             logger.error(f"Failed to update step status: {e}", exc_info=True)
