@@ -6,6 +6,7 @@ import json
 from sqlalchemy import text, inspect
 from sqlalchemy.engine import Engine, Connection
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.resilience import retry
 from synqx_core.errors import (
     ConnectionFailedError,
     AuthenticationError,
@@ -43,6 +44,7 @@ class SQLConnector(BaseConnector):
             "future": True
         }
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def connect(self) -> None:
         if self._connection and not self._connection.closed:
             return
@@ -206,6 +208,7 @@ class SQLConnector(BaseConnector):
         except Exception as e:
             raise SchemaDiscoveryError(f"Sample-based inference failed: {e}")
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def read_batch(
         self, asset: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs
     ) -> Iterator[pd.DataFrame]:
@@ -295,6 +298,8 @@ class SQLConnector(BaseConnector):
         except Exception as e:
             logger.warning(f"Failed to calculate total record count for '{query_or_asset}': {e}")
             return None
+
+    @retry(exceptions=(Exception,), max_attempts=3)
     def execute_query(
         self,
         query: str,
@@ -338,6 +343,7 @@ class SQLConnector(BaseConnector):
             logger.error(f"Query execution failed: {e}")
             raise DataTransferError(f"Query execution failed. Detailed fault: {str(e)}")
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def write_batch(
         self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs
     ) -> int:

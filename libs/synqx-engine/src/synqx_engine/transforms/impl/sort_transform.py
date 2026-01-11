@@ -1,11 +1,11 @@
 from typing import Iterator
-import pandas as pd
-from synqx_engine.transforms.base import BaseTransform
-from synqx_core.errors import ConfigurationError
+import polars as pl
+from synqx_engine.transforms.polars_base import PolarsTransform
+from synqx_core.errors import ConfigurationError, TransformationError
 
-class SortTransform(BaseTransform):
+class SortTransform(PolarsTransform):
     """
-    Sorts data.
+    High-performance sorting using Polars.
     Config:
     - columns: List[str]
     - ascending: bool or List[bool]
@@ -15,14 +15,26 @@ class SortTransform(BaseTransform):
         if "columns" not in self.config:
             raise ConfigurationError("SortTransform requires 'columns'.")
 
-    def transform(self, data: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
+    def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         columns = self.config["columns"]
-        ascending = self.config.get("ascending", True)
+        descending = not self.config.get("ascending", True)
         
-        # Blocking: Accumulate everything then sort
-        all_chunks = list(data)
-        if not all_chunks:
-            return
+        # Sorting is a blocking operation
+        try:
+            lazy_frames = [df.lazy() for df in data]
+            if not lazy_frames:
+                return
+                
+            lf = pl.concat(lazy_frames)
             
-        full_df = pd.concat(all_chunks, ignore_index=True)
-        yield full_df.sort_values(by=columns, ascending=ascending)
+            # Polars sort
+            result_df = lf.sort(columns, descending=descending).collect()
+            
+            if self.on_chunk:
+                import pandas as pd
+                self.on_chunk(pd.DataFrame(), direction="intermediate")
+                
+            yield result_df
+            
+        except Exception as e:
+            raise TransformationError(f"Polars Sort failed: {e}") from e

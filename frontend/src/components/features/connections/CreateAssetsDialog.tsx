@@ -32,11 +32,7 @@ type FormValues = {
         name: string;
         fully_qualified_name?: string;
         asset_type: string;
-        usageType: 'source' | 'destination';
         query?: string;
-        is_incremental_capable: boolean;
-        watermark_column?: string;
-        write_mode: 'append' | 'replace' | 'upsert';
     }[];
 };
 
@@ -97,11 +93,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
             assets: [{
                 name: '',
                 asset_type: defaultAssetType,
-                usageType: 'source',
-                query: '',
-                is_incremental_capable: false,
-                watermark_column: 'timestamp',
-                write_mode: 'append'
+                query: ''
             }]
         }
     });
@@ -115,11 +107,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                 assets: [{
                     name: '',
                     asset_type: defaultAssetType,
-                    usageType: 'source',
-                    query: '',
-                    is_incremental_capable: false,
-                    watermark_column: 'timestamp',
-                    write_mode: 'append'
+                    query: ''
                 }]
             });
         }
@@ -147,7 +135,6 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
             assets: data.assets.filter(a => a.name.trim() !== '').map(asset => {
                 const config: Record<string, any> = {};
                 
-                // For REST APIs, we treat the name as an endpoint
                 let finalName = asset.name.trim();
                 if (connectorType === ConnectorType.REST_API && !finalName.startsWith('/')) {
                     finalName = '/' + finalName;
@@ -159,19 +146,13 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                     config.code = asset.query;
                     config.language = asset.asset_type;
                 }
-                if (asset.is_incremental_capable && asset.watermark_column) {
-                    config.watermark_column = asset.watermark_column;
-                }
-                if (asset.usageType === 'destination') {
-                    config.write_mode = asset.write_mode;
-                }
+
                 return {
                     name: finalName,
                     fully_qualified_name: asset.fully_qualified_name?.trim() || finalName,
                     asset_type: asset.asset_type,
-                    is_source: asset.usageType === 'source',
-                    is_destination: asset.usageType === 'destination',
-                    is_incremental_capable: asset.is_incremental_capable,
+                    is_source: true, // Default to available for both if not specified
+                    is_destination: true,
                     config: config,
                     connection_id: connectionId
                 };
@@ -220,11 +201,9 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                     <ScrollArea className="flex-1">
                         <div className="p-10 pt-6 space-y-4">
                             <div className="grid grid-cols-12 gap-4 px-4 mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
-                                <div className="col-span-3">Display Name</div>
-                                <div className="col-span-3">Technical Identifier (FQN)</div>
-                                <div className="col-span-2">Object Type</div>
-                                <div className="col-span-2 text-center">Sync Direction</div>
-                                <div className="col-span-1 text-center">Strategy</div>
+                                <div className="col-span-4">Display Name</div>
+                                <div className="col-span-4">Technical Identifier (FQN)</div>
+                                <div className="col-span-3">Object Type</div>
                                 <div className="col-span-1"></div>
                             </div>
 
@@ -232,8 +211,6 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                 {fields.map((field, index) => {
                                     const assetType = watchedAssets?.[index]?.asset_type;
                                     const isQuery = (QUERY_SCRIPT_TYPES as string[]).includes(assetType);
-                                    const isIncremental = watchedAssets?.[index]?.is_incremental_capable;
-                                    const usageType = watchedAssets?.[index]?.usageType;
 
                                     return (
                                         <motion.div
@@ -245,7 +222,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                         >
                                             <div className="grid grid-cols-12 gap-3 items-center p-3">
                                                 {/* Name */}
-                                                <div className="col-span-3">
+                                                <div className="col-span-4">
                                                     <Input
                                                         {...register(`assets.${index}.name`, { required: true })}
                                                         placeholder="e.g. Users Feed"
@@ -254,7 +231,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                 </div>
 
                                                 {/* FQN */}
-                                                <div className="col-span-3">
+                                                <div className="col-span-4">
                                                     <Input
                                                         {...register(`assets.${index}.fully_qualified_name`)}
                                                         placeholder="e.g. public.users"
@@ -263,16 +240,13 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                 </div>
 
                                                 {/* Type */}
-                                                <div className="col-span-2">
+                                                <div className="col-span-3">
                                                     <Controller
                                                         control={control}
                                                         name={`assets.${index}.asset_type`}
                                                         render={({ field: f }) => (
                                                             <Select onValueChange={(val) => { 
                                                                 f.onChange(val); 
-                                                                if ((QUERY_SCRIPT_TYPES as string[]).includes(val)) {
-                                                                    setValue(`assets.${index}.usageType`, 'source');
-                                                                }
                                                             }} defaultValue={f.value}>
                                                                 <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-xs">
                                                                     <SelectValue />
@@ -292,72 +266,6 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                     />
                                                 </div>
 
-                                                {/* Usage */}
-                                                <div className="col-span-2">
-                                                    <Controller
-                                                        control={control}
-                                                        name={`assets.${index}.usageType`}
-                                                        render={({ field: f }) => (
-                                                            <Select onValueChange={f.onChange} value={f.value} disabled={isQuery}>
-                                                                <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-xs uppercase tracking-wider">
-                                                                    <div className="flex items-center justify-center w-full gap-2">
-                                                                        <ArrowRightLeft className="h-3.5 w-3.5 text-primary/60" />
-                                                                        <SelectValue />
-                                                                    </div>
-                                                                </SelectTrigger>
-                                                                <SelectContent className="rounded-2xl shadow-xl">
-                                                                    <SelectItem value="source" className="rounded-xl">Source</SelectItem>
-                                                                    <SelectItem value="destination" className="rounded-xl">Destination</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        )}
-                                                    />
-                                                </div>
-
-                                                {/* Strategy */}
-                                                <div className="col-span-1">
-                                                    {usageType === 'source' ? (
-                                                        <Controller
-                                                            control={control}
-                                                            name={`assets.${index}.is_incremental_capable`}
-                                                            render={({ field: f }) => (
-                                                                <Select 
-                                                                    onValueChange={(val) => f.onChange(val === 'incremental')} 
-                                                                    value={f.value ? 'incremental' : 'full'}
-                                                                >
-                                                                    <SelectTrigger className={cn(
-                                                                        "h-10 rounded-2xl text-[10px] font-bold uppercase tracking-tighter transition-all",
-                                                                        f.value ? "bg-primary/10 border-primary/30 text-primary" : "bg-background/50 border-border/40 text-muted-foreground"
-                                                                    )}>
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent className="rounded-2xl">
-                                                                        <SelectItem value="full" className="rounded-xl text-[10px] font-bold">FULL</SelectItem>
-                                                                        <SelectItem value="incremental" className="rounded-xl text-[10px] font-bold">INCR</SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            )}
-                                                        />
-                                                    ) : (
-                                                        <Controller
-                                                            control={control}
-                                                            name={`assets.${index}.write_mode`}
-                                                            render={({ field: f }) => (
-                                                                <Select onValueChange={f.onChange} value={f.value}>
-                                                                    <SelectTrigger className="h-10 rounded-2xl bg-background/50 border-border/40 text-[9px] uppercase tracking-tighter">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent className="rounded-2xl">
-                                                                        <SelectItem value="append" className="rounded-xl text-[10px] font-bold">APPEND</SelectItem>
-                                                                        <SelectItem value="replace" className="rounded-xl text-[10px] font-bold">REPLACE</SelectItem>
-                                                                        <SelectItem value="upsert" className="rounded-xl text-[10px] font-bold">UPSERT</SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            )}
-                                                        />
-                                                    )}
-                                                </div>
-
                                                 {/* Remove */}
                                                 <div className="col-span-1 flex justify-end">
                                                     <Button 
@@ -375,7 +283,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
 
                                                                                         {/* Advanced Config Section */}
                                                                                         <AnimatePresence>
-                                                                                            {(isIncremental || isQuery) && (
+                                                                                            {isQuery && (
                                                                                                 <motion.div
                                                                                                     initial={{ opacity: 0, height: 0 }}
                                                                                                     animate={{ opacity: 1, height: 'auto' }}
@@ -384,23 +292,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                                                                 >
                                                                                                     <div className="p-4">
                                                                                                         <div className="bg-primary/5 border border-primary/10 rounded-[1.5rem] p-5 space-y-5 shadow-inner">
-                                                                                                            {isIncremental && (
-                                                                                                                <div className="flex items-center gap-4 bg-background/60 border border-primary/20 rounded-2xl p-3 shadow-sm">
-                                                                                                                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                                                                                                                        <TrendingUp className="h-4 w-4" />
-                                                                                                                    </div>
-                                                                                                                    <div className="flex-1 flex items-center gap-3">
-                                                                                                                                                                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-primary/70">Watermark Column</Label>
-                                                                                                                                                                                                <Input 
-                                                                                                                                                                                                    {...register(`assets.${index}.watermark_column`, { required: isIncremental })} 
-                                                                                                                                                                                                    placeholder="e.g. updated_at or id" 
-                                                                                                                                                                                                    className="h-8 text-xs bg-transparent border-none shadow-none focus-visible:ring-0 px-3 font-mono" 
-                                                                                                                                                                                                />                                                                                                                    </div>
-                                                                                                                </div>
-                                                                                                            )}
-                                            
-                                                                                                            {isQuery && (
-                                                                                                                <div className="space-y-3">
+                                                                                                            <div className="space-y-3">
                                                                                                                     <div className="flex items-center justify-between px-1">
                                                                                                                         <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                                                                                                                             <Code className="h-3 w-3 text-primary" /> Logic Definition
@@ -418,7 +310,6 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                                                                                                         />
                                                                                                                     </div>
                                                                                                                 </div>
-                                                                                                            )}
                                                                                                         </div>
                                                                                                     </div>
                                                                                                 </motion.div>
@@ -435,11 +326,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
                                 onClick={() => append({ 
                                     name: '', 
                                     asset_type: defaultAssetType, 
-                                    usageType: 'source', 
-                                    query: '', 
-                                    is_incremental_capable: false, 
-                                    watermark_column: 'timestamp', 
-                                    write_mode: 'append' 
+                                    query: ''
                                 })}
                             >
                                 <Plus className="h-4 w-4" /> Add Another Asset

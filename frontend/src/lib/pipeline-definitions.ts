@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { 
-    Database, 
-    HardDriveUpload, 
-    ArrowRightLeft, 
+import {
+    Database,
+    HardDriveUpload,
+    ArrowRightLeft,
     PlayCircle,
     Layers,
     ShieldCheck,
@@ -15,7 +15,9 @@ import {
     PaintBucket,
     SortAsc,
     Zap,
-    Workflow
+    Workflow,
+    History,
+    Shield
 } from 'lucide-react';
 import { OperatorType } from './enums';
 
@@ -105,7 +107,14 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 type: "merge", 
                 opClass: "merge", 
                 icon: Layers, 
-                desc: "Upsert/Merge data logic" 
+                desc: "Upsert/Merge data logic",
+                fields: [
+                    {
+                        name: 'on', label: 'Merge Key', type: 'text', configKey: 'on', 
+                        placeholder: 'id',
+                        tooltip: 'Unique identifier used to match records for upsert.'
+                    }
+                ]
             }
         ]
     },
@@ -122,21 +131,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     {
                         name: 'condition', label: 'Filter Condition', type: 'text', configKey: 'condition', 
                         placeholder: "status == 'active'",
-                        tooltip: 'Python-style boolean expression. Use column names directly. Example: (age > 21) & (country == "US")'
-                    }
-                ]
-            },
-            {
-                label: "Polars Logic", 
-                type: "transform", 
-                opClass: "polars_code", 
-                icon: Zap, 
-                desc: "High-performance Rust-backed transformations",
-                fields: [
-                    {
-                        name: 'code', label: 'Polars Code', type: 'textarea', configKey: 'code', 
-                        placeholder: "def transform(lf):\n    return lf.filter(pl.col('status') == 'active')",
-                        tooltip: 'Must define a "transform(lf)" function that accepts and returns a Polars LazyFrame.'
+                        tooltip: 'Standard SQL-like condition. Example: age > 21 AND status = "active"'
                     }
                 ]
             },
@@ -155,7 +150,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     {
                         name: 'aggregates', label: 'Aggregates', type: 'json', configKey: 'aggregates', 
                         placeholder: '{ "salary": "mean", "id": "count" }',
-                        tooltip: 'Map of column names to aggregation functions. Available: sum, count, mean, median, min, max, std, var.'
+                        tooltip: 'Map of column names to aggregation functions. Available: sum, count, mean, min, max, unique_count.'
                     }
                 ]
             },
@@ -182,26 +177,21 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 ]
             },
             {
-                label: "Generic Pandas", 
+                label: "Map Columns", 
                 type: "transform", 
-                opClass: "pandas_transform", 
+                opClass: "map", 
                 icon: ArrowRightLeft, 
-                desc: "Custom Pandas operations",
+                desc: "Rename or drop columns",
                 fields: [
                     {
-                        name: 'filter_query', label: 'Filter Query', type: 'text', configKey: 'filter_query', 
-                        placeholder: "col > 10",
-                        tooltip: 'Pandas .query() string. High performance filtering for large dataframes.'
-                    },
-                    {
-                        name: 'rename_columns', label: 'Rename Mapping', type: 'json', configKey: 'columns', 
+                        name: 'rename', label: 'Rename Mapping', type: 'json', configKey: 'rename', 
                         placeholder: '{"old": "new"}',
-                        tooltip: 'JSON object mapping old column names to new ones. Unmapped columns are kept as is.'
+                        tooltip: 'JSON object mapping old column names to new ones.'
                     },
                     {
-                        name: 'drop_columns', label: 'Drop Columns', type: 'text', configKey: 'drop_columns', 
-                        description: 'Comma separated',
-                        tooltip: 'List of columns to remove from the dataset completely.'
+                        name: 'drop', label: 'Drop Columns', type: 'text', configKey: 'drop', 
+                        description: 'Comma separated list',
+                        tooltip: 'List of columns to remove from the dataset.'
                     }
                 ]
             }
@@ -220,37 +210,11 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     {
                         name: 'schema', label: 'Validation Rules', type: 'json', configKey: 'schema', 
                         placeholder: '[ { "column": "id", "check": "not_null" } ]',
-                        tooltip: 'List of validation rules to apply. Each rule target a column and performs a check (not_null, unique, regex, min_value, max_value, in_list, data_type).'
-                    },
-                    {
-                        name: 'error_threshold_percent', label: 'Error Threshold (%)', type: 'number', configKey: 'error_threshold_percent',
-                        placeholder: '100',
-                        tooltip: 'Percentage of rows that can fail validation before the pipeline terminates (0-100).'
-                    },
-                    {
-                        name: 'error_threshold_rows', label: 'Error Threshold (Rows)', type: 'number', configKey: 'error_threshold_rows',
-                        placeholder: '0',
-                        tooltip: 'Absolute number of rows that can fail validation before the pipeline terminates. 0 means disabled.'
-                    },
-                    {
-                        name: 'allow_extra_columns', label: 'Allow Schema Drift', type: 'boolean', configKey: 'allow_extra_columns',
-                        tooltip: 'If disabled, any column found in the source that is not defined in the contract will trigger a validation failure.'
+                        tooltip: 'List of validation rules to apply. Checks: not_null, min_value, max_value, regex, in_list.'
                     },
                     {
                         name: 'strict', label: 'Terminal Failure', type: 'boolean', configKey: 'strict',
-                        tooltip: 'If enabled, the entire pipeline will fail if threshold is exceeded. If disabled, invalid rows are simply quarantined and the pipeline continues.'
-                    },
-                    {
-                        name: 'quarantine', label: 'Forensic Capture', type: 'boolean', configKey: 'quarantine',
-                        tooltip: 'If enabled, invalid rows will be captured in a separate forensic buffer for inspection.'
-                    },
-                    {
-                        name: 'quarantine_connection_id', label: 'Quarantine Connection', type: 'number', configKey: 'quarantine_connection_id',
-                        tooltip: 'Target connection for native database quarantine.'
-                    },
-                    {
-                        name: 'quarantine_asset_id', label: 'Quarantine Asset', type: 'number', configKey: 'quarantine_asset_id',
-                        tooltip: 'Target table/asset for native database quarantine.'
+                        tooltip: 'If enabled, the entire pipeline will fail on the first invalid row. If disabled, invalid rows are quarantined.'
                     }
                 ]
             },
@@ -262,7 +226,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 desc: "Remove duplicate records",
                 fields: [
                     {
-                        name: 'subset', label: 'Subset Columns', type: 'text', configKey: 'subset', 
+                        name: 'columns', label: 'Subset Columns', type: 'text', configKey: 'columns', 
                         description: 'Comma separated',
                         tooltip: 'Only consider these columns when identifying duplicates. If empty, all columns are checked.'
                     },
@@ -270,10 +234,23 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                         name: 'keep', label: 'Keep', type: 'select', configKey: 'keep',
                         options: [
                             { label: 'First', value: 'first' },
-                            { label: 'Last', value: 'last' },
-                            { label: 'None (Drop All)', value: 'false' }
+                            { label: 'Last', value: 'last' }
                         ],
                         tooltip: 'Which occurrence to keep when duplicates are found.'
+                    }
+                ]
+            },
+            {
+                label: "PII Masking", 
+                type: "transform", 
+                opClass: "pii_mask", 
+                icon: Shield, 
+                desc: "Redact or hash sensitive data",
+                fields: [
+                    {
+                        name: 'masks', label: 'Masking Rules', type: 'json', configKey: 'masks', 
+                        placeholder: '[ { "column": "email", "strategy": "hash" } ]',
+                        tooltip: 'List of masking rules. Strategies: redact, partial, hash, regex.'
                     }
                 ]
             },
@@ -287,24 +264,19 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     {
                         name: 'strategy', label: 'Strategy', type: 'select', configKey: 'strategy',
                         options: [
-                            { label: 'Constant Value', value: '' },
-                            { label: 'Mean', value: 'mean' },
-                            { label: 'Median', value: 'median' },
-                            { label: 'Mode', value: 'mode' },
                             { label: 'Forward Fill', value: 'ffill' },
-                            { label: 'Backward Fill', value: 'bfill' }
+                            { label: 'Backward Fill', value: 'bfill' },
+                            { label: 'Mean', value: 'mean' },
+                            { label: 'Min', value: 'min' },
+                            { label: 'Max', value: 'max' },
+                            { label: 'Zero', value: 'zero' }
                         ],
-                        tooltip: 'Mean/Median/Mode: statistical imputation. FFill/BFill: carry previous/next value forward/backward.'
+                        tooltip: 'Choose a strategy to fill missing values.'
                     },
                     {
                         name: 'value', label: 'Constant Value', type: 'text', configKey: 'value', 
-                        description: 'Used if strategy is empty',
-                        tooltip: 'Static value to replace NULLs with when no statistical strategy is selected.'
-                    },
-                    {
-                        name: 'subset', label: 'Columns', type: 'text', configKey: 'subset', 
-                        description: 'Comma separated (optional)',
-                        tooltip: 'Specific columns to apply the fill logic to.'
+                        description: 'Used if no strategy is selected',
+                        tooltip: 'Static value to replace NULLs with.'
                     }
                 ]
             }
@@ -323,7 +295,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     {
                         name: 'casts', label: 'Type Mapping', type: 'json', configKey: 'casts', 
                         placeholder: '{ "id": "int", "price": "float", "is_active": "bool" }',
-                        tooltip: 'Map of columns to their target data types. Use "int", "float", "str", "bool", or "datetime".'
+                        tooltip: 'Map of columns to their target data types (int, float, bool, str, datetime).'
                     }
                 ]
             },
@@ -337,7 +309,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     {
                         name: 'rename_map', label: 'Rename Mapping', type: 'json', configKey: 'columns', 
                         placeholder: '{ "old_name": "new_name" }',
-                        tooltip: 'A dictionary where keys are original names and values are new names. Unmapped columns are kept as is.'
+                        tooltip: 'Dictionary of old names to new names.'
                     }
                 ]
             },
@@ -351,7 +323,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     {
                         name: 'columns', label: 'Target Columns', type: 'text', configKey: 'columns', 
                         description: 'Comma separated',
-                        tooltip: 'List of column names to be excluded from the data stream.'
+                        tooltip: 'List of column names to be excluded.'
                     }
                 ]
             },
@@ -363,16 +335,55 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 desc: "Pattern based replacement",
                 fields: [
                     { name: 'column', label: 'Column', type: 'text', configKey: 'column', tooltip: 'The column to apply regex on.' },
-                    { name: 'pattern', label: 'Pattern', type: 'text', configKey: 'pattern', placeholder: '\\d+', tooltip: 'Regular expression pattern to search for.' },
-                    { name: 'replacement', label: 'Replacement', type: 'text', configKey: 'replacement', tooltip: 'String to replace the matches with.' }
+                    { name: 'pattern', label: 'Pattern', type: 'text', configKey: 'pattern', placeholder: '\\d+', tooltip: 'Regex pattern to search for.' },
+                    { name: 'replacement', label: 'Replacement', type: 'text', configKey: 'replacement', tooltip: 'String to replace matches with.' }
                 ]
             },
-            { label: "Python Code", type: "transform", opClass: "code_transform", icon: PlayCircle, desc: "Arbitrary Python execution",
+            {
+                label: "SCD Type 2", 
+                type: "transform", 
+                opClass: "scd_type_2", 
+                icon: History, 
+                desc: "Track history with versioned rows",
                 fields: [
                     {
-                        name: 'code', label: 'Python Code', type: 'textarea', configKey: 'code', 
-                        placeholder: "def transform(df):\n    # Custom logic here\n    return df",
-                        tooltip: 'Must define a "transform(df)" function that accepts and returns a Pandas DataFrame.'
+                        name: 'primary_key', label: 'Primary Key', type: 'text', configKey: 'primary_key', 
+                        description: 'Comma separated columns',
+                        tooltip: 'Columns that uniquely identify a business entity.'
+                    },
+                    {
+                        name: 'compare_columns', label: 'Compare Columns', type: 'text', configKey: 'compare_columns', 
+                        description: 'Comma separated columns',
+                        tooltip: 'Columns to check for changes to trigger a new version.'
+                    },
+                    {
+                        name: 'effective_from_col', label: 'Effective From Col', type: 'text', configKey: 'effective_from_col', 
+                        placeholder: 'synqx_effective_from',
+                        tooltip: 'Column for version start timestamp.'
+                    },
+                    {
+                        name: 'effective_to_col', label: 'Effective To Col', type: 'text', configKey: 'effective_to_col', 
+                        placeholder: 'synqx_effective_to',
+                        tooltip: 'Column for version end timestamp.'
+                    },
+                    {
+                        name: 'is_current_col', label: 'Is Current Col', type: 'text', configKey: 'is_current_col', 
+                        placeholder: 'synqx_is_current',
+                        tooltip: 'Boolean column for the latest version.'
+                    }
+                ]
+            },
+            {
+                label: "Python Code", 
+                type: "transform", 
+                opClass: "code", 
+                icon: Zap, 
+                desc: "High-performance custom logic",
+                fields: [
+                    {
+                        name: 'code', label: 'Script', type: 'textarea', configKey: 'code', 
+                        placeholder: "def transform(lf):\n    return lf.with_columns((pl.col('price') * 1.2).alias('taxed_price'))",
+                        tooltip: 'Must define a "transform(lf)" function that accepts and returns a Polars LazyFrame.'
                     }
                 ]
             },
@@ -385,12 +396,12 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 fields: [
                     {
                         name: 'connection_id', label: 'dbt Connection', type: 'number', configKey: 'connection_id', 
-                        tooltip: 'ID of the dbt connector to use for execution.'
+                        tooltip: 'ID of the dbt connector.'
                     },
                     {
                         name: 'command', label: 'dbt Command', type: 'text', configKey: 'command', 
                         placeholder: "run --select model_name",
-                        tooltip: 'The specific dbt CLI command to trigger.'
+                        tooltip: 'The specific dbt CLI command.'
                     }
                 ]
             },
@@ -416,14 +427,12 @@ export const mapOperatorToNodeType = (opType: string) => {
 
 // Helper: Map Frontend Node Type to Backend OperatorType
 export const mapNodeTypeToOperator = (nodeType: string, operatorClass?: string) => {
-    // Explicit overrides based on operator class (backward compatibility or specific transforms)
     if (operatorClass === 'merge') return OperatorType.MERGE;
     if (operatorClass === 'union') return OperatorType.UNION;
     if (operatorClass === 'join') return OperatorType.JOIN;
     if (operatorClass === 'validate') return OperatorType.VALIDATE;
     if (operatorClass === 'noop') return OperatorType.NOOP;
     
-    // Direct mapping from Node Type
     switch (nodeType?.toLowerCase()) {
         case 'source': return OperatorType.EXTRACT;
         case 'sink': return OperatorType.LOAD;

@@ -6,6 +6,7 @@ import s3fs
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.resilience import retry
 from synqx_core.errors import ConfigurationError, DataTransferError, SchemaDiscoveryError, ConnectionFailedError
 from synqx_core.logging import get_logger
 
@@ -39,6 +40,7 @@ class S3Connector(BaseConnector):
         except Exception as e:
             raise ConfigurationError(f"Invalid S3 configuration: {e}")
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def connect(self) -> None:
         if self._fs:
             return
@@ -171,6 +173,7 @@ class S3Connector(BaseConnector):
         except Exception as e:
             raise SchemaDiscoveryError(f"S3 schema inference failed for {asset}: {e}")
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def read_batch(
         self, asset: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs
     ) -> Iterator[pd.DataFrame]:
@@ -244,6 +247,7 @@ class S3Connector(BaseConnector):
         except Exception as e:
             raise DataTransferError(f"S3 read failed for {asset}: {e}")
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def write_batch(
         self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs
     ) -> int:

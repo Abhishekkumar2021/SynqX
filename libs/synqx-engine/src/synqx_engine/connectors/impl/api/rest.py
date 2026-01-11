@@ -2,6 +2,7 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 import httpx
 import pandas as pd
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.resilience import retry
 from synqx_core.errors import ConfigurationError, DataTransferError
 from synqx_core.logging import get_logger
 from pydantic import Field
@@ -69,6 +70,7 @@ class RestApiConnector(BaseConnector):
         except Exception as e:
             raise ConfigurationError(f"Invalid REST API configuration: {e}")
 
+    @retry(exceptions=(httpx.RequestError,), max_attempts=3)
     def connect(self) -> None:
         if self.client:
             return
@@ -229,6 +231,7 @@ class RestApiConnector(BaseConnector):
             logger.error(f"Sample fetch failed for {asset}: {e}")
             return []
 
+    @retry(exceptions=(httpx.RequestError, httpx.HTTPStatusError), max_attempts=3)
     def read_batch(
         self, asset: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs
     ) -> Iterator[pd.DataFrame]:
@@ -314,6 +317,7 @@ class RestApiConnector(BaseConnector):
             except Exception as e:
                 raise DataTransferError(f"REST API read failed at path {path}: {e}")
 
+    @retry(exceptions=(httpx.RequestError, httpx.HTTPStatusError), max_attempts=3)
     def write_batch(
         self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs
     ) -> int:
@@ -379,6 +383,7 @@ class RestApiConnector(BaseConnector):
         
         return total
 
+    @retry(exceptions=(httpx.RequestError, httpx.HTTPStatusError), max_attempts=3)
     def execute_query(
         self,
         query: str,

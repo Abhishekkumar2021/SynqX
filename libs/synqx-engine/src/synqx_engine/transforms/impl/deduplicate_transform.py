@@ -1,45 +1,36 @@
 from typing import Iterator
-import pandas as pd
-from synqx_engine.transforms.base import BaseTransform
-from synqx_core.errors import ConfigurationError
-from synqx_core.logging import get_logger
+import polars as pl
+from synqx_engine.transforms.polars_base import PolarsTransform
+from synqx_core.errors import TransformationError
 
-logger = get_logger(__name__)
-
-class DeduplicateTransform(BaseTransform):
+class DeduplicateTransform(PolarsTransform):
     """
-    Removes duplicate rows from the DataFrame.
+    High-performance deduplication using Polars.
     Config:
-    - subset: Optional[List[str]] (Columns to consider for identifying duplicates, default all)
-    - keep: str (Which duplicate to keep: 'first', 'last', or False to drop all duplicates)
+    - columns: List[str] (columns to consider for uniqueness, default: all)
+    - keep: str (first, last, any - default: first)
     """
 
     def validate_config(self) -> None:
-        keep = self.get_config_value("keep", "first")
-        if keep not in ["first", "last", False]:
-            raise ConfigurationError("DeduplicateTransform 'keep' must be 'first', 'last', or False.")
+        pass
 
-    def transform(self, data: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
-        subset = self.config.get("subset")
+    def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
+        subset = self.config.get("columns") or self.config.get("subset")
         keep = self.config.get("keep", "first")
-
-        # Blocking: Accumulate everything for global deduplication
-        all_chunks = list(data)
-        if not all_chunks:
-            return
-            
-        full_df = pd.concat(all_chunks, ignore_index=True)
-        
-        # Filter subset columns that actually exist
-        valid_subset = [col for col in subset if col in full_df.columns] if subset else None
         
         try:
-            dedup_df = full_df.drop_duplicates(subset=valid_subset, keep=keep)
+            lazy_frames = [df.lazy() for df in data]
+            if not lazy_frames:
+                return
+                
+            lf = pl.concat(lazy_frames)
+            result_df = lf.unique(subset=subset, keep=keep, maintain_order=True).collect()
+            
             if self.on_chunk:
-                filtered_count = len(full_df) - len(dedup_df)
-                if filtered_count > 0:
-                    self.on_chunk(pd.DataFrame(), direction="intermediate", filtered_count=filtered_count)
-            yield dedup_df
+                import pandas as pd
+                self.on_chunk(pd.DataFrame(), direction="intermediate")
+                
+            yield result_df
+            
         except Exception as e:
-            logger.warning(f"Deduplication failed: {e}")
-            yield full_df
+            raise TransformationError(f"Deduplication failed: {e}") from e

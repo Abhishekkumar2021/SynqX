@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional, Iterator, Union
 import pandas as pd
 from pymongo import MongoClient, UpdateOne
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.resilience import retry
 from synqx_core.errors import (
     ConfigurationError, 
     ConnectionFailedError, 
@@ -44,6 +45,7 @@ class MongoDBConnector(BaseConnector):
         except Exception as e:
             raise ConfigurationError(f"Invalid MongoDB configuration: {e}")
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def connect(self) -> None:
         if self._client:
             return
@@ -146,6 +148,7 @@ class MongoDBConnector(BaseConnector):
         except Exception as e:
             raise SchemaDiscoveryError(f"MongoDB schema inference failed: {e}")
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def read_batch(
         self, asset: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs
     ) -> Iterator[pd.DataFrame]:
@@ -208,6 +211,7 @@ class MongoDBConnector(BaseConnector):
         if batch:
             yield pd.DataFrame(batch)
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def execute_query(
         self,
         query: str,
@@ -247,6 +251,7 @@ class MongoDBConnector(BaseConnector):
         except Exception as e:
             raise DataTransferError(f"MongoDB query failed: {e}")
 
+    @retry(exceptions=(Exception,), max_attempts=3)
     def write_batch(
         self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs
     ) -> int:

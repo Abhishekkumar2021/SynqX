@@ -1,21 +1,26 @@
 from typing import Iterator, Dict
-import pandas as pd
-from synqx_engine.transforms.base import BaseTransform
+import polars as pl
+from synqx_engine.transforms.polars_base import PolarsTransform
 
-class UnionTransform(BaseTransform):
+class UnionTransform(PolarsTransform):
     """
-    Combines multiple data streams vertically (concatenation).
+    Combines multiple Polars data streams vertically (concatenation).
     Streams inputs sequentially to keep memory usage low.
     """
 
     def validate_config(self) -> None:
         pass
 
-    def transform(self, data: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
+    def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         # Single input pass-through
         yield from data
 
-    def transform_multi(self, data_map: Dict[str, Iterator[pd.DataFrame]]) -> Iterator[pd.DataFrame]:
+    def transform_multi(self, data_map: Dict[str, Iterator[pl.DataFrame]]) -> Iterator[pl.DataFrame]:
         # Stream each input sequentially
+        # This is the most memory-efficient way to union large datasets
         for iterator in data_map.values():
-            yield from iterator
+            for df in iterator:
+                if self.on_chunk:
+                    import pandas as pd
+                    self.on_chunk(pd.DataFrame(), direction="intermediate")
+                yield df

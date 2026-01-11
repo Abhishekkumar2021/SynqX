@@ -260,9 +260,34 @@ class ParallelAgent:
                     for nid in layer_nodes_ids:
                         node = node_map[nid]
                         inputs = {uid: self.cache.retrieve(uid) for uid in dag.get_upstream_nodes(nid)}
+                        
+                        # Node-level retry wrapper
+                        def execute_with_retry(n, inp, s_cb):
+                            max_attempts = (n.get("max_retries") or 0) + 1
+                            strategy = n.get("retry_strategy") or "fixed"
+                            delay = n.get("retry_delay_seconds") or 5
+                            
+                            for attempt in range(max_attempts):
+                                try:
+                                    return self.executor.execute(n, inp, s_cb)
+                                except Exception as exc:
+                                    if attempt + 1 < max_attempts:
+                                        wait_time = delay
+                                        if strategy == "exponential_backoff":
+                                            wait_time = delay * (2 ** attempt)
+                                        elif strategy == "linear_backoff":
+                                            wait_time = delay * (attempt + 1)
+                                            
+                                        log_cb(f"[RETRY] Node '{n.get('node_id')}' failed (Attempt {attempt+1}/{max_attempts}). Retrying in {wait_time}s: {exc}", n.get('node_id'))
+                                        if s_cb:
+                                            s_cb(n.get('node_id'), "pending", {"message": f"Retrying ({attempt+1}/{max_attempts})..."})
+                                        time.sleep(wait_time)
+                                    else:
+                                        raise exc
+
                         if status_cb:
                             status_cb(nid, "pending")
-                        futures[pool.submit(self.executor.execute, node, inputs, status_cb)] = nid
+                        futures[pool.submit(execute_with_retry, node, inputs, status_cb)] = nid
                         if status_cb:
                             status_cb(nid, "running")
 

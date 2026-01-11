@@ -1,18 +1,15 @@
 from typing import Iterator
-import pandas as pd
-from synqx_engine.transforms.base import BaseTransform
-from synqx_core.errors import ConfigurationError
-from synqx_core.logging import get_logger
+import polars as pl
+from synqx_engine.transforms.polars_base import PolarsTransform
+from synqx_core.errors import ConfigurationError, TransformationError
 
-logger = get_logger(__name__)
-
-class FillNullsTransform(BaseTransform):
+class FillNullsTransform(PolarsTransform):
     """
-    Fills null (NaN) values in the DataFrame.
+    High-performance null filling using Polars.
     Config:
-    - value: Any (Value to fill nulls with, e.g., 0, 'N/A', -1) OR
-    - strategy: Literal['mean', 'median', 'mode', 'ffill', 'bfill'] (Method to fill nulls)
-    - subset: Optional[List[str]] (Columns to apply fill to, default all)
+    - value: Any (Value to fill nulls with) OR
+    - strategy: str ('forward', 'backward', 'min', 'max', 'mean', 'zero', 'one')
+    - subset: Optional[List[str]] (Columns to apply fill to)
     """
 
     def validate_config(self) -> None:
@@ -20,50 +17,41 @@ class FillNullsTransform(BaseTransform):
         strategy = self.get_config_value("strategy")
         if value is None and strategy is None:
             raise ConfigurationError("FillNullsTransform requires either 'value' or 'strategy'.")
-        if value is not None and strategy is not None:
-            raise ConfigurationError("FillNullsTransform cannot have both 'value' and 'strategy'.")
 
-    def transform(self, data: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
+    def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         value = self.config.get("value")
         strategy = self.config.get("strategy")
-        subset_cols = self.config.get("subset")
+        subset = self.config.get("subset")
+        
+        # Strategy mapping from Pandas names to Polars
+        strategy_map = {
+            'ffill': 'forward',
+            'bfill': 'backward',
+            'mean': 'mean',
+            'min': 'min',
+            'max': 'max',
+            'zero': 'zero',
+            'one': 'one'
+        }
+        polars_strategy = strategy_map.get(strategy, strategy)
 
-        if value is not None:
-            # Streaming fill
-            for df in data:
-                if df.empty:
-                    yield df
-                    continue
-                target_cols = [col for col in subset_cols if col in df.columns] if subset_cols else df.columns
-                df[target_cols] = df[target_cols].fillna(value=value)
+        for df in data:
+            if df.is_empty():
                 yield df
-        elif strategy in ['mean', 'median', 'mode']:
-            # Blocking fill for statistical strategies
-            all_chunks = list(data)
-            if not all_chunks:
-                return
-            full_df = pd.concat(all_chunks, ignore_index=True)
-            target_cols = [col for col in subset_cols if col in full_df.columns] if subset_cols else full_df.columns
-            
-            if strategy == 'mean':
-                full_df[target_cols] = full_df[target_cols].fillna(full_df[target_cols].mean(numeric_only=True))
-            elif strategy == 'median':
-                full_df[target_cols] = full_df[target_cols].fillna(full_df[target_cols].median(numeric_only=True))
-            elif strategy == 'mode':
-                mode_res = full_df[target_cols].mode()
-                if not mode_res.empty:
-                    full_df[target_cols] = full_df[target_cols].fillna(mode_res.iloc[0])
-            
-            yield full_df
-        else:
-            # Streaming for ffill/bfill (local to chunk)
-            for df in data:
-                if df.empty:
-                    yield df
-                    continue
-                target_cols = [col for col in subset_cols if col in df.columns] if subset_cols else df.columns
-                if strategy == 'ffill':
-                    df[target_cols] = df[target_cols].ffill()
-                elif strategy == 'bfill':
-                    df[target_cols] = df[target_cols].bfill()
-                yield df
+                continue
+                
+            try:
+                if value is not None:
+                    # Fill with specific value
+                    result_df = df.fill_null(value=value)
+                else:
+                    # Fill with strategy
+                    result_df = df.fill_null(strategy=polars_strategy)
+                
+                if self.on_chunk:
+                    import pandas as pd
+                    self.on_chunk(pd.DataFrame(), direction="intermediate")
+                    
+                yield result_df
+            except Exception as e:
+                raise TransformationError(f"Polars FillNulls failed: {e}") from e

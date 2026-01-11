@@ -1,11 +1,11 @@
 from typing import Iterator
-import pandas as pd
-from synqx_engine.transforms.base import BaseTransform
+import polars as pl
+from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.errors import ConfigurationError
 
-class DropColumnsTransform(BaseTransform):
+class DropColumnsTransform(PolarsTransform):
     """
-    Drops specified columns from the DataFrame.
+    Drops specified columns from the DataFrame using Polars.
     Config:
     - columns: List[str] (e.g., ["column_to_drop_1", "column_to_drop_2"])
     """
@@ -14,12 +14,16 @@ class DropColumnsTransform(BaseTransform):
         if "columns" not in self.config or not isinstance(self.config["columns"], list):
             raise ConfigurationError("DropColumnsTransform requires 'columns' as a list in config.")
 
-    def transform(self, data: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
+    def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         cols_to_drop = self.config["columns"]
         for df in data:
+            if df.is_empty():
+                yield df
+                continue
+                
             # Only drop columns that actually exist in the DataFrame
             existing_cols = [col for col in cols_to_drop if col in df.columns]
             if existing_cols:
-                yield df.drop(columns=existing_cols)
+                yield df.drop(existing_cols)
             else:
-                yield df # No columns to drop, return original DF
+                yield df

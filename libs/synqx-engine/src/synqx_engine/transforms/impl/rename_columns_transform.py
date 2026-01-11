@@ -1,11 +1,11 @@
 from typing import Iterator
-import pandas as pd
-from synqx_engine.transforms.base import BaseTransform
+import polars as pl
+from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.errors import ConfigurationError
 
-class RenameColumnsTransform(BaseTransform):
+class RenameColumnsTransform(PolarsTransform):
     """
-    Renames columns based on a provided mapping.
+    Renames columns using Polars.
     Config:
     - rename_map: Dict[str, str] (e.g., {"old_name": "new_name"})
     """
@@ -14,7 +14,16 @@ class RenameColumnsTransform(BaseTransform):
         if "rename_map" not in self.config and "columns" not in self.config:
             raise ConfigurationError("RenameColumnsTransform requires 'rename_map' or 'columns' as a dictionary in config.")
 
-    def transform(self, data: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
+    def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         rename_map = self.config.get("rename_map") or self.config.get("columns")
         for df in data:
-            yield df.rename(columns=rename_map)
+            if df.is_empty():
+                yield df
+                continue
+            
+            # Polars rename only handles columns that exist
+            safe_map = {k: v for k, v in rename_map.items() if k in df.columns}
+            if safe_map:
+                yield df.rename(safe_map)
+            else:
+                yield df

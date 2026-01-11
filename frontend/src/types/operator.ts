@@ -5,7 +5,7 @@ import {
     Copy, FileCode, Sliders, X,
     Database, HardDriveUpload, CheckCircle2,
     PlayCircle, GitMerge, Layers,
-    Zap
+    Zap, History, Shield
 } from 'lucide-react';
 
 export interface OperatorDef {
@@ -109,49 +109,63 @@ export const OPERATORS: OperatorDef[] = [
   }
 }`
     },
+    {
+        id: 'merge',
+        name: 'Merge (Upsert)',
+        type: 'merge',
+        description: 'Upsert new records into a primary dataset based on a key.',
+        icon: GitMerge,
+        category: 'Set Operations',
+        color: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/20',
+        configSchema: {
+            "on": "string (column name)"
+        },
+        example: `{ 
+  "operator_type": "merge",
+  "operator_class": "merge",
+  "config": {
+    "on": "id"
+  }
+}`
+    },
     // --- Transformations ---
     {
         id: 'filter',
         name: 'Filter Rows',
         type: 'transform',
-        description: 'Filter dataset rows based on a condition string (Pandas query syntax).',
+        description: 'Filter dataset rows based on a condition string.',
         icon: Filter,
         category: 'Transformations',
         color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
         configSchema: {
-            "query": "string (e.g. 'age > 18')"
+            "condition": "string (e.g. 'age > 18')"
         },
         example: `{ 
   "operator_type": "transform",
   "operator_class": "filter",
   "config": {
-    "query": "status == 'active' and score >= 0.8"
+    "condition": "status == 'active' and score >= 0.8"
   }
 }`
     },
     {
         id: 'map',
-        name: 'Map Values',
+        name: 'Map Columns',
         type: 'transform',
-        description: 'Map values in a column using a dictionary or expression.',
+        description: 'Rename or drop columns in the dataset.',
         icon: ArrowRightLeft,
         category: 'Transformations',
         color: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
         configSchema: {
-            "column": "string",
-            "mapping": "dict",
-            "default": "any (optional)"
+            "rename": "dict (optional)",
+            "drop": "list[string] (optional)"
         },
         example: `{ 
   "operator_type": "transform",
   "operator_class": "map",
   "config": {
-    "column": "country_code",
-    "mapping": {
-      "US": "United States",
-      "UK": "United Kingdom"
-    },
-    "default": "Unknown"
+    "rename": { "old_name": "new_name" },
+    "drop": ["temp_id"]
   }
 }`
     },
@@ -205,16 +219,15 @@ export const OPERATORS: OperatorDef[] = [
         category: 'Data Quality',
         color: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/20',
         configSchema: {
-            "columns": "dict {column: type}"
+            "casts": "dict {column: type}"
         },
         example: `{ 
   "operator_type": "transform",
   "operator_class": "type_cast",
   "config": {
-    "columns": {
+    "casts": {
       "price": "float",
-      "quantity": "int",
-      "is_active": "bool"
+      "quantity": "int"
     }
   }
 }`
@@ -228,16 +241,16 @@ export const OPERATORS: OperatorDef[] = [
         category: 'Data Quality',
         color: 'text-lime-500 bg-lime-500/10 border-lime-500/20',
         configSchema: {
-            "columns": "list[string] (optional)",
+            "subset": "list[string] (optional)",
             "value": "any",
-            "method": "string ('ffill', 'bfill')"
+            "strategy": "string ('forward', 'backward', 'mean')"
         },
         example: `{ 
   "operator_type": "transform",
   "operator_class": "fill_nulls",
   "config": {
     "value": 0,
-    "columns": ["score", "count"]
+    "subset": ["score", "count"]
   }
 }`
     },
@@ -250,54 +263,81 @@ export const OPERATORS: OperatorDef[] = [
         category: 'Data Quality',
         color: 'text-violet-500 bg-violet-500/10 border-violet-500/20',
         configSchema: {
-            "subset": "list[string]",
-            "keep": "string ('first', 'last', false)"
+            "columns": "list[string]",
+            "keep": "string ('first', 'last')"
         },
         example: `{ 
   "operator_type": "transform",
   "operator_class": "deduplicate",
   "config": {
-    "subset": ["email"],
+    "columns": ["email"],
     "keep": "last"
+  }
+}`
+    },
+    {
+        id: 'scd_type_2',
+        name: 'SCD Type 2',
+        type: 'transform',
+        description: 'Track historical changes by maintaining versioned rows (Effective From/To).',
+        icon: History,
+        category: 'Advanced',
+        color: 'text-blue-600 bg-blue-600/10 border-blue-600/20',
+        configSchema: {
+            "primary_key": "list[string] (required)",
+            "compare_columns": "list[string] (required)",
+            "effective_from_col": "string (optional)",
+            "effective_to_col": "string (optional)",
+            "is_current_col": "string (optional)"
+        },
+        example: `{ 
+  "operator_type": "transform",
+  "operator_class": "scd_type_2",
+  "config": {
+    "primary_key": ["user_id"],
+    "compare_columns": ["email", "address"]
+  }
+}`
+    },
+    {
+        id: 'pii_mask',
+        name: 'PII Masking',
+        type: 'transform',
+        description: 'Automatically redact or hash sensitive data (emails, credit cards, etc.).',
+        icon: Shield,
+        category: 'Data Quality',
+        color: 'text-indigo-600 bg-indigo-600/10 border-indigo-600/20',
+        configSchema: {
+            "masks": "list[dict] (required)"
+        },
+        example: `{ 
+  "operator_type": "transform",
+  "operator_class": "pii_mask",
+  "config": {
+    "masks": [
+      { "column": "email", "strategy": "hash" },
+      { "column": "credit_card", "strategy": "partial", "visible_chars": 4 }
+    ]
   }
 }`
     },
     // --- Advanced ---
     {
-        id: 'polars_code',
-        name: 'Polars Logic (Rust Speed)',
+        id: 'code',
+        name: 'Python Code (High Performance)',
         type: 'transform',
-        description: 'High-performance Python logic using Polars Lazy API (optimized for millions of rows).',
-        icon: Zap,
+        description: 'Execute high-performance Rust-backed logic using the Polars API.',
+        icon: Code2,
         category: 'Advanced',
-        color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        color: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
         configSchema: {
             "code": "string (e.g. 'def transform(lf): return lf.filter(pl.col(\"score\") > 0.5)')"
         },
         example: `{ 
   "operator_type": "transform",
-  "operator_class": "polars_code",
-  "config": {
-    "code": "def transform(lf):\n    return lf.with_columns((pl.col('price') * 1.2).alias('taxed_price'))"
-  }
-}`
-    },
-    {
-        id: 'code',
-        name: 'Python Code',
-        type: 'transform',
-        description: 'Execute arbitrary Python code to transform the DataFrame.',
-        icon: Code2,
-        category: 'Advanced',
-        color: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
-        configSchema: {
-            "code": "string"
-        },
-        example: `{ 
-  "operator_type": "transform",
   "operator_class": "code",
   "config": {
-    "code": "def transform(df):\n    df['total'] = df['price'] * df['qty']\n    return df"
+    "code": "def transform(lf):\n    return lf.with_columns((pl.col('price') * 1.2).alias('taxed_price'))"
   }
 }`
     },
@@ -333,14 +373,14 @@ export const OPERATORS: OperatorDef[] = [
         category: 'Data Quality',
         color: 'text-teal-500 bg-teal-500/10 border-teal-500/20',
         configSchema: {
-            "schema": "dict (column: type)",
+            "schema": "list[dict] (column, check)",
             "strict": "boolean"
         },
         example: `{ 
   "operator_type": "validate",
-  "operator_class": "schema_check",
+  "operator_class": "validate",
   "config": {
-    "schema": { "id": "int", "email": "string" },
+    "schema": [ { "column": "id", "check": "not_null" } ],
     "strict": true
   }
 }`

@@ -351,7 +351,9 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 connection_id: node.data.connection_id ? String(node.data.connection_id) : '',
                 asset_id: (node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) ? 
                     String(node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) : '',
-                write_strategy: config.write_strategy || 'append',
+                write_mode: config.write_mode || 'append',
+                incremental: config.incremental === true,
+                watermark_column: config.watermark_column || '',
                 max_retries: node.data.max_retries ?? 3,
                 retry_strategy: (node.data as any).retry_strategy || 'fixed',
                 retry_delay_seconds: node.data.retry_delay_seconds ?? 60,
@@ -429,7 +431,9 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 config: {
                     ...baseConfig,
                     ...dynamicConfig,
-                    write_strategy: data.operator_type === 'sink' ? data.write_strategy : undefined
+                    write_mode: data.operator_type === 'sink' ? data.write_mode : undefined,
+                    incremental: data.operator_type === 'source' ? data.incremental : undefined,
+                    watermark_column: data.operator_type === 'source' ? data.watermark_column : undefined
                 },
                 column_mapping: colMapping,
                 connection_id: data.connection_id ? parseInt(data.connection_id) : undefined,
@@ -606,10 +610,34 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                     </Select>
                                                 )} />
                                             </div>
+                                            {nodeType === 'source' && (
+                                                <div className="space-y-4 pt-2">
+                                                    <div className="flex items-center space-x-2">
+                                                        <Checkbox 
+                                                            id="incremental" 
+                                                            checked={watch('incremental')} 
+                                                            onCheckedChange={(val) => setValue('incremental', val)} 
+                                                            disabled={!isEditor} 
+                                                        />
+                                                        <Label htmlFor="incremental" className="text-[10px] font-bold leading-none cursor-pointer">Incremental Sync</Label>
+                                                    </div>
+                                                    {watch('incremental') && (
+                                                        <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                            <Label className="text-[10px] font-bold">Watermark Column</Label>
+                                                            <Input 
+                                                                {...register('watermark_column')} 
+                                                                placeholder="e.g. updated_at" 
+                                                                readOnly={!isEditor} 
+                                                                className="h-8 text-[10px] font-mono bg-background/50" 
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             {nodeType === 'sink' && (
                                                 <div className="space-y-2 pt-2">
                                                     <Label className="text-[10px] font-bold">Write Strategy</Label>
-                                                    <Controller control={control} name="write_strategy" render={({ field }) => (
+                                                    <Controller control={control} name="write_mode" render={({ field }) => (
                                                         <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
                                                             <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20"><SelectValue placeholder="Select strategy" /></SelectTrigger>
                                                             <SelectContent>
@@ -639,11 +667,22 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                         <SelectItem value="none">Disabled</SelectItem>
                                                         <SelectItem value="fixed">Fixed</SelectItem>
                                                         <SelectItem value="linear_backoff">Linear</SelectItem>
+                                                        <SelectItem value="exponential_backoff">Exponential</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             )} />
                                         </div>
                                         {watch('retry_strategy') !== 'none' && <div className="space-y-2"><Label className="text-[10px] font-bold">Max Retries</Label><Input type="number" {...register('max_retries', { valueAsNumber: true })} readOnly={!isEditor} className="h-9 bg-background/50" /></div>}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold">Retry Delay (s)</Label>
+                                            <Input type="number" {...register('retry_delay_seconds', { valueAsNumber: true })} readOnly={!isEditor} className="h-9 bg-background/50" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold">Timeout (s)</Label>
+                                            <Input type="number" {...register('timeout_seconds', { valueAsNumber: true })} placeholder="3600" readOnly={!isEditor} className="h-9 bg-background/50" />
+                                        </div>
                                     </div>
                                 </div>
                                 <Separator className="opacity-50" />
