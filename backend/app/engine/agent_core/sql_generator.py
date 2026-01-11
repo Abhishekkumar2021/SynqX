@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional
-from app.models.enums import OperatorType
+from synqx_core.models.enums import OperatorType
 
 class SQLPushdownGenerator:
     """
@@ -74,7 +74,7 @@ class StaticOptimizer:
         Main optimization entry point. Returns a modified pipeline_version (cloned)
         with collapsed nodes.
         """
-        from app.models.connections import Connection, Asset
+        from synqx_core.models.connections import Connection, Asset
         
         # 1. Map node_id to node object
         node_map = {n.node_id: n for n in pipeline_version.nodes}
@@ -104,7 +104,7 @@ class StaticOptimizer:
         Detects chains that start and end on the same connection.
         Collapses them into a single INSERT INTO ... SELECT or CREATE TABLE AS.
         """
-        from app.models.connections import Asset, Connection
+        from synqx_core.models.connections import Asset, Connection
         node_map = {n.node_id: n for n in pipeline_version.nodes}
         edges = pipeline_version.edges
 
@@ -166,7 +166,7 @@ class StaticOptimizer:
 
     @classmethod
     def _get_node_connection_id(cls, node: Any, db: Any) -> Optional[int]:
-        from app.models.connections import Asset
+        from synqx_core.models.connections import Asset
         if node.operator_type == OperatorType.EXTRACT:
             asset = db.query(Asset).filter(Asset.id == node.source_asset_id).first()
             return asset.connection_id if asset else None
@@ -176,7 +176,7 @@ class StaticOptimizer:
 
     @classmethod
     def _get_node_sql(cls, node: Any, db: Any) -> Optional[str]:
-        from app.models.connections import Asset
+        from synqx_core.models.connections import Asset
         if node.operator_type == OperatorType.EXTRACT:
             asset = db.query(Asset).filter(Asset.id == node.source_asset_id).first()
             if not asset:

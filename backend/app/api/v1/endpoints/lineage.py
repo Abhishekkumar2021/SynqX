@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app import models
 from app.services.lineage_service import LineageService
-from app.schemas.lineage import LineageGraph, ImpactAnalysis, ColumnLineage
+from synqx_core.schemas.lineage import LineageGraph, ImpactAnalysis, ColumnLineage
 
 router = APIRouter()
 

@@ -11,21 +11,21 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from app.api import deps
-from app.schemas.agent import (
+from synqx_core.schemas.agent import (
     AgentCreate, AgentResponse, AgentToken, AgentHeartbeat,
     AgentJobStatusUpdate, AgentJobLogEntry, AgentStepUpdate
 )
-from app.schemas.ephemeral import EphemeralJobUpdate
-from app.schemas.pipeline import PipelineVersionRead
+from synqx_core.schemas.ephemeral import EphemeralJobUpdate
+from synqx_core.schemas.pipeline import PipelineVersionRead
 from app.services.agent_service import AgentService
 from app.services.ephemeral_service import EphemeralJobService
-from app.models.agent import Agent
-from app.models.user import User
-from app.models.execution import Job, JobStatus, PipelineRun
-from app.models.ephemeral import EphemeralJob
-from app.models.monitoring import JobLog
-from app.models.enums import PipelineRunStatus, OperatorRunStatus
-from app.models.pipelines import PipelineVersion
+from synqx_core.models.agent import Agent
+from synqx_core.models.user import User
+from synqx_core.models.execution import Job, JobStatus, PipelineRun
+from synqx_core.models.ephemeral import EphemeralJob
+from synqx_core.models.monitoring import JobLog
+from synqx_core.models.enums import PipelineRunStatus, OperatorRunStatus
+from synqx_core.models.pipelines import PipelineVersion
 from app.services.vault_service import VaultService
 from app.engine.agent_core.state_manager import StateManager
 
@@ -189,7 +189,7 @@ def update_step_status(
     state_manager = StateManager(db, job_id)
     
     # Resolve step run
-    from app.models.execution import StepRun
+    from synqx_core.models.execution import StepRun
     step_run = db.query(StepRun).filter(
         StepRun.pipeline_run_id == job.run.id,
         StepRun.node_id == step_update.node_id
@@ -363,7 +363,7 @@ def poll_jobs(
 
     if not job:
         # 2. Check for Ephemeral Jobs (Interactive Queries, etc)
-        from app.models.ephemeral import EphemeralJob
+        from synqx_core.models.ephemeral import EphemeralJob
         ephemeral = db.query(EphemeralJob).filter(
             and_(
                 EphemeralJob.status == JobStatus.QUEUED,

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.api import deps
-from app.schemas.connection import (
+from synqx_core.schemas.connection import (
     ConnectionCreate,
     ConnectionUpdate,
     ConnectionRead,
@@ -34,7 +34,7 @@ from app.services.audit_service import AuditService
 from app.services.vault_service import VaultService
 from app.core.errors import AppError
 from app.core.logging import get_logger
-from app.models.enums import ConnectorType, AssetType
+from synqx_core.models.enums import ConnectorType, AssetType
 from app.services.dependency_service import DependencyService
 
 router = APIRouter()

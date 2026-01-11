@@ -7,7 +7,7 @@ from sqlalchemy import desc, asc
 from app import models
 from app.api import deps
 from app.services.audit_service import AuditLog
-from app.schemas.audit import AuditLogListResponse
+from synqx_core.schemas.audit import AuditLogListResponse
 
 router = APIRouter()
 

@@ -3,9 +3,9 @@ from celery.exceptions import SoftTimeLimitExceeded, Retry
 from app.core.celery_app import celery_app
 from app.core.logging import get_logger
 from app.db.session import session_scope
-from app.models.execution import Job, PipelineRun
-from app.models.enums import JobStatus, PipelineRunStatus
-from app.models.pipelines import PipelineVersion
+from synqx_core.models.execution import Job, PipelineRun
+from synqx_core.models.enums import JobStatus, PipelineRunStatus
+from synqx_core.models.pipelines import PipelineVersion
 from app.engine.agent_engine import PipelineAgent as PipelineRunner
 from app.core.db_logging import DBLogger
 from app.core.errors import ConfigurationError, PipelineExecutionError
@@ -28,8 +28,8 @@ def test_celery():
 )
 def deliver_alert_task(self, alert_id: int):
     """Deliver an alert to an external system (Slack, Teams, Webhook)."""
-    from app.models.monitoring import Alert
-    from app.models.enums import AlertStatus, AlertDeliveryMethod
+    from synqx_core.models.monitoring import Alert
+    from synqx_core.models.enums import AlertStatus, AlertDeliveryMethod
 
     with session_scope() as session:
         alert = session.query(Alert).filter(Alert.id == alert_id).first()
@@ -255,7 +255,7 @@ def execute_pipeline_task(self, job_id: int) -> str:
             # Trigger Job Started Alert
             try:
                 from app.services.alert_service import AlertService
-                from app.models.enums import AlertType, AlertLevel
+                from synqx_core.models.enums import AlertType, AlertLevel
                 # Use a separate session for alerts to avoid aborting the main transaction on error
                 with session_scope() as alert_session:
                     AlertService.trigger_alerts(
@@ -340,7 +340,7 @@ def execute_pipeline_task(self, job_id: int) -> str:
                 # POST-PROCESSING (Alerts, Logs) - Wrap in try/except to not fail the task
                 try:
                     from app.services.alert_service import AlertService
-                    from app.models.enums import AlertType, AlertLevel
+                    from synqx_core.models.enums import AlertType, AlertLevel
                     with session_scope() as alert_session:
                         AlertService.trigger_alerts(
                             alert_session,
@@ -557,7 +557,7 @@ def _mark_job_failed(
     # Trigger Alerts based on Config
     try:
         from app.services.alert_service import AlertService
-        from app.models.enums import AlertType, AlertLevel
+        from synqx_core.models.enums import AlertType, AlertLevel
         
         with session_scope() as alert_session:
             AlertService.trigger_alerts(
@@ -627,7 +627,7 @@ def _calculate_retry_delay(job: Job, retry_count: int) -> int:
     Calculate retry delay based on the job's pipeline configuration.
     Returns delay in seconds.
     """
-    from app.models.enums import RetryStrategy
+    from synqx_core.models.enums import RetryStrategy
     
     # Default values
     base_delay = job.retry_delay_seconds if job.retry_delay_seconds is not None else 60

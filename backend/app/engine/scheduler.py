@@ -5,10 +5,10 @@ from croniter import croniter
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
 
-from app.models.pipelines import Pipeline
-from app.models.monitoring import SchedulerEvent
-from app.models.execution import Job
-from app.models.enums import JobStatus
+from synqx_core.models.pipelines import Pipeline
+from synqx_core.models.monitoring import SchedulerEvent
+from synqx_core.models.execution import Job
+from synqx_core.models.enums import JobStatus
 from app.worker.tasks import execute_pipeline_task
 from app.core.logging import get_logger
 from app.utils.agent import is_remote_group

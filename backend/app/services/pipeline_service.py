@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import and_
 
-from app.models.pipelines import Pipeline, PipelineVersion, PipelineNode, PipelineEdge
-from app.models.execution import Job
-from app.models.enums import PipelineStatus, JobStatus, OperatorType, RetryStrategy
-from app.schemas.pipeline import (
+from synqx_core.models.pipelines import Pipeline, PipelineVersion, PipelineNode, PipelineEdge
+from synqx_core.models.execution import Job
+from synqx_core.models.enums import PipelineStatus, JobStatus, OperatorType, RetryStrategy
+from synqx_core.schemas.pipeline import (
     PipelineCreate,
     PipelineVersionCreate,
     PipelineNodeCreate,

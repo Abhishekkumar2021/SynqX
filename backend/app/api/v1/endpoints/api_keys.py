@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import models
-from app.schemas import api_key as api_key_schema
+from synqx_core.schemas import api_key as api_key_schema
 from app.api import deps
 from app.core import security
 from app.services.audit_service import AuditService

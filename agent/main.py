@@ -29,9 +29,9 @@ PID_FILE = BASE_DIR / ".agent.pid"
 
 # Import local engine logic
 sys.path.append(str(BASE_DIR))
-from engine.dag import DAG  # noqa: E402
+from synqx_engine.dag import DAG  # noqa: E402
 from engine.executor import NodeExecutor, ParallelAgent  # noqa: E402
-from engine.utils.serialization import sanitize_for_json  # noqa: E402
+from synqx_core.utils.serialization import sanitize_for_json  # noqa: E402
 from engine.core.sql_generator import StaticOptimizer  # noqa: E402
 
 # Load existing .env
@@ -188,7 +188,7 @@ class SynqxAgent:
             if not conn_data:
                 raise ValueError("Contextual connection metadata missing for ephemeral request")
             
-            from engine.connectors.factory import ConnectorFactory
+            from synqx_engine.connectors.factory import ConnectorFactory
             connector = ConnectorFactory.get_connector(conn_data["type"], conn_data["config"])
             
             result_update = {"status": "success"}
@@ -286,7 +286,7 @@ class SynqxAgent:
                 package = payload.get("package")
                 
                 import subprocess
-                base_dir = os.path.join(os.getcwd(), "data", "envs", str(conn_data["id"]), language)
+                base_dir = os.path.join(os.getcwd(), ".synqx", "envs", str(conn_data["id"]), language)
                 os.makedirs(base_dir, exist_ok=True)
                 
                 if action == "initialize":

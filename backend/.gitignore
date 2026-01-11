@@ -1,20 +1,17 @@
-# Python-generated files
+# SynqX Backend Specific
 __pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
-# Environments
+*.py[cod]
+.venv/
 .env
+.env.*
 
-# Ignore entire folders and everything inside them
+# Data & Logs
 data/
 logs/
+*.log
+celerybeat-schedule*
 
-# Ignore all celery beat state files
-celerybeat-*
+# Build
+dist/
+build/
+*.egg-info/

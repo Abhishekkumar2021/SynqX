@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.api import deps
-from app.schemas.dashboard import DashboardStats
+from synqx_core.schemas.dashboard import DashboardStats
 from app.services.dashboard_service import DashboardService
 
 router = APIRouter()

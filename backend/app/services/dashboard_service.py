@@ -3,22 +3,22 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, and_, desc, or_
 
-from app.models.pipelines import Pipeline
-from app.models.execution import Job, PipelineRun, StepRun
-from app.models.monitoring import Alert, AlertConfig
-from app.models.connections import Connection, Asset
-from app.models.agent import Agent
-from app.models.user import User
-from app.models.audit import AuditLog
-from app.models.ephemeral import EphemeralJob
-from app.models.enums import PipelineStatus, JobStatus, OperatorRunStatus, AlertStatus, AgentStatus
-from app.schemas.dashboard import (
+from synqx_core.models.pipelines import Pipeline
+from synqx_core.models.execution import Job, PipelineRun, StepRun
+from synqx_core.models.monitoring import Alert, AlertConfig
+from synqx_core.models.connections import Connection, Asset
+from synqx_core.models.agent import Agent
+from synqx_core.models.user import User
+from synqx_core.models.audit import AuditLog
+from synqx_core.models.ephemeral import EphemeralJob
+from synqx_core.models.enums import PipelineStatus, JobStatus, OperatorRunStatus, AlertStatus, AgentStatus
+from synqx_core.schemas.dashboard import (
     DashboardStats, ThroughputDataPoint, PipelineDistribution, RecentActivity,
     SystemHealth, FailingPipeline, SlowestPipeline, DashboardAlert, ConnectorHealth,
     AgentGroupStats, QualityTrendDataPoint, QualityViolation
 )
-from app.schemas.audit import AuditLogRead
-from app.schemas.ephemeral import EphemeralJobResponse
+from synqx_core.schemas.audit import AuditLogRead
+from synqx_core.schemas.ephemeral import EphemeralJobResponse
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -124,7 +124,7 @@ class DashboardService:
             ).scalar() or 0
 
             if workspace_id:
-                from app.models.workspace import WorkspaceMember
+                from synqx_core.models.workspace import WorkspaceMember
                 total_users = self.db.query(func.count(WorkspaceMember.user_id)).filter(
                     WorkspaceMember.workspace_id == workspace_id
                 ).scalar() or 0

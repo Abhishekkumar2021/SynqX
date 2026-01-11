@@ -1,1 +1,0 @@
-from engine.connectors.impl.generic.custom_script import CustomScriptConnector as CustomScriptConnector

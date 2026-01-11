@@ -7,66 +7,15 @@ import json
 import psutil
 import os
 from typing import Dict, Any, List, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 
-from engine.metrics import ExecutionMetrics
-from engine.connectors.factory import ConnectorFactory
-from engine.transforms.factory import TransformFactory
+from synqx_engine.metrics import ExecutionMetrics
+from synqx_engine.core.data_cache import DataCache
+from synqx_engine.connectors.factory import ConnectorFactory
+from synqx_engine.transforms.factory import TransformFactory
 from engine.core.sql_generator import SQLPushdownGenerator
 
 logger = logging.getLogger("SynqX-Agent-Executor")
-
-class DataCache:
-    """Thread-safe data cache with LRU eviction."""
-    def __init__(self, max_memory_mb: int = 2048):
-        self._cache: Dict[str, List[pd.DataFrame]] = {}
-        self._lock = threading.RLock()
-        self.max_memory_mb = max_memory_mb
-        self._current_memory_mb = 0.0
-        self._access_order: List[str] = []
-        
-    def store(self, node_id: str, chunks: List[pd.DataFrame]):
-        with self._lock:
-            memory_mb = sum(df.memory_usage(deep=True).sum() for df in chunks) / (1024 * 1024)
-            if self._current_memory_mb + memory_mb > self.max_memory_mb:
-                self._apply_memory_pressure_strategy(memory_mb)
-            if node_id in self._cache:
-                old_memory = sum(df.memory_usage(deep=True).sum() for df in self._cache[node_id]) / (1024 * 1024)
-                self._current_memory_mb -= old_memory
-            self._cache[node_id] = chunks
-            self._current_memory_mb += memory_mb
-            if node_id in self._access_order:
-                self._access_order.remove(node_id)
-            self._access_order.append(node_id)
-
-    def retrieve(self, node_id: str) -> List[pd.DataFrame]:
-        with self._lock:
-            chunks = self._cache.get(node_id, [])
-            if chunks and node_id in self._access_order:
-                self._access_order.remove(node_id)
-                self._access_order.append(node_id)
-            return chunks
-
-    def clear(self, node_ids: List[str]):
-        with self._lock:
-            for nid in node_ids:
-                if nid in self._cache:
-                    chunks = self._cache.pop(nid)
-                    self._current_memory_mb -= sum(df.memory_usage(deep=True).sum() for df in chunks) / (1024 * 1024)
-                    if nid in self._access_order:
-                        self._access_order.remove(nid)
-
-    def _apply_memory_pressure_strategy(self, required_mb: float):
-        if not self._cache:
-            return
-        target_free = required_mb * 1.2
-        freed = 0.0
-        while freed < target_free and self._access_order:
-            lru_node = self._access_order.pop(0)
-            chunks = self._cache.pop(lru_node)
-            node_mem = sum(df.memory_usage(deep=True).sum() for df in chunks) / (1024 * 1024)
-            self._current_memory_mb -= node_mem
-            freed += node_mem
 
 class NodeExecutor:
     """Agent Node Executor - Standardized with Backend logic."""
@@ -299,7 +248,7 @@ class ParallelAgent:
         self.metrics = ExecutionMetrics()
 
     def run(self, dag: Any, node_map: Dict[str, Any], log_cb: Any, status_cb: Any = None):
-        self.metrics.execution_start = datetime.utcnow()
+        self.metrics.execution_start = datetime.now(timezone.utc)
         self.metrics.total_nodes = len(node_map)
         layers = dag.get_execution_layers()
         
@@ -338,7 +287,7 @@ class ParallelAgent:
                                 status_cb(nid, "failed", {"error_message": str(e)})
                             raise e
 
-            self.metrics.execution_end = datetime.utcnow()
+            self.metrics.execution_end = datetime.now(timezone.utc)
             return self.metrics.to_dict()
         finally:
-            self.cache.clear(list(node_map.keys()))
+            self.cache.clear_all()

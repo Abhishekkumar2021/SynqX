@@ -4,6 +4,8 @@ version = "1.0.0"
 description = "Universal Remote Execution Agent for SynqX"
 authors = [{ name = "SynqX Team" }]
 dependencies = [
+    "synqx-core",
+    "synqx-engine",
     "requests>=2.31.0",
     "httpx>=0.27.0",
     "pandas>=2.2.2",
@@ -45,12 +47,16 @@ dependencies = [
 ]
 requires-python = ">=3.9"
 
+[tool.uv.sources]
+synqx-core = { path = "../libs/synqx-core", editable = true }
+synqx-engine = { path = "../libs/synqx-engine", editable = true }
+
 [project.scripts]
 synqx-agent = "main:main_cli"
 
 [tool.setuptools]
 py-modules = ["main"]
-packages = ["engine", "engine.connectors", "engine.transforms"]
+packages = ["engine"]
 
 [build-system]
 requires = ["setuptools>=61.0"]

@@ -5,9 +5,9 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from app.models.agent import Agent
-from app.models.enums import AgentStatus
-from app.schemas.agent import AgentCreate, AgentHeartbeat, AgentToken
+from synqx_core.models.agent import Agent
+from synqx_core.models.enums import AgentStatus
+from synqx_core.schemas.agent import AgentCreate, AgentHeartbeat, AgentToken
 from app.core.errors import AppError, NotFoundError
 
 class AgentService:

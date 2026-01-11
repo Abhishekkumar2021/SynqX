@@ -3,9 +3,9 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 
-from app.models.execution import Job, PipelineRun, StepRun
-from app.models.monitoring import JobLog, StepLog
-from app.models.enums import JobStatus, PipelineRunStatus
+from synqx_core.models.execution import Job, PipelineRun, StepRun
+from synqx_core.models.monitoring import JobLog, StepLog
+from synqx_core.models.enums import JobStatus, PipelineRunStatus
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.worker.tasks import execute_pipeline_task
@@ -87,7 +87,7 @@ class JobService:
                 pipeline_run.error_message = f"Cancelled: {reason}" if reason else "Cancelled by user"
                 
                 # Also cancel active step runs
-                from app.models.enums import OperatorRunStatus
+                from synqx_core.models.enums import OperatorRunStatus
                 active_steps = self.db_session.query(StepRun).filter(
                     StepRun.pipeline_run_id == pipeline_run.id,
                     StepRun.status == OperatorRunStatus.RUNNING
@@ -180,33 +180,38 @@ class JobService:
             logger.error(f"Failed to retry job {job_id}: {e}")
             raise AppError(f"Failed to retry job: {e}")
 
-    def get_job_logs(self, job_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None, level: Optional[str] = None) -> List[dict]:
-        """Get logs for a specific job and all its retry attempts (via correlation_id)."""
-        # Fetch the job to get its correlation_id
+    def get_job_logs(self, job_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None, level: Optional[str] = None, all_attempts: bool = False) -> List[dict]:
+        """Get logs for a specific job. If all_attempts is True, returns logs for all retries via correlation_id."""
+        # Fetch the job
         job = self.get_job(job_id, user_id=user_id, workspace_id=workspace_id)
         if not job:
             return []
             
         correlation_id = job.correlation_id
 
-        # 1. Fetch Job Logs for ALL jobs with the same correlation_id
-        job_logs_query = (
-            self.db_session.query(JobLog)
-            .join(Job, JobLog.job_id == Job.id)
-            .filter(Job.correlation_id == correlation_id)
-        )
+        # 1. Fetch Job Logs
+        job_logs_query = self.db_session.query(JobLog)
+        if all_attempts:
+            job_logs_query = job_logs_query.join(Job, JobLog.job_id == Job.id).filter(Job.correlation_id == correlation_id)
+        else:
+            job_logs_query = job_logs_query.filter(JobLog.job_id == job_id)
+            
         if level:
             job_logs_query = job_logs_query.filter(JobLog.level == level)
         job_logs = job_logs_query.all()
 
-        # 2. Fetch Step Logs associated with all runs of this job (via correlation_id)
+        # 2. Fetch Step Logs associated with this job (or all attempts)
         step_logs_query = (
             self.db_session.query(StepLog)
             .join(StepRun, StepLog.step_run_id == StepRun.id)
             .join(PipelineRun, StepRun.pipeline_run_id == PipelineRun.id)
-            .join(Job, PipelineRun.job_id == Job.id)
-            .filter(Job.correlation_id == correlation_id)
         )
+        
+        if all_attempts:
+            step_logs_query = step_logs_query.join(Job, PipelineRun.job_id == Job.id).filter(Job.correlation_id == correlation_id)
+        else:
+            step_logs_query = step_logs_query.filter(PipelineRun.job_id == job_id)
+            
         if level:
             step_logs_query = step_logs_query.filter(StepLog.level == level)
         step_logs = step_logs_query.all()
@@ -238,7 +243,7 @@ class JobService:
                 "type": "step_log"
             })
 
-        # 4. Sort by timestamp to preserve chronological order across attempts
+        # 4. Sort by timestamp to preserve chronological order
         unified_logs.sort(key=lambda x: x["timestamp"])
         
         return unified_logs
@@ -331,7 +336,7 @@ class PipelineRunService:
     def get_run_metrics(self, pipeline_id: int, user_id: int, workspace_id: Optional[int] = None) -> dict:
         """Get aggregated metrics for a pipeline's runs, scoped to user or workspace."""
         # Ensure pipeline belongs to user/workspace
-        from app.models.pipelines import Pipeline
+        from synqx_core.models.pipelines import Pipeline
         query = self.db_session.query(Pipeline).filter(Pipeline.id == pipeline_id)
         if workspace_id:
             query = query.filter(Pipeline.workspace_id == workspace_id)

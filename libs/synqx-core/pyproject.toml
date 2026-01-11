@@ -1,0 +1,13 @@
+[project]
+name = "synqx-core"
+version = "0.1.0"
+description = "Shared data contracts, models, and errors for Synqx"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0.0",
+    "sqlalchemy>=2.0.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

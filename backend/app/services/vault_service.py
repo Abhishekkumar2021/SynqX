@@ -4,7 +4,7 @@ import base64
 import hashlib
 from cryptography.fernet import Fernet
 
-from app.models.connections import Connection
+from synqx_core.models.connections import Connection
 from app.core.errors import AppError, ConfigurationError
 from app.core.config import settings
 from app.core.logging import get_logger

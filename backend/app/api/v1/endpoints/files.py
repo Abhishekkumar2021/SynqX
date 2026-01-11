@@ -5,12 +5,12 @@ from app import models
 from app.api import deps
 from app.services.connection_service import ConnectionService
 from app.services.vault_service import VaultService
-from app.connectors.factory import ConnectorFactory
-from app.models.user import User
+from synqx_engine.connectors.factory import ConnectorFactory
+from synqx_core.models.user import User
 from app.core.logging import get_logger
 from app.services.ephemeral_service import EphemeralJobService
-from app.schemas.ephemeral import EphemeralJobCreate
-from app.models.enums import JobType, JobStatus
+from synqx_core.schemas.ephemeral import EphemeralJobCreate
+from synqx_core.models.enums import JobType, JobStatus
 from app.utils.agent import is_remote_group
 import os
 import time
@@ -56,7 +56,7 @@ def list_files(
         start = time.time()
         while time.time() - start < 30:
             db.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated = db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break
@@ -101,7 +101,7 @@ def create_directory(
         start = time.time()
         while time.time() - start < 30:
             db.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated = db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break
@@ -143,7 +143,7 @@ def download_file(
         start = time.time()
         while time.time() - start < 45: # Longer timeout for transfer
             db.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated = db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break
@@ -208,7 +208,7 @@ async def upload_file(
         start = time.time()
         while time.time() - start < 60:
             db.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated = db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break
@@ -250,7 +250,7 @@ def save_file(
         start = time.time()
         while time.time() - start < 30:
             db.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated = db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break
@@ -289,7 +289,7 @@ def delete_file(
         start = time.time()
         while time.time() - start < 30:
             db.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated = db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break
@@ -327,7 +327,7 @@ def zip_directory(
         start = time.time()
         while time.time() - start < 60:
             db.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated = db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break

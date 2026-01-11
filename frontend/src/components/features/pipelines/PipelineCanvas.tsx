@@ -510,6 +510,7 @@ export const PipelineCanvas: React.FC = () => {
                         operator_class: (nodeData.operator_class as string) || 'pandas_transform',
                         source_asset_id: nodeData.source_asset_id,
                         destination_asset_id: nodeData.destination_asset_id,
+                        connection_id: nodeData.connection_id,
                         max_retries: 3,
                         retry_strategy: RetryStrategy.FIXED,
                         retry_delay_seconds: 60

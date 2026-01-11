@@ -1,0 +1,1 @@
+from synqx_engine.connectors.impl.generic.custom_script import CustomScriptConnector as CustomScriptConnector

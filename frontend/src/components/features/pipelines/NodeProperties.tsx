@@ -348,8 +348,9 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 operator_class: currentOpClass,
                 config: JSON.stringify(config, null, 2),
                 column_mapping_obj: mappingArray,
-                connection_id: String(node.data.connection_id || ''),
-                asset_id: String(node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id || ''),
+                connection_id: node.data.connection_id ? String(node.data.connection_id) : '',
+                asset_id: (node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) ? 
+                    String(node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) : '',
                 write_strategy: config.write_strategy || 'append',
                 max_retries: node.data.max_retries ?? 3,
                 retry_strategy: (node.data as any).retry_strategy || 'fixed',

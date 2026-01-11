@@ -4,9 +4,9 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api import deps
-from app.models.user import User
-from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
-from app.models.enums import AlertLevel
+from synqx_core.models.user import User
+from synqx_core.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
+from synqx_core.models.enums import AlertLevel
 from app.services.alert_service import AlertService
 from app.services.audit_service import AuditService
 from app.utils.agent import is_remote_group
@@ -122,7 +122,7 @@ def update_workspace(
     
     # If explicitly asked to clear all, OR if switching the workspace to internal mode
     if request.clear_all_pipelines or not is_remote_group(request.default_agent_group):
-        from app.models.pipelines import Pipeline
+        from synqx_core.models.pipelines import Pipeline
         db.query(Pipeline).filter(Pipeline.workspace_id == workspace_id).update(
             {Pipeline.agent_group: "internal"},
             synchronize_session=False

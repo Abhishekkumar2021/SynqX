@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.api import deps
-from app.schemas.pipeline import (
+from synqx_core.schemas.pipeline import (
     PipelineCreate,
     PipelineRead,
     PipelineUpdate,
@@ -28,7 +28,7 @@ from app.services.gitops_service import GitOpsService
 from app.services.audit_service import AuditService
 from app.core.errors import AppError, ConfigurationError
 from app.core.logging import get_logger
-from app.models.enums import PipelineStatus
+from synqx_core.models.enums import PipelineStatus
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -740,8 +740,8 @@ def get_pipeline_stats(
 ):
     try:
         from sqlalchemy import func
-        from app.models.execution import Job
-        from app.models.enums import JobStatus
+        from synqx_core.models.execution import Job
+        from synqx_core.models.enums import JobStatus
 
         service = PipelineService(db)
         pipeline = service.get_pipeline(
@@ -781,7 +781,7 @@ def get_pipeline_stats(
         )
 
         # Calculate total quarantined rows across all runs
-        from app.models.execution import PipelineRun
+        from synqx_core.models.execution import PipelineRun
         total_quarantined = (
             db.query(func.coalesce(func.sum(PipelineRun.total_failed), 0))
             .filter(PipelineRun.pipeline_id == pipeline_id)
@@ -966,7 +966,7 @@ def get_pipeline_watermark(
     current_user: models.User = Depends(deps.get_current_user),
 ):
     try:
-        from app.models.execution import Watermark
+        from synqx_core.models.execution import Watermark
         # Verify pipeline access
         service = PipelineService(db)
         pipeline = service.get_pipeline(

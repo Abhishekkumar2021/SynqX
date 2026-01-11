@@ -6,15 +6,15 @@ from app import models
 from app.api import deps
 from app.services import connection_service
 from app.services.vault_service import VaultService
-from app.connectors.factory import ConnectorFactory
-from app.models.ephemeral import EphemeralJob
-from app.models.explorer import QueryHistory
-from app.models.user import User
-from app.models.enums import JobType, JobStatus
+from synqx_engine.connectors.factory import ConnectorFactory
+from synqx_core.models.ephemeral import EphemeralJob
+from synqx_core.models.explorer import QueryHistory
+from synqx_core.models.user import User
+from synqx_core.models.enums import JobType, JobStatus
 from pydantic import BaseModel
 
 from app.services.ephemeral_service import EphemeralJobService
-from app.schemas.ephemeral import EphemeralJobCreate, EphemeralJobResponse
+from synqx_core.schemas.ephemeral import EphemeralJobCreate, EphemeralJobResponse
 from app.utils.agent import is_remote_group
 from app.utils.serialization import sanitize_for_json
 from app.core.logging import get_logger

@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.db.session import SessionLocal
-from app.models.execution import StepRun, PipelineRun
-from app.models.enums import OperatorRunStatus, PipelineRunStatus, OperatorType
+from synqx_core.models.execution import StepRun, PipelineRun
+from synqx_core.models.enums import OperatorRunStatus, PipelineRunStatus, OperatorType
 from app.core.db_logging import DBLogger
 from app.core.logging import get_logger
 from app.core.websockets import manager
@@ -92,7 +92,7 @@ class StateManager:
             ) or 0
             
             # Fetch job to get user_id
-            from app.models.execution import Job
+            from synqx_core.models.execution import Job
             job = self.db.query(Job).filter(Job.id == self.job_id).first()
             if not job:
                 raise Exception(f"Job {self.job_id} not found during run initialization")

@@ -10,10 +10,10 @@ from app.db.session import SessionLocal
 from app.core.logging import get_logger
 from app.core.config import settings
 from app.core import security
-from app.models.user import User
-from app.models.api_keys import ApiKey
-from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
-from app.schemas.auth import TokenPayload
+from synqx_core.models.user import User
+from synqx_core.models.api_keys import ApiKey
+from synqx_core.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
+from synqx_core.schemas.auth import TokenPayload
 
 logger = get_logger(__name__)
 

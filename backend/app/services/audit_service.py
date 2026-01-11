@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.models.audit import AuditLog
-from app.models.enums import AlertLevel
+from synqx_core.models.audit import AuditLog
+from synqx_core.models.enums import AlertLevel
 from app.services.alert_service import AlertService
 
 class AuditService:

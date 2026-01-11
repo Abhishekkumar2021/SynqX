@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any
 import json
 import redis
 
-from app.models.monitoring import JobLog, StepLog
+from synqx_core.models.monitoring import JobLog, StepLog
 from app.core.logging import get_logger
 from app.core.config import settings
 
@@ -29,7 +29,7 @@ class DBLogger:
             log_id = None
             
             # Fetch workspace_id from job
-            from app.models.execution import Job
+            from synqx_core.models.execution import Job
             job = session.query(Job).filter(Job.id == job_id).first()
             workspace_id = job.workspace_id if job else None
 
@@ -76,7 +76,7 @@ class DBLogger:
             timestamp = datetime.now(timezone.utc)
             log_id = None
             
-            from app.models.execution import StepRun, PipelineRun, Job
+            from synqx_core.models.execution import StepRun, PipelineRun, Job
             
             # Efficient lookup for workspace_id
             workspace_id = None

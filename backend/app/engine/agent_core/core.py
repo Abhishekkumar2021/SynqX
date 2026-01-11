@@ -11,16 +11,16 @@ import concurrent.futures
 import time
 from datetime import datetime, timezone
 
-from app.engine.dag import DAG, DagCycleError
-from app.models.pipelines import PipelineVersion, PipelineNode
-from app.models.execution import PipelineRun
+from synqx_engine.dag import DAG, DagCycleError
+from synqx_core.models.pipelines import PipelineVersion, PipelineNode
+from synqx_core.models.execution import PipelineRun
 from app.core.errors import ConfigurationError, PipelineExecutionError
 from app.core.logging import get_logger
 from app.core.db_logging import DBLogger
 from app.engine.agent_core.state_manager import StateManager
 from app.engine.agent_core.node_executor import NodeExecutor
-from app.engine.agent_core.data_cache import DataCache
-from app.engine.agent_core.execution_metrics import ExecutionMetrics
+from synqx_engine.core.data_cache import DataCache
+from synqx_engine.metrics import ExecutionMetrics
 from app.engine.agent_core.sql_generator import StaticOptimizer
 from app.db.session import SessionLocal
 from app.core.config import settings
@@ -211,7 +211,7 @@ class ParallelExecutionLayer:
 
     def _calculate_retry_delay(self, node: PipelineNode, attempt: int) -> int:
         """Calculate retry delay based on node configuration and attempt number"""
-        from app.models.enums import RetryStrategy
+        from synqx_core.models.enums import RetryStrategy
         
         base_delay = node.retry_delay_seconds or 60
         strategy = node.retry_strategy or RetryStrategy.FIXED
@@ -440,6 +440,13 @@ class PipelineAgent:
                     records = sum(len(df) for df in results)
                     total_layer_records += records
                     self.metrics.total_records_processed += records
+                    
+                    # Add meaningful per-node completion log
+                    DBLogger.log_job(
+                        db, job_id, "INFO",
+                        f"Node '{node_id}' finalized. [Processed {records:,} records in {len(results)} chunks]",
+                        source="engine"
+                    )
 
                 # Memory management
                 completed_nodes = set(n.node_id for n in layer_nodes)
@@ -453,7 +460,7 @@ class PipelineAgent:
                     job_id,
                     "INFO",
                     f"Stage {layer_idx} finalized successfully. Processed {total_layer_records:,} records in {layer_duration:.2f}s. "
-                    f"Engine memory footprint: {cache_stats['utilization_pct']:.1f}%.",
+                    f"Total records in-flight: {self.metrics.total_records_processed:,} | Memory footprint: {cache_stats['utilization_pct']:.1f}%.",
                 )
 
             # Finalize execution
@@ -465,7 +472,7 @@ class PipelineAgent:
                 f"Total Duration: {self.metrics.duration_seconds:.2f}s. "
                 f"Processed {self.metrics.total_records_processed:,} records across {self.metrics.completed_nodes} nodes with an average throughput of {self.metrics.throughput_records_per_sec:.2f} rec/s."
             )
-            DBLogger.log_job(db, job_id, "SUCCESS", summary)
+            DBLogger.log_job(db, job_id, "SUCCESS", summary, source="engine")
 
         except Exception as e:
             self.metrics.execution_end = datetime.now(timezone.utc)

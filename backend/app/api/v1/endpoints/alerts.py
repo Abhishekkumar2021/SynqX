@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app import models
-from app.schemas import alert as alert_schema
+from synqx_core.schemas import alert as alert_schema
 from app.api import deps
 from app.services.audit_service import AuditService
 

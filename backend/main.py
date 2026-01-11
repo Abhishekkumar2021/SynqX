@@ -16,8 +16,8 @@ from app.middlewares.correlation import CorrelationMiddleware
 from app.models import Base
 from app.api.v1.api import api_router
 from app.core.errors import AppError, NotFoundError, ForbiddenError
-import app.connectors.impl  # Register connectors
-import app.engine.transforms.impl  # Register transforms
+import synqx_engine.connectors.impl  # Register connectors
+import synqx_engine.transforms.impl  # Register transforms
 
 setup_logging()
 logger = get_logger("main")

@@ -5,7 +5,7 @@ import pyarrow.parquet as pq
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 
-from app.schemas.job import (
+from synqx_core.schemas.job import (
     JobRead,
     JobListResponse,
     JobCancelRequest,
@@ -21,7 +21,7 @@ from app.services.job_service import JobService, PipelineRunService
 from app.api import deps
 from app.core.errors import AppError
 from app.core.logging import get_logger
-from app.models.enums import JobStatus, PipelineRunStatus
+from synqx_core.models.enums import JobStatus, PipelineRunStatus
 from app import models
 
 router = APIRouter()
@@ -112,8 +112,8 @@ def get_job_run(
 ):
     service = PipelineRunService(db)
     # Find pipeline run by job_id
-    from app.models.execution import PipelineRun, Job
-    from app.schemas.pipeline import PipelineVersionRead
+    from synqx_core.models.execution import PipelineRun, Job
+    from synqx_core.schemas.pipeline import PipelineVersionRead
     
     # Check job ownership
     job_query = db.query(Job).filter(Job.id == job_id)
@@ -269,6 +269,7 @@ def retry_job(
 def get_job_logs(
     job_id: int,
     level: Optional[str] = Query(None, description="Filter by log level"),
+    all_attempts: bool = Query(False, description="Include logs from all retry attempts"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
     _: models.WorkspaceMember = Depends(deps.require_viewer),
@@ -279,7 +280,8 @@ def get_job_logs(
             job_id, 
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id,
-            level=level
+            level=level,
+            all_attempts=all_attempts
         )
         return [UnifiedLogRead.model_validate(log) for log in logs]
         
@@ -518,7 +520,7 @@ def get_step_data(
 ):
     try:
         from app.engine.agent_core.forensics import ForensicSniffer
-        from app.models.execution import StepRun, PipelineRun
+        from synqx_core.models.execution import StepRun, PipelineRun
         
         # Ownership check
         query = db.query(StepRun).join(PipelineRun).filter(StepRun.id == step_id)
@@ -543,7 +545,7 @@ def get_step_data(
         
         sniffer = ForensicSniffer(run_id)
         # Manually override base_dir to ensure consistency with project root
-        sniffer.base_dir = os.path.join(project_root, "data", "forensics", f"run_{run_id}")
+        sniffer.base_dir = os.path.join(project_root, ".synqx", "forensics", f"run_{run_id}")
         
         # We use node.id (the integer from pipeline_nodes) which is stored in step.node_id
         logger.debug(f"Fetching forensic data for node {step.node_id}, run {run_id}, direction {direction}")
@@ -598,13 +600,13 @@ def list_quarantine(
     _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
-        from app.models.execution import StepRun, PipelineRun
+        from synqx_core.models.execution import StepRun, PipelineRun
         
         # Use consistent absolute path logic
         current_dir = os.path.dirname(os.path.abspath(__file__))
         # Go up 4 levels to reach backend root from app/api/v1/endpoints/
         project_root = os.path.abspath(os.path.join(current_dir, "..", "..", "..", ".."))
-        forensics_dir = os.path.join(project_root, "data", "forensics")
+        forensics_dir = os.path.join(project_root, ".synqx", "forensics")
         
         if not os.path.exists(forensics_dir):
             return []

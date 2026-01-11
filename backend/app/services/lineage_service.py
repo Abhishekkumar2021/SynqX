@@ -2,11 +2,11 @@ from typing import List, Dict, Set
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 
-from app.models.pipelines import Pipeline, PipelineVersion, PipelineNode
-from app.models.connections import Asset
-from app.models.execution import PipelineRun
-from app.models.enums import PipelineStatus, PipelineRunStatus
-from app.schemas.lineage import LineageGraph, LineageNode, LineageEdge, ImpactAnalysis, ColumnLineage, ColumnFlow
+from synqx_core.models.pipelines import Pipeline, PipelineVersion, PipelineNode
+from synqx_core.models.connections import Asset
+from synqx_core.models.execution import PipelineRun
+from synqx_core.models.enums import PipelineStatus, PipelineRunStatus
+from synqx_core.schemas.lineage import LineageGraph, LineageNode, LineageEdge, ImpactAnalysis, ColumnLineage, ColumnFlow
 
 class LineageService:
     def __init__(self, db: Session):

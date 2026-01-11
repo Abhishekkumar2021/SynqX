@@ -40,7 +40,7 @@ class ForensicSniffer:
         # current_dir is backend/app/engine/agent_core
         # We need to go up 3 levels to reach 'backend'
         project_root = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
-        self.base_dir = os.path.join(project_root, "data", "forensics", f"run_{run_id}")
+        self.base_dir = os.path.join(project_root, ".synqx", "forensics", f"run_{run_id}")
         os.makedirs(self.base_dir, exist_ok=True)
 
         self._write_lock = threading.Lock()
@@ -281,7 +281,7 @@ class ForensicSniffer:
     def cleanup_all():
         """Utility to wipe all forensic data"""
         try:
-            path = os.path.join("data", "forensics")
+            path = os.path.join(".synqx", "forensics")
             if os.path.exists(path):
                 shutil.rmtree(path)
                 os.makedirs(path, exist_ok=True)
@@ -293,7 +293,7 @@ class ForensicSniffer:
     def list_runs() -> List[Dict[str, Any]]:
         """List all available forensic runs"""
         runs = []
-        base_path = os.path.join("data", "forensics")
+        base_path = os.path.join(".synqx", "forensics")
 
         if not os.path.exists(base_path):
             return runs

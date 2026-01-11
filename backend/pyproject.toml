@@ -1,7 +1,26 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "Synqx Backend API"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "synqx-core",
+    "synqx-engine",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "sqlalchemy>=2.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "structlog>=23.0.0",
+    "alembic>=1.10.0",
+    "pandas>=2.0.0",
+    "python-jose>=3.3.0",
+    "passlib>=1.7.0",
+    "python-multipart>=0.0.6",
+    "requests>=2.30.0"
+]
+
+[tool.uv.sources]
+synqx-core = { path = "../libs/synqx-core", editable = true }
+synqx-engine = { path = "../libs/synqx-engine", editable = true }

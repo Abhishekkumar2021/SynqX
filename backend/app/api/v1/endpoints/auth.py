@@ -9,8 +9,8 @@ from app.core import security
 from app.core.config import settings
 from app.core.errors import AppError
 from app.core.logging import get_logger
-from app.models.user import User
-from app.schemas.auth import Token, UserCreate, UserRead, UserUpdate
+from synqx_core.models.user import User
+from synqx_core.schemas.auth import Token, UserCreate, UserRead, UserUpdate
 from app.services.audit_service import AuditService
 
 from app.services.oidc_service import OIDCService

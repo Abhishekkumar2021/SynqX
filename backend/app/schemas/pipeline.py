@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from croniter import croniter
-from app.models.enums import PipelineStatus, OperatorType, RetryStrategy
+from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy
 
 
 class PipelineNodeBase(BaseModel):

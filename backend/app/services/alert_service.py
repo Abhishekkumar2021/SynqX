@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
 from app import models
-from app.models.enums import AlertType, AlertLevel, AlertStatus, AlertDeliveryMethod
+from synqx_core.models.enums import AlertType, AlertLevel, AlertStatus, AlertDeliveryMethod
 from app.core.logging import get_logger
 
 import json

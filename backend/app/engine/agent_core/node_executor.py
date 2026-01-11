@@ -13,15 +13,15 @@ import json
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
-from app.models.pipelines import PipelineNode
-from app.models.execution import PipelineRun, StepRun, Watermark
-from app.models.connections import Asset, Connection
-from app.models.enums import OperatorType, OperatorRunStatus
+from synqx_core.models.pipelines import PipelineNode
+from synqx_core.models.execution import PipelineRun, StepRun, Watermark
+from synqx_core.models.connections import Asset, Connection
+from synqx_core.models.enums import OperatorType, OperatorRunStatus
 from app.core.logging import get_logger
 from app.core.db_logging import DBLogger
 from app.services.vault_service import VaultService
-from app.connectors.factory import ConnectorFactory
-from app.engine.transforms.factory import TransformFactory
+from synqx_engine.connectors.factory import ConnectorFactory
+from synqx_engine.transforms.factory import TransformFactory
 from app.core.errors import AppError
 from app.engine.agent_core.state_manager import StateManager
 from app.engine.agent_core.forensics import ForensicSniffer
@@ -136,6 +136,11 @@ class NodeExecutor:
             f"Operation: {node.operator_type.value.upper()} | Implementation: {node.operator_class}.",
             job_id=pipeline_run.job_id
         )
+        
+        # Log input context if available
+        if input_data:
+            input_summary = ", ".join([f"'{k}' ({sum(len(df) for df in v):,} rows)" for k, v in input_data.items()])
+            DBLogger.log_step(db, step_run.id, "DEBUG", f"Input context initialized with {len(input_data)} upstream sources: {input_summary}", job_id=pipeline_run.job_id)
         
         # Pre-flight check for Custom Script environments
         if node.operator_class == "custom_script":
@@ -489,6 +494,7 @@ class NodeExecutor:
                 # 3. Execute
                 data_iter = None
                 if op_type in {OperatorType.JOIN, OperatorType.UNION, OperatorType.MERGE}:
+                    DBLogger.log_step(db, step_run.id, "DEBUG", f"Merging {len(input_iters)} data streams using {op_type.value} logic.", job_id=pipeline_run.job_id)
                     data_iter = transform.transform_multi(input_iters)
                 else:
                     upstream_it = next(iter(input_iters.values())) if input_iters else iter([])
@@ -505,6 +511,7 @@ class NodeExecutor:
                     
                     if chunk_count % 10 == 0:
                         logger.debug(f"    Processed {chunk_count} chunks, {stats['out']:,} rows")
+                        DBLogger.log_step(db, step_run.id, "DEBUG", f"Transformation in progress: {chunk_count} chunks materialized...", job_id=pipeline_run.job_id)
             
             # =====================================================================
             # Finalize Success
@@ -717,7 +724,7 @@ class NodeExecutor:
     ):
         """Persist watermark value to database with type preservation"""
         from app.db.session import SessionLocal
-        from app.models.execution import Watermark
+        from synqx_core.models.execution import Watermark
         
         with SessionLocal() as session:
             t_wm = session.query(Watermark).filter(

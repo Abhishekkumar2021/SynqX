@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import and_, or_, func, distinct
 
-from app.models.connections import Connection, Asset, AssetSchemaVersion
-from app.models.pipelines import Pipeline, PipelineVersion, PipelineNode
-from app.models.execution import Job, PipelineRun
-from app.models.enums import ConnectorType, JobStatus, AssetType
-from app.schemas.connection import (
+from synqx_core.models.connections import Connection, Asset, AssetSchemaVersion
+from synqx_core.models.pipelines import Pipeline, PipelineVersion, PipelineNode
+from synqx_core.models.execution import Job, PipelineRun
+from synqx_core.models.enums import ConnectorType, JobStatus, AssetType
+from synqx_core.schemas.connection import (
     ConnectionCreate,
     ConnectionUpdate,
     AssetCreate,
@@ -24,7 +24,7 @@ from app.schemas.connection import (
 )
 from app.core.errors import AppError
 from app.services.vault_service import VaultService
-from app.connectors.factory import ConnectorFactory
+from synqx_engine.connectors.factory import ConnectorFactory
 from app.core.logging import get_logger
 from app.core.cache import cache
 from app.services.dependency_service import DependencyService
@@ -54,8 +54,8 @@ class ConnectionService:
         Waits for completion and returns the result (sample_data).
         """
         from app.services.ephemeral_service import EphemeralJobService
-        from app.schemas.ephemeral import EphemeralJobCreate
-        from app.models.enums import JobType
+        from synqx_core.schemas.ephemeral import EphemeralJobCreate
+        from synqx_core.models.enums import JobType
         from app.services.agent_service import AgentService
 
         # Fail early if no agents are online for this group
@@ -92,7 +92,7 @@ class ConnectionService:
         start_time = time.time()
         while time.time() - start_time < 45:
             self.db_session.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated_job = self.db_session.query(EphemeralJob).get(job.id)
             if updated_job.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break

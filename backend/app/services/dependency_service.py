@@ -5,8 +5,8 @@ import logging
 from typing import Dict, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from app.models.environment import Environment
-from app.models.connections import Connection
+from synqx_core.models.environment import Environment
+from synqx_core.models.connections import Connection
 from app.core.errors import AppError
 from app.utils.agent import is_remote_group
 
@@ -46,7 +46,7 @@ class DependencyService:
         # Simple check for now
         if self.connection.user_id != self.user_id:
              # Check workspace member role
-             from app.models.workspace import WorkspaceMember, WorkspaceRole
+             from synqx_core.models.workspace import WorkspaceMember, WorkspaceRole
              member = self.db.query(WorkspaceMember).filter(
                  WorkspaceMember.workspace_id == self.connection.workspace_id,
                  WorkspaceMember.user_id == self.user_id
@@ -56,8 +56,8 @@ class DependencyService:
 
     def _trigger_remote_task(self, payload: Dict):
         from app.services.ephemeral_service import EphemeralJobService
-        from app.schemas.ephemeral import EphemeralJobCreate
-        from app.models.enums import JobType, JobStatus
+        from synqx_core.schemas.ephemeral import EphemeralJobCreate
+        from synqx_core.models.enums import JobType, JobStatus
         import time
 
         job_in = EphemeralJobCreate(
@@ -72,7 +72,7 @@ class DependencyService:
         start = time.time()
         while time.time() - start < 60:
             self.db.expire_all()
-            from app.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob
             updated = self.db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break

@@ -4,9 +4,9 @@ import io
 from datetime import datetime, timezone
 import polars as pl
 from sqlalchemy.orm import Session
-from app.models.ephemeral import EphemeralJob
-from app.models.enums import JobStatus, JobType
-from app.schemas.ephemeral import EphemeralJobCreate, EphemeralJobUpdate
+from synqx_core.models.ephemeral import EphemeralJob
+from synqx_core.models.enums import JobStatus, JobType
+from synqx_core.schemas.ephemeral import EphemeralJobCreate, EphemeralJobUpdate
 from app.core.logging import get_logger
 from app.core.websockets import manager
 from app.utils.agent import is_remote_group

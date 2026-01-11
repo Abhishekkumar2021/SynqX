@@ -2,31 +2,30 @@
 set -Eeuo pipefail
 
 # ====================================================== 
-# OS Guard (macOS / Linux)
-# ====================================================== 
-OS="$(uname -s)"
-case "$OS" in
-    Darwin|Linux) ;;
-    *)
-        echo "[ERROR] Unsupported OS: $OS"
-        exit 1
-        ;;
-esac
-
-# ====================================================== 
 # Script paths (ABSOLUTE, SAFE)
 # ====================================================== 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ====================================================== 
-# Load .env if present
+# Colors & Formatting
 # ====================================================== 
-if [[ -f "$PROJECT_ROOT/.env" ]]; then
-    set -a
-    source "$PROJECT_ROOT/.env"
-    set +a
-fi
+BOLD='\033[1m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Icons
+ICON_INFO="ℹ️"
+ICON_OK="✅"
+ICON_WARN="⚠️"
+ICON_ERR="❌"
+ICON_START="🚀"
+ICON_STOP="🛑"
+ICON_LOG="📝"
 
 # ====================================================== 
 # Config
@@ -37,278 +36,253 @@ FE_PORT="${FE_PORT:-5173}"
 PID_DIR="$PROJECT_ROOT/.synqx"
 LOG_DIR="$PROJECT_ROOT/.synqx/logs"
 
-API_PID="$PID_DIR/api.pid"
-WORKER_PID="$PID_DIR/worker.pid"
-BEAT_PID="$PID_DIR/beat.pid"
-FE_PID="$PID_DIR/frontend.pid"
-
-API_LOG="$LOG_DIR/api.log"
-WORKER_LOG="$LOG_DIR/worker.log"
-BEAT_LOG="$LOG_DIR/beat.log"
-FE_LOG="$LOG_DIR/frontend.log"
-
 mkdir -p "$PID_DIR" "$LOG_DIR"
 
 # ====================================================== 
-# Colors & Logging
+# Helpers
 # ====================================================== 
-GREEN="\033[0;32m"
-BLUE="\033[0;34m"
-RED="\033[0;31m"
-YELLOW="\033[0;33m"
-NC="\033[0m"
-
-info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }
-ok()    { echo -e "${GREEN}[OK]${NC}    $*"; }
-warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
-error() { echo -e "${RED}[ERROR]${NC} $*"; }
-
-# ====================================================== 
-# Utils
-# ====================================================== 
-check_port() {
-    if lsof -i ":$1" >/dev/null 2>&1; then
-        error "Port $1 already in use"
-        exit 1
-    fi
-}
-
-wait_for_port() {
-    local port=$1
-    local name=$2
-    for _ in {1..20}; do
-        if lsof -i ":$port" >/dev/null 2>&1; then
-            ok "$name ready on port $port"
-            return
-        fi
-        sleep 0.5
-    done
-    warn "$name did not become ready"
-}
-
-start_bg() {
-    local name=$1
-    local pidfile=$2
-    local logfile=$3
-    shift 3
-
-    "$@" >"$logfile" 2>&1 &
-    local pid=$!
-
-    if ! echo "$pid" > "$pidfile"; then
-        error "Failed to write PID for $name"
-        kill "$pid" 2>/dev/null || true
-        exit 1
-    fi
-
-    ok "$name started (PID $pid)"
-}
-
-stop_pidfile() {
-    local name=$1
-    local pidfile=$2
-
-    if [[ ! -f "$pidfile" ]]; then
-        warn "$name not running"
-        return
-    fi
-
-    local pid
-    pid=$(cat "$pidfile")
-
-    if kill -0 "$pid" 2>/dev/null; then
-        warn "Stopping $name (PID $pid)"
-        kill "$pid"
-        wait "$pid" 2>/dev/null || true
-    fi
-
-    rm -f "$pidfile"
-    ok "$name stopped"
-}
-
-kill_port_fallback() {
-    lsof -ti ":$1" 2>/dev/null | xargs -r kill -9 || true
-}
-
-# ====================================================== 
-# Doctor
-# ====================================================== 
-doctor() {
-    info "Running SynqX doctor checks"
-
-    # -----------------------
-    # Python / venv
-    # -----------------------
-    if [[ -d "$PROJECT_ROOT/backend/.venv" ]]; then
-        info "Activating backend virtualenv for checks"
-        # shellcheck disable=SC1091
-        source "$PROJECT_ROOT/backend/.venv/bin/activate"
-    fi
-
-    if command -v python >/dev/null 2>&1; then
-        ok "Python found: $(python --version)"
-    elif command -v python3 >/dev/null 2>&1; then
-        ok "Python3 found: $(python3 --version)"
-    else
-        error "Neither python nor python3 found"
-        return 1
-    fi
-
-    # -----------------------
-    # Node / tooling
-    # -----------------------
-    command -v node >/dev/null 2>&1 \
-        && ok "Node found: $(node --version)" \
-        || error "node not found"
-
-    command -v npm >/dev/null 2>&1 \
-        && ok "npm found: $(npm --version)" \
-        || error "npm not found"
-
-    command -v lsof >/dev/null 2>&1 \
-        && ok "lsof available" \
-        || error "lsof not found"
-
-    command -v celery >/dev/null 2>&1 \
-        && ok "celery available" \
-        || warn "celery not found (will rely on venv)"
-
-    # -----------------------
-    # Project structure
-    # -----------------------
-    [[ -d "$PROJECT_ROOT/backend" ]] \
-        && ok "backend/ exists" \
-        || error "backend/ missing"
-
-    [[ -d "$PROJECT_ROOT/frontend" ]] \
-        && ok "frontend/ exists" \
-        || error "frontend/ missing"
-
-    # -----------------------
-    # Ports (WARN only)
-    # -----------------------
-    for port in "$API_PORT" "$FE_PORT"; do
-        if lsof -i ":$port" >/dev/null 2>&1; then
-            warn "Port $port is currently in use"
-        else
-            ok "Port $port is free"
-        fi
-    done
-
-    ok "Doctor checks completed"
-}
-
-
-# ====================================================== 
-# Logs
-# ====================================================== 
-logs() {
-    case "${2:-}" in
-        api)        tail -f "$API_LOG" ;;
-        worker)     tail -f "$WORKER_LOG" ;;
-        beat)       tail -f "$BEAT_LOG" ;;
-        frontend)   tail -f "$FE_LOG" ;;
-        *) 
-            echo "Usage: $0 logs {api|worker|beat|frontend}"
-            exit 1
-            ;;
+get_svc_name() {
+    case "$1" in
+        api) echo "Backend API" ;; 
+        worker) echo "Celery Worker" ;; 
+        beat) echo "Celery Beat" ;; 
+        frontend) echo "Frontend" ;; 
+        agent) echo "SynqX Agent" ;; 
+        *) echo "Unknown" ;; 
     esac
 }
 
-# ====================================================== 
-# Start / Stop
-# ====================================================== 
-start_stack() {
-    info "Starting SynqX Stack"
+info()  { echo -e "${BLUE}${ICON_INFO}  ${BOLD}$*${NC}"; }
+ok()    { echo -e "${GREEN}${ICON_OK}  $*${NC}"; }
+warn()  { echo -e "${YELLOW}${ICON_WARN}  $*${NC}"; }
+error() { echo -e "${RED}${ICON_ERR}  $*${NC}"; }
 
-    check_port "$API_PORT"
-    check_port "$FE_PORT"
+# ====================================================== 
+# Setup / Install
+# ====================================================== 
+ensure_tool() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        error "$1 not found. Please install it."
+        exit 1
+    fi
+}
 
+install() {
+    info "Starting Full Stack Installation..."
+    ensure_tool "uv"
+    ensure_tool "npm"
+
+    # Shared Libs
+    info "Linking Shared Libraries..."
+    cd "$PROJECT_ROOT/backend"
+    [[ ! -d ".venv" ]] && uv venv
+    uv pip install -e ../libs/synqx-core -e ../libs/synqx-engine
+    
     # Backend
-    cd "$PROJECT_ROOT/backend" || exit 1
+    info "Installing Backend Dependencies..."
+    uv pip install -r requirements.txt
+    
+    # Agent
+    info "Setting up Agent..."
+    cd "$PROJECT_ROOT/agent"
+    [[ ! -d ".venv" ]] && uv venv
+    uv pip install -e ../libs/synqx-core -e ../libs/synqx-engine -r requirements.txt
+    
+    # Frontend
+    info "Installing Frontend Dependencies..."
+    cd "$PROJECT_ROOT/frontend"
+    npm install
+    
+    ok "Installation Complete!"
+}
 
-    if [[ -d ".venv" ]]; then
-        source .venv/bin/activate
-        ok "Virtualenv activated"
-    else
-        warn "No virtualenv found"
+# ====================================================== 
+# Process Management
+# ====================================================== 
+get_pid() {
+    local svc=$1
+    local pid_file="$PID_DIR/$svc.pid"
+    if [[ -f "$pid_file" ]]; then
+        cat "$pid_file"
+    fi
+}
+
+is_running() {
+    local svc=$1
+    local pid
+    pid=$(get_pid "$svc")
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+start_svc() {
+    local svc=$1
+    local name=$(get_svc_name "$svc")
+    local log_file="$LOG_DIR/$svc.log"
+    local pid_file="$PID_DIR/$svc.pid"
+
+    if is_running "$svc"; then
+        warn "$name is already running."
+        return
     fi
 
-    start_bg "API" "$API_PID" "$API_LOG" \
-        uvicorn main:app --reload --port "$API_PORT"
+    info "Launching $name..."
+    
+    case "$svc" in
+        api)
+            cd "$PROJECT_ROOT/backend"
+            nohup "$PROJECT_ROOT/backend/.venv/bin/uvicorn" main:app --reload --port "$API_PORT" --host 0.0.0.0 >"$log_file" 2>&1 &
+            ;;
+        worker)
+            cd "$PROJECT_ROOT/backend"
+            nohup "$PROJECT_ROOT/backend/.venv/bin/celery" -A app.core.celery_app worker --loglevel=info --pool=solo >"$log_file" 2>&1 &
+            ;;
+        beat)
+            cd "$PROJECT_ROOT/backend"
+            nohup "$PROJECT_ROOT/backend/.venv/bin/celery" -A app.core.celery_app beat --loglevel=info >"$log_file" 2>&1 &
+            ;;
+        frontend)
+            cd "$PROJECT_ROOT/frontend"
+            nohup npm run dev -- --host --port "$FE_PORT" >"$log_file" 2>&1 &
+            ;;
+        agent)
+            cd "$PROJECT_ROOT/agent"
+            nohup "$PROJECT_ROOT/agent/.venv/bin/python" main.py start >"$log_file" 2>&1 &
+            ;;
+    esac
 
-    start_bg "Worker" "$WORKER_PID" "$WORKER_LOG" \
-        celery -A app.core.celery_app worker --loglevel=info --pool=solo
-
-    start_bg "Beat" "$BEAT_PID" "$BEAT_LOG" \
-        celery -A app.core.celery_app beat --loglevel=info
-
-    cd "$PROJECT_ROOT"
-    wait_for_port "$API_PORT" "Backend API"
-
-    # Frontend
-    cd "$PROJECT_ROOT/frontend" || exit 1
-    start_bg "Frontend" "$FE_PID" "$FE_LOG" npm run dev -- --host
-    cd "$PROJECT_ROOT"
-
-    echo
-    ok "SynqX Stack is up"
-    echo "  API      → http://localhost:$API_PORT/docs"
-    echo "  Frontend → http://localhost:$FE_PORT"
+    local pid=$!
+    echo "$pid" > "$pid_file"
+    
+    # Quick health check
+    sleep 1
+    if kill -0 "$pid" 2>/dev/null; then
+        ok "$name started (PID: $pid)"
+    else
+        error "$name failed to start. Check logs: $log_file"
+        rm -f "$pid_file"
+    fi
 }
 
-stop_stack() {
-    info "Stopping SynqX Stack"
+stop_svc() {
+    local svc=$1
+    local name=$(get_svc_name "$svc")
+    local pid
+    pid=$(get_pid "$svc")
 
-    stop_pidfile "Frontend" "$FE_PID"
-    stop_pidfile "Beat" "$BEAT_PID"
-    stop_pidfile "Worker" "$WORKER_PID"
-    stop_pidfile "API" "$API_PID"
-
-    kill_port_fallback "$API_PORT"
-    kill_port_fallback "$FE_PORT"
-
-    ok "SynqX Stack stopped"
+    if [[ -n "$pid" ]]; then
+        echo -ne "${YELLOW}${ICON_STOP}  Stopping $name ($pid)...${NC}"
+        # Kill process group to catch sub-processes (like uvicorn reload)
+        { kill -TERM -"$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null; } && echo " Done." || echo " Not running."
+        rm -f "$PID_DIR/$svc.pid"
+    fi
 }
 
-status_stack() {
-    info "SynqX Status"
-    for f in "$API_PID" "$WORKER_PID" "$BEAT_PID" "$FE_PID"; do
-        local name
-        name=$(basename "$f" .pid)
-        if [[ -f "$f" ]] && kill -0 "$(cat "$f")" 2>/dev/null; then
-            ok "$name running"
+# ====================================================== 
+# Commands
+# ====================================================== 
+status() {
+    echo -e "\n${BOLD}SynqX Service Status${NC}"
+    echo -e "----------------------------------------"
+    printf "% -20s %-10s %-10s\n" "Service" "Status" "PID"
+    
+    for svc in "api" "worker" "beat" "frontend" "agent"; do
+        local name=$(get_svc_name "$svc")
+        if is_running "$svc"; then
+            local pid
+            pid=$(get_pid "$svc")
+            printf "% -20s ${GREEN}%-10s${NC} %-10s\n" "$name" "RUNNING" "$pid"
         else
-            warn "$name stopped"
+            printf "% -20s ${RED}%-10s${NC} %-10s\n" "$name" "STOPPED" "-"
         fi
     done
+    echo
+}
+
+start_all() {
+    info "${ICON_START}  Starting SynqX Ecosystem..."
+    # Check ports first
+    lsof -i ":$API_PORT" >/dev/null 2>&1 && { error "Port $API_PORT in use. Kill existing processes first."; exit 1; }
+    lsof -i ":$FE_PORT" >/dev/null 2>&1 && { error "Port $FE_PORT in use. Kill existing processes first."; exit 1; }
+
+    start_svc "api"
+    start_svc "worker"
+    start_svc "beat"
+    start_svc "frontend"
+    
+    if [[ "${1:-}" == "--with-agent" ]]; then
+        start_svc "agent"
+    fi
+    
+    echo
+    ok "Ecosystem is online."
+    status
+}
+
+stop_all() {
+    info "${ICON_STOP}  Shutting down SynqX Ecosystem..."
+    for svc in "agent" "frontend" "beat" "worker" "api"; do
+        stop_svc "$svc"
+    done
+    
+    # Cleanup zombie ports
+    lsof -ti ":$API_PORT" | xargs kill -9 2>/dev/null || true
+    lsof -ti ":$FE_PORT" | xargs kill -9 2>/dev/null || true
+    
+    ok "All services stopped."
+}
+
+show_logs() {
+    local svc=${1:-}
+    if [[ -z "$svc" ]]; then
+        info "Tailing all logs (Ctrl+C to stop)..."
+        tail -f "$LOG_DIR"/*.log
+    else
+        local name=$(get_svc_name "$svc")
+        if [[ "$name" != "Unknown" ]]; then
+            info "Tailing logs for $name..."
+            tail -f "$LOG_DIR/$svc.log"
+        else
+            error "Unknown service: $svc. Available: api, worker, beat, frontend, agent"
+        fi
+    fi
 }
 
 # ====================================================== 
-# tmux Dev Mode
+# Entry Point
 # ====================================================== 
-tmux_mode() {
-    command -v tmux >/dev/null || { error "tmux not installed"; exit 1; }
-
-    tmux new-session -d -s synqx
-    tmux rename-window -t synqx:0 api
-    tmux send-keys -t synqx "cd $PROJECT_ROOT && ./scripts/synqx.sh start" C-m
-    tmux attach -t synqx
+usage() {
+    echo -e "${BOLD}SynqX Developer CLI${NC}"
+    echo -e "Usage: $0 {command} [options]\n"
+    echo -e "Commands:"
+    echo -e "  ${CYAN}install${NC}          Install all dependencies and setup venvs"
+    echo -e "  ${CYAN}start${NC}            Start the core stack (API, Worker, Beat, Frontend)"
+    echo -e "  ${CYAN}start --with-agent${NC} Start core stack + local SynqX Agent"
+    echo -e "  ${CYAN}stop${NC}             Stop all running SynqX services"
+    echo -e "  ${CYAN}status${NC}           Show status of all services"
+    echo -e "  ${CYAN}restart${NC}          Restart all services"
+    echo -e "  ${CYAN}logs [service]${NC}   Tail logs (omit service to tail all)"
+    echo -e "  ${CYAN}clean [--full]${NC}   Cleanup logs and cache (use --full for venvs/modules)"
+    echo
 }
 
-# ====================================================== 
-# CLI
-# ====================================================== 
 case "${1:-}" in
-    start)    start_stack ;; 
-    stop)     stop_stack ;; 
-    restart)  stop_stack; start_stack ;; 
-    status)   status_stack ;; 
-    logs)     logs "$@" ;; 
-    doctor)   doctor ;; 
-    tmux)     tmux_mode ;; 
-    *) 
-        echo "Usage: $0 {start|stop|restart|status|logs|doctor|tmux}"
-        exit 1
+    install) install ;; 
+    start)   start_all "${2:-}" ;; 
+    stop)    stop_all ;; 
+    restart) stop_all; sleep 1; start_all "${2:-}" ;; 
+    status)  status ;; 
+    logs)    show_logs "${2:-}" ;; 
+    clean)   
+        rm -rf "$PID_DIR"
+        find . -name "__pycache__" -type d -exec rm -rf {} +
+        ok "Cleaned cache and logs."
+        if [[ "${2:-}" == "--full" ]]; then
+            rm -rf backend/.venv agent/.venv frontend/node_modules
+            warn "Deep clean complete: Virtualenvs and node_modules removed."
+        fi
         ;;
+    *) usage ;; 
 esac
