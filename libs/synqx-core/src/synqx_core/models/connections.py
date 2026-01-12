@@ -38,12 +38,20 @@ class Connection(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     description: Mapped[Optional[str]] = mapped_column(Text)
     tags: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
 
+    # Enterprise Ops: Staging support
+    staging_connection_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("connections.id", ondelete="SET NULL"), nullable=True
+    )
+
     # Workspace scoping
     workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     workspace: Mapped[Optional["Workspace"]] = relationship("Workspace", back_populates="connections")
+    staging_connection: Mapped[Optional["Connection"]] = relationship(
+        "Connection", remote_side=[id], post_update=True
+    )
     assets: Mapped[list["Asset"]] = relationship(
         back_populates="connection", cascade="all, delete-orphan", lazy="selectin"
     )

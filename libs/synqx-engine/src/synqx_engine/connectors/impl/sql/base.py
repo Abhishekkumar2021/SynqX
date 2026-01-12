@@ -6,6 +6,7 @@ import json
 from sqlalchemy import text, inspect
 from sqlalchemy.engine import Engine, Connection
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.models.enums import SchemaEvolutionPolicy
 from synqx_core.utils.resilience import retry
 from synqx_core.utils.data import is_df_empty
 from synqx_core.errors import (
@@ -377,7 +378,7 @@ class SQLConnector(BaseConnector):
         if clean_mode == "replace":
             clean_mode = "overwrite"
 
-        allow_evolution = kwargs.get("allow_schema_evolution", False)
+        evolution_policy = kwargs.get("schema_evolution_policy", SchemaEvolutionPolicy.STRICT)
 
         # 1. Discover target columns (Cached for the duration of this batch)
         table_exists = False
@@ -402,50 +403,45 @@ class SQLConnector(BaseConnector):
                 if is_df_empty(df): 
                     continue
                 
-                # --- ROBUST SCHEMA EVOLUTION ---
-                if allow_evolution:
-                    # Case A: Table does not exist - Let pandas create it on the first chunk
-                    if not table_exists and first_chunk:
-                        logger.info(f"Schema Evolution: Creating new table '{asset}'...")
-                        # We proceed to the write logic and let if_exists='replace' handle creation
-                        pass 
-                    
-                    # Case B: Table exists, but new columns are present in the chunk
-                    elif table_exists:
-                        new_cols = [c for c in df.columns if c not in target_columns]
-                        if new_cols:
-                            logger.info(f"Schema Evolution: Detecting {len(new_cols)} new columns for '{asset}': {new_cols}")
-                            for col in new_cols:
-                                # Enhanced Type Mapping
-                                dtype = str(df[col].dtype).lower()
-                                sql_type = "TEXT" 
-                                if "int" in dtype: sql_type = "BIGINT"
-                                elif "float" in dtype or "double" in dtype: sql_type = "DOUBLE PRECISION"
-                                elif "bool" in dtype: sql_type = "BOOLEAN"
-                                elif "datetime" in dtype: sql_type = "TIMESTAMP"
-                                elif "json" in dtype or "object" in dtype:
-                                    # Heuristic: check if content is JSON-like
-                                    sql_type = "JSONB" if "postgres" in str(self._engine.url).lower() else "TEXT"
-                                
-                                table_ref = f"\"{schema}\".\"{name}\"" if schema else f"\"{name}\""
-                                alter_stmt = f"ALTER TABLE {table_ref} ADD COLUMN \"{col}\" {sql_type}"
-                                
-                                try:
-                                    self._connection.execute(text(alter_stmt))
-                                    # Crucial: Commit DDL immediately as some DBs don't auto-commit DDL in transactions
-                                    self._connection.execute(text("COMMIT")) 
-                                    logger.info(f"  [EVOLVED] Added column '{col}' ({sql_type}) to {table_ref}")
-                                    target_columns.append(col) 
-                                except Exception as alter_err:
-                                    logger.error(f"  [FAILED] Could not evolve column '{col}': {alter_err}")
+                # --- SCHEMA EVOLUTION & COMPLIANCE ---
+                new_cols = [c for c in df.columns if c not in target_columns] if table_exists else []
                 
-                # Case C: Safety Filter (Evolution disabled or failed)
-                if not allow_evolution and target_columns:
-                    valid_cols = [c for c in df.columns if c in target_columns]
-                    if len(valid_cols) < len(df.columns):
-                        ignored = [c for c in df.columns if c not in target_columns]
-                        logger.warning(f"Evolution disabled: Filtering out {len(ignored)} unknown columns: {ignored}")
-                    df = df[valid_cols]
+                if new_cols:
+                    if evolution_policy == SchemaEvolutionPolicy.STRICT:
+                        msg = f"Schema Breach: New columns {new_cols} detected but policy is STRICT for '{asset}'."
+                        logger.error(msg)
+                        raise DataTransferError(msg)
+                    
+                    elif evolution_policy == SchemaEvolutionPolicy.EVOLVE:
+                        logger.info(f"Schema Evolution: Automatically adding {len(new_cols)} columns to '{asset}'")
+                        for col in new_cols:
+                            dtype = str(df[col].dtype).lower()
+                            sql_type = "TEXT" 
+                            if "int" in dtype: sql_type = "BIGINT"
+                            elif "float" in dtype or "double" in dtype: sql_type = "DOUBLE PRECISION"
+                            elif "bool" in dtype: sql_type = "BOOLEAN"
+                            elif "datetime" in dtype: sql_type = "TIMESTAMP"
+                            elif "json" in dtype or "object" in dtype:
+                                sql_type = "JSONB" if "postgres" in str(self._engine.url).lower() else "TEXT"
+                            
+                            table_ref = f"\"{schema}\".\"{name}\"" if schema else f"\"{name}\""
+                            alter_stmt = f"ALTER TABLE {table_ref} ADD COLUMN \"{col}\" {sql_type}"
+                            
+                            try:
+                                self._connection.execute(text(alter_stmt))
+                                self._connection.execute(text("COMMIT")) 
+                                target_columns.append(col) 
+                            except Exception as alter_err:
+                                raise DataTransferError(f"Failed to evolve schema for '{asset}': {alter_err}")
+                    
+                    elif evolution_policy == SchemaEvolutionPolicy.IGNORE:
+                        logger.warning(f"Schema Evolution (IGNORE): Dropping new columns {new_cols} from stream for '{asset}'")
+                        df = df[target_columns]
+
+                # Case: Safety Filter for missing columns in source (Nullable by default in target is fine)
+                if table_exists and evolution_policy != SchemaEvolutionPolicy.EVOLVE:
+                    # Only include columns that actually exist in target
+                    df = df[[c for c in df.columns if c in target_columns]]
 
                 # 2. Handle Write Mode
                 if_exists_val = 'append'

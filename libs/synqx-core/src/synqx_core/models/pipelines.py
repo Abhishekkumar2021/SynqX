@@ -8,7 +8,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from synqx_core.models.base import Base, AuditMixin, SoftDeleteMixin, OwnerMixin
-from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy
+from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy, WriteStrategy, SchemaEvolutionPolicy
 from synqx_core.utils.agent import is_remote_group
 
 if TYPE_CHECKING:
@@ -158,6 +158,20 @@ class PipelineNode(Base, AuditMixin):
 
     source_asset_id: Mapped[Optional[int]] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"))
     destination_asset_id: Mapped[Optional[int]] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"))
+    
+    # Data Reliability & Movement
+    write_strategy: Mapped[WriteStrategy] = mapped_column(
+        SQLEnum(WriteStrategy, values_callable=lambda obj: [e.value for e in obj]), 
+        default=WriteStrategy.APPEND, nullable=False
+    )
+    schema_evolution_policy: Mapped[SchemaEvolutionPolicy] = mapped_column(
+        SQLEnum(SchemaEvolutionPolicy, values_callable=lambda obj: [e.value for e in obj]), 
+        default=SchemaEvolutionPolicy.STRICT, nullable=False
+    )
+
+    # Mission Critical: Governance & Quality
+    data_contract: Mapped[Optional[dict]] = mapped_column(JSON, default=dict) # YAML-based contract rules
+    quarantine_asset_id: Mapped[Optional[int]] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"))
 
     max_retries: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     retry_strategy: Mapped[RetryStrategy] = mapped_column(

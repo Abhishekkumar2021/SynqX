@@ -74,6 +74,7 @@ export interface Connection {
   max_concurrent_connections: number;
   connection_timeout_seconds: number;
   tags: Record<string, any>;
+  staging_connection_id?: number;
 }
 
 export interface ConnectionCreate {
@@ -84,6 +85,7 @@ export interface ConnectionCreate {
   tags?: Record<string, any>;
   max_concurrent_connections?: number;
   connection_timeout_seconds?: number;
+  staging_connection_id?: number;
 }
 
 export interface ConnectionUpdate {
@@ -93,6 +95,7 @@ export interface ConnectionUpdate {
   tags?: Record<string, any>;
   max_concurrent_connections?: number;
   connection_timeout_seconds?: number;
+  staging_connection_id?: number;
 }
 
 export interface EphemeralJobResponse {
@@ -294,6 +297,10 @@ export interface PipelineNode {
   source_asset_id?: number;
   destination_asset_id?: number;
   connection_id?: number;
+  write_strategy: string;
+  schema_evolution_policy: string;
+  data_contract?: any;
+  quarantine_asset_id?: number;
   max_retries: number;
   retry_strategy?: RetryStrategy;
   retry_delay_seconds?: number;

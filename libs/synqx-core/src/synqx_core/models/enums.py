@@ -117,6 +117,22 @@ class RetryStrategy(str, enum.Enum):
     EXPONENTIAL_BACKOFF = "exponential_backoff"
     LINEAR_BACKOFF = "linear_backoff"
 
+class WriteStrategy(str, enum.Enum):
+    APPEND = "append"
+    OVERWRITE = "overwrite"
+    UPSERT = "upsert"
+    SCD2 = "scd2"
+
+class SyncMode(str, enum.Enum):
+    FULL_LOAD = "full_load"
+    INCREMENTAL = "incremental"
+    CDC = "cdc"
+
+class SchemaEvolutionPolicy(str, enum.Enum):
+    STRICT = "strict"
+    EVOLVE = "evolve"
+    IGNORE = "ignore"
+
 class DataDirection(str, enum.Enum):
     SOURCE = "source"
     DESTINATION = "destination"

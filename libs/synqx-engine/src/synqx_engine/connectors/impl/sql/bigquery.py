@@ -1,11 +1,15 @@
+import uuid
 from typing import Any, Dict, Optional, Iterator, Union, List
 import pandas as pd
 from synqx_engine.connectors.base import BaseConnector
 from synqx_core.errors import ConfigurationError, ConnectionFailedError, DataTransferError
+from synqx_core.logging import get_logger
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from google.cloud import bigquery
 from google.oauth2 import service_account
+
+logger = get_logger(__name__)
 
 class BigQueryConfig(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", case_sensitive=False)
@@ -16,6 +20,10 @@ class BigQueryConfig(BaseSettings):
     credentials_path: Optional[str] = Field(None, description="Path to Service Account JSON")
 
 class BigQueryConnector(BaseConnector):
+    """
+    Robust BigQuery Connector using Google Cloud Python SDK.
+    Supports high-performance staging via GCS.
+    """
     def __init__(self, config: Dict[str, Any]):
         self._config_model: Optional[BigQueryConfig] = None
         self._client: Optional[bigquery.Client] = None
@@ -24,9 +32,6 @@ class BigQueryConnector(BaseConnector):
     def validate_config(self) -> None:
         try:
             self._config_model = BigQueryConfig.model_validate(self.config)
-            if not self._config_model.credentials_json and not self._config_model.credentials_path:
-                 # It might rely on default environment auth
-                 pass
         except Exception as e:
             raise ConfigurationError(f"Invalid BigQuery config: {e}")
 
@@ -52,9 +57,9 @@ class BigQueryConnector(BaseConnector):
 
     def test_connection(self) -> bool:
         try:
-            with self.session():
-                self._client.query("SELECT 1")
-                return True
+            self.connect()
+            self._client.query("SELECT 1").result()
+            return True
         except Exception:
             return False
 
@@ -111,7 +116,7 @@ class BigQueryConnector(BaseConnector):
         table_id = f"{self._config_model.project_id}.{self._config_model.dataset_id}.{asset}"
         
         job_config = bigquery.LoadJobConfig()
-        if mode == "replace":
+        if mode == "replace" or mode == "overwrite":
             job_config.write_disposition = bigquery.WriteDisposition.WRITE_TRUNCATE
         else:
             job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
@@ -128,6 +133,69 @@ class BigQueryConnector(BaseConnector):
             total += len(df)
             
         return total
+
+    def supports_staging(self) -> bool:
+        return True
+
+    def write_staged(
+        self,
+        data: Union[pd.DataFrame, Iterator[pd.DataFrame]],
+        asset: str,
+        stage_connector: Any,
+        mode: str = "append",
+        **kwargs,
+    ) -> int:
+        """
+        BigQuery-specific high-performance load via GCS.
+        """
+        from synqx_engine.connectors.impl.files.gcs import GCSConnector
+        
+        if not isinstance(stage_connector, GCSConnector):
+            logger.warning(f"BigQuery staged write requested with non-GCS connector. Falling back to direct load.")
+            return self.write_batch(data, asset, mode=mode, **kwargs)
+
+        self.connect()
+        table_id = f"{self._config_model.project_id}.{self._config_model.dataset_id}.{asset}"
+        
+        # 1. Generate unique staging path
+        session_id = str(uuid.uuid4())[:8]
+        stage_filename = f"synqx_stage_{asset}_{session_id}.parquet"
+        
+        try:
+            # 2. Upload to GCS as Parquet
+            rows_written = stage_connector.write_batch(
+                data, 
+                stage_filename, 
+                mode="replace"
+            )
+            
+            if rows_written == 0:
+                return 0
+
+            # 3. Trigger BigQuery Load from GCS
+            gcs_conf = stage_connector._config_model
+            uri = f"gs://{gcs_conf.bucket}/{stage_filename}"
+            
+            job_config = bigquery.LoadJobConfig(
+                source_format=bigquery.SourceFormat.PARQUET,
+                write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE if mode.lower() in ("replace", "overwrite") 
+                                  else bigquery.WriteDisposition.WRITE_APPEND,
+            )
+
+            logger.info(f"Triggering BigQuery Load for {asset} from {uri}")
+            load_job = self._client.load_table_from_uri(uri, table_id, job_config=job_config)
+            load_job.result() # Wait for completion
+            
+            return rows_written
+
+        except Exception as e:
+            logger.error(f"BigQuery staged load failed: {e}")
+            raise DataTransferError(f"BigQuery staged load failed: {e}")
+        finally:
+            try:
+                stage_connector.delete_file(stage_filename)
+            except Exception:
+                pass
 
     def execute_query(
         self,

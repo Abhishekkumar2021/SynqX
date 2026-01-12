@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from croniter import croniter
-from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy
+from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy, WriteStrategy, SchemaEvolutionPolicy
 
 
 class PipelineNodeBase(BaseModel):
@@ -16,6 +16,15 @@ class PipelineNodeBase(BaseModel):
     source_asset_id: Optional[int] = Field(None, gt=0)
     destination_asset_id: Optional[int] = Field(None, gt=0)
     connection_id: Optional[int] = None
+    
+    # Data Reliability & Movement
+    write_strategy: WriteStrategy = Field(default=WriteStrategy.APPEND)
+    schema_evolution_policy: SchemaEvolutionPolicy = Field(default=SchemaEvolutionPolicy.STRICT)
+    
+    # Mission Critical: Governance & Quality
+    data_contract: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    quarantine_asset_id: Optional[int] = Field(None, gt=0)
+
     max_retries: int = Field(default=3, ge=0, le=10)
     retry_strategy: RetryStrategy = Field(default=RetryStrategy.FIXED)
     retry_delay_seconds: int = Field(default=60, ge=0, le=3600)

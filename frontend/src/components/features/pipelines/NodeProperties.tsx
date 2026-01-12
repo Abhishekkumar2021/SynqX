@@ -13,7 +13,10 @@ import {
     GitCompare,
     ArrowRight,
     Loader2,
-    Sparkles
+    Sparkles,
+    Shield,
+    FileCode,
+    Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -452,13 +455,17 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 connection_id: node.data.connection_id ? String(node.data.connection_id) : '',
                 asset_id: (node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) ? 
                     String(node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) : '',
-                write_mode: config.write_mode || 'append',
+                write_strategy: (node.data as any).write_strategy || config.write_mode || 'append',
+                schema_evolution_policy: (node.data as any).schema_evolution_policy || 'strict',
                 incremental: config.incremental === true,
                 watermark_column: config.watermark_column || '',
                 max_retries: node.data.max_retries ?? 3,
                 retry_strategy: (node.data as any).retry_strategy || 'fixed',
                 retry_delay_seconds: node.data.retry_delay_seconds ?? 60,
                 timeout_seconds: node.data.timeout_seconds ?? 3600,
+                data_contract_yaml: (node.data as any).data_contract ? 
+                    (typeof (node.data as any).data_contract === 'string' ? (node.data as any).data_contract : JSON.stringify((node.data as any).data_contract, null, 2)) : '',
+                quarantine_asset_id: (node.data as any).quarantine_asset_id ? String((node.data as any).quarantine_asset_id) : '',
                 schema_rules: currentOpClass === 'validate' ? (config.schema || []) : [],
                 schema_json_manual: currentOpClass === 'validate' ? JSON.stringify(config.schema || [], null, 2) : ''
             };
@@ -532,11 +539,14 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 config: {
                     ...baseConfig,
                     ...dynamicConfig,
-                    write_mode: data.operator_type === 'sink' ? data.write_mode : undefined,
                     incremental: data.operator_type === 'source' ? data.incremental : undefined,
                     watermark_column: data.operator_type === 'source' ? data.watermark_column : undefined
                 },
                 column_mapping: colMapping,
+                write_strategy: data.operator_type === 'sink' ? data.write_strategy : undefined,
+                schema_evolution_policy: data.operator_type === 'sink' ? data.schema_evolution_policy : undefined,
+                data_contract: data.data_contract_yaml,
+                quarantine_asset_id: data.quarantine_asset_id ? parseInt(data.quarantine_asset_id) : undefined,
                 connection_id: data.connection_id ? parseInt(data.connection_id) : undefined,
                 asset_id: data.asset_id ? parseInt(data.asset_id) : undefined,
                 max_retries: data.max_retries,
@@ -668,12 +678,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                 <div className="px-6 pt-4 shrink-0">
-                    <TabsList className="w-full grid grid-cols-3">
-                        <TabsTrigger value="settings" className="gap-2"><Sliders size={14} /> Basic</TabsTrigger>
-                        <TabsTrigger value="lineage" className="gap-2"><Share2 size={14} /> Lineage</TabsTrigger>
+                    <TabsList className="w-full grid grid-cols-4">
+                        <TabsTrigger value="settings" className="gap-2 text-[10px]"><Sliders size={12} /> Basic</TabsTrigger>
+                        <TabsTrigger value="contract" className="gap-2 text-[10px]"><Shield size={12} /> Contract</TabsTrigger>
+                        <TabsTrigger value="lineage" className="gap-2 text-[10px]"><Share2 size={12} /> Lineage</TabsTrigger>
                         {node.data.diffStatus && node.data.diffStatus !== 'none' ? (
-                            <TabsTrigger value="diff" className="gap-2 bg-amber-500/10 text-amber-500"><GitCompare size={14} /> Diff</TabsTrigger>
-                        ) : <TabsTrigger value="advanced" className="gap-2"><Code size={14} /> Advanced</TabsTrigger>}
+                            <TabsTrigger value="diff" className="gap-2 bg-amber-500/10 text-amber-500 text-[10px]"><GitCompare size={12} /> Diff</TabsTrigger>
+                        ) : <TabsTrigger value="advanced" className="gap-2 text-[10px]"><Code size={12} /> Expert</TabsTrigger>}
                     </TabsList>
                 </div>
 
@@ -736,18 +747,35 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                 </div>
                                             )}
                                             {nodeType === 'sink' && (
-                                                <div className="space-y-2 pt-2">
-                                                    <Label className="text-[10px] font-bold">Write Strategy</Label>
-                                                    <Controller control={control} name="write_mode" render={({ field }) => (
-                                                        <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
-                                                            <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20"><SelectValue placeholder="Select strategy" /></SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="append">Append</SelectItem>
-                                                                <SelectItem value="overwrite">Overwrite</SelectItem>
-                                                                <SelectItem value="upsert">Upsert</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    )} />
+                                                <div className="space-y-4 pt-2">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-bold flex items-center">Write Strategy <HelpIcon content="Determines how data is committed to the target asset." /></Label>
+                                                        <Controller control={control} name="write_strategy" render={({ field }) => (
+                                                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                                                                <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20"><SelectValue placeholder="Select strategy" /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="append" className="text-xs font-bold">Append</SelectItem>
+                                                                    <SelectItem value="overwrite" className="text-xs font-bold">Overwrite</SelectItem>
+                                                                    <SelectItem value="upsert" className="text-xs font-bold">Upsert</SelectItem>
+                                                                    <SelectItem value="scd2" className="text-xs font-bold">SCD Type 2</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )} />
+                                                    </div>
+                                                    
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-bold flex items-center">Evolution Policy <HelpIcon content="Defines behavior when incoming data schema differs from target." /></Label>
+                                                        <Controller control={control} name="schema_evolution_policy" render={({ field }) => (
+                                                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                                                                <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20"><SelectValue placeholder="Select policy" /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="strict" className="text-xs font-bold">Strict (Fail on mismatch)</SelectItem>
+                                                                    <SelectItem value="evolve" className="text-xs font-bold">Evolve (Auto-Alter Table)</SelectItem>
+                                                                    <SelectItem value="ignore" className="text-xs font-bold">Ignore (Drop new columns)</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )} />
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -790,6 +818,66 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Documentation</Label>
                                     <Textarea {...register('description')} placeholder="Notes..." readOnly={!isEditor} className="min-h-20 rounded-lg bg-background/50 border-border/40 text-xs resize-none" />
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="contract" className="m-0 focus-visible:outline-none">
+                                <div className="p-6 space-y-8">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                                            <Shield className="h-5 w-5 text-primary" />
+                                            <div>
+                                                <h4 className="text-[11px] font-bold uppercase tracking-tight">Mission Critical Guardrails</h4>
+                                                <p className="text-[9px] text-muted-foreground leading-relaxed">Define validation rules in YAML. Violations will be diverted to quarantine.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contract Rules (YAML)</Label>
+                                                <Badge variant="outline" className="text-[8px] font-mono opacity-60">STRICT: FALSE</Badge>
+                                            </div>
+                                            <Textarea 
+                                                {...register('data_contract_yaml')} 
+                                                placeholder="columns:&#10;  - name: email&#10;    type: string&#10;    required: true&#10;    pattern: '.*@.*'&#10;  - name: age&#10;    type: integer&#10;    min: 18" 
+                                                className="font-mono text-[10px] min-h-64 bg-[#0a0a0a] text-primary/90 border-white/5 rounded-xl p-4 shadow-inner"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <Separator className="opacity-50" />
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <Trash2 className="h-3 w-3 text-destructive" />
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Quarantine Buffer</span>
+                                        </div>
+                                        
+                                        <div className="space-y-4 p-4 rounded-xl border border-destructive/20 bg-destructive/5">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold">Sink Connection</Label>
+                                                <Controller control={control} name="quarantine_connection_id" render={({ field }) => (
+                                                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                                                        <SelectTrigger className="h-9 rounded-lg bg-background/50 border-destructive/10"><SelectValue placeholder="Select connection..." /></SelectTrigger>
+                                                        <SelectContent>{connections?.map((c: any) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
+                                                    </Select>
+                                                )} />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold">Quarantine Asset</Label>
+                                                <Controller control={control} name="quarantine_asset_id" render={({ field }) => (
+                                                    <Select onValueChange={field.onChange} value={field.value} disabled={!watch('quarantine_connection_id') || !isEditor}>
+                                                        <SelectTrigger className="h-9 rounded-lg bg-background/50 border-destructive/10"><SelectValue placeholder="Select asset..." /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {/* We'd need to fetch assets for this specific connection too, but for prototype let's reuse assets if same connection or assume user knows */}
+                                                            {filteredAssets?.map((a: any) => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )} />
+                                            </div>
+                                            <p className="text-[9px] text-muted-foreground">Invalid rows will be written to this asset with a <code>__synqx_quarantine_reason__</code> column.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </TabsContent>
 

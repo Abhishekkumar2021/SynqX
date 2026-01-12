@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createConnection, updateConnection, type ConnectionCreate } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,7 @@ const connectionSchema = z.object({
     connector_type: z.string().min(1, "Connection type is required"),
     description: z.string().optional(),
     config: z.record(z.string(), z.any()),
+    staging_connection_id: z.number().nullable().optional()
 });
 
 type ConnectionFormValues = z.infer<typeof connectionSchema>;
@@ -53,6 +54,12 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({ 
     const [activeCategory, setActiveCategory] = useState<string>('All');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const queryClient = useQueryClient();
+
+    // Fetch Connections for staging selection
+    const { data: allConnections } = useQuery({
+        queryKey: ['connections'],
+        queryFn: () => queryClient.getQueryData(['connections']) as any[] || []
+    });
 
     const categories = ['All', 'Database', 'Warehouse', 'File', 'API', 'Generic'];
 
@@ -76,7 +83,8 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({ 
             name: initialData?.name || '',
             description: initialData?.description || '',
             connector_type: initialData?.connector_type || '',
-            config: initialData?.config || {}
+            config: initialData?.config || {},
+            staging_connection_id: initialData?.staging_connection_id || null
         }
     });
 
@@ -116,7 +124,8 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({ 
                 name: initialData.name || '',
                 description: initialData.description || '',
                 connector_type: initialData.connector_type || '',
-                config: initialData.config || {}
+                config: initialData.config || {},
+                staging_connection_id: initialData.staging_connection_id || null
             });
             setSelectedType(initialData.connector_type);
             setStep('configure');
@@ -125,7 +134,8 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({ 
                 name: '',
                 description: '',
                 connector_type: '',
-                config: {}
+                config: {},
+                staging_connection_id: null
             });
             setSelectedType(null);
             setStep('select');
@@ -484,6 +494,53 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({ 
                                     )}
                                 </div>
                             </div>
+
+                            <div className="h-px w-full bg-border/20" />
+
+                            {/* Staging Section (Warehouses only) */}
+                            {(selectedType === 'snowflake' || selectedType === 'bigquery') && (
+                                <div className="space-y-6">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500/10 text-amber-500 text-[10px] font-bold border border-amber-500/20">3</span>
+                                        High Performance Staging
+                                    </h4>
+                                    <div className="grid gap-5 pl-9">
+                                        <FormField control={form.control} name="staging_connection_id" render={({ field }) => (
+                                            <FormItem className="space-y-2">
+                                                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Staging Area Connection</Label>
+                                                <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 mb-4">
+                                                    <p className="text-[10px] text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
+                                                        Enable "Stage & Load" for billion-row scale. Data will be buffered in {selectedType === 'snowflake' ? 'S3' : 'GCS'} before native ingestion.
+                                                    </p>
+                                                </div>
+                                                <Select 
+                                                    onValueChange={(val) => field.onChange(val === 'none' ? null : parseInt(val))} 
+                                                    value={String(field.value ?? 'none')}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-10 rounded-xl bg-background border-border/40 shadow-sm">
+                                                            <SelectValue placeholder="Select staging connection (Optional)" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent className="rounded-xl border-border/40 backdrop-blur-xl bg-background/95">
+                                                        <SelectItem value="none" className="text-xs font-medium">None (Standard Insert)</SelectItem>
+                                                        {allConnections?.filter((c: any) => {
+                                                            if (selectedType === 'snowflake') return c.connector_type === 's3';
+                                                            if (selectedType === 'bigquery') return c.connector_type === 'gcs';
+                                                            return false;
+                                                        }).map((c: any) => (
+                                                            <SelectItem key={c.id} value={String(c.id)} className="text-xs font-medium">
+                                                                {c.name} ({c.connector_type.toUpperCase()})
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </div>
+                                </div>
+                            )}
                         </form>
                     </Form>
                 </div>

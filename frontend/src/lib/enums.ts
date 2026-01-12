@@ -130,6 +130,28 @@ export const RetryStrategy = {
 } as const;
 export type RetryStrategy = typeof RetryStrategy[keyof typeof RetryStrategy];
 
+export const WriteStrategy = {
+    APPEND: "append",
+    OVERWRITE: "overwrite",
+    UPSERT: "upsert",
+    SCD2: "scd2"
+} as const;
+export type WriteStrategy = typeof WriteStrategy[keyof typeof WriteStrategy];
+
+export const SyncMode = {
+    FULL_LOAD: "full_load",
+    INCREMENTAL: "incremental",
+    CDC: "cdc"
+} as const;
+export type SyncMode = typeof SyncMode[keyof typeof SyncMode];
+
+export const SchemaEvolutionPolicy = {
+    STRICT: "strict",
+    EVOLVE: "evolve",
+    IGNORE: "ignore"
+} as const;
+export type SchemaEvolutionPolicy = typeof SchemaEvolutionPolicy[keyof typeof SchemaEvolutionPolicy];
+
 export const DataDirection = {
     SOURCE: "source",
     DESTINATION: "destination",

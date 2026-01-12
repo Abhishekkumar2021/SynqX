@@ -24,6 +24,7 @@ class ConnectionBase(BaseModel):
     tags: Optional[Dict[str, Any]] = Field(default_factory=dict)
     max_concurrent_connections: int = Field(default=5, ge=1, le=100)
     connection_timeout_seconds: int = Field(default=30, ge=1, le=300)
+    staging_connection_id: Optional[int] = Field(None, description="Connection to use for intermediate staging (e.g. S3 for Snowflake)")
 
     @field_validator("tags", mode="before")
     @classmethod
@@ -61,6 +62,7 @@ class ConnectionUpdate(BaseModel):
     tags: Optional[Dict[str, Any]] = None
     max_concurrent_connections: Optional[int] = Field(None, ge=1, le=100)
     connection_timeout_seconds: Optional[int] = Field(None, ge=1, le=300)
+    staging_connection_id: Optional[int] = None
 
     @field_validator("name")
     @classmethod

@@ -89,6 +89,27 @@ class BaseConnector(ABC):
     ) -> int:
         pass
 
+    def supports_staging(self) -> bool:
+        """
+        Returns True if this connector supports native 'Stage & Load' (e.g. S3 -> Snowflake).
+        """
+        return False
+
+    def write_staged(
+        self,
+        data: Union[pd.DataFrame, Iterator[pd.DataFrame]],
+        asset: str,
+        stage_connector: "BaseConnector",
+        mode: str = "append",
+        **kwargs,
+    ) -> int:
+        """
+        High-performance write using an intermediate staging area (e.g. S3).
+        1. Write data to staging area as Parquet/CSV.
+        2. Trigger native LOAD/COPY command from warehouse.
+        """
+        raise NotImplementedError(f"Staged write not supported for {self.__class__.__name__}")
+
     def fetch_sample(
         self, asset: str, limit: int = 100, **kwargs
     ) -> List[Dict[str, Any]]:

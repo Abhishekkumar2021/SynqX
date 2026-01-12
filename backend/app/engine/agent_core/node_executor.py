@@ -192,7 +192,7 @@ class NodeExecutor:
 
             # PERFORMANCE: Native Database Quarantine
             if direction == "quarantine" and not chunk_is_empty:
-                q_asset_id = node.config.get("quarantine_asset_id")
+                q_asset_id = node.quarantine_asset_id
                 if q_asset_id:
                     try:
                         # Ensure we have pandas for quarantine write if necessary
@@ -333,6 +333,13 @@ class NodeExecutor:
                     if "asset" in read_params:
                         read_params.pop("asset")
 
+                # --- DATA CONTRACT INITIALIZATION ---
+                contract_validator = None
+                if node.data_contract:
+                    from synqx_engine.core.contract import ContractValidator
+                    contract_validator = ContractValidator(node.data_contract)
+                    DBLogger.log_step(db, step_run.id, "INFO", "Data Contract active. Pre-flight validation enabled.", job_id=pipeline_run.job_id)
+
                 wm_col = self._get_watermark_column(asset) if asset.is_incremental_capable else None
                 max_val = None
                 
@@ -346,7 +353,22 @@ class NodeExecutor:
                             chunk = chunk.convert_dtypes(dtype_backend="pyarrow")
                         except Exception as e:
                             logger.debug(f"PyArrow conversion skipped for chunk: {e}")
+                        
+                        # --- DATA CONTRACT VALIDATION ---
+                        if contract_validator:
+                            # Convert to Polars for high-speed validation
+                            pl_chunk = pl.from_pandas(chunk) if isinstance(chunk, pd.DataFrame) else chunk
+                            valid_chunk, quarantine_chunk = contract_validator.validate_chunk(pl_chunk)
                             
+                            if not quarantine_chunk.is_empty():
+                                error_count = len(quarantine_chunk)
+                                logger.warning(f"Data Contract violation: Quarantining {error_count} records from node '{node.name}'")
+                                on_chunk(quarantine_chunk.to_pandas(), direction="quarantine", error_count=error_count)
+                            
+                            chunk = valid_chunk.to_pandas() if isinstance(chunk, pd.DataFrame) else valid_chunk
+                            if chunk.is_empty() if hasattr(chunk, "is_empty") else is_df_empty(chunk):
+                                continue
+
                         on_chunk(chunk, direction="out")
                         
                         # Apply watermark filter
@@ -425,20 +447,42 @@ class NodeExecutor:
                     logger.info("  [SUCCESS] Native ELT command completed.")
                     DBLogger.log_step(db, step_run.id, "SUCCESS", "Native database synchronization finalized successfully.", job_id=pipeline_run.job_id)
                 else:
+                    # --- DATA CONTRACT INITIALIZATION ---
+                    contract_validator = None
+                    if node.data_contract:
+                        from synqx_engine.core.contract import ContractValidator
+                        contract_validator = ContractValidator(node.data_contract)
+                        DBLogger.log_step(db, step_run.id, "INFO", "Data Contract active. Validating ingress before target commit.", job_id=pipeline_run.job_id)
+
                     # Prepare sink stream
                     def sink_stream():
                         for uid, chunks in (input_data or {}).items():
                             logger.debug(f"  Processing input from upstream '{uid}': {len(chunks)} chunks")
                             for chunk in chunks:
                                 on_chunk(chunk, direction="in")
+                                
+                                # --- DATA CONTRACT VALIDATION ---
+                                if contract_validator:
+                                    pl_chunk = pl.from_pandas(chunk) if isinstance(chunk, pd.DataFrame) else chunk
+                                    valid_chunk, quarantine_chunk = contract_validator.validate_chunk(pl_chunk)
+                                    
+                                    if not quarantine_chunk.is_empty():
+                                        on_chunk(quarantine_chunk.to_pandas(), direction="quarantine", error_count=len(quarantine_chunk))
+                                    
+                                    chunk = valid_chunk.to_pandas() if isinstance(chunk, pd.DataFrame) else valid_chunk
+                                    if chunk.is_empty() if hasattr(chunk, "is_empty") else is_df_empty(chunk):
+                                        continue
+
                                 on_chunk(chunk, direction="out")
                                 yield chunk
                     
                     # Write data
-                    write_mode = node.config.get("write_strategy") or (asset.config or {}).get("write_mode") or "append"
+                    write_mode = node.config.get("write_strategy") or node.write_strategy.value or (asset.config or {}).get("write_mode") or "append"
+                    evolution_policy = node.schema_evolution_policy.value
+                    
                     asset_identifier = asset.fully_qualified_name or asset.name
-                    logger.info(f"  Write mode: {write_mode.upper()}")
-                    DBLogger.log_step(db, step_run.id, "INFO", f"Executing target commit using strategy: {write_mode.upper()}.", job_id=pipeline_run.job_id)
+                    logger.info(f"  Write mode: {write_mode.upper()} | Policy: {evolution_policy.upper()}")
+                    DBLogger.log_step(db, step_run.id, "INFO", f"Executing target commit using strategy: {write_mode.upper()} (Policy: {evolution_policy.upper()}).", job_id=pipeline_run.job_id)
                     
                     with connector.session() as session:
                         # Merge node config for write parameters
@@ -446,14 +490,44 @@ class NodeExecutor:
                         write_params.pop("write_strategy", None) # Handled separately via 'mode'
                         write_params.pop("ui", None)             # Metadata cleanup
                         write_params.pop("connection_id", None)  # Metadata cleanup
+                        write_params["schema_evolution_policy"] = evolution_policy
                         
-                        records_out = session.write_batch(
-                            sink_stream(),
-                            asset=asset_identifier,
-                            mode=write_mode,
-                            **write_params
-                        )
-                        stats["out"] = records_out
+                        # --- HIGH PERFORMANCE STAGING ---
+                        if session.supports_staging() and conn.staging_connection_id:
+                            try:
+                                stage_conn_obj = db.query(Connection).get(conn.staging_connection_id)
+                                if stage_conn_obj:
+                                    stage_cfg = VaultService.get_connector_config(stage_conn_obj)
+                                    stage_connector = ConnectorFactory.get_connector(stage_conn_obj.connector_type.value, stage_cfg)
+                                    
+                                    DBLogger.log_step(db, step_run.id, "INFO", f"Optimized Staging detected. Using '{stage_conn_obj.name}' as intermediate buffer.", job_id=pipeline_run.job_id)
+                                    
+                                    records_out = session.write_staged(
+                                        sink_stream(),
+                                        asset=asset_identifier,
+                                        stage_connector=stage_connector,
+                                        mode=write_mode,
+                                        **write_params
+                                    )
+                                    stats["out"] = records_out
+                                else:
+                                    # Fallback to standard batch
+                                    records_out = session.write_batch(sink_stream(), asset=asset_identifier, mode=write_mode, **write_params)
+                                    stats["out"] = records_out
+                            except Exception as stage_err:
+                                logger.warning(f"Staged write failed, falling back to batch: {stage_err}")
+                                DBLogger.log_step(db, step_run.id, "WARNING", f"Staged load failed ({stage_err}). Falling back to standard batch transfer.", job_id=pipeline_run.job_id)
+                                records_out = session.write_batch(sink_stream(), asset=asset_identifier, mode=write_mode, **write_params)
+                                stats["out"] = records_out
+                        else:
+                            # Standard write
+                            records_out = session.write_batch(
+                                sink_stream(),
+                                asset=asset_identifier,
+                                mode=write_mode,
+                                **write_params
+                            )
+                            stats["out"] = records_out
                     
                     logger.info(f"  [SUCCESS] Loaded {records_out:,} records")
                     DBLogger.log_step(db, step_run.id, "SUCCESS", f"Load phase complete. Successfully committed {records_out:,} records to destination.", job_id=pipeline_run.job_id)
@@ -519,12 +593,29 @@ class NodeExecutor:
                     upstream_it = next(iter(input_iters.values())) if input_iters else iter([])
                     data_iter = transform.transform(upstream_it)
                 
+                # --- DATA CONTRACT INITIALIZATION ---
+                contract_validator = None
+                if node.data_contract:
+                    from synqx_engine.core.contract import ContractValidator
+                    contract_validator = ContractValidator(node.data_contract)
+
                 # 4. Materialize results
                 chunk_count = 0
                 for chunk in data_iter:
                     chunk_count += 1
-                    # Ensure metadata is captured in Pandas format for forensics/telemetry if needed, 
-                    # but on_chunk handles both.
+                    
+                    # --- DATA CONTRACT VALIDATION ---
+                    if contract_validator:
+                        pl_chunk = pl.from_pandas(chunk) if isinstance(chunk, pd.DataFrame) else chunk
+                        valid_chunk, quarantine_chunk = contract_validator.validate_chunk(pl_chunk)
+                        
+                        if not quarantine_chunk.is_empty():
+                            on_chunk(quarantine_chunk.to_pandas(), direction="quarantine", error_count=len(quarantine_chunk))
+                        
+                        chunk = valid_chunk.to_pandas() if isinstance(chunk, pd.DataFrame) else valid_chunk
+                        if chunk.is_empty() if hasattr(chunk, "is_empty") else is_df_empty(chunk):
+                            continue
+
                     on_chunk(chunk, direction="out")
                     results.append(chunk)
                     

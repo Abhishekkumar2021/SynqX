@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from '@/components/ui/slider';
 import { CronBuilder } from '@/components/common/CronBuilder';
-import { type Pipeline, updatePipeline, getAgents } from '@/lib/api';
+import { type Pipeline, updatePipeline, getAgents, getPipelines } from '@/lib/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
@@ -364,7 +364,7 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                                         <Select onValueChange={field.onChange} value={field.value}>
                                                             <SelectTrigger className="h-11 rounded-xl bg-background border-border/40 font-bold text-xs shadow-sm">
                                                                 <SelectValue />
-                                                            </Trigger>
+                                                            </SelectTrigger>
                                                             <SelectContent className="rounded-xl border-border/40 backdrop-blur-xl bg-background/95">
                                                                 <SelectItem value="none" className="text-xs font-bold">Disabled</SelectItem>
                                                                 <SelectItem value="fixed" className="text-xs font-bold">Fixed Interval</SelectItem>
