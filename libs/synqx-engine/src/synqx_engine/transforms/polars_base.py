@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, List
 import polars as pl
 from synqx_core.logging import get_logger
 
@@ -25,6 +25,13 @@ class PolarsTransform(ABC):
     def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         """Apply Polars transformation to the data stream."""
         pass
+
+    def get_lineage_map(self, input_columns: List[str]) -> Dict[str, List[str]]:
+        """
+        Returns a mapping of Output Column -> List of Input Columns.
+        Default implementation assumes identity mapping (pass-through).
+        """
+        return {col: [col] for col in input_columns}
 
     def transform_multi(self, data_map: Dict[str, Iterator[pl.DataFrame]]) -> Iterator[pl.DataFrame]:
         """Apply transformation to multiple Polars data streams."""

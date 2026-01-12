@@ -163,6 +163,7 @@ class StepRun(Base, AuditMixin):
     cpu_percent: Mapped[Optional[float]] = mapped_column(Float)
     memory_mb: Mapped[Optional[float]] = mapped_column(Float)
     sample_data: Mapped[Optional[dict]] = mapped_column(JSON)
+    lineage_map: Mapped[Optional[dict]] = mapped_column(JSON)
 
     error_message: Mapped[Optional[str]] = mapped_column(Text)
     error_type: Mapped[Optional[str]] = mapped_column(String(255))

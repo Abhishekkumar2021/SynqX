@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, List, Dict
 import polars as pl
 from synqx_engine.transforms.polars_base import PolarsTransform
 
@@ -29,8 +29,21 @@ class MapTransform(PolarsTransform):
             
             if rename_map:
                 # Polars rename only for existing columns
+                # Pandas would ignore missing, but Polars raises error
                 safe_rename = {k: v for k, v in rename_map.items() if k in df.columns}
                 if safe_rename:
                     df = df.rename(safe_rename)
             
             yield df
+
+    def get_lineage_map(self, input_columns: List[str]) -> Dict[str, List[str]]:
+        rename_map = self.config.get("rename") or {}
+        drop_cols = set(self.config.get("drop") or [])
+        
+        lineage = {}
+        for col in input_columns:
+            if col in drop_cols:
+                continue
+            new_name = rename_map.get(col, col)
+            lineage[new_name] = [col]
+        return lineage

@@ -13,7 +13,7 @@ class DataCache:
     """
     
     def __init__(self, max_memory_mb: int = 2048):
-        self._cache: Dict[str, List[pd.DataFrame]] = {}
+        self._cache: Dict[str, List[Any]] = {}
         self._lock = threading.RLock()
         self.max_memory_mb = max_memory_mb
         self._current_memory_mb = 0.0
@@ -21,12 +21,22 @@ class DataCache:
         
         logger.info(f"DataCache initialized with {max_memory_mb}MB limit")
     
-    def store(self, node_id: str, chunks: List[pd.DataFrame]):
+    def _get_df_size(self, df: Any) -> int:
+        """Type-agnostic calculation of DataFrame memory footprint in bytes"""
+        if df is None:
+            return 0
+        if hasattr(df, "estimated_size"):
+            return df.estimated_size()
+        if hasattr(df, "memory_usage"):
+            return int(df.memory_usage(deep=True).sum())
+        return 0
+
+    def store(self, node_id: str, chunks: List[Any]):
         """Store chunks with memory tracking and pressure handling"""
         with self._lock:
             # Calculate memory footprint
             memory_mb = sum(
-                df.memory_usage(deep=True).sum() for df in chunks
+                self._get_df_size(df) for df in chunks
             ) / (1024 * 1024)
             
             # Memory pressure handling
@@ -43,7 +53,7 @@ class DataCache:
             if node_id in self._cache:
                 # Update existing
                 old_memory = sum(
-                    df.memory_usage(deep=True).sum() for df in self._cache[node_id]
+                    self._get_df_size(df) for df in self._cache[node_id]
                 ) / (1024 * 1024)
                 self._current_memory_mb -= old_memory
             
@@ -60,7 +70,7 @@ class DataCache:
                 f"({memory_mb:.2f}MB, total: {self._current_memory_mb:.2f}MB)"
             )
     
-    def retrieve(self, node_id: str) -> List[pd.DataFrame]:
+    def retrieve(self, node_id: str) -> List[Any]:
         """Retrieve cached chunks and update access order"""
         with self._lock:
             chunks = self._cache.get(node_id, [])
@@ -71,23 +81,16 @@ class DataCache:
                 self._access_order.append(node_id)
             
             return chunks
-    
+
     def clear_node(self, node_id: str):
         """Clear cache for specific node to free memory"""
         with self._lock:
             if node_id in self._cache:
                 chunks = self._cache.pop(node_id)
                 memory_freed = sum(
-                    df.memory_usage(deep=True).sum() for df in chunks
+                    self._get_df_size(df) for df in chunks
                 ) / (1024 * 1024)
                 self._current_memory_mb -= memory_freed
-                
-                if node_id in self._access_order:
-                    self._access_order.remove(node_id)
-                
-                logger.debug(f"Freed {memory_freed:.2f}MB from node '{node_id}'")
-                return memory_freed
-            return 0.0
     
     def _apply_memory_pressure_strategy(self, required_mb: float):
         """

@@ -22,6 +22,10 @@ class AggregateTransform(PolarsTransform):
         group_cols = self.config["group_by"]
         agg_map = self.config["aggregates"]
         
+        if isinstance(group_cols, dict):
+            # Fallback for UI-driven dictionary configs
+            group_cols = list(group_cols.keys())
+        
         # We must accumulate chunks for aggregation as it is a blocking operation,
         # but using Polars' concat and lazy execution is much faster and more 
         # memory-efficient than Pandas.
@@ -60,6 +64,7 @@ class AggregateTransform(PolarsTransform):
             # 3. Execute the aggregation
             # Using collect() here. In a future iteration, we could use sink_parquet
             # if the final result itself is massive.
+            # group_cols can be string or list
             result_df = lf.group_by(group_cols).agg(agg_exprs).collect()
             
             if self.on_chunk:

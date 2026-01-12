@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from datetime import datetime
 
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.data import is_df_empty
 from synqx_core.errors import (
     ConfigurationError,
     ConnectionFailedError,
@@ -209,7 +210,7 @@ class SQLiteConnector(BaseConnector):
 
         try:
             for df in data_iter:
-                if df.empty:
+                if is_df_empty(df):
                     continue
                 df.to_sql(
                     name=asset,

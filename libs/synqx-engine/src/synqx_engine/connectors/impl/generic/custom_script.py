@@ -16,6 +16,7 @@ import io
 import time
 from contextlib import redirect_stdout
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.data import is_df_empty
 from synqx_core.errors import (
     ConfigurationError,
     DataTransferError,
@@ -516,7 +517,7 @@ class CustomScriptConnector(BaseConnector):
                         except (ValueError, TypeError) as e:
                             logger.warning(f"Fallback filter failed for column '{col}': {e}")
             
-            if not df.empty:
+            if not is_df_empty(df):
                 yield df
 
     def _execute_shell(self, asset_name: str, code: str, limit: int, offset: int, incremental_filter: Optional[Dict] = None, **kwargs) -> Iterator[pd.DataFrame]:

@@ -571,6 +571,7 @@ def process_step_telemetry_task(job_id: int, step_update_data: dict) -> str:
                 cpu_percent=step_update_data.get("cpu_percent"),
                 memory_mb=step_update_data.get("memory_mb"),
                 sample_data=step_update_data.get("sample_data"),
+                lineage_map=step_update_data.get("sample_data", {}).get("lineage") if step_update_data.get("sample_data") else None,
                 error=Exception(step_update_data["error_message"]) if step_update_data.get("error_message") else None
             )
 

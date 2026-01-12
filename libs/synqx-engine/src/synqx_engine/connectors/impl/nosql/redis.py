@@ -4,6 +4,7 @@ import pandas as pd
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.data import is_df_empty
 from synqx_core.errors import ConfigurationError, DataTransferError, ConnectionFailedError
 from synqx_core.logging import get_logger
 
@@ -104,7 +105,7 @@ class RedisConnector(BaseConnector):
                         if col in df.columns:
                             df = df[df[col] > val]
                 
-                if not df.empty:
+                if not is_df_empty(df):
                     # Apply limit if needed (simplistic)
                     if limit:
                         remaining = limit - rows_yielded
@@ -130,7 +131,7 @@ class RedisConnector(BaseConnector):
                     if col in df.columns:
                         df = df[df[col] > val]
             
-            if not df.empty:
+            if not is_df_empty(df):
                 if limit and limit - rows_yielded < len(df):
                     df = df.iloc[:limit - rows_yielded]
                 yield df

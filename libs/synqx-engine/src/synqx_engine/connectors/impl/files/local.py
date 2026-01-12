@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.data import is_df_empty
 from synqx_core.errors import ConfigurationError, SchemaDiscoveryError, DataTransferError
 from synqx_core.logging import get_logger
 
@@ -174,7 +175,7 @@ class LocalFileConnector(BaseConnector):
                 elif "datetime" in dtype_str:
                     col_type = "datetime"
                 elif "object" in dtype_str:
-                    first_val = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
+                    first_val = df[col].dropna().iloc[0] if not is_df_empty(df[col].dropna()) else None
                     if isinstance(first_val, (dict, list)):
                         col_type = "json"
                 
@@ -255,7 +256,7 @@ class LocalFileConnector(BaseConnector):
                         if col in df.columns:
                             df = df[df[col] > val]
                 
-                if df.empty:
+                if is_df_empty(df):
                     continue
                 
                 if limit is not None:
@@ -306,7 +307,7 @@ class LocalFileConnector(BaseConnector):
                     else:
                         df = pd.DataFrame(df)
 
-                if df.empty:
+                if is_df_empty(df):
                     continue
                 
                 write_mode = 'w' if (first and clean_mode == 'overwrite') or not os.path.exists(path) else 'a'

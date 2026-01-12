@@ -4,9 +4,12 @@ from sqlalchemy import func, case
 
 from synqx_core.models.pipelines import Pipeline, PipelineVersion, PipelineNode
 from synqx_core.models.connections import Asset
-from synqx_core.models.execution import PipelineRun
+from synqx_core.models.execution import PipelineRun, StepRun
 from synqx_core.models.enums import PipelineStatus, PipelineRunStatus
-from synqx_core.schemas.lineage import LineageGraph, LineageNode, LineageEdge, ImpactAnalysis, ColumnLineage, ColumnFlow
+from synqx_core.schemas.lineage import (
+    LineageGraph, LineageNode, LineageEdge, ImpactAnalysis, 
+    ColumnLineage, ColumnFlow, ColumnImpact, ColumnImpactAnalysis
+)
 
 class LineageService:
     def __init__(self, db: Session):
@@ -91,13 +94,51 @@ class LineageService:
                         }
                     ))
         
-        # 2. Fetch Asset Details
+        # 2. Fetch Asset Details & Health
         assets = self.db.query(Asset).filter(Asset.id.in_(asset_ids)).all()
         
+        # Aggregate health metrics (latest run per producing node)
+        health_stats = {}
+        latest_step_runs = self.db.query(
+            StepRun.node_id,
+            func.max(StepRun.id).label("max_id")
+        ).group_by(StepRun.node_id).subquery()
+        
+        step_stats_query = self.db.query(
+            StepRun.records_out,
+            StepRun.records_error,
+            StepRun.status,
+            PipelineNode.destination_asset_id
+        ).join(
+            latest_step_runs, StepRun.id == latest_step_runs.c.max_id
+        ).join(
+            PipelineNode, StepRun.node_id == PipelineNode.id
+        ).filter(
+            PipelineNode.destination_asset_id.in_(asset_ids)
+        ).all()
+        
+        for rec_out, rec_err, status, asset_id in step_stats_query:
+            v = float(rec_out or 0)
+            e = float(rec_err or 0)
+            score = (v / (v + e) * 100) if (v + e) > 0 else 100.0
+            
+            # Penalize heavily if the last run failed
+            if status == "failed":
+                score = score * 0.2
+            elif status != "success": # pending, running, etc.
+                score = score * 0.8
+                
+            health_stats[asset_id] = {
+                "health_score": round(score, 1),
+                "last_run_status": status
+            }
+
         for asset in assets:
             conn_type = "generic"
             if asset.connection:
                 conn_type = asset.connection.connector_type.value
+            
+            a_health = health_stats.get(asset.id, {"health_score": 100.0, "last_run_status": "unknown"})
                 
             nodes[f"asset_{asset.id}"] = LineageNode(
                 id=f"asset_{asset.id}",
@@ -112,7 +153,9 @@ class LineageService:
                     "fqn": asset.fully_qualified_name,
                     "schema_version": asset.current_schema_version,
                     "schema_metadata": asset.schema_metadata,
-                    "last_updated": asset.updated_at.isoformat() if asset.updated_at else None
+                    "last_updated": asset.updated_at.isoformat() if asset.updated_at else None,
+                    "health_score": a_health["health_score"],
+                    "last_run_status": a_health["last_run_status"]
                 }
             )
 
@@ -131,7 +174,7 @@ class LineageService:
 
     def get_column_lineage(self, asset_id: int, column_name: str, workspace_id: int) -> ColumnLineage:
         """
-        Trace a specific column back to its origin, supporting multi-source nodes.
+        Trace a specific column back to its origin using automated run-level lineage.
         """
         path: List[ColumnFlow] = []
         current_asset_id = asset_id
@@ -150,7 +193,7 @@ class LineageService:
             ).first()
             
             if not producing_node:
-                # We've reached a source asset (no upstream pipeline produces it)
+                # We've reached a source asset
                 return ColumnLineage(
                     column_name=column_name,
                     asset_id=asset_id,
@@ -159,31 +202,36 @@ class LineageService:
                     path=path
                 )
             
-            # Analyze node transformation to find upstream column
+            # --- HIGH FIDELITY TRACING ---
+            # Try to find the most recent successful run for this node
+            last_run = self.db.query(StepRun).filter(
+                StepRun.node_id == producing_node.id,
+                StepRun.status == "success",
+                StepRun.lineage_map.isnot(None)
+            ).order_by(StepRun.completed_at.desc()).first()
+
             source_col = current_column
             transform_type = "direct"
+
+            if last_run and last_run.lineage_map:
+                # Use actual execution results
+                # Map is Output -> List[Input]
+                upstream_cols = last_run.lineage_map.get(current_column, [])
+                if upstream_cols:
+                    # For now, we take the first ancestor. 
+                    # Complex multi-source lineage (like calculated fields) would list all.
+                    # Standardizing on dot-notation parsing for multi-source
+                    raw_source = upstream_cols[0]
+                    if "." in raw_source:
+                        source_col = raw_source.split(".", 1)[1]
+                    else:
+                        source_col = raw_source
+                    transform_type = "automated"
             
-            # 1. Check explicit column_mapping first (The New Standard)
-            if producing_node.column_mapping:
-                if current_column in producing_node.column_mapping:
-                    source_col = producing_node.column_mapping[current_column]
-                    transform_type = "mapped"
-            
-            # 2. Operator-specific heuristics for multi-source logic
-            elif producing_node.operator_type == "join":
-                # For joins, if no mapping, we assume the name matches in one of the inputs
-                # This is a heuristic until strict contracts are enforced
-                transform_type = "join_passthrough"
-            
-            elif producing_node.operator_class == "aggregate":
-                # Aggregates often change names (e.g. sum_sales)
-                # If no mapping, we check if the source col is part of the group_by or aggregate config
-                agg_config = producing_node.config.get("aggregates", {})
-                if current_column in agg_config:
-                    # current_column IS the target, the source is the key inagg_config
-                    # However agg_config is often {col: func}
-                    source_col = current_column # name usually stays same in our engine unless aliased
-                    transform_type = "aggregation"
+            # Fallback to static analysis if no run-level data
+            elif producing_node.column_mapping and current_column in producing_node.column_mapping:
+                source_col = producing_node.column_mapping[current_column]
+                transform_type = "mapped"
             
             elif producing_node.operator_class == "rename_columns":
                 mapping = producing_node.config.get("columns", {})
@@ -191,7 +239,7 @@ class LineageService:
                 if current_column in reverse_mapping:
                     source_col = reverse_mapping[current_column]
                     transform_type = "rename"
-            
+
             # Add to path
             path.insert(0, ColumnFlow(
                 source_column=source_col,
@@ -201,14 +249,7 @@ class LineageService:
                 pipeline_id=producing_node.version.pipeline_id
             ))
             
-            # Move upstream: For multi-source, we need to pick the RIGHT source asset
-            # If the node has multiple source assets (joins), we try to find which one has this column
-            upstream_nodes = self.db.query(PipelineNode).filter(
-                PipelineNode.pipeline_version_id == producing_node.pipeline_version_id,
-                PipelineNode.destination_asset_id.isnot(None) # This logic needs refining for complex DAGs
-            ).all()
-            
-            # For now, we take the primary source_asset_id
+            # Move upstream
             current_asset_id = producing_node.source_asset_id
             current_column = source_col
             
@@ -221,6 +262,88 @@ class LineageService:
             origin_asset_id=current_asset_id or 0,
             origin_column_name=current_column,
             path=path)
+
+    def get_column_impact_analysis(self, asset_id: int, column_name: str, workspace_id: int) -> ColumnImpactAnalysis:
+        """
+        Trace downstream dependencies for a specific column.
+        Answers: "If I change/delete this column, what breaks?"
+        """
+        impacts: List[ColumnImpact] = []
+        visited = set() # (asset_id, column_name)
+        
+        queue = [(asset_id, column_name)]
+        
+        while queue:
+            curr_asset_id, curr_column = queue.pop(0)
+            if (curr_asset_id, curr_column) in visited:
+                continue
+            visited.add((curr_asset_id, curr_column))
+            
+            # Find nodes that consume this asset
+            consuming_nodes = self.db.query(PipelineNode).join(
+                PipelineVersion, PipelineNode.pipeline_version_id == PipelineVersion.id
+            ).join(
+                Pipeline, PipelineVersion.pipeline_id == Pipeline.id
+            ).filter(
+                PipelineNode.source_asset_id == curr_asset_id,
+                Pipeline.workspace_id == workspace_id
+            ).all()
+            
+            for node in consuming_nodes:
+                # Find the most recent successful run to get lineage_map
+                last_run = self.db.query(StepRun).filter(
+                    StepRun.node_id == node.id,
+                    StepRun.status == "success",
+                    StepRun.lineage_map.isnot(None)
+                ).order_by(StepRun.completed_at.desc()).first()
+                
+                derived_columns = []
+                
+                if last_run and last_run.lineage_map:
+                    # lineage_map is Output -> List[Input]
+                    for output_col, input_cols in last_run.lineage_map.items():
+                        # Input cols might be like "asset_name.column_name" or just "column_name"
+                        for in_col in input_cols:
+                            if in_col == curr_column or in_col.endswith(f".{curr_column}"):
+                                derived_columns.append((output_col, "automated"))
+                                break
+                
+                # Fallback to static mapping if no automated lineage found for this column
+                if not derived_columns:
+                    if node.column_mapping:
+                        # mapping is Target -> Source
+                        for target, source in node.column_mapping.items():
+                            if source == curr_column:
+                                derived_columns.append((target, "mapped"))
+                                
+                    elif node.operator_class == "rename_columns":
+                        mapping = node.config.get("columns", {})
+                        if curr_column in mapping:
+                            derived_columns.append((mapping[curr_column], "rename"))
+                    
+                    # Direct pass-through for some operators if not explicitly mapped
+                    elif node.operator_class in ["filter", "sort", "limit"]:
+                        derived_columns.append((curr_column, "passthrough"))
+
+                # If we found derived columns, they affect the destination asset
+                if derived_columns and node.destination_asset:
+                    for der_col, trans_type in derived_columns:
+                        impacts.append(ColumnImpact(
+                            column_name=der_col,
+                            asset_id=node.destination_asset.id,
+                            asset_name=node.destination_asset.name,
+                            pipeline_id=node.version.pipeline_id,
+                            pipeline_name=node.version.pipeline.name,
+                            node_id=node.node_id,
+                            transformation_type=trans_type
+                        ))
+                        queue.append((node.destination_asset.id, der_col))
+        
+        return ColumnImpactAnalysis(
+            column_name=column_name,
+            asset_id=asset_id,
+            impacts=impacts
+        )
 
     def get_impact_analysis(self, asset_id: int, workspace_id: int) -> ImpactAnalysis:
         """

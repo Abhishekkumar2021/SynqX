@@ -5,6 +5,7 @@ import pandas as pd
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from synqx_engine.connectors.base import BaseConnector
+from synqx_core.utils.data import is_df_empty
 from synqx_core.errors import ConfigurationError, ConnectionFailedError, SchemaDiscoveryError, DataTransferError
 from synqx_core.logging import get_logger
 
@@ -153,7 +154,7 @@ class GCSConnector(BaseConnector):
                 elif "datetime" in dtype_str:
                     col_type = "datetime"
                 elif "object" in dtype_str:
-                    first_val = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
+                    first_val = df[col].dropna().iloc[0] if not is_df_empty(df[col].dropna()) else None
                     if isinstance(first_val, (dict, list)):
                         col_type = "json"
                 

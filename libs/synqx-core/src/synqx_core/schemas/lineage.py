@@ -38,3 +38,17 @@ class ColumnLineage(BaseModel):
     origin_asset_id: int
     origin_column_name: str
     path: List[ColumnFlow]
+
+class ColumnImpact(BaseModel):
+    column_name: str
+    asset_id: int
+    asset_name: str
+    pipeline_id: int
+    pipeline_name: str
+    node_id: str
+    transformation_type: str
+
+class ColumnImpactAnalysis(BaseModel):
+    column_name: str
+    asset_id: int
+    impacts: List[ColumnImpact]

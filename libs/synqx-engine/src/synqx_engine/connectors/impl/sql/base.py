@@ -7,6 +7,7 @@ from sqlalchemy import text, inspect
 from sqlalchemy.engine import Engine, Connection
 from synqx_engine.connectors.base import BaseConnector
 from synqx_core.utils.resilience import retry
+from synqx_core.utils.data import is_df_empty
 from synqx_core.errors import (
     ConnectionFailedError,
     AuthenticationError,
@@ -87,7 +88,10 @@ class SQLConnector(BaseConnector):
             return False
 
     def discover_assets(
-        self, pattern: Optional[str] = None, include_metadata: bool = False, **kwargs
+        self,
+        pattern: Optional[str] = None,
+        include_metadata: bool = False,
+        **kwargs
     ) -> List[Dict[str, Any]]:
         self.connect()
         try:
@@ -160,7 +164,11 @@ class SQLConnector(BaseConnector):
         return None
 
     def infer_schema(
-        self, asset: str, sample_size: int = 1000, mode: str = "auto", **kwargs
+        self,
+        asset: str,
+        sample_size: int = 1000,
+        mode: str = "auto",
+        **kwargs
     ) -> Dict[str, Any]:
         self.connect()
         name, schema = self.normalize_asset_identifier(asset)
@@ -210,7 +218,11 @@ class SQLConnector(BaseConnector):
 
     @retry(exceptions=(Exception,), max_attempts=3)
     def read_batch(
-        self, asset: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs
+        self,
+        asset: str,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        **kwargs
     ) -> Iterator[pd.DataFrame]:
         self.connect()
         
@@ -229,7 +241,7 @@ class SQLConnector(BaseConnector):
                     params[param_name] = val
                 
                 if where_clauses:
-                    clean_query = f"SELECT * FROM ({clean_query}) AS inc_subq WHERE {' AND '.join(where_clauses)}"
+                    clean_query = f"SELECT * FROM ({clean_query}) AS inc_subq WHERE {" AND ".join(where_clauses)}"
 
             # Safely apply limit and offset using a subquery wrap
             if limit or offset:
@@ -254,7 +266,7 @@ class SQLConnector(BaseConnector):
                     params[param_name] = val
                 
                 if where_clauses:
-                    query += f" WHERE {' AND '.join(where_clauses)}"
+                    query += f" WHERE {" AND ".join(where_clauses)}"
 
             if limit:
                 query += f" LIMIT {int(limit)}"
@@ -345,7 +357,11 @@ class SQLConnector(BaseConnector):
 
     @retry(exceptions=(Exception,), max_attempts=3)
     def write_batch(
-        self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs
+        self,
+        data: Union[pd.DataFrame, Iterator[pd.DataFrame]],
+        asset: str,
+        mode: str = "append",
+        **kwargs
     ) -> int:
         self.connect()
         
@@ -361,12 +377,17 @@ class SQLConnector(BaseConnector):
         if clean_mode == "replace":
             clean_mode = "overwrite"
 
-        # Discover target columns to prevent errors from extra columns (e.g. joined results)
+        allow_evolution = kwargs.get("allow_schema_evolution", False)
+
+        # 1. Discover target columns (Cached for the duration of this batch)
+        table_exists = False
         try:
             inspector = inspect(self._engine)
-            target_columns = [c['name'] for c in inspector.get_columns(name, schema=schema)]
+            target_columns_info = inspector.get_columns(name, schema=schema)
+            target_columns = [c['name'] for c in target_columns_info]
+            table_exists = len(target_columns) > 0
         except Exception as e:
-            logger.warning(f"Could not introspect column schema for '{asset}'; skipping automated filtration: {e}")
+            logger.debug(f"Target '{asset}' not yet initialized: {e}")
             target_columns = []
 
         if isinstance(data, pd.DataFrame):
@@ -378,29 +399,67 @@ class SQLConnector(BaseConnector):
         try:
             first_chunk = True
             for df in data_iter:
-                if df is None or df.empty: 
+                if is_df_empty(df): 
                     continue
                 
-                # Filter columns if we successfully inspected the target
-                if target_columns:
+                # --- ROBUST SCHEMA EVOLUTION ---
+                if allow_evolution:
+                    # Case A: Table does not exist - Let pandas create it on the first chunk
+                    if not table_exists and first_chunk:
+                        logger.info(f"Schema Evolution: Creating new table '{asset}'...")
+                        # We proceed to the write logic and let if_exists='replace' handle creation
+                        pass 
+                    
+                    # Case B: Table exists, but new columns are present in the chunk
+                    elif table_exists:
+                        new_cols = [c for c in df.columns if c not in target_columns]
+                        if new_cols:
+                            logger.info(f"Schema Evolution: Detecting {len(new_cols)} new columns for '{asset}': {new_cols}")
+                            for col in new_cols:
+                                # Enhanced Type Mapping
+                                dtype = str(df[col].dtype).lower()
+                                sql_type = "TEXT" 
+                                if "int" in dtype: sql_type = "BIGINT"
+                                elif "float" in dtype or "double" in dtype: sql_type = "DOUBLE PRECISION"
+                                elif "bool" in dtype: sql_type = "BOOLEAN"
+                                elif "datetime" in dtype: sql_type = "TIMESTAMP"
+                                elif "json" in dtype or "object" in dtype:
+                                    # Heuristic: check if content is JSON-like
+                                    sql_type = "JSONB" if "postgres" in str(self._engine.url).lower() else "TEXT"
+                                
+                                table_ref = f"\"{schema}\".\"{name}\"" if schema else f"\"{name}\""
+                                alter_stmt = f"ALTER TABLE {table_ref} ADD COLUMN \"{col}\" {sql_type}"
+                                
+                                try:
+                                    self._connection.execute(text(alter_stmt))
+                                    # Crucial: Commit DDL immediately as some DBs don't auto-commit DDL in transactions
+                                    self._connection.execute(text("COMMIT")) 
+                                    logger.info(f"  [EVOLVED] Added column '{col}' ({sql_type}) to {table_ref}")
+                                    target_columns.append(col) 
+                                except Exception as alter_err:
+                                    logger.error(f"  [FAILED] Could not evolve column '{col}': {alter_err}")
+                
+                # Case C: Safety Filter (Evolution disabled or failed)
+                if not allow_evolution and target_columns:
                     valid_cols = [c for c in df.columns if c in target_columns]
-                    if not valid_cols:
-                        logger.warning(f"No schema-compliant columns identified for '{asset}'. Available: {df.columns.tolist()}")
-                        continue
+                    if len(valid_cols) < len(df.columns):
+                        ignored = [c for c in df.columns if c not in target_columns]
+                        logger.warning(f"Evolution disabled: Filtering out {len(ignored)} unknown columns: {ignored}")
                     df = df[valid_cols]
 
-                # Robust type conversion for SQL
+                # 2. Handle Write Mode
+                if_exists_val = 'append'
+                if first_chunk:
+                    if clean_mode == 'overwrite':
+                        if_exists_val = 'replace'
+                    elif not table_exists:
+                        if_exists_val = 'replace'
+                        table_exists = True # Created now
+                
+                # Robust type conversion
                 for col in df.columns:
                     if df[col].dtype == 'object':
                         df[col] = df[col].apply(lambda x: json.dumps(x) if isinstance(x, (dict, list)) else x)
-                
-                # Handle Write Mode
-                if_exists_val = 'append'
-                if first_chunk and clean_mode == 'overwrite':
-                    if_exists_val = 'replace'
-                
-                if clean_mode == 'upsert':
-                    logger.warning(f"Atomic Upsert requested for '{asset}' but SQLConnector only supports append/overwrite. Falling back to bulk append.")
 
                 df.to_sql(
                     name=name,
@@ -410,6 +469,12 @@ class SQLConnector(BaseConnector):
                     index=False,
                     **kwargs
                 )
+                
+                # If we just created the table, refresh target_columns
+                if first_chunk and if_exists_val == 'replace':
+                    target_columns = df.columns.tolist()
+                    table_exists = True
+
                 total += len(df)
                 first_chunk = False
             return total

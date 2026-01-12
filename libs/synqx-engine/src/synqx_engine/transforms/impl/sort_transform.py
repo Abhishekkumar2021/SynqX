@@ -17,6 +17,9 @@ class SortTransform(PolarsTransform):
 
     def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         columns = self.config["columns"]
+        if isinstance(columns, dict):
+            columns = list(columns.keys())
+            
         descending = not self.config.get("ascending", True)
         
         # Sorting is a blocking operation

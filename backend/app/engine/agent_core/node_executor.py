@@ -17,6 +17,7 @@ from synqx_core.models.pipelines import PipelineNode
 from synqx_core.models.execution import PipelineRun, StepRun, Watermark
 from synqx_core.models.connections import Asset, Connection
 from synqx_core.models.enums import OperatorType, OperatorRunStatus
+from synqx_core.utils.data import is_df_empty
 from app.core.logging import get_logger
 from app.core.db_logging import DBLogger
 from app.services.vault_service import VaultService
@@ -68,14 +69,15 @@ class NodeExecutor:
         
         return asset, conn
     
-    def _sniff_data(self, df: pd.DataFrame, max_rows: int = 100) -> Optional[Dict]:
+    def _sniff_data(self, df: Any, max_rows: int = 100) -> Optional[Dict]:
         """Capture sample data for inspection with robust JSON handling"""
         try:
-            if df.empty:
+            if is_df_empty(df):
                 return None
             
-            # Use pandas built-in JSON conversion to handle Timestamps, etc.
-            sample_df = df.head(max_rows)
+            # Convert Polars to Pandas for standardized sniffing if needed
+            if hasattr(df, "to_pandas"):
+                df = df.to_pandas()
             json_str = sample_df.to_json(orient="records", date_format="iso")
             sample = json.loads(json_str)
             
@@ -177,32 +179,37 @@ class NodeExecutor:
         samples: Dict[str, Dict] = {}
         results: List[pd.DataFrame] = []
         
-        def on_chunk(chunk: pd.DataFrame, direction: str = "out", error_count: int = 0, filtered_count: int = 0):
+        def on_chunk(chunk: Any, direction: str = "out", error_count: int = 0, filtered_count: int = 0):
             """Callback for chunk processing with telemetry"""
             
-            if chunk.empty and error_count == 0 and filtered_count == 0:
+            chunk_is_empty = is_df_empty(chunk)
+            
+            if chunk_is_empty and error_count == 0 and filtered_count == 0:
                 return
             
             if error_count > 0:
                 logger.debug(f"Node {node.id} reporting {error_count} rejections/errors")
 
             # PERFORMANCE: Native Database Quarantine
-            if direction == "quarantine" and not chunk.empty:
+            if direction == "quarantine" and not chunk_is_empty:
                 q_asset_id = node.config.get("quarantine_asset_id")
                 if q_asset_id:
                     try:
+                        # Ensure we have pandas for quarantine write if necessary
+                        p_chunk = chunk.to_pandas() if hasattr(chunk, "to_pandas") else chunk
+                        
                         q_asset, q_conn = self._fetch_asset_connection(db, q_asset_id)
                         q_cfg = VaultService.get_connector_config(q_conn)
                         q_connector = ConnectorFactory.get_connector(q_conn.connector_type.value, q_cfg)
                         
-                        logger.info(f"Diverting {len(chunk)} invalid rows to quarantine asset: {q_asset.name}")
+                        logger.info(f"Diverting {len(p_chunk)} invalid rows to quarantine asset: {q_asset.name}")
                         with q_connector.session():
                             q_connector.write_batch(
-                                [chunk], 
+                                [p_chunk], 
                                 asset=q_asset.fully_qualified_name or q_asset.name,
                                 mode="append"
                             )
-                        DBLogger.log_step(db, step_run.id, "DEBUG", f"Diverted {len(chunk)} rows to native quarantine table '{q_asset.name}'.", job_id=pipeline_run.job_id)
+                        DBLogger.log_step(db, step_run.id, "DEBUG", f"Diverted {len(p_chunk)} rows to native quarantine table '{q_asset.name}'.", job_id=pipeline_run.job_id)
                     except Exception as q_err:
                         logger.error(f"Failed to write to native quarantine: {q_err}")
                         DBLogger.log_step(db, step_run.id, "ERROR", f"Native quarantine write failed: {q_err}. Falling back to forensic capture.", job_id=pipeline_run.job_id)
@@ -211,25 +218,34 @@ class NodeExecutor:
                 logger.info(f"Node {node.id} QUARANTINE update: {error_count} records")
 
             # Capture sample data (first chunk of each direction)
-            if direction not in samples and not chunk.empty:
+            if direction not in samples and not chunk_is_empty:
                 samples[direction] = self._sniff_data(chunk)
             
             # Forensic capture
-            if not chunk.empty:
+            if not chunk_is_empty:
                 sniffer.capture_chunk(node.id, chunk, direction=direction)
             
             # Update statistics
             chunk_rows = len(chunk)
-            chunk_bytes = int(chunk.memory_usage(deep=True).sum()) if not chunk.empty else 0
+            
+            # Calculate memory usage (Polars vs Pandas)
+            if chunk_is_empty:
+                chunk_bytes = 0
+            elif hasattr(chunk, "estimated_size"):
+                chunk_bytes = chunk.estimated_size()
+            elif hasattr(chunk, "memory_usage"):
+                chunk_bytes = int(chunk.memory_usage(deep=True).sum())
+            else:
+                chunk_bytes = 0
             
             if direction == "out":
                 stats["out"] += chunk_rows
                 stats["bytes"] += chunk_bytes
                 stats["chunks_out"] += 1
                 
-                # Optional: Log progress every few chunks for very large datasets
-                if stats["chunks_out"] % 50 == 0:
-                    DBLogger.log_step(db, step_run.id, "INFO", f"Processing in progress: {stats['out']:,} records streamed...", job_id=pipeline_run.job_id)
+                # Log progress every few chunks for very large datasets
+                if stats["chunks_out"] % 10 == 0:
+                    DBLogger.log_step(db, step_run.id, "INFO", f"Stream processing in progress: {stats['out']:,} records synchronized...", job_id=pipeline_run.job_id)
             elif direction == "in":
                 stats["in"] += chunk_rows
                 stats["chunks_in"] += 1
@@ -337,11 +353,14 @@ class NodeExecutor:
                         if wm_col and current_wm:
                             before_count = len(chunk)
                             chunk = self._apply_watermark_filter(chunk, wm_col, current_wm)
+                            
+                            if is_df_empty(chunk):
+                                after_count = 0
+                                stats["filtered"] += (before_count - after_count)
+                                continue
+                            
                             after_count = len(chunk)
                             stats["filtered"] += (before_count - after_count)
-                            
-                            if chunk.empty:
-                                continue
                         
                         # Track high watermark
                         if wm_col:

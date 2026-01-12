@@ -30,6 +30,13 @@ class BaseTransform(ABC):
         """
         pass
 
+    def get_lineage_map(self, input_columns: List[str]) -> Dict[str, List[str]]:
+        """
+        Returns a mapping of Output Column -> List of Input Columns.
+        Default implementation assumes identity mapping (pass-through).
+        """
+        return {col: [col] for col in input_columns}
+
     def transform_multi(self, data_map: Dict[str, Iterator[pd.DataFrame]]) -> Iterator[pd.DataFrame]:
         """
         Apply transformation to multiple data streams.

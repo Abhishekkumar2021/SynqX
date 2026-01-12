@@ -31,7 +31,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
-import { getLineageGraph, getImpactAnalysis, getColumnLineage } from '@/lib/api/lineage';
+import { getLineageGraph, getImpactAnalysis, getColumnLineage, getColumnImpact } from '@/lib/api/lineage';
 import { AssetNode } from '@/components/features/lineage/AssetNode';
 import GlowEdge from '@/components/features/pipelines/GlowEdge';
 import { PageMeta } from '@/components/common/PageMeta';
@@ -127,6 +127,13 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
     const { data: colLineage, isLoading: isLoadingColLineage } = useQuery({
         queryKey: ['column-lineage', selectedAsset?.data?.asset_id, selectedColumn],
         queryFn: () => getColumnLineage(selectedAsset?.data?.asset_id as number, selectedColumn as string),
+        enabled: !!selectedAsset?.data?.asset_id && !!selectedColumn,
+    });
+
+    // 2.5 Fetch Column Impact when a column is selected
+    const { data: colImpact, isLoading: isLoadingColImpact } = useQuery({
+        queryKey: ['column-impact', selectedAsset?.data?.asset_id, selectedColumn],
+        queryFn: () => getColumnImpact(selectedAsset?.data?.asset_id as number, selectedColumn as string),
         enabled: !!selectedAsset?.data?.asset_id && !!selectedColumn,
     });
 
@@ -302,15 +309,15 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                 </div>
                              </div>
 
-                             {/* Section 1.5: Trace Column (NEW) */}
+                             {/* Section 1.5: Trace Column & Impact */}
                              <div className="space-y-3">
                                 <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
-                                    <Search className="h-3 w-3 text-primary" /> Trace Column
+                                    <Search className="h-3 w-3 text-primary" /> Trace & Impact
                                 </h3>
                                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-4">
                                     <Select value={selectedColumn || ''} onValueChange={setSelectedColumn}>
                                         <SelectTrigger className="h-9 glass-input rounded-xl text-xs shadow-none border-border/20 bg-background/50">
-                                            <SelectValue placeholder="Select a column to trace..." />
+                                            <SelectValue placeholder="Select a column..." />
                                         </SelectTrigger>
                                         <SelectContent className="glass border-border/40 rounded-xl">
                                             {(selectedAsset.data as AssetNodeData).schema_metadata?.columns?.map((col: { name: string, type: string }) => (
@@ -321,52 +328,66 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                         </SelectContent>
                                     </Select>
 
-                                    {isLoadingColLineage ? (
+                                    {isLoadingColLineage || isLoadingColImpact ? (
                                         <div className="flex items-center justify-center py-4">
                                             <Loader2 className="h-5 w-5 text-primary animate-spin" />
                                         </div>
-                                    ) : colLineage && (
-                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                                            <div className="space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-primary/20">
-                                                {/* Origin */}
-                                                <div className="flex gap-3 relative z-10">
-                                                    <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center ring-4 ring-background shrink-0">
-                                                        <Zap className="h-3 w-3 text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[10px] font-bold uppercase text-primary tracking-tighter">Origin</div>
-                                                        <div className="text-xs font-bold">{colLineage.origin_column_name}</div>
-                                                        <div className="text-[9px] text-muted-foreground truncate max-w-40 ">Asset #{colLineage.origin_asset_id}</div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Flow Path */}
-                                                {colLineage.path.map((flow, idx) => (
-                                                    <div key={idx} className="flex gap-3 relative z-10 pl-0.5">
-                                                        <div className="h-5 w-5 rounded-full bg-background border-2 border-primary/40 flex items-center justify-center ring-4 ring-background shrink-0">
-                                                            <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter flex items-center gap-1">
-                                                                {flow.transformation_type} <ArrowRight className="h-2 w-2" /> {flow.target_column}
+                                    ) : selectedColumn && (
+                                        <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-500">
+                                            {/* Lineage (Backwards) */}
+                                            {colLineage && (
+                                                <div className="space-y-2">
+                                                    <div className="text-[10px] font-bold uppercase text-muted-foreground/60">Upstream Origin</div>
+                                                    <div className="space-y-3 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-primary/20">
+                                                        {/* Origin */}
+                                                        <div className="flex gap-3 relative z-10">
+                                                            <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center ring-4 ring-background shrink-0">
+                                                                <Zap className="h-3 w-3 text-white" />
                                                             </div>
-                                                            <div className="text-xs font-medium opacity-80">Pipeline #{flow.pipeline_id}</div>
-                                                            <div className="text-[9px] font-mono opacity-40">Node: {flow.node_id}</div>
+                                                            <div>
+                                                                <div className="text-[10px] font-bold uppercase text-primary tracking-tighter">Source</div>
+                                                                <div className="text-xs font-bold">{colLineage.origin_column_name}</div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
 
-                                                {/* Terminal */}
-                                                <div className="flex gap-3 relative z-10">
-                                                    <div className="h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center ring-4 ring-background shrink-0">
-                                                        <CheckCircle2 className="h-3 w-3 text-white" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-[10px] font-bold uppercase text-emerald-600 tracking-tighter">Terminal</div>
-                                                        <div className="text-xs font-bold">{colLineage.column_name}</div>
+                                                        {/* Path */}
+                                                        {colLineage.path.map((flow, idx) => (
+                                                            <div key={idx} className="flex gap-3 relative z-10 pl-0.5">
+                                                                <div className="h-5 w-5 rounded-full bg-background border-2 border-primary/40 flex items-center justify-center ring-4 ring-background shrink-0">
+                                                                    <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                                                                </div>
+                                                                <div className="text-[10px] text-muted-foreground">
+                                                                    {flow.transformation_type} → {flow.target_column}
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            </div>
+                                            )}
+
+                                            {/* Impact (Forwards) */}
+                                            {colImpact && (
+                                                <div className="space-y-2">
+                                                    <div className="text-[10px] font-bold uppercase text-destructive/60 flex items-center gap-1">
+                                                        Downstream Impact
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {colImpact.impacts.length > 0 ? colImpact.impacts.map((imp, idx) => (
+                                                            <div key={idx} className="p-2 rounded-lg bg-destructive/5 border border-destructive/10 text-[11px] space-y-1">
+                                                                <div className="flex justify-between items-start">
+                                                                    <span className="font-bold text-foreground/80">{imp.column_name}</span>
+                                                                    <Badge variant="outline" className="text-[8px] h-3 px-1 border-destructive/20 text-destructive">{imp.transformation_type}</Badge>
+                                                                </div>
+                                                                <div className="text-muted-foreground flex items-center gap-1">
+                                                                    <Layers className="h-2 w-2" /> {imp.asset_name}
+                                                                </div>
+                                                            </div>
+                                                        )) : (
+                                                            <div className="text-[10px] text-muted-foreground italic px-1">No downstream impacts detected.</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

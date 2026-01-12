@@ -1,4 +1,4 @@
-from typing import Iterator, Dict
+from typing import Iterator, Dict, List
 import polars as pl
 from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.logging import get_logger
@@ -19,10 +19,19 @@ class JoinTransform(PolarsTransform):
         raise NotImplementedError("JoinTransform requires multiple inputs. Use transform_multi instead.")
 
     def transform_multi(self, data_map: Dict[str, Iterator[pl.DataFrame]]) -> Iterator[pl.DataFrame]:
-        join_on = self.config["on"]
+        join_on = self.config.get("on")
+        left_on = self.config.get("left_on")
+        right_on = self.config.get("right_on")
         how = self.config.get("how", "left")
         
+        # Polars mapping
         polars_how = how if how != "outer" else "full"
+        
+        # Robustly handle different join configurations
+        if isinstance(join_on, dict):
+            left_on = list(join_on.keys())
+            right_on = list(join_on.values())
+            join_on = None
         
         keys = list(data_map.keys())
         if len(keys) != 2:
@@ -36,7 +45,15 @@ class JoinTransform(PolarsTransform):
             if not right_lazy_list:
                 if polars_how == "inner":
                     return
-                right_lf = pl.LazyFrame({join_on: []})
+                
+                # Create empty schema-aware LazyFrame for the right side
+                schema_cols = []
+                if join_on:
+                    schema_cols = [join_on] if isinstance(join_on, str) else join_on
+                elif right_on:
+                    schema_cols = [right_on] if isinstance(right_on, str) else right_on
+                
+                right_lf = pl.LazyFrame({c: [] for c in schema_cols})
             else:
                 right_lf = pl.concat(right_lazy_list)
 
@@ -48,9 +65,12 @@ class JoinTransform(PolarsTransform):
                     yield left_df
                     continue
 
+                # Execute join with proper parameter mapping
                 result_df = left_df.lazy().join(
                     right_lf, 
-                    on=join_on, 
+                    on=join_on,
+                    left_on=left_on,
+                    right_on=right_on,
                     how=polars_how, 
                     suffix="_right"
                 ).collect()
@@ -63,3 +83,16 @@ class JoinTransform(PolarsTransform):
                 
         except Exception as e:
              raise TransformationError(f"Join failed: {e}") from e
+
+    def get_lineage_map_multi(self, input_schemas: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        """
+        Special override for multi-input operators.
+        Returns Output Column -> List of (InputID, InputColumn)
+        """
+        lineage = {}
+        for uid, columns in input_schemas.items():
+            for col in columns:
+                if col not in lineage:
+                    lineage[col] = []
+                lineage[col].append(f"{uid}.{col}")
+        return lineage

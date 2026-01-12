@@ -121,7 +121,9 @@ async def root():
 
 @app.get("/health", tags=["System"])
 async def health() -> Dict[str, Any]:
-    result = {"status": "healthy", "database": "unknown"}
+    result = {"status": "healthy", "database": "unknown", "broker": "unknown"}
+    
+    # 1. Database Check
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
@@ -130,6 +132,18 @@ async def health() -> Dict[str, Any]:
         result["status"] = "degraded"
         result["database"] = f"down: {exc}"
         logger.error("health_db_failed", error=str(exc))
+        
+    # 2. Celery/Broker Check
+    try:
+        from app.core.celery_app import celery_app
+        with celery_app.connection_for_read() as conn:
+            conn.connect()
+        result["broker"] = "up"
+    except Exception as exc:
+        result["status"] = "degraded"
+        result["broker"] = f"down: {exc}"
+        logger.error("health_broker_failed", error=str(exc))
+        
     return result
 
 

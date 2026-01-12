@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, List, Dict
 import polars as pl
 from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.errors import ConfigurationError
@@ -27,3 +27,12 @@ class RenameColumnsTransform(PolarsTransform):
                 yield df.rename(safe_map)
             else:
                 yield df
+
+    def get_lineage_map(self, input_columns: List[str]) -> Dict[str, List[str]]:
+        rename_map = self.config.get("rename_map") or self.config.get("columns") or {}
+        lineage = {}
+        for col in input_columns:
+            # If renamed, output points to input
+            new_name = rename_map.get(col, col)
+            lineage[new_name] = [col]
+        return lineage

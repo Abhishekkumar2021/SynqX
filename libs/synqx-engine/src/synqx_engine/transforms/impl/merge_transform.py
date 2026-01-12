@@ -57,6 +57,7 @@ class MergeTransform(PolarsTransform):
             delta_df = delta_lf.collect()
             
             # Anti-join to find records that are NOT being updated
+            # Robustly handle if on_key is string or list
             stable_records = primary_df.join(delta_df, on=on_key, how="anti")
             
             # Combine stable records with all delta records

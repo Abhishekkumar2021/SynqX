@@ -13,6 +13,7 @@ from synqx_engine.metrics import ExecutionMetrics
 from synqx_engine.core.data_cache import DataCache
 from synqx_engine.connectors.factory import ConnectorFactory
 from synqx_engine.transforms.factory import TransformFactory
+from synqx_core.utils.data import is_df_empty
 from engine.core.sql_generator import SQLPushdownGenerator
 
 logger = logging.getLogger("SynqX-Agent-Executor")
@@ -29,10 +30,15 @@ class NodeExecutor:
         except Exception:
             return 0.0, 0.0
 
-    def _sniff_data(self, df: pd.DataFrame, max_rows: int = 100) -> Optional[Dict]:
+    def _sniff_data(self, df: Any, max_rows: int = 100) -> Optional[Dict]:
         try:
-            if df.empty:
+            if is_df_empty(df):
                 return None
+            
+            # Standardize on pandas for sniffing if needed
+            if hasattr(df, "to_pandas"):
+                df = df.to_pandas()
+            
             sample_df = df.head(max_rows)
             return {
                 "rows": json.loads(sample_df.to_json(orient="records", date_format="iso")),
@@ -44,7 +50,7 @@ class NodeExecutor:
         except Exception:
             return None
 
-    def execute(self, node: Dict[str, Any], inputs: Dict[str, List[pd.DataFrame]], status_cb: Any = None) -> List[pd.DataFrame]:
+    def execute(self, node: Dict[str, Any], inputs: Dict[str, List[Any]], status_cb: Any = None, log_cb: Any = None) -> List[Any]:
         node_id = node.get("node_id", "unknown")
         
         # PERFORMANCE: Handle nodes collapsed via ELT Pushdown
@@ -65,35 +71,50 @@ class NodeExecutor:
         
         logger.info(f"[INIT] Initializing node '{node_id}' ({op_type.upper()}/{op_class})")
         
-        stats = {"in": 0, "out": 0, "error": 0, "bytes": 0}
+        stats = {"in": 0, "out": 0, "error": 0, "bytes": 0, "chunks": 0}
         samples = {}
         results = []
 
-        def on_chunk(chunk: pd.DataFrame, direction: str = "out", error_count: int = 0, filtered_count: int = 0):
-            if chunk.empty and error_count == 0:
+        def on_chunk(chunk: Any, direction: str = "out", error_count: int = 0, filtered_count: int = 0):
+            chunk_is_empty = is_df_empty(chunk)
+            if chunk_is_empty and error_count == 0:
                 return
             
+            stats["chunks"] += 1
+            
             # PERFORMANCE: Native Database Quarantine on Agent
-            if direction == "quarantine" and not chunk.empty:
+            if direction == "quarantine" and not chunk_is_empty:
                 q_asset_id = node.get("config", {}).get("quarantine_asset_id")
                 q_conn_id = node.get("config", {}).get("quarantine_connection_id") # May be passed from backend
                 
                 if q_conn_id and q_asset_id:
                     try:
+                        # Ensure pandas for write if needed
+                        p_chunk = chunk.to_pandas() if hasattr(chunk, "to_pandas") else chunk
+                        
                         q_conn_data = self.connections.get(str(q_conn_id))
                         if q_conn_data:
                             q_connector = ConnectorFactory.get_connector(q_conn_data["type"], q_conn_data["config"])
-                            logger.info(f"Diverting {len(chunk)} invalid rows to native quarantine...")
+                            logger.info(f"Diverting {len(p_chunk)} invalid rows to native quarantine...")
                             with q_connector.session():
-                                q_connector.write_batch([chunk], asset=q_asset_id, mode="append")
+                                q_connector.write_batch([p_chunk], asset=q_asset_id, mode="append")
                     except Exception as q_err:
                         logger.error(f"Agent failed to write native quarantine: {q_err}")
 
-            if direction not in samples and not chunk.empty:
+            if direction not in samples and not chunk_is_empty:
                 samples[direction] = self._sniff_data(chunk)
             
             chunk_rows = len(chunk)
-            chunk_bytes = int(chunk.memory_usage(deep=True).sum()) if not chunk.empty else 0
+            
+            # Memory usage handling
+            if chunk_is_empty:
+                chunk_bytes = 0
+            elif hasattr(chunk, "estimated_size"):
+                chunk_bytes = chunk.estimated_size()
+            elif hasattr(chunk, "memory_usage"):
+                chunk_bytes = int(chunk.memory_usage(deep=True).sum())
+            else:
+                chunk_bytes = 0
             
             if direction == "out":
                 stats["out"] += chunk_rows
@@ -114,6 +135,9 @@ class NodeExecutor:
                     "memory_mb": mem,
                     "sample_data": samples
                 })
+            
+            if log_cb and stats["chunks"] % 10 == 0: # Log every 10 chunks to avoid spam
+                log_cb(f"  Processed {stats['chunks']} chunks. Total records in-flight: {max(stats['in'], stats['out']):,}", node_id)
 
         try:
             # EXTRACT
@@ -179,7 +203,12 @@ class NodeExecutor:
                     
                     logger.info(f"  Streaming commit to {conn_data['type'].upper()} entity: '{asset_name}'")
                     with connector.session():
-                        rows_written = connector.write_batch(input_stream(), asset=asset_name, mode=config.get("write_mode", "append"))
+                        rows_written = connector.write_batch(
+                            input_stream(), 
+                            asset=asset_name, 
+                            mode=config.get("write_mode", "append"),
+                            allow_schema_evolution=config.get("allow_schema_evolution", False)
+                        )
                         stats["out"] = rows_written
                 results = []
 
@@ -199,6 +228,21 @@ class NodeExecutor:
                 
                 engine = TransformFactory.get_engine(transform)
                 logger.info(f"  Applying {engine.upper()} transformation: '{op_class}'")
+
+                # Lineage Capture
+                input_schemas = {uid: [str(c) for c in chunks[0].columns] if chunks else [] for uid, chunks in inputs.items()}
+                if op_type in ["join", "union", "merge"]:
+                    if hasattr(transform, 'get_lineage_map_multi'):
+                        lineage_map = transform.get_lineage_map_multi(input_schemas)
+                    else:
+                        lineage_map = {col: [f"{uid}.{col}" for uid, cols in input_schemas.items() if col in cols] 
+                                      for uid, cols in input_schemas.items() for col in cols}
+                else:
+                    first_input_cols = next(iter(input_schemas.values())) if input_schemas else []
+                    lineage_map = transform.get_lineage_map(first_input_cols)
+
+                # Store lineage in samples for reporting
+                samples["lineage"] = lineage_map
 
                 # Prepare input iterators with engine conversion
                 input_iters = {}
@@ -269,7 +313,7 @@ class ParallelAgent:
                             
                             for attempt in range(max_attempts):
                                 try:
-                                    return self.executor.execute(n, inp, s_cb)
+                                    return self.executor.execute(n, inp, s_cb, log_cb)
                                 except Exception as exc:
                                     if attempt + 1 < max_attempts:
                                         wait_time = delay

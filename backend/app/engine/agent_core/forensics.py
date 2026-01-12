@@ -11,6 +11,7 @@ import threading
 from typing import Dict, Any, Optional, List
 import pandas as pd
 from datetime import datetime, timezone
+from synqx_core.utils.data import is_df_empty
 
 from app.core.logging import get_logger
 
@@ -54,20 +55,26 @@ class ForensicSniffer:
     def capture_chunk(
         self,
         node_id: int,
-        chunk: pd.DataFrame,
+        chunk: Any,
         direction: str = "out",
         metadata: Optional[Dict] = None,
     ):
         """
         Thread-safe chunk capture with optimized batching using native PyArrow writers.
         """
-        if chunk.empty:
+        if is_df_empty(chunk):
             return
 
         try:
             import pyarrow as pa
             import pyarrow.parquet as pq
             
+            # Standardize on Pandas for PyArrow conversion if it's Polars
+            if hasattr(chunk, "to_pandas"):
+                p_chunk = chunk.to_pandas()
+            else:
+                p_chunk = chunk
+
             file_path = os.path.join(
                 self.base_dir, f"node_{node_id}_{direction}.parquet"
             )
@@ -89,9 +96,9 @@ class ForensicSniffer:
 
                 available_space = self.MAX_ROWS_PER_FILE - current_rows
                 chunk_to_write = (
-                    chunk.head(available_space)
-                    if len(chunk) > available_space
-                    else chunk
+                    p_chunk.head(available_space)
+                    if len(p_chunk) > available_space
+                    else p_chunk
                 )
                 
                 rows_to_add = len(chunk_to_write)
@@ -120,9 +127,9 @@ class ForensicSniffer:
                         "node_id": node_id,
                         "direction": direction,
                         "first_capture": datetime.now(timezone.utc).isoformat(),
-                        "schema": list(chunk.columns),
+                        "schema": list(p_chunk.columns),
                         "dtypes": {
-                            col: str(dtype) for col, dtype in chunk.dtypes.items()
+                            col: str(dtype) for col, dtype in p_chunk.dtypes.items()
                         },
                     }
 

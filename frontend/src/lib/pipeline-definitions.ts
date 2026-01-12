@@ -64,7 +64,13 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 type: "sink", 
                 opClass: "loader", 
                 icon: HardDriveUpload, 
-                desc: "Load data into a destination connection" 
+                desc: "Load data into a destination connection",
+                fields: [
+                    {
+                        name: 'allow_schema_evolution', label: 'Schema Evolution', type: 'boolean', configKey: 'allow_schema_evolution',
+                        tooltip: 'If enabled, SynqX will automatically issue ALTER TABLE commands if new columns are detected in the incoming data.'
+                    }
+                ]
             }
         ]
     },

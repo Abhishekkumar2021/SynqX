@@ -178,6 +178,7 @@ class StateManager:
         cpu_percent: Optional[float] = None,
         memory_mb: Optional[float] = None,
         sample_data: Optional[dict] = None,
+        lineage_map: Optional[dict] = None,
         error: Optional[Exception] = None
     ):
         """
@@ -226,6 +227,10 @@ class StateManager:
             # Update sample data
             if sample_data is not None:
                 t_step_run.sample_data = sanitize_for_json(sample_data)
+            
+            # Update lineage
+            if lineage_map is not None:
+                t_step_run.lineage_map = sanitize_for_json(lineage_map)
             
             # Update error info
             if error:

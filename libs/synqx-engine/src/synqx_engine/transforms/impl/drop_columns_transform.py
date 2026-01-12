@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, List, Dict
 import polars as pl
 from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.errors import ConfigurationError
@@ -27,3 +27,7 @@ class DropColumnsTransform(PolarsTransform):
                 yield df.drop(existing_cols)
             else:
                 yield df
+
+    def get_lineage_map(self, input_columns: List[str]) -> Dict[str, List[str]]:
+        cols_to_drop = set(self.config.get("columns") or [])
+        return {col: [col] for col in input_columns if col not in cols_to_drop}
