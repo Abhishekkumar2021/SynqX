@@ -17,6 +17,7 @@ from synqx_core.schemas.pipeline import (
     PipelineVersionSummary,
     PipelineTriggerRequest,
     PipelineTriggerResponse,
+    PipelineBackfillRequest,
     PipelinePublishRequest,
     PipelinePublishResponse,
     PipelineValidationResponse,
@@ -420,7 +421,9 @@ def trigger_pipeline_run(
             async_execution=trigger_request.async_execution,
             run_params=trigger_request.run_params,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
+            is_backfill=trigger_request.is_backfill,
+            backfill_config=trigger_request.backfill_config
         )
 
         AuditService.log_event(
@@ -430,7 +433,7 @@ def trigger_pipeline_run(
             event_type="pipeline.trigger",
             target_type="Pipeline",
             target_id=pipeline_id,
-            details={"job_id": result["job_id"], "version_id": trigger_request.version_id}
+            details={"job_id": result["job_id"], "version_id": trigger_request.version_id, "is_backfill": trigger_request.is_backfill}
         )
 
         return PipelineTriggerResponse(
@@ -464,6 +467,77 @@ def trigger_pipeline_run(
                 "message": "Failed to trigger pipeline run",
             },
         )
+
+
+@router.post(
+    "/{pipeline_id}/backfill",
+    summary="Trigger Date-Range Backfill",
+    description="Trigger multiple pipeline runs for each day in the specified range."
+)
+def backfill_pipeline(
+    pipeline_id: int,
+    backfill_request: PipelineBackfillRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
+):
+    try:
+        service = PipelineService(db)
+        
+        # Calculate days
+        from datetime import timedelta
+        start = backfill_request.start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = backfill_request.end_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        if start > end:
+            raise HTTPException(status_code=400, detail="Start date must be before end date")
+            
+        days = (end - start).days + 1
+        if days > 31:
+            raise HTTPException(status_code=400, detail="Backfill range limited to 31 days per request")
+            
+        jobs_started = []
+        
+        curr = start
+        while curr <= end:
+            day_str = curr.strftime("%Y-%m-%d")
+            
+            result = service.trigger_pipeline_run(
+                pipeline_id=pipeline_id,
+                version_id=backfill_request.version_id,
+                async_execution=True,
+                user_id=current_user.id,
+                workspace_id=current_user.active_workspace_id,
+                is_backfill=True,
+                backfill_config={
+                    "date": day_str,
+                    "start_time": curr.isoformat(),
+                    "end_time": (curr + timedelta(days=1)).isoformat()
+                }
+            )
+            jobs_started.append(result["job_id"])
+            curr += timedelta(days=1)
+            
+        AuditService.log_event(
+            db,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            event_type="pipeline.backfill",
+            target_type="Pipeline",
+            target_id=pipeline_id,
+            details={"job_count": len(jobs_started), "start": start.isoformat(), "end": end.isoformat()}
+        )
+        
+        return {
+            "message": f"Successfully initiated {len(jobs_started)} backfill runs.",
+            "job_ids": jobs_started
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Backfill failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post(

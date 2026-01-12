@@ -112,14 +112,29 @@ class SynqxAgent:
 
     def heartbeat(self):
         try:
+            # Gather real-time metrics
+            cpu_usage = 0.0
+            memory_usage = 0.0
+            try:
+                import psutil
+                cpu_usage = psutil.cpu_percent()
+                memory_usage = psutil.virtual_memory().percent
+            except ImportError:
+                pass
+
             payload = {
                 "status": "online",
-                "system_info": {"os": platform.system(), "python": sys.version.split()[0]},
+                "system_info": {
+                    "os": platform.system(), 
+                    "python": sys.version.split()[0],
+                    "cpu_usage": cpu_usage,
+                    "memory_usage": memory_usage
+                },
                 "ip_address": self.ip_address,
                 "version": "1.0.0"
             }
             requests.post(f"{self.api_url}/agents/heartbeat", json=payload, headers=self.headers, timeout=5)
-            logger.debug("Heartbeat sent.")
+            logger.debug(f"Heartbeat sent. CPU: {cpu_usage}%, MEM: {memory_usage}%")
         except Exception as e:
             logger.error(f"Heartbeat failed: {e}")
 

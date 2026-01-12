@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { api } from "./base";
-import { 
+import {
   type Pipeline,
-  type PipelineCreate, 
-  type PipelineListResponse, 
+  type PipelineCreate,
+  type PipelineListResponse,
   type PipelineDetailRead,
   type PipelineStatsResponse,
   type PipelineVersionCreate,
   type PipelineVersionRead,
   type PipelineVersionSummary,
-  type PipelineTriggerResponse
+  type PipelineTriggerResponse,
+  type PipelineBackfillRequest
 } from "./types";
 
 export const getPipelines = async () => {
@@ -37,7 +38,7 @@ export const createPipeline = async (payload: PipelineCreate) => {
 export const updatePipeline = async (id: number, payload: any) => {
   const { data } = await api.patch<PipelineDetailRead>(
     `/pipelines/${id}`,
-    payload
+  payload
   );
   return data;
 };
@@ -99,8 +100,15 @@ export const triggerPipeline = async (id: number, versionId?: number) => {
   return data;
 };
 
-export const exportPipelineYAML = async (id: number, versionId?: number) => {
-  const { data } = await api.get(`/pipelines/${id}/export`, {
+export const backfillPipeline = async (id: number, payload: PipelineBackfillRequest) => {
+  const { data } = await api.post<any>(
+    `/pipelines/${id}/backfill`,
+    payload
+  );
+  return data;
+};
+
+export const exportPipelineYAML = async (id: number, versionId?: number) => {  const { data } = await api.get(`/pipelines/${id}/export`, {
     params: { version_id: versionId },
     responseType: 'blob'
   });

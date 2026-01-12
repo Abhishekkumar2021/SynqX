@@ -139,6 +139,8 @@ export interface Pipeline {
   is_remote_group: boolean;
   tags: Record<string, any>;
   priority: number;
+  sla_config?: Record<string, any>;
+  upstream_pipeline_ids?: number[];
   created_at: string;
   updated_at: string;
 }
@@ -196,6 +198,8 @@ export interface Job {
   infra_error?: string;
   worker_id?: string;
   queue_name?: string;
+  is_backfill: boolean;
+  backfill_config: Record<string, any>;
   execution_time_ms?: number;
   started_at?: string;
   completed_at?: string;
@@ -692,6 +696,14 @@ export interface PipelineTriggerRequest {
   version_id?: number;
   run_params?: Record<string, any>;
   async_execution?: boolean;
+  is_backfill?: boolean;
+  backfill_config?: Record<string, any>;
+}
+
+export interface PipelineBackfillRequest {
+  start_date: string;
+  end_date: string;
+  version_id?: number;
 }
 
 export interface PipelineTriggerResponse {

@@ -7,7 +7,8 @@ from sqlalchemy import and_
 
 from synqx_core.models.pipelines import Pipeline, PipelineVersion, PipelineNode, PipelineEdge
 from synqx_core.models.execution import Job
-from synqx_core.models.enums import PipelineStatus, JobStatus, OperatorType, RetryStrategy
+from synqx_core.models.agent import Agent
+from synqx_core.models.enums import PipelineStatus, JobStatus, OperatorType, RetryStrategy, AgentStatus
 from synqx_core.schemas.pipeline import (
     PipelineCreate,
     PipelineVersionCreate,
@@ -382,6 +383,8 @@ class PipelineService:
         run_params: Optional[Dict[str, Any]] = None,
         user_id: Optional[int] = None,
         workspace_id: Optional[int] = None,
+        is_backfill: bool = False,
+        backfill_config: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Fixed trigger with proper field names."""
         pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
@@ -423,37 +426,63 @@ class PipelineService:
             workspace_id=workspace_id or pipeline.workspace_id,
             correlation_id=str(uuid.uuid4()),
             status=JobStatus.PENDING,
+            is_backfill=is_backfill,
+            backfill_config=backfill_config or {},
             created_by=str(user_id) if user_id else None
         )
         self.db_session.add(job)
         self.db_session.flush()
         
         try:
-            # Check for Remote Agent Routing
-            if is_remote_group(pipeline.agent_group):
+            # Check for Remote Agent Routing & Global Load Balancing
+            target_group = pipeline.agent_group
+            if is_remote_group(target_group) or target_group == "auto":
                 from app.services.agent_service import AgentService
-                if not AgentService.is_group_active(self.db_session, workspace_id or pipeline.workspace_id, pipeline.agent_group):
-                    raise AppError(f"No active agents found in group '{pipeline.agent_group}'. Please ensure your remote agent is running.")
+                
+                selected_agent = None
+                if target_group == "auto":
+                    # Global Load Balancing: Find the best agent across all groups in workspace
+                    # Or we could have a specific 'global' group. 
+                    # For now, 'auto' means 'find least busy online agent in workspace'
+                    online_agents = self.db_session.query(Agent).filter(
+                        Agent.workspace_id == (workspace_id or pipeline.workspace_id),
+                        Agent.status == AgentStatus.ONLINE
+                    ).all()
+                    
+                    if online_agents:
+                        # Simple load balancer if no group specified
+                        selected_agent = AgentService.find_best_agent(self.db_session, workspace_id or pipeline.workspace_id, online_agents[0].tags.get('groups', ['default'])[0])
+                else:
+                    # Group-specific load balancing
+                    selected_agent = AgentService.find_best_agent(self.db_session, workspace_id or pipeline.workspace_id, target_group)
 
-                # Mark as queued for remote agent
+                if not selected_agent:
+                    if target_group == "auto":
+                        raise AppError("No active agents found in workspace for automatic dispatch.")
+                    raise AppError(f"No active agents found in group '{target_group}'. Please ensure your remote agent is running.")
+
+                # Mark as queued for specific agent or group
                 job.status = JobStatus.QUEUED
-                job.queue_name = pipeline.agent_group
+                job.queue_name = target_group
+                job.worker_id = selected_agent.client_id
                 self.db_session.commit()
                 
                 logger.info(
-                    f"Pipeline #{pipeline_id} run queued for remote agent group '{pipeline.agent_group}'",
+                    f"Pipeline #{pipeline_id} run queued for agent '{selected_agent.name}' (Group: {target_group})",
                     extra={
                         "pipeline_id": pipeline_id,
                         "job_id": job.id,
-                        "agent_group": pipeline.agent_group
+                        "agent_id": selected_agent.id,
+                        "agent_group": target_group
                     },
                 )
                 
                 return {
                     "status": "queued",
-                    "message": f"Job successfully queued for remote agent group '{pipeline.agent_group}'. Waiting for agent pickup.",
+                    "message": f"Job successfully dispatched to agent '{selected_agent.name}'.",
                     "job_id": job.id,
-                    "queue": pipeline.agent_group
+                    "queue": target_group,
+                    "agent_name": selected_agent.name
                 }
 
             if async_execution:

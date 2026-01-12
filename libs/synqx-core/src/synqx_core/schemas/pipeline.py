@@ -208,6 +208,10 @@ class PipelineBase(BaseModel):
     tags: Optional[Dict[str, Any]] = Field(default_factory=dict)
     priority: int = Field(default=5, ge=1, le=10)
 
+    # Enterprise Ops
+    sla_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    upstream_pipeline_ids: Optional[List[int]] = Field(default_factory=list)
+
     @field_validator("tags", mode="before")
     @classmethod
     def validate_tags(cls, v):
@@ -260,6 +264,8 @@ class PipelineUpdate(BaseModel):
     agent_group: Optional[str] = None
     tags: Optional[Dict[str, Any]] = None
     priority: Optional[int] = Field(None, ge=1, le=10)
+    sla_config: Optional[Dict[str, Any]] = None
+    upstream_pipeline_ids: Optional[List[int]] = None
 
     @field_validator("schedule_cron")
     @classmethod
@@ -309,6 +315,15 @@ class PipelineTriggerRequest(BaseModel):
     version_id: Optional[int] = None
     run_params: Optional[Dict[str, Any]] = Field(default_factory=dict)
     async_execution: bool = Field(default=True)
+    is_backfill: bool = Field(default=False)
+    backfill_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+
+class PipelineBackfillRequest(BaseModel):
+    start_date: datetime
+    end_date: datetime
+    version_id: Optional[int] = None
+    # interval: Literal["daily", "hourly"] = "daily"
 
 
 class PipelineTriggerResponse(BaseModel):

@@ -48,6 +48,10 @@ class Pipeline(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     tags: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     priority: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
 
+    # Enterprise Ops
+    sla_config: Mapped[Optional[dict]] = mapped_column(JSON, default=dict) # e.g. {"max_duration": 3600, "finish_by": "08:00"}
+    upstream_pipeline_ids: Mapped[Optional[list]] = mapped_column(JSON, default=list) # List of pipeline IDs this depends on
+
     # Workspace scoping
     workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

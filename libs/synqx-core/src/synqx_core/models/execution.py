@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 from sqlalchemy import (
     Integer, String, Float, DateTime, Text, ForeignKey, 
-    UniqueConstraint, Index, JSON, Enum as SQLEnum, BigInteger
+    UniqueConstraint, Index, JSON, Enum as SQLEnum, BigInteger, Boolean
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
@@ -44,6 +44,10 @@ class Job(Base, AuditMixin, OwnerMixin):
         SQLEnum(JobStatus), default=JobStatus.PENDING, nullable=False, index=True
     )
     infra_error: Mapped[Optional[str]] = mapped_column(Text)
+
+    # Enterprise Ops
+    is_backfill: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    backfill_config: Mapped[Optional[dict]] = mapped_column(JSON, default=dict) # e.g. {"start_date": "...", "end_date": "..."}
 
     worker_id: Mapped[Optional[str]] = mapped_column(String(255))
     queue_name: Mapped[Optional[str]] = mapped_column(String(255))

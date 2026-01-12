@@ -299,7 +299,7 @@ export const DashboardPage: React.FC = () => {
                 
                 {/* PRIMARY ROW: Performance & Distribution */}
                 <div className="grid gap-8 lg:grid-cols-12">
-                    <div className="lg:col-span-8">
+                    <div className="lg:col-span-7">
                         <DashboardWidget
                             title="Execution Throughput"
                             description="Processing performance across temporal buckets"
@@ -321,7 +321,7 @@ export const DashboardPage: React.FC = () => {
                             />
                         </DashboardWidget>
                     </div>
-                    <div className="lg:col-span-4">
+                    <div className="lg:col-span-5">
                         <DashboardWidget
                             title="Status Distribution"
                             description="Global pipeline health topology"

@@ -57,6 +57,11 @@ interface SettingsFormData {
     agent_group: string | null;
     tags: Record<string, any>;
     priority: number;
+    sla_config: {
+        max_duration?: number;
+        finish_by?: string;
+    };
+    upstream_pipeline_ids: number[];
 }
 
 export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ pipeline, open, onOpenChange }) => {
@@ -72,6 +77,13 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
     const { data: agents } = useQuery({
         queryKey: ['agents'],
         queryFn: getAgents,
+    });
+
+    // Fetch all pipelines for dependency selection
+    const { data: allPipelines } = useQuery({
+        queryKey: ['pipelines-list-minimal'],
+        queryFn: getPipelines,
+        enabled: open
     });
 
     const agentGroups = useMemo(() => {
@@ -98,6 +110,8 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                 execution_timeout_seconds: pipeline.execution_timeout_seconds || 3600,
                 priority: pipeline.priority || 5,
                 agent_group: (pipeline as any).agent_group || 'internal',
+                sla_config: pipeline.sla_config || {},
+                upstream_pipeline_ids: pipeline.upstream_pipeline_ids || [],
             });
         }
     }, [pipeline, open, reset]);
@@ -162,6 +176,7 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                     { id: "general", label: "General", icon: FileText },
                                     { id: "automation", label: "Automation", icon: CalendarClock },
                                     { id: "performance", label: "Performance", icon: Zap },
+                                    { id: "ops", label: "Enterprise Ops", icon: Box },
                                     { id: "governance", label: "Policies", icon: ShieldAlert },
                                 ].map((item) => (
                                     <TabsTrigger
@@ -276,6 +291,12 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                                                         Internal Cloud Cluster
                                                                     </div>
                                                                 </SelectItem>
+                                                                <SelectItem value="auto" className="text-xs font-bold">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Zap className="h-3.5 w-3.5 text-amber-500" />
+                                                                        Global Load Balancing (Auto)
+                                                                    </div>
+                                                                </SelectItem>
                                                                 {agentGroups.map(group => (
                                                                     <SelectItem key={group} value={group} className="text-xs font-bold">
                                                                         <div className="flex items-center gap-2">
@@ -343,7 +364,7 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                                         <Select onValueChange={field.onChange} value={field.value}>
                                                             <SelectTrigger className="h-11 rounded-xl bg-background border-border/40 font-bold text-xs shadow-sm">
                                                                 <SelectValue />
-                                                            </SelectTrigger>
+                                                            </Trigger>
                                                             <SelectContent className="rounded-xl border-border/40 backdrop-blur-xl bg-background/95">
                                                                 <SelectItem value="none" className="text-xs font-bold">Disabled</SelectItem>
                                                                 <SelectItem value="fixed" className="text-xs font-bold">Fixed Interval</SelectItem>
@@ -385,6 +406,78 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                         </div>
                                     </TabsContent>
 
+                                    <TabsContent value="ops" className="m-0 p-8 animate-in fade-in duration-300 space-y-8">
+                                        <div className="grid gap-8 max-w-2xl">
+                                            {/* SLA Section */}
+                                            <div className="space-y-6">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <ShieldAlert className="h-4 w-4 text-primary" />
+                                                    <h3 className="text-sm font-bold uppercase tracking-wider">Service Level Agreements (SLA)</h3>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-6 p-6 rounded-2xl border border-border/40 bg-muted/5">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ml-1">Max Duration (Sec)</Label>
+                                                        <Input
+                                                            type="number"
+                                                            {...register('sla_config.max_duration', { valueAsNumber: true })}
+                                                            className="h-11 rounded-xl bg-background border-border/40 font-bold text-sm"
+                                                            placeholder="e.g. 3600"
+                                                        />
+                                                        <p className="text-[10px] text-muted-foreground px-1">Alert if execution takes longer than this.</p>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ml-1">Finish By (UTC)</Label>
+                                                        <Input
+                                                            {...register('sla_config.finish_by')}
+                                                            className="h-11 rounded-xl bg-background border-border/40 font-bold text-sm"
+                                                            placeholder="HH:MM (e.g. 08:00)"
+                                                        />
+                                                        <p className="text-[10px] text-muted-foreground px-1">Alert if not completed by this time daily.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Dependencies Section */}
+                                            <div className="space-y-6">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <Zap className="h-4 w-4 text-amber-500" />
+                                                    <h3 className="text-sm font-bold uppercase tracking-wider">Upstream Dependencies</h3>
+                                                </div>
+                                                <div className="p-6 rounded-2xl border border-border/40 bg-muted/5 space-y-4">
+                                                    <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ml-1">Trigger after success of:</Label>
+                                                    <div className="grid gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                                        {allPipelines?.filter(p => p.id !== pipeline?.id).map(p => (
+                                                            <div key={p.id} className="flex items-center space-x-3 p-3 rounded-xl bg-background border border-border/40 hover:border-primary/30 transition-all">
+                                                                <Switch
+                                                                    id={`dep-${p.id}`}
+                                                                    checked={watch('upstream_pipeline_ids')?.includes(p.id)}
+                                                                    onCheckedChange={(checked) => {
+                                                                        const current = watch('upstream_pipeline_ids') || [];
+                                                                        if (checked) {
+                                                                            setValue('upstream_pipeline_ids', [...current, p.id]);
+                                                                        } else {
+                                                                            setValue('upstream_pipeline_ids', current.filter(id => id !== p.id));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <Label htmlFor={`dep-${p.id}`} className="text-xs font-bold cursor-pointer flex-1">
+                                                                    {p.name}
+                                                                    <span className="ml-2 text-[10px] font-medium text-muted-foreground opacity-60">ID: {p.id}</span>
+                                                                </Label>
+                                                            </div>
+                                                        ))}
+                                                        {(!allPipelines || allPipelines.length <= 1) && (
+                                                            <div className="text-center py-6 text-muted-foreground text-xs font-medium italic">
+                                                                No other pipelines available in workspace.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[10px] text-muted-foreground px-1">This pipeline will auto-trigger when any selected upstream pipeline completes successfully.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </TabsContent>
+
                                     <TabsContent value="governance" className="m-0 p-8 animate-in fade-in duration-300">
                                         <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
                                             <div className="h-16 w-16 rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center mb-6">
@@ -405,3 +498,4 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
         </Dialog>
     );
 };
+

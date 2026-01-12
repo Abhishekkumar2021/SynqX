@@ -41,6 +41,7 @@ import { type Pipeline, type Job, getPipelineStats, deletePipeline, exportPipeli
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { RunPipelineDialog } from './RunPipelineDialog';
+import { BackfillDialog } from './BackfillDialog';
 
 interface PipelineGridItemProps {
     pipeline: Pipeline & { lastJob?: Job };
@@ -63,6 +64,7 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
     const queryClient = useQueryClient();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+    const [isBackfillDialogOpen, setIsBackfillDialogOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const lastJob = pipeline.lastJob;
 
@@ -152,6 +154,9 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                         <DropdownMenuContent align="end" className="w-52 rounded-xl border-border/60 shadow-lg p-1">
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => setIsRunDialogOpen(true)} disabled={!onRun}>
                                 <Play className="h-3.5 w-3.5 opacity-70" /> Run with Options...
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => setIsBackfillDialogOpen(true)}>
+                                <History className="h-3.5 w-3.5 opacity-70 text-amber-500" /> Backfill Data...
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onViewVersions(pipeline)}>
                                 <History className="h-3.5 w-3.5 opacity-70" /> View History
@@ -322,6 +327,12 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                 open={isRunDialogOpen} 
                 onOpenChange={setIsRunDialogOpen} 
                 onRun={onRun ?? (() => {})} 
+            />
+
+            <BackfillDialog
+                pipeline={pipeline}
+                open={isBackfillDialogOpen}
+                onOpenChange={setIsBackfillDialogOpen}
             />
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

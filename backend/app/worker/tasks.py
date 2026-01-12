@@ -4,8 +4,8 @@ from app.core.celery_app import celery_app
 from app.core.logging import get_logger
 from app.db.session import session_scope
 from synqx_core.models.execution import Job, PipelineRun
-from synqx_core.models.enums import JobStatus, PipelineRunStatus
-from synqx_core.models.pipelines import PipelineVersion
+from synqx_core.models.enums import JobStatus, PipelineRunStatus, PipelineStatus
+from synqx_core.models.pipelines import PipelineVersion, Pipeline
 from app.engine.agent_engine import PipelineAgent as PipelineRunner
 from app.core.db_logging import DBLogger
 from app.core.errors import ConfigurationError, PipelineExecutionError
@@ -337,19 +337,43 @@ def execute_pipeline_task(self, job_id: int) -> str:
                 })
                 manager.broadcast_sync("jobs_list", {"type": "job_list_update"})
 
-                # POST-PROCESSING (Alerts, Logs) - Wrap in try/except to not fail the task
+                # POST-PROCESSING (Alerts, Logs, Dependencies) - Wrap in try/except to not fail the task
                 try:
                     from app.services.alert_service import AlertService
+                    from app.services.pipeline_service import PipelineService
                     from synqx_core.models.enums import AlertType, AlertLevel
-                    with session_scope() as alert_session:
+                    
+                    with session_scope() as post_session:
+                        # 1. Trigger Success Alerts
                         AlertService.trigger_alerts(
-                            alert_session,
+                            post_session,
                             alert_type=AlertType.JOB_SUCCESS,
                             pipeline_id=job.pipeline_id,
                             job_id=job.id,
                             message=f"Pipeline '{pipeline.name}' completed successfully",
                             level=AlertLevel.SUCCESS
                         )
+                        
+                        # 2. Trigger Downstream Pipelines (Dependency Triggers)
+                        downstream_pipelines = post_session.query(Pipeline).filter(
+                            Pipeline.upstream_pipeline_ids.contains([job.pipeline_id]),
+                            Pipeline.status == PipelineStatus.ACTIVE,
+                            Pipeline.deleted_at.is_(None)
+                        ).all()
+                        
+                        if downstream_pipelines:
+                            p_service = PipelineService(post_session)
+                            for dp in downstream_pipelines:
+                                try:
+                                    p_service.trigger_pipeline_run(
+                                        pipeline_id=dp.id,
+                                        workspace_id=dp.workspace_id,
+                                        async_execution=True
+                                    )
+                                    DBLogger.log_job(session, job.id, "INFO", f"Triggered downstream dependency: Pipeline '{dp.name}' (#{dp.id})")
+                                except Exception as trig_err:
+                                    logger.error(f"Failed to trigger downstream pipeline {dp.id}: {trig_err}")
+
                     DBLogger.log_job(session, job.id, "INFO", "Job processing finalized successfully", source="worker")
                 except Exception as post_err:
                     logger.error(f"Post-processing failed but job was successful: {post_err}")
@@ -582,6 +606,132 @@ def process_step_telemetry_task(job_id: int, step_update_data: dict) -> str:
 
 
 # Helper functions
+
+
+@celery_app.task(
+    name="app.worker.tasks.check_sla_breaches",
+    soft_time_limit=300,
+)
+def check_sla_breaches() -> str:
+    """
+    Monitor running jobs and pipelines for SLA violations.
+    Supports:
+    - max_duration: Alert if job runs longer than X seconds.
+    - finish_by: Alert if job is still running (or hasn't started) after a specific time (e.g. "08:00").
+    """
+    from app.services.alert_service import AlertService
+    from synqx_core.models.enums import AlertType, AlertLevel
+    from synqx_core.models.pipelines import Pipeline
+
+    logger.info("SLA breach check started")
+    breach_count = 0
+    now = datetime.now(timezone.utc)
+
+    try:
+        with session_scope() as session:
+            # 1. Check RUNNING jobs for duration and finish_by breaches
+            running_jobs = session.query(Job).filter(
+                Job.status == JobStatus.RUNNING,
+                Job.started_at.isnot(None)
+            ).all()
+
+            for job in running_jobs:
+                pipeline = job.pipeline
+                if not pipeline or not pipeline.sla_config:
+                    continue
+
+                sla_config = pipeline.sla_config
+                
+                # Check max duration SLA
+                max_duration = sla_config.get("max_duration")
+                if max_duration:
+                    elapsed = (now - job.started_at).total_seconds()
+                    if elapsed > max_duration:
+                        msg = f"SLA Breach (Duration): Pipeline '{pipeline.name}' has been running for {int(elapsed)}s (Limit: {max_duration}s)"
+                        AlertService.trigger_alerts(
+                            session,
+                            alert_type=AlertType.SLA_BREACH,
+                            pipeline_id=pipeline.id,
+                            job_id=job.id,
+                            message=msg,
+                            level=AlertLevel.WARNING
+                        )
+                        DBLogger.log_job(session, job.id, "WARNING", msg)
+                        breach_count += 1
+
+                # Check finish_by SLA
+                finish_by = sla_config.get("finish_by") # e.g. "08:00"
+                if finish_by:
+                    try:
+                        hour, minute = map(int, finish_by.split(":"))
+                        # Create a datetime for today at finish_by time in UTC (or pipeline timezone if we had it)
+                        deadline = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                        
+                        if now > deadline:
+                            msg = f"SLA Breach (Finish By): Pipeline '{pipeline.name}' is still running after {finish_by} UTC"
+                            AlertService.trigger_alerts(
+                                session,
+                                alert_type=AlertType.SLA_BREACH,
+                                pipeline_id=pipeline.id,
+                                job_id=job.id,
+                                message=msg,
+                                level=AlertLevel.CRITICAL
+                            )
+                            DBLogger.log_job(session, job.id, "CRITICAL", msg)
+                            breach_count += 1
+                    except Exception as e:
+                        logger.error(f"Invalid finish_by format for pipeline {pipeline.id}: {finish_by}")
+
+            # 2. Check for pipelines that SHOULD have finished but haven't even started/succeeded
+            # We look for pipelines with finish_by SLA and no successful run since the start of the current day
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            pipelines_with_sla = session.query(Pipeline).filter(
+                Pipeline.sla_config.isnot(None),
+                Pipeline.status == PipelineStatus.ACTIVE,
+                Pipeline.deleted_at.is_(None)
+            ).all()
+            
+            for pipeline in pipelines_with_sla:
+                finish_by = pipeline.sla_config.get("finish_by")
+                if not finish_by:
+                    continue
+                    
+                try:
+                    hour, minute = map(int, finish_by.split(":"))
+                    deadline = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                    
+                    if now > deadline:
+                        # Check if there is a successful run today
+                        recent_success = session.query(Job).filter(
+                            Job.pipeline_id == pipeline.id,
+                            Job.status == JobStatus.SUCCESS,
+                            Job.completed_at >= start_of_day
+                        ).first()
+                        
+                        if not recent_success:
+                            # Check if we already alerted for this today to avoid spam
+                            # (In a real system we'd use a dedicated SLA tracking table)
+                            msg = f"SLA Breach (Missed): Pipeline '{pipeline.name}' has not completed successfully by {finish_by} UTC"
+                            
+                            # Simple deduplication: don't alert if we alerted in the last hour
+                            # Or just rely on AlertService to handle deduplication if implemented
+                            AlertService.trigger_alerts(
+                                session,
+                                alert_type=AlertType.SLA_BREACH,
+                                pipeline_id=pipeline.id,
+                                message=msg,
+                                level=AlertLevel.CRITICAL
+                            )
+                            breach_count += 1
+                except Exception as e:
+                    pass
+
+            return f"SLA check completed. Identified {breach_count} violations."
+
+    except Exception as e:
+        logger.error(f"SLA breach check failed: {e}", exc_info=True)
+        raise
 
 
 def _mark_job_failed(

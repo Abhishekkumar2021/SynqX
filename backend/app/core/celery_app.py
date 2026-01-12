@@ -25,6 +25,10 @@ celery_app.conf.update(
         "scheduler-heartbeat": {
             "task": "app.worker.tasks.scheduler_heartbeat",
             "schedule": 60.0,
+        },
+        "sla-monitor": {
+            "task": "app.worker.tasks.check_sla_breaches",
+            "schedule": 300.0, # Check every 5 minutes
         }
     },
 )

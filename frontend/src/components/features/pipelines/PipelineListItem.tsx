@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { cn, formatNumber } from '@/lib/utils';import { formatDistanceToNow } from 'date-fns';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { RunPipelineDialog } from './RunPipelineDialog';
+import { BackfillDialog } from './BackfillDialog';
 import { exportPipelineYAML } from '@/lib/api';
 
 interface PipelineListItemProps {
@@ -54,6 +55,7 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
     const queryClient = useQueryClient();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+    const [isBackfillDialogOpen, setIsBackfillDialogOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
     const lastJob = pipeline.lastJob;
@@ -244,6 +246,9 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => setIsRunDialogOpen(true)} disabled={!onRun}>
                                 <Play className="h-3.5 w-3.5 opacity-70" /> Run with Options...
                             </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => setIsBackfillDialogOpen(true)}>
+                                <History className="h-3.5 w-3.5 opacity-70 text-amber-500" /> Backfill Data...
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg font-medium text-xs py-2" onClick={() => onViewVersions(pipeline)}>
                                 <History className="h-3.5 w-3.5 opacity-70" /> View History
                             </DropdownMenuItem>
@@ -276,6 +281,12 @@ export const PipelineListItem: React.FC<PipelineListItemProps> = ({ pipeline, on
                 open={isRunDialogOpen} 
                 onOpenChange={setIsRunDialogOpen} 
                 onRun={onRun ?? (() => {})} 
+            />
+
+            <BackfillDialog
+                pipeline={pipeline}
+                open={isBackfillDialogOpen}
+                onOpenChange={setIsBackfillDialogOpen}
             />
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

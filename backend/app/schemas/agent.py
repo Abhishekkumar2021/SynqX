@@ -27,7 +27,7 @@ class AgentUpdate(BaseModel):
 
 class AgentHeartbeat(BaseModel):
     status: AgentStatus = AgentStatus.ONLINE
-    system_info: Optional[Dict[str, str]] = None
+    system_info: Optional[Dict[str, Any]] = None
     ip_address: Optional[str] = None
     version: Optional[str] = None
 

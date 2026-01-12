@@ -124,3 +124,45 @@ class AgentService:
                     return True
                     
         return False
+
+    @staticmethod
+    def find_best_agent(db: Session, workspace_id: int, group_tag: str) -> Optional[Agent]:
+        """
+        Implements Global Load Balancing.
+        Finds the 'least busy' online agent in the group based on reported metrics.
+        """
+        threshold = datetime.now(timezone.utc) - timedelta(minutes=2)
+        
+        # 1. Fetch potential candidates
+        candidates = db.query(Agent).filter(
+            Agent.workspace_id == workspace_id,
+            Agent.status == AgentStatus.ONLINE,
+            Agent.last_heartbeat_at >= threshold
+        ).all()
+        
+        best_agent = None
+        lowest_score = 201.0 # Max possible score is 200 (100 CPU + 100 MEM)
+        
+        for agent in candidates:
+            # Group check
+            groups = agent.tags.get('groups', [])
+            if isinstance(groups, list):
+                if not any(str(g).lower() == group_tag.lower() for g in groups):
+                    continue
+            elif isinstance(groups, str):
+                if groups.lower() != group_tag.lower():
+                    continue
+            else:
+                continue
+                
+            # Score calculation (Lower is better)
+            cpu = agent.system_info.get('cpu_usage', 50.0)
+            mem = agent.system_info.get('memory_usage', 50.0)
+            
+            score = float(cpu) + float(mem)
+            
+            if score < lowest_score:
+                lowest_score = score
+                best_agent = agent
+                
+        return best_agent
