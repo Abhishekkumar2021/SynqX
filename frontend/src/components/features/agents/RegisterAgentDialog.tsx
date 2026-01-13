@@ -283,7 +283,7 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
         return 'linux';
     });
 
-    const [installMethod, setInstallTab] = useState('one-liner');
+    const [installMethod, setInstallTab] = useState('manual');
     const [isDownloading, setIsDownloading] = useState(false);
 
     const handleDownloadZip = async () => {
@@ -299,11 +299,11 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `synqx-agent-${agentName.toLowerCase().replace(/\s+/g, '-')}.zip`);
+            link.setAttribute('download', `synqx-agent-portable.tar.gz`);
             document.body.appendChild(link);
             link.click();
             link.remove();
-            toast.success("Developer Kit Downloaded");
+            toast.success("Portable Installer Downloaded");
         } catch {
             toast.error("Package Generation Failed");
         } finally {
@@ -331,40 +331,34 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
 
     const dockerCommand = `docker run -d \\
   --name synqx-agent-${agentName.toLowerCase().replace(/\s+/g, '-')} \\
+  --restart unless-stopped \\
   -e SYNQX_API_URL="${API_URL}" \\
   -e SYNQX_CLIENT_ID="${clientId}" \\
   -e SYNQX_API_KEY="${apiKey}" \\
   -e SYNQX_TAGS="${tags}" \\
   synqx/agent:latest`;
 
-    const shellCommand = platform === 'windows' 
-        ? `powershell -ExecutionPolicy ByPass -Command "iwr https://get.synqx.com/install.ps1 | iex" -ApiUrl "${API_URL}" -ClientId "${clientId}" -ApiKey "${apiKey}"`
-        : `curl -fsSL https://get.synqx.com/install.sh | bash -s -- --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}"`;
-
     const pythonCommand = platform === 'windows' 
-        ? `# 1. Isolate Environment
-uv venv
-.venv\\Scripts\\Activate.ps1
+        ? `# 1. Extract Archive
+Expand-Archive synqx-agent-portable.tar.gz -DestinationPath .
+cd dist_agent
 
-# 2. Install Standard CLI
-uv pip install -e . 
+# 2. Run Installer
+.\\install.ps1 -ApiUrl "${API_URL}" -ClientId "${clientId}" -ApiKey "${apiKey}"
 
-# 3. Permanent Configuration
-synqx-agent configure --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}" --tags "${tags}"
-
-# 4. Start Agent
+# 3. Start Agent
+.\\venv\\Scripts\\Activate.ps1
 synqx-agent start`
-        : `# 1. Isolate Environment
-uv venv
-source .venv/bin/activate
+        : `# 1. Extract Archive
+tar -xzf synqx-agent-portable.tar.gz
+cd dist_agent
 
-# 2. Install Standard CLI
-uv pip install -e . 
+# 2. Run Installer (Auto-configures & Installs Dependencies)
+chmod +x install.sh
+./install.sh --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}" --tags "${tags}"
 
-# 3. Permanent Configuration
-synqx-agent configure --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}" --tags "${tags}"
-
-# 4. Start Agent
+# 3. Start Agent
+source venv/bin/activate
 synqx-agent start`;
 
     return (
@@ -457,29 +451,16 @@ synqx-agent start`;
                     </div>
 
                     <Tabs value={installMethod} onValueChange={setInstallTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 bg-muted/30 border border-border/40 rounded-xl p-1 h-11">
-                            <TabsTrigger value="one-liner" className="gap-2 text-[11px] font-bold uppercase tracking-tight rounded-lg">
-                                <Terminal className="h-3.5 w-3.5" /> CLI One-Liner
+                        <TabsList className="grid w-full grid-cols-2 bg-muted/30 border border-border/40 rounded-xl p-1 h-11">
+                            <TabsTrigger value="manual" className="gap-2 text-[11px] font-bold uppercase tracking-tight rounded-lg">
+                                <Download className="h-3.5 w-3.5" /> Portable Installer
                             </TabsTrigger>
                             <TabsTrigger value="docker" className="gap-2 text-[11px] font-bold uppercase tracking-tight rounded-lg">
                                 <Box className="h-3.5 w-3.5" /> Docker
                             </TabsTrigger>
-                            <TabsTrigger value="manual" className="gap-2 text-[11px] font-bold uppercase tracking-tight rounded-lg">
-                                <Code2 className="h-3.5 w-3.5" /> Manual steps
-                            </TabsTrigger>
                         </TabsList>
                         
                         <div className="mt-6">
-                            <TabsContent value="one-liner" className="mt-0 space-y-4 animate-in fade-in-50 duration-300">
-                                <p className="text-[11px] font-medium text-muted-foreground px-1 leading-relaxed">Automatic {platform} setup. Handles virtual environment & dependencies.</p>
-                                <CodeBlock language="bash" code={shellCommand} rounded wrap maxHeight="120px" className="border-border/40 bg-muted/10 shadow-sm" />
-                            </TabsContent>
-
-                            <TabsContent value="docker" className="mt-0 space-y-4 animate-in fade-in-50 duration-300">
-                                <p className="text-[11px] font-medium text-muted-foreground px-1 leading-relaxed">Isolated container execution. The preferred method for production servers.</p>
-                                <CodeBlock language="bash" code={dockerCommand} rounded wrap maxHeight="120px" className="border-border/40 bg-muted/10 shadow-sm" />
-                            </TabsContent>
-
                             <TabsContent value="manual" className="mt-0 space-y-8 animate-in fade-in-50 duration-300">
                                 {/* ZIP Download Hero Section */}
                                 <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex items-center justify-between gap-6 group hover:border-primary/40 transition-all shadow-sm">
@@ -488,8 +469,8 @@ synqx-agent start`;
                                             <ArrowDownToLine className={cn("h-7 w-7 text-primary", isDownloading && "animate-bounce")} />
                                         </div>
                                         <div className="space-y-1">
-                                            <h4 className="font-bold text-base tracking-tight text-foreground">Source Package</h4>
-                                            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed max-w-70">Pre-configured agent with full source code.</p>
+                                            <h4 className="font-bold text-base tracking-tight text-foreground">Portable Agent Package</h4>
+                                            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed max-w-70">Self-contained installer with offline dependencies.</p>
                                         </div>
                                     </div>
                                     <Button 
@@ -498,7 +479,7 @@ synqx-agent start`;
                                         className="rounded-xl h-12 px-6 font-bold gap-2 shadow-lg shadow-primary/20 shrink-0 transition-all hover:scale-[1.02] active:scale-95 bg-primary text-primary-foreground"
                                     >
                                         {isDownloading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Download className="h-4.5 w-4.5" />}
-                                        Download ZIP
+                                        Download Installer
                                     </Button>
                                 </div>
 
@@ -506,7 +487,7 @@ synqx-agent start`;
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3 px-1">
                                         <div className="h-1.5 w-1.5 rounded-full bg-primary/40 shadow-[0_0_8px_var(--color-primary)]" />
-                                        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Custom Configuration Reference</h4>
+                                        <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 leading-none">Setup Instructions</h4>
                                     </div>
                                     <CodeBlock 
                                         language="bash" 
@@ -516,8 +497,13 @@ synqx-agent start`;
                                         maxHeight="220px" 
                                         className="border-border/40 bg-muted/10 shadow-inner" 
                                     />
-                                    <p className="text-[10px] text-center text-muted-foreground opacity-60 font-medium uppercase tracking-tight">Manual setup with uv isolation</p>
+                                    <p className="text-[10px] text-center text-muted-foreground opacity-60 font-medium uppercase tracking-tight">Compatible with Python 3.9+</p>
                                 </div>
+                            </TabsContent>
+
+                            <TabsContent value="docker" className="mt-0 space-y-4 animate-in fade-in-50 duration-300">
+                                <p className="text-[11px] font-medium text-muted-foreground px-1 leading-relaxed">Isolated container execution. The preferred method for production servers.</p>
+                                <CodeBlock language="bash" code={dockerCommand} rounded wrap maxHeight="120px" className="border-border/40 bg-muted/10 shadow-sm" />
                             </TabsContent>
                         </div>
                     </Tabs>

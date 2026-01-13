@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from croniter import croniter
-from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy, WriteStrategy, SchemaEvolutionPolicy
+from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy, WriteStrategy, SchemaEvolutionPolicy, SyncMode
 
 
 class PipelineNodeBase(BaseModel):
@@ -18,6 +18,7 @@ class PipelineNodeBase(BaseModel):
     connection_id: Optional[int] = None
     
     # Data Reliability & Movement
+    sync_mode: SyncMode = Field(default=SyncMode.FULL_LOAD)
     write_strategy: WriteStrategy = Field(default=WriteStrategy.APPEND)
     schema_evolution_policy: SchemaEvolutionPolicy = Field(default=SchemaEvolutionPolicy.STRICT)
     

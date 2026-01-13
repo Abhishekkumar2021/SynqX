@@ -8,7 +8,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
 from synqx_core.models.base import Base, AuditMixin, SoftDeleteMixin, OwnerMixin
-from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy, WriteStrategy, SchemaEvolutionPolicy
+from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy, WriteStrategy, SchemaEvolutionPolicy, SyncMode
 from synqx_core.utils.agent import is_remote_group
 
 if TYPE_CHECKING:
@@ -160,6 +160,10 @@ class PipelineNode(Base, AuditMixin):
     destination_asset_id: Mapped[Optional[int]] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"))
     
     # Data Reliability & Movement
+    sync_mode: Mapped[SyncMode] = mapped_column(
+        SQLEnum(SyncMode, values_callable=lambda obj: [e.value for e in obj]),
+        default=SyncMode.FULL_LOAD, nullable=False
+    )
     write_strategy: Mapped[WriteStrategy] = mapped_column(
         SQLEnum(WriteStrategy, values_callable=lambda obj: [e.value for e in obj]), 
         default=WriteStrategy.APPEND, nullable=False

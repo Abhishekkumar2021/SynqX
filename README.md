@@ -26,130 +26,109 @@ graph TD
 
     subgraph "Data Plane"
         API -- "Tasks & Config" --> Redis[(Redis Broker)]
-        Redis -- "Stream" --> Worker[Celery Worker Cluster]
-        Worker -- "Status & Logs" --> Redis
-        Beat[Celery Beat] -- "Schedules" --> Redis
+        Worker[Celery Worker Cluster] -- "Stream" --> Redis
+        Agent[Remote Agents] -- "Long-Poll" --> API
     end
 
     subgraph "External Systems"
         Worker -- "Extract" --> Source[(Sources: SQL/API/S3)]
-        Worker -- "Load" --> Dest[(Destinations: DW/Lake)]
+        Agent -- "Remote Exec" --> PrivateDB[(Private DBs)]
     end
 ```
 
 ---
 
-## Key Features
+## Developer Quick Start
 
-### Intelligent Orchestration
-*   **Immutable Pipelines**: Every change to a pipeline creates a new immutable version. Instantly rollback to any previous snapshot if a production run fails.
-*   **Visual DAG Editor**: Design complex dependency graphs with a drag-and-drop interface powered by React Flow.
-*   **Smart Scheduling**: Integrated Cron-based scheduling with timezone awareness and catch-up policies.
-*   **GitOps & Version Control**: Import and export pipelines as YAML manifests for version control, CI/CD integration, and easy sharing between environments.
-
-### Deep Forensics & Observability
-*   **Real-time Telemetry**: Watch execution logs stream live via WebSockets as they happen.
-*   **Data Sniffing**: Inspect sample data snapshots at *each node boundary* to identify transformation bugs before they propagate.
-*   **Metric Tracking**: detailed CPU, memory, and duration metrics for every step of the pipeline.
-
-### Universal Connectivity
-*   **Standardized Assets**: Abstracts physical systems (SQL tables, S3 files, API endpoints) into logical "Assets" with a unified naming convention.
-*   **Broad Support**:
-    *   **Relational**: PostgreSQL, MySQL, MariaDB, Oracle, SQL Server (MSSQL), SQLite.
-    *   **Data Warehouses**: Snowflake, BigQuery, Redshift, Databricks.
-    *   **Files**: S3, GCS, Azure Blob, SFTP, Local Filesystem (CSV, Parquet, JSONL).
-    *   **NoSQL & Streaming**: MongoDB, Redis, Cassandra, DynamoDB, Elasticsearch, Kafka, RabbitMQ.
-    *   **SaaS APIs**: Generic REST, GraphQL, Salesforce, Airtable, Google Sheets.
-
-### Powerful Transformations
-*   **Low-Code Modules**: Filter, Map, TypeCast, Join, Union, Merge, Aggregate (GroupBy), Sort, Deduplicate, RegexReplace, FillNulls, DropColumns.
-*   **Code-First**: Execute custom Python/Pandas logic for complex transformations that go beyond standard operators.
-
-### Enterprise-Grade Security & Governance
-*   **The Vault**: Application-layer AES-256 encryption ensures credentials never leak, even if the underlying database is compromised. Decryption occurs only in volatile memory.
-*   **Multi-Tenancy**: Isolate teams, projects, and environments with secure, self-contained Workspaces.
-*   **Role-Based Access Control (RBAC)**: Fine-grained permissions (Admin, Editor, Viewer) for every action, from pipeline creation to workspace administration.
-*   **Admin CLI**: A powerful, feature-rich CLI (`synqx-admin`) for user management, system diagnostics, and administrative tasks.
-
----
-
-## Tech Stack
-
-| Component | Technology | Description |
-| :--- | :--- | :--- |
-| **Backend API** | Python, FastAPI | High-performance async REST API. |
-| **Worker Engine** | Celery | Distributed task queue for executing ETL jobs. |
-| **Broker/Cache** | Redis | Message broker for task queues and real-time pub/sub. |
-| **Database** | PostgreSQL | Primary persistent store for metadata and execution history. |
-| **Frontend** | React, Vite | Modern SPA with TypeScript and Tailwind CSS. |
-| **Admin CLI** | Typer, Rich | Feature-rich command-line interface for system administration. |
-| **Visualization** | React Flow | Interactive node-based graph editor. |
-
----
-
-## Quick Start
-
-The easiest way to get started is using the unified management script, which handles environment checks and service orchestration.
+We provide a unified CLI tool `synqx.py` to manage the entire development lifecycle.
 
 ### Prerequisites
-*   **Docker & Docker Compose** (Recommended)
-*   *Or for local dev:* Python 3.13+, Node.js 18+, PostgreSQL 15+, Redis 7+
+*   Python 3.9+
+*   Node.js 18+
+*   PostgreSQL 15+ (Running locally or via Docker)
+*   Redis 7+ (Running locally or via Docker)
+*   `uv` (fast Python package manager) recommended
 
-### One-Command Launch
+### 1. Installation
+Clone the repository and install all dependencies (Backend, Agent, Frontend, Libraries) with a single command:
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/your-org/synqx.git
 cd synqx
 
-# 2. Check environment readiness
-./scripts/synqx.sh doctor
-
-# 3. Start the entire stack
-./scripts/synqx.sh start
+# Installs venvs, dependencies, and links internal libraries
+./scripts/synqx.py install
 ```
 
-*The UI will be available at `http://localhost:5173` and the API docs at `http://localhost:8000/docs`.*
+### 2. Development
+Start the full stack (API, Worker, Scheduler, Frontend):
 
-### Manual Local Setup
-
-If you prefer running services directly on your machine:
-
-**1. Backend**
 ```bash
-cd backend
-# Create a virtual environment
-python -m venv .venv && source .venv/bin/activate
-# Install dependencies using uv
-pip install uv
-uv pip install -r requirements.txt
-# Copy and configure environment variables
-cp .env.example .env
-# Update .env with your local DB credentials
-# Run the API server
-uvicorn main:app --reload
+# Start Core Stack
+./scripts/synqx.py start
+
+# Start Core Stack + Local Agent
+./scripts/synqx.py start --agent
 ```
 
-**2. Frontend**
+*   **UI:** [http://localhost:5173](http://localhost:5173)
+*   **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 3. Management
+Use the CLI to manage services and logs:
+
 ```bash
-cd frontend
-npm install
-npm run dev
+# Check status of all services
+./scripts/synqx.py status
+
+# Tail logs (Ctrl+C to exit)
+./scripts/synqx.py logs api      # backend logs
+./scripts/synqx.py logs worker   # worker logs
+./scripts/synqx.py logs agent    # agent logs
+
+# Restart everything
+./scripts/synqx.py restart
+
+# Stop everything
+./scripts/synqx.py stop
 ```
 
-**3. Workers**
+### 4. Database Operations
+Manage database migrations via the unified CLI:
+
 ```bash
-# In a new terminal (from backend dir with venv activated)
-celery -A app.core.celery_app worker --loglevel=info
+# Apply pending migrations
+./scripts/synqx.py db migrate
+
+# Create new revision (after model changes)
+./scripts/synqx.py db revision -m "add_new_table"
 ```
 
-### Using the Admin CLI
-Once the backend is running, you can use the admin CLI for administrative tasks:
+---
+
+## Agent Management & Release
+
+The SynqX Agent is designed to be **portable and self-contained**.
+
+### Building the Portable Agent
+To generate a release artifact for remote deployment:
+
 ```bash
-# Make sure you are in the backend directory with the venv activated
-python -m scripts.synqx_admin --help
-# Example: Create a new superuser
-python -m scripts.synqx_admin users create --superuser
+# Builds 'synqx-agent-portable.tar.gz' in the root directory
+./scripts/synqx.py build agent
+```
+
+This artifact contains the agent code, all internal dependencies (bundled as wheels), and an installation script. The Backend API automatically serves this file to users via the "Download Portable Installer" button in the UI.
+
+### Release Versioning
+To bump versions across the monorepo and rebuild the agent:
+
+```bash
+# Bump patch version (1.0.0 -> 1.0.1) and rebuild
+./scripts/synqx.py release bump patch
+
+# Bump minor version (1.0.0 -> 1.1.0) and rebuild
+./scripts/synqx.py release bump minor
 ```
 
 ---
@@ -158,11 +137,11 @@ python -m scripts.synqx_admin users create --superuser
 
 | Module | Description | Path |
 | :--- | :--- | :--- |
-| **Backend** | Python/FastAPI engine, Celery worker cluster, Vault security, and Admin CLI. | [`/backend`](./backend) |
-| **Frontend** | Premium React-based Console UI with a visual DAG editor and documentation. | [`/frontend`](./frontend) |
-| **Helm Charts** | Kubernetes deployment manifests for production. | [`/helm`](./helm) |
-| **Scripts** | Unified lifecycle management scripts for local development. | [`/scripts`](./scripts) |
-| **Admin CLI** | The `synqx_admin.py` CLI tool for system administration. | [`/backend/scripts`](./backend/scripts) |
+| **Backend** | Python/FastAPI engine, Celery worker cluster, Vault security. | [`/backend`](./backend) |
+| **Frontend** | Premium React-based Console UI with a visual DAG editor. | [`/frontend`](./frontend) |
+| **Agent** | Remote execution unit for isolated environments. | [`/agent`](./agent) |
+| **Libs** | Shared internal libraries (`synqx-core`, `synqx-engine`). | [`/libs`](./libs) |
+| **Scripts** | Unified lifecycle management CLI. | [`/scripts`](./scripts) |
 
 ---
 

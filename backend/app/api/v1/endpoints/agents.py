@@ -247,48 +247,34 @@ def export_agent_package(
 ):
     """
     Generates a pre-configured ZIP package of the SynqX Agent.
+    If a portable build (synqx-agent-portable.tar.gz) exists, serves that.
+    Otherwise, falls back to zipping the source on the fly.
     """
     agent_name = data.agent_name
     client_id = data.client_id
     api_key = data.api_key
     tags = data.tags
 
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
-        agent_dir = os.path.join(os.getcwd(), "agent")
-        if not os.path.exists(agent_dir):
-             agent_dir = os.path.join(os.getcwd(), "..", "agent")
+    # 1. Check for Portable Build Artifact
+    # This is created by scripts/build_agent_release.sh
+    portable_archive = os.path.join(os.getcwd(), "synqx-agent-portable.tar.gz")
+    if not os.path.exists(portable_archive):
+         # Try one level up if we are in backend/
+         portable_archive = os.path.join(os.getcwd(), "..", "synqx-agent-portable.tar.gz")
 
-        for root, _, files in os.walk(agent_dir):
-            for file in files:
-                if file.endswith(".pyc") or "__pycache__" in root or ".env" in file or ".venv" in root:
-                    continue
-                file_path = os.path.join(root, file)
-                archive_path = os.path.relpath(file_path, agent_dir)
-                zip_file.write(file_path, archive_path)
+    if not os.path.exists(portable_archive):
+        logger.error("Portable agent artifact not found. Admin must run build script.")
+        raise HTTPException(
+            status_code=404, 
+            detail="Portable agent package not found. Please contact your system administrator to generate the release artifact."
+        )
 
-        # Pre-configured .env
-        env_content = f"""SYNQX_API_URL=http://localhost:8000/api/v1
-SYNQX_CLIENT_ID={client_id}
-SYNQX_API_KEY={api_key}
-SYNQX_TAGS={tags}
-"""
-        zip_file.writestr(".env", env_content)
-
-        readme = f"""# SynqX Agent: {agent_name}
-Quick Start:
-1. Extract ZIP
-2. pip install -e .
-3. synqx-agent start
-"""
-        zip_file.writestr("README.md", readme)
-
-    buffer.seek(0)
+    # Serve the pre-built portable archive
     return StreamingResponse(
-        buffer,
-        media_type="application/x-zip-compressed",
+        open(portable_archive, "rb"),
+        media_type="application/gzip",
         headers={
-            "Content-Disposition": f"attachment; filename=synqx-agent-{agent_name.lower().replace(' ', '-')}.zip"
+            "Content-Disposition": f"attachment; filename=synqx-agent-portable.tar.gz"
         }
     )
 

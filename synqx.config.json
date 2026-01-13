@@ -1,0 +1,16 @@
+{
+  "api_port": 8000,
+  "frontend_port": 5173,
+  "log_level": "INFO",
+  "health_check_interval": 30,
+  "max_restart_attempts": 3,
+  "graceful_shutdown_timeout": 10,
+  "build": {
+    "verify_checksums": true,
+    "parallel_builds": true
+  },
+  "database": {
+    "backup_before_migrate": true,
+    "backup_retention_days": 7
+  }
+}
