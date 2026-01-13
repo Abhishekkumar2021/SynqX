@@ -175,6 +175,7 @@ class PipelineNode(Base, AuditMixin):
 
     # Mission Critical: Governance & Quality
     data_contract: Mapped[Optional[dict]] = mapped_column(JSON, default=dict) # YAML-based contract rules
+    guardrails: Mapped[Optional[list]] = mapped_column(JSON, default=list) # List of thresholds/rules
     quarantine_asset_id: Mapped[Optional[int]] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"))
 
     max_retries: Mapped[int] = mapped_column(Integer, default=3, nullable=False)

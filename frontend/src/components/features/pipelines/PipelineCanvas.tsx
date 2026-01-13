@@ -995,7 +995,7 @@ export const PipelineCanvas: React.FC = () => {
 
                 {/* Properties Inspector */}
                 <div className={cn(
-                    "absolute top-0 right-0 w-full md:w-112.5 h-full glass-panel rounded-none! shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden z-[60] transition-all duration-700 cubic-bezier(0.32, 0.72, 0, 1) border-l border-border/20",
+                    "absolute top-0 right-0 w-full md:w-128 h-full glass-panel rounded-none! shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden z-[60] transition-all duration-700 cubic-bezier(0.32, 0.72, 0, 1) border-l border-border/20",
                     selectedNode ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
                 )}>
                     {selectedNode && (

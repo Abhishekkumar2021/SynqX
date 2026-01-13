@@ -196,24 +196,17 @@ class NodeExecutor:
                 chunk_profile = self.profiler.profile_chunk(chunk)
                 quality_profile = self.profiler.merge_profiles(quality_profile, chunk_profile)
                 
-                # AUTOMATED GUARDRAILS (The "Quality Gate")
-                # For internal agent, we access guardrails from node.config
-                guardrails = node.config.get("guardrails", []) if node.config else []
+                # ENFORCE GUARDRAILS (The "Circuit Breaker")
+                # Check both top-level and config-level for backward compatibility
+                guardrails = getattr(node, "guardrails", []) or (node.config.get("guardrails", []) if node.config else [])
                 total_rows = stats["out"] + len(chunk)
                 
-                for gr in guardrails:
-                    col = gr.get("column")
-                    metric = gr.get("metric") # e.g. "null_percentage"
-                    threshold = gr.get("threshold")
-                    
-                    if col in quality_profile:
-                        if metric == "null_percentage":
-                            null_rate = (quality_profile[col]["null_count"] / total_rows) * 100
-                            if null_rate > threshold:
-                                err_msg = f"QUALITY GATE FAILURE: Column '{col}' null rate is {null_rate:.2f}% (Threshold: {threshold}%)"
-                                logger.error(err_msg)
-                                DBLogger.log_step(db, step_run.id, "CRITICAL", err_msg, job_id=pipeline_run.job_id)
-                                raise ValueError(err_msg)
+                try:
+                    self.profiler.check_guardrails(quality_profile, guardrails, total_rows)
+                except ValueError as ge:
+                    logger.error(f"Execution halted: {ge}")
+                    DBLogger.log_step(db, step_run.id, "CRITICAL", f"GUARDRAIL BREACH: {ge}", job_id=pipeline_run.job_id)
+                    raise ge
 
             if error_count > 0:
                 logger.debug(f"Node {node.id} reporting {error_count} rejections/errors")

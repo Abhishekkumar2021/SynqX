@@ -24,6 +24,7 @@ class PipelineNodeBase(BaseModel):
     
     # Mission Critical: Governance & Quality
     data_contract: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    guardrails: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     quarantine_asset_id: Optional[int] = Field(None, gt=0)
 
     max_retries: int = Field(default=3, ge=0, le=10)

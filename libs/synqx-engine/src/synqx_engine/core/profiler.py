@@ -80,4 +80,102 @@ class DataProfiler:
                 if v_min: merged[col]["min"] = min(v_min)
                 if v_max: merged[col]["max"] = max(v_max)
                 
-        return merged
+                    
+                
+                return merged
+                
+        
+                
+            @staticmethod
+                
+            def check_guardrails(profile: Dict, guardrails: List[Dict], total_rows: int) -> None:
+                
+                """
+                
+                Evaluate profile against a set of guardrail rules.
+                
+                Raises ValueError if any guardrail is violated.
+                
+                """
+                
+                if not guardrails or not profile or total_rows <= 0:
+                
+                    return
+                
+        
+                
+                for gr in guardrails:
+                
+                    col = gr.get("column")
+                
+                    metric = gr.get("metric") # e.g. "null_percentage", "min", "max"
+                
+                    threshold = gr.get("threshold")
+                
+                    operator = gr.get("operator", "greater_than") # "greater_than", "less_than", "equal"
+                
+        
+                
+                    if col not in profile:
+                
+                        continue
+                
+        
+                
+                    col_stats = profile[col]
+                
+                    value = None
+                
+        
+                
+                    if metric == "null_percentage":
+                
+                        value = (col_stats.get("null_count", 0) / total_rows) * 100
+                
+                    elif metric == "min":
+                
+                        value = col_stats.get("min")
+                
+                    elif metric == "max":
+                
+                        value = col_stats.get("max")
+                
+                    elif metric == "mean":
+                
+                        value = col_stats.get("mean")
+                
+        
+                
+                    if value is None:
+                
+                        continue
+                
+        
+                
+                    # Evaluate violation
+                
+                    violated = False
+                
+                    if operator == "greater_than":
+                
+                        violated = value > threshold
+                
+                    elif operator == "less_than":
+                
+                        violated = value < threshold
+                
+                    elif operator == "equal":
+                
+                        violated = abs(value - threshold) < 1e-9
+                
+        
+                
+                    if violated:
+                
+                        err_msg = f"GUARDRAIL BREACH: Column '{col}' {metric} is {value:.2f} (Threshold: {operator} {threshold})"
+                
+                        logger.error(err_msg)
+                
+                        raise ValueError(err_msg)
+                
+        

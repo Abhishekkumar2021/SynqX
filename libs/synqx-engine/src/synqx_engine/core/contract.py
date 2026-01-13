@@ -1,6 +1,6 @@
 from typing import Dict, List, Any, Optional, Tuple, Union
 import polars as pl
-import yaml
+import json
 from synqx_core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -9,14 +9,16 @@ class ContractValidator:
     """
     High-performance Data Contract Validator using Polars.
     Supports validating chunks against a predefined set of rules.
+    Standardized on JSON for cross-platform compatibility.
     """
 
     def __init__(self, contract_config: dict[str, Any] | str):
         if isinstance(contract_config, str):
             try:
-                self.config = yaml.safe_load(contract_config) or {}
+                # Standardize on JSON input
+                self.config = json.loads(contract_config) if contract_config.strip() else {}
             except Exception as e:
-                logger.error(f"Failed to parse Data Contract YAML: {e}")
+                logger.error(f"Failed to parse Data Contract JSON: {e}")
                 self.config = {}
         else:
             self.config = contract_config or {}
@@ -25,13 +27,13 @@ class ContractValidator:
         self.strict = self.config.get("strict", False)
 
     @classmethod
-    def from_yaml(cls, yaml_str: str) -> "ContractValidator":
-        """Factory to create validator from YAML string"""
+    def from_json(cls, json_str: str) -> "ContractValidator":
+        """Factory to create validator from JSON string"""
         try:
-            config = yaml.safe_load(yaml_str)
+            config = json.loads(json_str)
             return cls(config or {})
         except Exception as e:
-            logger.error(f"Failed to parse Data Contract YAML: {e}")
+            logger.error(f"Failed to parse Data Contract JSON: {e}")
             return cls({})
 
     def validate_chunk(self, df: pl.DataFrame) -> Tuple[pl.DataFrame, pl.DataFrame]:

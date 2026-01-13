@@ -244,6 +244,19 @@ const VALIDATION_CHECKS = [
     { label: 'Data Type', value: 'data_type' },
 ];
 
+const GUARDRAIL_METRICS = [
+    { label: 'Null Percentage', value: 'null_percentage' },
+    { label: 'Minimum Value', value: 'min' },
+    { label: 'Maximum Value', value: 'max' },
+    { label: 'Mean Average', value: 'mean' },
+];
+
+const GUARDRAIL_OPERATORS = [
+    { label: 'Greater Than', value: 'greater_than' },
+    { label: 'Less Than', value: 'less_than' },
+    { label: 'Equal To', value: 'equal' },
+];
+
 const DATA_TYPES = [
     { label: 'String', value: 'string' },
     { label: 'Integer', value: 'int' },
@@ -275,113 +288,275 @@ const HelpIcon = ({ content }: { content?: string }) => {
     );
 };
 
-const RuleBuilder = ({ watch, setValue }: any) => {
-    const rules = watch('schema_rules') || [];
+const RuleBuilder = ({ watch, setValue, rulesKey = 'schema_rules' }: any) => {
+    const rules = watch(rulesKey) || [];
 
     const addRule = () => {
-        setValue('schema_rules', [...rules, { column: '', check: 'not_null' }]);
+        setValue(rulesKey, [...rules, { column: '', check: 'not_null' }]);
     };
 
     const removeRule = (index: number) => {
         const newRules = [...rules];
         newRules.splice(index, 1);
-        setValue('schema_rules', newRules);
+        setValue(rulesKey, newRules);
     };
 
     const updateRule = (index: number, field: string, value: any) => {
         const newRules = [...rules];
         newRules[index] = { ...newRules[index], [field]: value };
-        setValue('schema_rules', newRules);
+        setValue(rulesKey, newRules);
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Validation Rules</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addRule} className="h-7 text-[9px] font-bold uppercase tracking-wider rounded-lg border-primary/20 hover:bg-primary/5">
-                    <Plus className="h-3 w-3 mr-1" /> Add Rule
+        <div className="space-y-6">
+            <div className="flex items-center justify-between px-1">
+                <div className="flex flex-col">
+                    <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">Governance Rules</Label>
+                    <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">Logic validation sequence</span>
+                </div>
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addRule} 
+                    className="h-8 text-[9px] font-bold uppercase tracking-widest rounded-xl border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all gap-2"
+                >
+                    <Plus className="h-3.5 w-3.5" /> New Clause
                 </Button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
                 {rules.map((rule: any, index: number) => (
-                    <div key={index} className="p-4 rounded-xl border border-border/40 bg-background/40 space-y-3 relative group/rule">
+                    <div key={index} className="group p-5 rounded-3xl border border-border/40 bg-muted/5 hover:border-primary/30 hover:bg-primary/[0.02] transition-all duration-300 relative">
+                        <div className="absolute -left-1.5 top-6 bottom-6 w-1 rounded-full bg-primary/20 group-hover:bg-primary/40 transition-colors" />
+                        
                         <Button 
                             type="button" 
                             variant="ghost" 
                             size="icon" 
                             onClick={() => removeRule(index)}
-                            className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover/rule:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                            className="absolute top-4 right-4 h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         >
-                            <Trash2 size={12} />
+                            <Trash2 size={14} />
                         </Button>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Column</Label>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="space-y-2">
+                                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Field Identifier</Label>
                                 <Input 
-                                    placeholder="e.g. email" 
+                                    placeholder="e.g. email_address" 
                                     value={rule.column} 
                                     onChange={(e) => updateRule(index, 'column', e.target.value)}
-                                    className="h-8 text-xs bg-muted/20"
+                                    className="h-9 text-xs font-mono bg-background/50 rounded-xl border-border/40 focus:ring-primary/10"
                                 />
                             </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Check</Label>
+                            <div className="space-y-2">
+                                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Constraint Type</Label>
                                 <Select value={rule.check} onValueChange={(val) => updateRule(index, 'check', val)}>
-                                    <SelectTrigger className="h-8 text-xs bg-muted/20">
+                                    <SelectTrigger className="h-9 text-xs bg-background/50 rounded-xl border-border/40">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="rounded-xl border-border/40">
                                         {VALIDATION_CHECKS.map(c => (
-                                            <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>
+                                            <SelectItem key={c.value} value={c.value} className="text-xs font-medium">{c.label}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
 
-                        <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                             {rule.check === 'regex' && (
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Pattern</Label>
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Pattern Match (Regex)</Label>
                                     <Input 
-                                        placeholder="regex pattern" 
+                                        placeholder="^[a-z]+$" 
                                         value={rule.pattern || ''} 
                                         onChange={(e) => updateRule(index, 'pattern', e.target.value)}
-                                        className="h-8 text-xs font-mono bg-muted/20"
+                                        className="h-9 text-xs font-mono bg-black/20 text-primary border-white/5 rounded-xl"
                                     />
                                 </div>
                             )}
                             {(rule.check === 'min_value' || rule.check === 'max_value') && (
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Threshold</Label>
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Threshold Bound</Label>
                                     <Input 
                                         type="number"
                                         value={rule.value || 0} 
                                         onChange={(e) => updateRule(index, 'value', Number(e.target.value))}
-                                        className="h-8 text-xs bg-muted/20"
+                                        className="h-9 text-xs font-mono bg-background/50 rounded-xl"
                                     />
                                 </div>
                             )}
                             {rule.check === 'data_type' && (
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-bold uppercase text-muted-foreground/60">Expected Type</Label>
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Enforced Primitive</Label>
                                     <Select value={rule.type || 'string'} onValueChange={(val) => updateRule(index, 'type', val)}>
-                                        <SelectTrigger className="h-8 text-xs bg-muted/20">
+                                        <SelectTrigger className="h-9 text-xs bg-background/50 rounded-xl">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="rounded-xl border-border/40">
                                             {DATA_TYPES.map(t => (
-                                                <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                                                <SelectItem key={t.value} value={t.value} className="text-xs font-medium">{t.label}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             )}
+                            {rule.check === 'in_list' && (
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Allowed Values</Label>
+                                    <Input 
+                                        placeholder="e.g. active, pending, deleted" 
+                                        value={rule.values ? (Array.isArray(rule.values) ? rule.values.join(', ') : rule.values) : ''} 
+                                        onChange={(e) => updateRule(index, 'values', e.target.value.split(',').map(s => s.trim()))}
+                                        className="h-9 text-xs font-mono bg-background/50 rounded-xl border-border/40"
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}
+
+                {rules.length === 0 && (
+                    <div className="p-12 text-center border-2 border-dashed border-border/40 rounded-[2.5rem] bg-muted/5 group hover:bg-muted/10 transition-colors duration-500">
+                        <div className="relative inline-block mb-4">
+                            <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full group-hover:bg-primary/20 transition-all" />
+                            <div className="relative h-16 w-16 rounded-3xl glass-card flex items-center justify-center border-0 shadow-xl mx-auto">
+                                <Shield className="h-8 w-8 text-primary/40 group-hover:text-primary transition-colors" />
+                            </div>
+                        </div>
+                        <p className="text-[11px] font-bold text-foreground uppercase tracking-widest">No Active Contract Clauses</p>
+                        <p className="text-[9px] text-muted-foreground mt-2 max-w-[240px] mx-auto leading-relaxed">Secure your data stream by adding validation rules. Violations will be diverted to quarantine automatically.</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const GuardrailBuilder = ({ watch, setValue }: any) => {
+    const guardrails = watch('guardrails_list') || [];
+
+    const addGuardrail = () => {
+        setValue('guardrails_list', [...guardrails, { column: '', metric: 'null_percentage', operator: 'greater_than', threshold: 0 }]);
+    };
+
+    const removeGuardrail = (index: number) => {
+        const newGuardrails = [...guardrails];
+        newGuardrails.splice(index, 1);
+        setValue('guardrails_list', newGuardrails);
+    };
+
+    const updateGuardrail = (index: number, field: string, value: any) => {
+        const newGuardrails = [...guardrails];
+        newGuardrails[index] = { ...newGuardrails[index], [field]: value };
+        setValue('guardrails_list', newGuardrails);
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between px-1">
+                <div className="flex flex-col">
+                    <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">Circuit Rules</Label>
+                    <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">Statistical enforcement thresholds</span>
+                </div>
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addGuardrail} 
+                    className="h-8 text-[9px] font-bold uppercase tracking-widest rounded-xl border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 transition-all gap-2"
+                >
+                    <Plus className="h-3.5 w-3.5" /> Arm Breaker
+                </Button>
+            </div>
+
+            <div className="space-y-4">
+                {guardrails.map((gr: any, index: number) => (
+                    <div key={index} className="group p-5 rounded-3xl border border-border/40 bg-muted/5 hover:border-amber-500/30 hover:bg-amber-500/[0.02] transition-all duration-300 relative">
+                        <div className="absolute -left-1.5 top-6 bottom-6 w-1 rounded-full bg-amber-500/20 group-hover:bg-amber-500/40 transition-colors" />
+                        
+                        <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => removeGuardrail(index)}
+                            className="absolute top-4 right-4 h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        >
+                            <Trash2 size={14} />
+                        </Button>
+
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Monitored Column</Label>
+                                <Input 
+                                    placeholder="e.g. order_id" 
+                                    value={gr.column} 
+                                    onChange={(e) => updateGuardrail(index, 'column', e.target.value)}
+                                    className="h-9 text-xs font-mono bg-background/50 rounded-xl border-border/40"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Telemetry Metric</Label>
+                                    <Select value={gr.metric} onValueChange={(val) => updateGuardrail(index, 'metric', val)}>
+                                        <SelectTrigger className="h-9 text-xs bg-background/50 rounded-xl border-border/40">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-border/40">
+                                            {GUARDRAIL_METRICS.map(m => (
+                                                <SelectItem key={m.value} value={m.value} className="text-xs font-medium">{m.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Condition</Label>
+                                    <Select value={gr.operator} onValueChange={(val) => updateGuardrail(index, 'operator', val)}>
+                                        <SelectTrigger className="h-9 text-xs bg-background/50 rounded-xl border-border/40">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-border/40">
+                                            {GUARDRAIL_OPERATORS.map(o => (
+                                                <SelectItem key={o.value} value={o.value} className="text-xs font-medium">{o.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Termination Threshold</Label>
+                                <div className="relative">
+                                    <Input 
+                                        type="number"
+                                        value={gr.threshold} 
+                                        onChange={(e) => updateGuardrail(index, 'threshold', Number(e.target.value))}
+                                        className="h-9 text-xs font-mono bg-background/50 rounded-xl border-border/40 pr-12"
+                                    />
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground/40 uppercase">
+                                        {gr.metric === 'null_percentage' ? '%' : 'Val'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {guardrails.length === 0 && (
+                    <div className="p-12 text-center border-2 border-dashed border-border/40 rounded-[2.5rem] bg-muted/5 group hover:bg-muted/10 transition-colors duration-500">
+                        <div className="relative inline-block mb-4">
+                            <div className="absolute inset-0 bg-amber-500/10 blur-2xl rounded-full group-hover:bg-amber-500/20 transition-all" />
+                            <div className="relative h-16 w-16 rounded-3xl glass-card flex items-center justify-center border-0 shadow-xl mx-auto">
+                                <Zap className="h-8 w-8 text-amber-500/40 group-hover:text-amber-500 transition-colors" />
+                            </div>
+                        </div>
+                        <p className="text-[11px] font-bold text-foreground uppercase tracking-widest">No Active Circuit Breakers</p>
+                        <p className="text-[9px] text-muted-foreground mt-2 max-w-[240px] mx-auto leading-relaxed">Establish threshold rules that will automatically terminate execution if data quality deviates from standards.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -463,11 +638,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 retry_strategy: (node.data as any).retry_strategy || 'fixed',
                 retry_delay_seconds: node.data.retry_delay_seconds ?? 60,
                 timeout_seconds: node.data.timeout_seconds ?? 3600,
-                data_contract_yaml: (node.data as any).data_contract ? 
+                data_contract_json: (node.data as any).data_contract ? 
                     (typeof (node.data as any).data_contract === 'string' ? (node.data as any).data_contract : JSON.stringify((node.data as any).data_contract, null, 2)) : '',
+                contract_rules: (node.data as any).data_contract?.columns || [],
                 quarantine_asset_id: (node.data as any).quarantine_asset_id ? String((node.data as any).quarantine_asset_id) : '',
                 schema_rules: currentOpClass === 'validate' ? (config.schema || []) : [],
-                schema_json_manual: currentOpClass === 'validate' ? JSON.stringify(config.schema || [], null, 2) : ''
+                schema_json_manual: currentOpClass === 'validate' ? JSON.stringify(config.schema || [], null, 2) : '',
+                guardrails_list: (node.data as any).guardrails || []
             };
 
             const def = getOperatorDefinition(currentOpClass);
@@ -531,6 +708,24 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 });
             }
 
+            // Resolve Data Contract (JSON)
+            let finalContract: any = {};
+            try {
+                if (activeTab === 'contract') {
+                    // If we are on the contract tab, prefer the visual rules if in visual mode
+                    if (schemaMode === 'visual') {
+                        finalContract = { columns: data.contract_rules, strict: false };
+                    } else {
+                        finalContract = data.data_contract_json ? JSON.parse(data.data_contract_json) : {};
+                    }
+                } else {
+                    // Use existing logic
+                    finalContract = data.data_contract_json ? JSON.parse(data.data_contract_json) : {};
+                }
+            } catch (e) {
+                console.error("Failed to parse contract JSON", e);
+            }
+
             const payload: any = {
                 label: data.label,
                 description: data.description,
@@ -545,7 +740,8 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 column_mapping: colMapping,
                 write_strategy: data.operator_type === 'sink' ? data.write_strategy : undefined,
                 schema_evolution_policy: data.operator_type === 'sink' ? data.schema_evolution_policy : undefined,
-                data_contract: data.data_contract_yaml,
+                data_contract: finalContract,
+                guardrails: data.guardrails_list,
                 quarantine_asset_id: data.quarantine_asset_id ? parseInt(data.quarantine_asset_id) : undefined,
                 connection_id: data.connection_id ? parseInt(data.connection_id) : undefined,
                 asset_id: data.asset_id ? parseInt(data.asset_id) : undefined,
@@ -678,13 +874,22 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                 <div className="px-6 pt-4 shrink-0">
-                    <TabsList className="w-full grid grid-cols-4">
-                        <TabsTrigger value="settings" className="gap-2 text-[10px]"><Sliders size={12} /> Basic</TabsTrigger>
-                        <TabsTrigger value="contract" className="gap-2 text-[10px]"><Shield size={12} /> Contract</TabsTrigger>
-                        <TabsTrigger value="lineage" className="gap-2 text-[10px]"><Share2 size={12} /> Lineage</TabsTrigger>
+                    <TabsList className="w-full grid grid-cols-5 h-10 p-1 bg-muted/30 rounded-xl">
+                        <TabsTrigger value="settings" className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0">
+                            <Sliders size={11} /> Config
+                        </TabsTrigger>
+                        <TabsTrigger value="contract" className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0">
+                            <Shield size={11} /> Contract
+                        </TabsTrigger>
+                        <TabsTrigger value="guardrails" className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0 data-[state=active]:text-amber-500">
+                            <Zap size={11} /> Safety
+                        </TabsTrigger>
+                        <TabsTrigger value="lineage" className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0">
+                            <Share2 size={11} /> Lineage
+                        </TabsTrigger>
                         {node.data.diffStatus && node.data.diffStatus !== 'none' ? (
-                            <TabsTrigger value="diff" className="gap-2 bg-amber-500/10 text-amber-500 text-[10px]"><GitCompare size={12} /> Diff</TabsTrigger>
-                        ) : <TabsTrigger value="advanced" className="gap-2 text-[10px]"><Code size={12} /> Expert</TabsTrigger>}
+                            <TabsTrigger value="diff" className="gap-1.5 bg-amber-500/10 text-amber-500 text-[9px] font-bold uppercase tracking-tighter transition-all px-0"><GitCompare size={11} /> Diff</TabsTrigger>
+                        ) : <TabsTrigger value="advanced" className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0"><Code size={11} /> Expert</TabsTrigger>}
                     </TabsList>
                 </div>
 
@@ -822,27 +1027,67 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                             </TabsContent>
 
                             <TabsContent value="contract" className="m-0 focus-visible:outline-none">
-                                <div className="p-6 space-y-8">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                                            <Shield className="h-5 w-5 text-primary" />
-                                            <div>
-                                                <h4 className="text-[11px] font-bold uppercase tracking-tight">Mission Critical Guardrails</h4>
-                                                <p className="text-[9px] text-muted-foreground leading-relaxed">Define validation rules in YAML. Violations will be diverted to quarantine.</p>
+                                <div className="p-6 space-y-8 pb-32">
+                                    <div className="space-y-6">
+                                        <div className="relative group overflow-hidden p-6 rounded-[2rem] bg-primary/5 border border-primary/10 transition-all duration-500 hover:bg-primary/10">
+                                            <div className="absolute -right-10 -top-10 h-32 w-32 bg-primary/10 blur-3xl rounded-full" />
+                                            <div className="relative z-10 flex items-start gap-4">
+                                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner border border-primary/20">
+                                                    <Shield size={24} />
+                                                </div>
+                                                <div className="space-y-1.5 flex-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">Trust Governance</h4>
+                                                        <div className="flex items-center gap-1 bg-background/40 backdrop-blur-md p-1 rounded-xl border border-white/5 shadow-inner">
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => setSchemaMode('visual')}
+                                                                className={cn(
+                                                                    "px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                                                                    schemaMode === 'visual' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                                                                )}
+                                                            >
+                                                                Visual
+                                                            </button>
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => setSchemaMode('manual')}
+                                                                className={cn(
+                                                                    "px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all",
+                                                                    schemaMode === 'manual' ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                                                                )}
+                                                            >
+                                                                JSON
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed font-medium">
+                                                        Define the structural integrity of your data stream. Violations are automatically diverted to isolation while keeping the pipeline active.
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Contract Rules (YAML)</Label>
-                                                <Badge variant="outline" className="text-[8px] font-mono opacity-60">STRICT: FALSE</Badge>
+                                        {schemaMode === 'visual' ? (
+                                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                                <RuleBuilder watch={watch} setValue={setValue} rulesKey="contract_rules" />
                                             </div>
-                                            <Textarea 
-                                                {...register('data_contract_yaml')} 
-                                                placeholder="columns:&#10;  - name: email&#10;    type: string&#10;    required: true&#10;    pattern: '.*@.*'&#10;  - name: age&#10;    type: integer&#10;    min: 18" 
-                                                className="font-mono text-[10px] min-h-64 bg-[#0a0a0a] text-primary/90 border-white/5 rounded-xl p-4 shadow-inner"
-                                            />
-                                        </div>
+                                        ) : (
+                                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                                <div className="flex items-center justify-between px-1">
+                                                    <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">Source Blueprint (JSON)</Label>
+                                                    <Badge variant="outline" className="text-[8px] font-mono opacity-60 bg-background/50 border-0 h-5 px-2">STRICT_VALIDATION: OFF</Badge>
+                                                </div>
+                                                <div className="relative group">
+                                                    <div className="absolute inset-0 bg-primary/5 blur-xl rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                                                    <Textarea 
+                                                        {...register('data_contract_json')} 
+                                                        placeholder='{ "columns": [{ "name": "id", "type": "int" }] }' 
+                                                        className="font-mono text-[11px] min-h-87.5 bg-[#0a0a0a] text-primary/90 border-white/5 rounded-2xl p-6 shadow-2xl relative z-10 focus:ring-primary/20 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <Separator className="opacity-50" />
@@ -877,6 +1122,29 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                             </div>
                                             <p className="text-[9px] text-muted-foreground">Invalid rows will be written to this asset with a <code>__synqx_quarantine_reason__</code> column.</p>
                                         </div>
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="guardrails" className="m-0 focus-visible:outline-none">
+                                <div className="p-6 space-y-8 pb-32">
+                                    <div className="space-y-6">
+                                        <div className="relative group overflow-hidden p-6 rounded-[2rem] bg-amber-500/5 border border-amber-500/10 transition-all duration-500 hover:bg-amber-500/10">
+                                            <div className="absolute -right-10 -top-10 h-32 w-32 bg-amber-500/10 blur-3xl rounded-full" />
+                                            <div className="relative z-10 flex items-start gap-4">
+                                                <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shadow-inner border border-amber-500/20">
+                                                    <Zap size={24} />
+                                                </div>
+                                                <div className="space-y-1.5 flex-1">
+                                                    <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">Fail-Safe Infrastructure</h4>
+                                                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed font-medium">
+                                                        Establish automated circuit breakers. These rules monitor statistical telemetry in real-time and will terminate the job instantly if reliability thresholds are breached.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <GuardrailBuilder watch={watch} setValue={setValue} />
                                     </div>
                                 </div>
                             </TabsContent>
