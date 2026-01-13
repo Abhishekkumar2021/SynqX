@@ -10,6 +10,7 @@ import { cn, formatNumber, formatBytes } from '@/lib/utils';
 import type { LineageNode } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatDistanceToNow } from 'date-fns';
 
 const AssetIcon = ({ type, className }: { type: string, className?: string }) => {
   const t = type.toLowerCase();
@@ -37,10 +38,6 @@ const AssetIcon = ({ type, className }: { type: string, className?: string }) =>
   return <Table className={cn("text-muted-foreground", className)} />;
 };
 
-import { formatDistanceToNow } from 'date-fns';
-
-// ... (AssetIcon definition remains same)
-
 export const AssetNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as unknown as LineageNode['data'] & { label: string, isHighlighted?: boolean, hasActiveHighlight?: boolean };
   const { label, connection_type, fqn, last_updated, isHighlighted, hasActiveHighlight, health_score, last_run_status } = nodeData;
@@ -52,7 +49,19 @@ export const AssetNode = memo(({ data, selected }: NodeProps) => {
   return (
     <div className={cn(
       "group relative min-w-[280px] max-w-[320px] rounded-xl border transition-all duration-300 backdrop-blur-2xl overflow-hidden",
-...n        <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+      selected ? "border-primary ring-1 ring-primary shadow-lg shadow-primary/10" : "border-border/40 hover:border-border/80 shadow-sm",
+      isHighlighted && "ring-2 ring-primary border-primary z-50 scale-[1.02] shadow-xl shadow-primary/20",
+      hasActiveHighlight && !isHighlighted && "opacity-40 grayscale-[0.5]"
+    )}>
+      <Handle type="target" position={Position.Left} className="w-2 h-2 !bg-primary border-2 border-background" />
+      <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-primary border-2 border-background" />
+
+      {/* Header Section */}
+      <div className="p-3.5 flex items-center gap-3 border-b border-border/5 bg-muted/10">
+        <div className="h-10 w-10 rounded-lg bg-background border border-border/40 flex items-center justify-center shadow-sm shrink-0 group-hover:border-primary/30 transition-colors">
+          <AssetIcon type={connection_type || ''} className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1 flex flex-col gap-0.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 truncate">
               {connection_type || 'Unknown Source'}

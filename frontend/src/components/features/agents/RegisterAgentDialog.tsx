@@ -344,7 +344,7 @@ Expand-Archive synqx-agent-portable.tar.gz -DestinationPath .
 cd dist_agent
 
 # 2. Run Installer
-.\\install.ps1 -ApiUrl "${API_URL}" -ClientId "${clientId}" -ApiKey "${apiKey}"
+python3 install.py --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}"
 
 # 3. Start Agent
 .\\venv\\Scripts\\Activate.ps1
@@ -354,8 +354,7 @@ tar -xzf synqx-agent-portable.tar.gz
 cd dist_agent
 
 # 2. Run Installer (Auto-configures & Installs Dependencies)
-chmod +x install.sh
-./install.sh --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}" --tags "${tags}"
+python3 install.py --api-url "${API_URL}" --client-id "${clientId}" --api-key "${apiKey}" --tags "${tags}"
 
 # 3. Start Agent
 source venv/bin/activate

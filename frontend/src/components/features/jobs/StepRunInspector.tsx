@@ -5,7 +5,7 @@ import {
     X, Database, Zap, ArrowRight, Activity, 
     Clock, Cpu, AlertCircle, RefreshCcw,
     Table, Filter, AlertTriangle, ArrowDownToLine, ArrowUpFromLine,
-    Maximize2, Minimize2, ShieldAlert
+    Maximize2, Minimize2, ShieldAlert, Copy, BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,64 @@ import { ResultsGrid } from '@/components/features/explorer/ResultsGrid';
 import {
     TooltipProvider,
 } from "@/components/ui/tooltip";
+import { toast } from 'sonner';
+import { useTheme } from '@/hooks/useTheme';
+import {
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie
+} from 'recharts';
+
+interface StepRunInspectorProps {
+    step: any;
+    run?: any;
+    nodeLabel: string;
+    onClose: () => void;
+}
+
+// --- Premium Color Palette Matching System Standard ---
+const getThemeColors = (theme: string | undefined) => {
+    const isDark = theme === 'dark';
+    return {
+        SUCCESS: isDark ? '#10b981' : '#059669', // Emerald
+        FAILED: isDark ? '#f43f5e' : '#dc2626',  // Rose/Red
+        PRIMARY: isDark ? '#68a0ff' : '#0055ff', // Blue
+        GRID: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        TEXT: isDark ? '#94a3b8' : '#64748b',
+    };
+};
+
+/**
+ * Visual Micro-Chart for Column Distribution
+ */
+const ColumnMicroChart = ({ nullCount, total, colors }: { nullCount: number, total: number, colors: any }) => {
+    const data = [
+        { name: 'Valid', value: total - nullCount, fill: colors.SUCCESS },
+        { name: 'Null', value: nullCount, fill: colors.FAILED },
+    ].filter(d => d.value > 0);
+
+    return (
+        <div className="h-12 w-12 shrink-0">
+            <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                    <Pie
+                        data={data}
+                        innerRadius={14}
+                        outerRadius={22}
+                        paddingAngle={2}
+                        dataKey="value"
+                        stroke="transparent"
+                        animationBegin={0}
+                        animationDuration={1000}
+                    >
+                        {data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                    </Pie>
+                </PieChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
 
 interface StepRunInspectorProps {
     step: any;
@@ -83,6 +141,8 @@ const MaximizePortal = ({ children, onClose, title, subtitle }: { children: Reac
 export const StepRunInspector: React.FC<StepRunInspectorProps> = ({ 
     step: initialStep, run, nodeLabel, onClose
 }) => {
+    const { theme } = useTheme();
+    const colors = React.useMemo(() => getThemeColors(theme), [theme]);
     const [activeTab, setActiveTab] = useState('telemetry');
     const [maximizedDirection, setMaximizedDirection] = useState<'in' | 'out' | 'quarantine' | null>(null);
 
@@ -268,12 +328,15 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="px-6 pt-4 shrink-0">
-                        <TabsList className="w-full grid grid-cols-2">
+                        <TabsList className="w-full grid grid-cols-3">
                             <TabsTrigger value="telemetry" className="gap-2">
                                 <Activity size={14} /> Telemetry
                             </TabsTrigger>
                             <TabsTrigger value="data" className="gap-2">
                                 <Table size={14} /> Buffer Sniff
+                            </TabsTrigger>
+                            <TabsTrigger value="quality" className="gap-2">
+                                <ShieldAlert size={14} /> Quality Profile
                             </TabsTrigger>
                         </TabsList>
                     </div>
@@ -285,43 +348,54 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 px-1">
                                         <ArrowRight size={14} className="text-primary/60" />
-                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Data Lifecycle</Label>
+                                        <div className="flex flex-col">
+                                            <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Data Flow Analytics</Label>
+                                            <span className="text-[9px] text-muted-foreground/40 font-medium uppercase tracking-widest">Throughput & Integrity</span>
+                                        </div>
                                     </div>
                                     
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="p-5 rounded-[2rem] bg-blue-500/5 border border-blue-500/10 flex flex-col gap-1 shadow-sm">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="group relative p-6 rounded-[2.5rem] bg-blue-500/5 border border-blue-500/10 flex flex-col gap-1 shadow-sm hover:bg-blue-500/10 transition-all duration-500">
+                                            <div className="absolute top-6 right-6 h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
+                                                <ArrowDownToLine size={20} />
+                                            </div>
                                             <div className="flex items-center gap-2 text-blue-500/60 mb-1">
-                                                <ArrowDownToLine size={12} />
-                                                <span className="text-[9px] font-bold uppercase tracking-widest">Ingress</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest">Ingress</span>
                                             </div>
-                                            <p className="text-3xl font-bold tracking-tighter text-blue-500">{formatNumber(step.records_in || 0)}</p>
-                                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">Total Records In</span>
+                                            <p className="text-4xl font-bold tracking-tighter text-blue-500 drop-shadow-sm">{formatNumber(step.records_in || 0)}</p>
+                                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest mt-1">Total Signals Received</span>
                                         </div>
-                                        <div className="p-5 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10 flex flex-col gap-1 shadow-sm">
-                                            <div className="flex items-center gap-2 text-emerald-500/60 mb-1">
-                                                <ArrowUpFromLine size={12} />
-                                                <span className="text-[9px] font-bold uppercase tracking-widest">Egress</span>
+                                        <div className="group relative p-6 rounded-[2.5rem] bg-emerald-500/5 border border-emerald-500/10 flex flex-col gap-1 shadow-sm hover:bg-emerald-500/10 transition-all duration-500">
+                                            <div className="absolute top-6 right-6 h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
+                                                <ArrowUpFromLine size={20} />
                                             </div>
-                                            <p className="text-3xl font-bold tracking-tighter text-emerald-500">{formatNumber(step.records_out || 0)}</p>
-                                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">Successfully Processed</span>
+                                            <div className="flex items-center gap-2 text-emerald-500/60 mb-1">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest">Egress</span>
+                                            </div>
+                                            <p className="text-4xl font-bold tracking-tighter text-emerald-500 drop-shadow-sm">{formatNumber(step.records_out || 0)}</p>
+                                            <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest mt-1">Processed & Emitted</span>
                                         </div>
                                     </div>
 
                                     {(recordsFiltered > 0 || recordsError > 0) && (
-                                        <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2">
-                                            <div className="px-5 py-3 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex items-center justify-between">
-                                                <div className="flex items-center gap-2 text-amber-500/60">
-                                                    <Filter size={12} />
-                                                    <span className="text-[9px] font-bold uppercase tracking-widest">Filtered</span>
+                                        <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-4 duration-700">
+                                            <div className="px-6 py-4 rounded-3xl bg-amber-500/5 border border-amber-500/10 flex items-center justify-between group hover:bg-amber-500/10 transition-all">
+                                                <div className="flex items-center gap-3 text-amber-500/60">
+                                                    <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                                                        <Filter size={14} />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest">Filtered Out</span>
                                                 </div>
-                                                <span className="text-sm font-bold font-mono text-amber-600">{formatNumber(recordsFiltered)}</span>
+                                                <span className="text-lg font-bold font-mono text-amber-600 tracking-tighter">{formatNumber(recordsFiltered)}</span>
                                             </div>
-                                            <div className="px-5 py-3 rounded-2xl bg-destructive/5 border border-destructive/10 flex items-center justify-between">
-                                                <div className="flex items-center gap-2 text-destructive/60">
-                                                    <AlertTriangle size={12} />
-                                                    <span className="text-[9px] font-bold uppercase tracking-widest">Quarantine</span>
+                                            <div className="px-6 py-4 rounded-3xl bg-destructive/5 border border-destructive/10 flex items-center justify-between group hover:bg-destructive/10 transition-all">
+                                                <div className="flex items-center gap-3 text-destructive/60">
+                                                    <div className="h-8 w-8 rounded-xl bg-destructive/10 flex items-center justify-center">
+                                                        <AlertTriangle size={14} />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest">Quarantined</span>
                                                 </div>
-                                                <span className="text-sm font-bold font-mono text-destructive">{formatNumber(recordsError)}</span>
+                                                <span className="text-lg font-bold font-mono text-destructive tracking-tighter">{formatNumber(recordsError)}</span>
                                             </div>
                                         </div>
                                     )}
@@ -332,16 +406,16 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 px-1">
                                         <Clock size={14} className="text-primary/60" />
-                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Performance Profile</Label>
+                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Execution Performance</Label>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-4 rounded-2xl bg-muted/10 border border-border/20 space-y-1">
-                                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Execution Latency</span>
-                                            <p className="text-xl font-bold tracking-tight text-foreground">{formatDuration(step.duration_seconds * 1000)}</p>
+                                        <div className="p-5 rounded-[2rem] bg-muted/10 border border-border/20 space-y-1 hover:border-primary/20 transition-all">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Temporal Latency</span>
+                                            <p className="text-2xl font-bold tracking-tight text-foreground">{formatDuration(step.duration_seconds * 1000)}</p>
                                         </div>
-                                        <div className="p-4 rounded-2xl bg-muted/10 border border-border/20 space-y-1">
-                                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Data Volume</span>
-                                            <p className="text-xl font-bold tracking-tight text-foreground">{formatBytes(step.bytes_processed)}</p>
+                                        <div className="p-5 rounded-[2rem] bg-muted/10 border border-border/20 space-y-1 hover:border-primary/20 transition-all">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">Hydrated Volume</span>
+                                            <p className="text-2xl font-bold tracking-tight text-foreground">{formatBytes(step.bytes_processed)}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -351,23 +425,29 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 px-1">
                                         <Cpu size={14} className="text-primary/60" />
-                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Worker Resources</Label>
+                                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Compute Resource Footprint</Label>
                                     </div>
                                     <div className="grid grid-cols-1 gap-4">
-                                        <div className="p-5 rounded-[2rem] bg-muted/5 border border-border/20 space-y-5">
-                                            <div className="space-y-2">
+                                        <div className="p-6 rounded-[2.5rem] bg-muted/5 border border-border/20 space-y-6">
+                                            <div className="space-y-3">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Processor Load</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                                        <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">CPU Utilization</span>
+                                                    </div>
                                                     <span className="text-xs font-bold font-mono text-primary">{step.cpu_percent || 0}%</span>
                                                 </div>
-                                                <Progress value={step.cpu_percent || 0} className="h-1 bg-primary/10" />
+                                                <Progress value={step.cpu_percent || 0} className="h-1.5 bg-primary/10" />
                                             </div>
-                                            <div className="space-y-2">
+                                            <div className="space-y-3">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Memory Usage</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                                                        <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Memory Allocation</span>
+                                                    </div>
                                                     <span className="text-xs font-bold font-mono text-blue-500">{step.memory_mb || 0} MB</span>
                                                 </div>
-                                                <Progress value={Math.min(((step.memory_mb || 0) / 8192) * 100, 100)} className="h-1 bg-blue-500/10" />
+                                                <Progress value={Math.min(((step.memory_mb || 0) / 8192) * 100, 100)} className="h-1.5 bg-blue-500/10" />
                                             </div>
                                         </div>
                                     </div>
@@ -483,6 +563,172 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                 </TabsContent>
                             </div>
                         </Tabs>
+                    </TabsContent>
+
+                    {/* --- QUALITY PROFILE VIEW --- */}
+                    <TabsContent value="quality" className="flex-1 min-h-0 m-0 focus-visible:outline-none animate-in fade-in duration-500 overflow-hidden flex flex-col">
+                        {!step.quality_profile ? (
+                            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-4">
+                                <div className="h-16 w-16 rounded-2xl bg-muted/20 flex items-center justify-center text-muted-foreground/40">
+                                    <ShieldAlert size={32} />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="font-bold text-foreground">No Profile Data</h4>
+                                    <p className="text-xs text-muted-foreground max-w-xs mx-auto">Data quality profiling is only available for successful or running stream nodes.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <ScrollArea className="flex-1">
+                                <div className="p-6 space-y-8 pb-32">
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between px-1">
+                                            <div className="flex items-center gap-2">
+                                                <BarChart3 size={16} className="text-emerald-500" />
+                                                <div className="flex flex-col">
+                                                    <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">Deep Inspection</Label>
+                                                    <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">Statistical Column Signatures</span>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="h-8 rounded-xl gap-2 text-[9px] font-bold uppercase tracking-widest"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(JSON.stringify(step.quality_profile, null, 2));
+                                                    toast.success("Profile JSON copied");
+                                                }}
+                                            >
+                                                <Copy size={12} /> Copy JSON
+                                            </Button>
+                                        </div>
+
+                                        {/* Aggregate Profile Chart */}
+                                        <div className="p-6 rounded-[2.5rem] bg-muted/10 border border-border/40 shadow-inner">
+                                            <div className="flex items-center justify-between mb-6">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Aggregate Null Distribution</span>
+                                                    <span className="text-xs font-bold text-foreground">Percentage of missing values per column</span>
+                                                </div>
+                                            </div>
+                                            <div className="h-48 w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <BarChart data={Object.entries(step.quality_profile).map(([name, s]: [string, any]) => ({ 
+                                                        name, 
+                                                        nulls: ((s.null_count / (step.records_out || 1)) * 100) 
+                                                    }))}>
+                                                        <XAxis 
+                                                            dataKey="name" 
+                                                            hide 
+                                                        />
+                                                        <YAxis 
+                                                            hide 
+                                                            domain={[0, 100]} 
+                                                        />
+                                                        <Tooltip 
+                                                            cursor={{ fill: 'hsl(var(--primary)/0.05)' }}
+                                                            content={({ active, payload }) => {
+                                                                if (active && payload && payload.length) {
+                                                                    return (
+                                                                        <div className="bg-background/95 backdrop-blur-xl border border-border/40 p-2 rounded-xl shadow-2xl">
+                                                                            <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">{payload[0].payload.name}</p>
+                                                                            <p className="text-xs font-mono font-bold">{payload[0].value.toFixed(2)}% NULL</p>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                                return null;
+                                                            }}
+                                                        />
+                                                                                                                                                                        <Bar 
+                                                                                                                                                                            dataKey="nulls" 
+                                                                                                                                                                            radius={[6, 6, 0, 0]}
+                                                                                                                                                                            animationDuration={1500}
+                                                                                                                                                                        >
+                                                                                                                                                                            {Object.entries(step.quality_profile).map(([, s]: [string, any], index) => (
+                                                                                                                                                                                <Cell 
+                                                                                                                                                                                    key={`cell-${index}`} 
+                                                                                                                                                                                    fill={s.null_count > 0 ? colors.FAILED : colors.SUCCESS} 
+                                                                                                                                                                                    fillOpacity={0.6}
+                                                                                                                                                                                />
+                                                                                                                                                                            ))}
+                                                                                                                                                                        </Bar>
+                                                                                                                                                                    </BarChart>
+                                                                                                                                                                </ResponsiveContainer>
+                                                                                                                                                            </div>
+                                                                                                                                                        </div>
+                                                                                                                
+                                                                                                                                                        <div className="grid grid-cols-1 gap-4">
+                                                                                                                                                            {Object.entries(step.quality_profile).map(([col, stats]: [string, any]) => {
+                                                                                                                                                                const total = step.records_out || 1;
+                                                                                                                                                                const nullPct = (stats.null_count / total) * 100;
+                                                                                                                                                                const isValid = nullPct === 0;
+                                                                                                                
+                                                                                                                                                                return (
+                                                                                                                                                                    <div key={col} className="group p-5 rounded-[2.5rem] bg-muted/5 border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300">
+                                                                                                                                                                        <div className="flex items-center gap-4">
+                                                                                                                                                                            <ColumnMicroChart nullCount={stats.null_count} total={total} colors={colors} />
+                                                                                                                                                                            
+                                                                                                                                                                            <div className="flex-1 min-w-0">
+                                                                                                                
+                                                                <div className="flex items-center justify-between mb-1">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-bold text-sm tracking-tight group-hover:text-primary transition-colors truncate">{col}</span>
+                                                                        <Badge variant="outline" className="text-[9px] font-mono font-bold bg-background/50 border-0 h-4 px-1.5 opacity-60 shrink-0">
+                                                                            {stats.dtype}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    <p className={cn(
+                                                                        "text-sm font-mono font-bold tracking-tighter",
+                                                                        isValid ? "text-emerald-500" : "text-amber-500"
+                                                                    )}>
+                                                                        {nullPct.toFixed(1)}%
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <div className={cn("h-1.5 w-1.5 rounded-full shadow-[0_0_4px]", isValid ? "bg-emerald-500 shadow-emerald-500/40" : "bg-amber-500 shadow-amber-500/40")} />
+                                                                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                                                                            {isValid ? 'Pristine Data Signature' : 'Variance Detected'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Range / Numeric Stats */}
+                                                        {stats.min !== undefined && (
+                                                            <div className="mt-6 space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                                                                <div className="flex items-center justify-between gap-4">
+                                                                    <div className="flex-1 h-9 rounded-2xl bg-background/40 border border-border/20 flex items-center px-4 justify-between group-hover:bg-background/60 transition-colors">
+                                                                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">Min Value</span>
+                                                                        <span className="text-xs font-mono font-bold text-foreground/80">{stats.min}</span>
+                                                                    </div>
+                                                                    <ArrowRight size={12} className="text-muted-foreground/20 shrink-0" />
+                                                                    <div className="flex-1 h-9 rounded-2xl bg-background/40 border border-border/20 flex items-center px-4 justify-between group-hover:bg-background/60 transition-colors">
+                                                                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">Max Value</span>
+                                                                        <span className="text-xs font-mono font-bold text-foreground/80">{stats.max}</span>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                {stats.mean !== undefined && (
+                                                                    <div className="p-3 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between group-hover:bg-primary/10 transition-colors">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Activity size={12} className="text-primary/60" />
+                                                                            <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Mean Centroid</span>
+                                                                        </div>
+                                                                        <span className="text-xs font-mono font-bold text-primary">{stats.mean.toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </ScrollArea>
+                        )}
                     </TabsContent>
                 </Tabs>
 

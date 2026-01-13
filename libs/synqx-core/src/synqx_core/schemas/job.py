@@ -70,6 +70,8 @@ class StepRunRead(BaseModel):
     cpu_percent: Optional[float]
     memory_mb: Optional[float]
     sample_data: Optional[Dict[str, Any]]
+    quality_profile: Optional[Dict[str, Any]] = None
+    lineage_map: Optional[Dict[str, Any]] = None
     error_message: Optional[str]
     error_type: Optional[str]
     started_at: Optional[datetime]

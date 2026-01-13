@@ -73,6 +73,7 @@ class AgentStepUpdate(BaseModel):
     # Diagnostics
     error_message: Optional[str] = None
     sample_data: Optional[Dict[str, Any]] = None # For forensics
+    quality_profile: Optional[Dict[str, Any]] = None
 
 class AgentJobLogEntry(BaseModel):
     level: str # INFO, ERROR, etc.

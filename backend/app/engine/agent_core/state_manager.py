@@ -178,6 +178,7 @@ class StateManager:
         cpu_percent: Optional[float] = None,
         memory_mb: Optional[float] = None,
         sample_data: Optional[dict] = None,
+        quality_profile: Optional[dict] = None,
         lineage_map: Optional[dict] = None,
         error: Optional[Exception] = None
     ):
@@ -227,6 +228,10 @@ class StateManager:
             # Update sample data
             if sample_data is not None:
                 t_step_run.sample_data = sanitize_for_json(sample_data)
+            
+            # Update quality profile
+            if quality_profile is not None:
+                t_step_run.quality_profile = sanitize_for_json(quality_profile)
             
             # Update lineage
             if lineage_map is not None:
@@ -288,6 +293,7 @@ class StateManager:
                 "bytes_processed": bytes_processed,
                 "cpu_percent": cpu_percent,
                 "memory_mb": memory_mb,
+                "quality_profile": quality_profile,
                 "completed_at": t_step_run.completed_at.isoformat() if t_step_run.completed_at else None,
                 "duration_seconds": t_step_run.duration_seconds
             }

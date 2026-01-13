@@ -779,7 +779,7 @@ def dev_start(args):
             success_count += 1
         else:
             logging.error(f"Failed to start {svc_name}")
-            if args.fail_fast:
+            if getattr(args, 'fail_fast', False):
                 logging.error("Stopping due to --fail-fast")
                 dev_stop(args)
                 return False
@@ -1563,6 +1563,8 @@ Examples:
     restart_p.add_argument("--agent", action="store_true")
     restart_p.add_argument("--telemetry", action="store_true")
     restart_p.add_argument("--monitor", action="store_true")
+    restart_p.add_argument("--fail-fast", action="store_true")
+    restart_p.add_argument("--force", action="store_true", help="Force kill services during stop")
 
     subparsers.add_parser("status", help="Show service status")
     subparsers.add_parser("health", help="Run health checks")

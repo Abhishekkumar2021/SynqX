@@ -114,11 +114,28 @@ The SynqX Agent is designed to be **portable and self-contained**.
 To generate a release artifact for remote deployment:
 
 ```bash
-# Builds 'synqx-agent-portable.tar.gz' in the root directory
+# Builds 'synqx-agent-v1.0.0.tar.gz' and generates SHA256 checksum
 ./scripts/synqx.py build agent
 ```
 
-This artifact contains the agent code, all internal dependencies (bundled as wheels), and an installation script. The Backend API automatically serves this file to users via the "Download Portable Installer" button in the UI.
+### Security & Integrity
+Every build generates a `.sha256` file. Always verify the artifact before deployment:
+
+```bash
+# Linux / macOS
+sha256sum -c synqx-agent-v1.0.0.tar.gz.sha256
+
+# Windows (PowerShell)
+Get-FileHash synqx-agent-v1.0.0.tar.gz -Algorithm SHA256
+```
+
+### Post-Installation Audit
+After installing, we recommend running a connectivity audit to ensure the Agent can reach the SynqX Cloud and has valid credentials:
+
+```bash
+# Run from within the agent environment
+synqx-agent check
+```
 
 ### Release Versioning
 To bump versions across the monorepo and rebuild the agent:

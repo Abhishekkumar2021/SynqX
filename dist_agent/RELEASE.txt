@@ -1,2 +1,8 @@
 SynqX Agent v1.0.0
-Built: 2026-01-13 23:51:44
+Built: 2026-01-14 03:01:00
+Platform: Darwin 25.2.0
+Python: 3.13.0
+
+Included Libraries:
+  - synqx_core-0.1.0-py3-none-any.whl
+  - synqx_engine-0.1.0-py3-none-any.whl

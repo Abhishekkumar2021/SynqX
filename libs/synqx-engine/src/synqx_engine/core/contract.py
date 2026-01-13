@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, Union
 import polars as pl
 import yaml
 from synqx_core.logging import get_logger
@@ -11,7 +11,7 @@ class ContractValidator:
     Supports validating chunks against a predefined set of rules.
     """
 
-    def __init__(self, contract_config: Union[Dict[str, Any], str]):
+    def __init__(self, contract_config: dict[str, Any] | str):
         if isinstance(contract_config, str):
             try:
                 self.config = yaml.safe_load(contract_config) or {}

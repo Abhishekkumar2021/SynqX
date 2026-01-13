@@ -23,6 +23,7 @@ from app.core.db_logging import DBLogger
 from app.services.vault_service import VaultService
 from synqx_engine.connectors.factory import ConnectorFactory
 from synqx_engine.transforms.factory import TransformFactory
+from synqx_engine.core import DataProfiler
 from app.core.errors import AppError
 from app.engine.agent_core.state_manager import StateManager
 from app.engine.agent_core.forensics import ForensicSniffer
@@ -45,6 +46,7 @@ class NodeExecutor:
     
     def __init__(self, state_manager: StateManager):
         self.state_manager = state_manager
+        self.profiler = DataProfiler()
     
     def _get_process_metrics(self) -> Tuple[float, float]:
         """Get current process CPU and memory usage"""
@@ -114,7 +116,7 @@ class NodeExecutor:
                 step_run, OperatorRunStatus.SUCCESS, records_in=0, records_out=0, 
                 message=f"Pushed down to {collapsed_id}"
             )
-            return []
+            return [], {}
 
         # Get or create step run
         step_run = db.query(StepRun).filter(
@@ -178,15 +180,41 @@ class NodeExecutor:
         }
         samples: Dict[str, Dict] = {}
         results: List[pd.DataFrame] = []
+        quality_profile = {}
         
         def on_chunk(chunk: Any, direction: str = "out", error_count: int = 0, filtered_count: int = 0):
             """Callback for chunk processing with telemetry"""
+            nonlocal quality_profile
             
             chunk_is_empty = is_df_empty(chunk)
             
             if chunk_is_empty and error_count == 0 and filtered_count == 0:
                 return
             
+            # --- QUALITY PROFILING ---
+            if direction == "out" and not chunk_is_empty:
+                chunk_profile = self.profiler.profile_chunk(chunk)
+                quality_profile = self.profiler.merge_profiles(quality_profile, chunk_profile)
+                
+                # AUTOMATED GUARDRAILS (The "Quality Gate")
+                # For internal agent, we access guardrails from node.config
+                guardrails = node.config.get("guardrails", []) if node.config else []
+                total_rows = stats["out"] + len(chunk)
+                
+                for gr in guardrails:
+                    col = gr.get("column")
+                    metric = gr.get("metric") # e.g. "null_percentage"
+                    threshold = gr.get("threshold")
+                    
+                    if col in quality_profile:
+                        if metric == "null_percentage":
+                            null_rate = (quality_profile[col]["null_count"] / total_rows) * 100
+                            if null_rate > threshold:
+                                err_msg = f"QUALITY GATE FAILURE: Column '{col}' null rate is {null_rate:.2f}% (Threshold: {threshold}%)"
+                                logger.error(err_msg)
+                                DBLogger.log_step(db, step_run.id, "CRITICAL", err_msg, job_id=pipeline_run.job_id)
+                                raise ValueError(err_msg)
+
             if error_count > 0:
                 logger.debug(f"Node {node.id} reporting {error_count} rejections/errors")
 
@@ -266,7 +294,8 @@ class NodeExecutor:
                 records_filtered=stats["filtered"],
                 records_error=stats["error"],
                 bytes_processed=stats["bytes"],
-                sample_data=samples
+                sample_data=samples,
+                quality_profile=quality_profile
             )
         
         try:
@@ -639,7 +668,8 @@ class NodeExecutor:
                 retry_count=0,
                 cpu_percent=cpu,
                 memory_mb=mem,
-                sample_data=samples
+                sample_data=samples,
+                quality_profile=quality_profile
             )
             
             duration = step_run.duration_seconds or 0
@@ -655,7 +685,7 @@ class NodeExecutor:
             )
             
             logger.info(f"Node {node.id} returning {len(results)} chunks")
-            return results
+            return results, quality_profile
         
         except Exception as e:
             # =====================================================================
@@ -675,6 +705,7 @@ class NodeExecutor:
                 cpu,
                 mem,
                 samples,
+                quality_profile,
                 e
             )
             

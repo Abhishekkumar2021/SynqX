@@ -178,7 +178,7 @@ class ParallelExecutionLayer:
                             f"Retrying node '{node.name}' (Attempt {attempt + 1}/{max_retries + 1})"
                         )
 
-                    results = t_node_executor.execute(t_pipeline_run, t_node, input_data)
+                    results, quality_profile = t_node_executor.execute(t_pipeline_run, t_node, input_data)
 
                     node_duration = time.time() - node_start
                     total_rows = sum(len(df) for df in results)

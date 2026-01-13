@@ -286,8 +286,8 @@ def get_query_history(
     Get execution history. Merges legacy QueryHistory and new EphemeralJob records.
     """
     # 1. Fetch Legacy History
-    legacy_history = db.query(QueryHistory, models.connections.Connection.name.label("connection_name"))\
-        .join(models.connections.Connection, QueryHistory.connection_id == models.connections.Connection.id)\
+    legacy_history = db.query(QueryHistory, models.Connection.name.label("connection_name"))\
+        .join(models.Connection, QueryHistory.connection_id == models.Connection.id)\
         .filter(QueryHistory.workspace_id == current_user.active_workspace_id)\
         .all()
     

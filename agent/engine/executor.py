@@ -13,15 +13,18 @@ from synqx_engine.metrics import ExecutionMetrics
 from synqx_engine.core.data_cache import DataCache
 from synqx_engine.connectors.factory import ConnectorFactory
 from synqx_engine.transforms.factory import TransformFactory
+from synqx_engine.core import DataProfiler
 from synqx_core.utils.data import is_df_empty
 from engine.core.sql_generator import SQLPushdownGenerator
 
 logger = logging.getLogger("SynqX-Agent-Executor")
 
+
 class NodeExecutor:
     """Agent Node Executor - Standardized with Backend logic."""
     def __init__(self, connections: Dict[str, Any]):
         self.connections = connections
+        self.profiler = DataProfiler()
 
     def _get_process_metrics(self) -> Tuple[float, float]:
         try:
@@ -59,7 +62,7 @@ class NodeExecutor:
             logger.info(f"Node '{node_id}' was collapsed into '{collapsed_id}' via ELT Pushdown. Skipping local execution.")
             if status_cb:
                 status_cb(node_id, "success", {"records_in": 0, "records_out": 0, "message": f"Pushed down to {collapsed_id}"})
-            return []
+            return [], {}
 
         op_type = node.get("operator_type", "noop").lower()
         op_class = node.get("operator_class") or op_type
@@ -74,14 +77,38 @@ class NodeExecutor:
         stats = {"in": 0, "out": 0, "error": 0, "bytes": 0, "chunks": 0}
         samples = {}
         results = []
+        quality_profile = {}
 
         def on_chunk(chunk: Any, direction: str = "out", error_count: int = 0, filtered_count: int = 0):
+            nonlocal quality_profile
             chunk_is_empty = is_df_empty(chunk)
             if chunk_is_empty and error_count == 0:
                 return
             
             stats["chunks"] += 1
             
+            # --- QUALITY PROFILING ---
+            if direction == "out" and not chunk_is_empty:
+                chunk_profile = self.profiler.profile_chunk(chunk)
+                quality_profile = self.profiler.merge_profiles(quality_profile, chunk_profile)
+                
+                # AUTOMATED GUARDRAILS (The "Quality Gate")
+                guardrails = node.get("config", {}).get("guardrails", [])
+                total_rows = stats["out"] + len(chunk)
+                
+                for gr in guardrails:
+                    col = gr.get("column")
+                    metric = gr.get("metric") # e.g. "null_percentage"
+                    threshold = gr.get("threshold")
+                    
+                    if col in quality_profile:
+                        if metric == "null_percentage":
+                            null_rate = (quality_profile[col]["null_count"] / total_rows) * 100
+                            if null_rate > threshold:
+                                err_msg = f"QUALITY GATE FAILURE: Column '{col}' null rate is {null_rate:.2f}% (Threshold: {threshold}%)"
+                                logger.error(err_msg)
+                                raise ValueError(err_msg)
+
             # PERFORMANCE: Native Database Quarantine on Agent
             if direction == "quarantine" and not chunk_is_empty:
                 q_asset_id = node.get("config", {}).get("quarantine_asset_id")
@@ -133,7 +160,8 @@ class NodeExecutor:
                     "bytes_processed": stats["bytes"],
                     "cpu_percent": cpu,
                     "memory_mb": mem,
-                    "sample_data": samples
+                    "sample_data": samples,
+                    "quality_profile": quality_profile
                 })
             
             if log_cb and stats["chunks"] % 10 == 0: # Log every 10 chunks to avoid spam
@@ -268,7 +296,7 @@ class NodeExecutor:
                     on_chunk(chunk, direction="out")
                     results.append(chunk)
 
-            return results
+            return results, quality_profile
 
         except Exception as e:
             logger.error(f"Node '{node_id}' failed with a terminal error: {str(e)}")
@@ -313,7 +341,9 @@ class ParallelAgent:
                             
                             for attempt in range(max_attempts):
                                 try:
-                                    return self.executor.execute(n, inp, s_cb, log_cb)
+                                    # Create a local context for capturing quality_profile
+                                    results, quality_profile = self.executor.execute(n, inp, s_cb, log_cb)
+                                    return results, quality_profile
                                 except Exception as exc:
                                     if attempt + 1 < max_attempts:
                                         wait_time = delay
@@ -338,7 +368,8 @@ class ParallelAgent:
                     for future in concurrent.futures.as_completed(futures):
                         nid = futures[future]
                         try:
-                            chunks = future.result()
+                            # Capture both data chunks and the final quality profile
+                            chunks, quality_profile = future.result()
                             self.cache.store(nid, chunks)
                             self.metrics.completed_nodes += 1
                             total_rows = sum(len(df) for df in chunks)
@@ -347,7 +378,8 @@ class ParallelAgent:
                             if status_cb:
                                 status_cb(nid, "success", {
                                     "records_out": total_rows,
-                                    "sample_data": self.executor._sniff_data(chunks[0]) if chunks else None
+                                    "sample_data": self.executor._sniff_data(chunks[0]) if chunks else None,
+                                    "quality_profile": quality_profile
                                 })
                         except Exception as e:
                             self.metrics.failed_nodes += 1

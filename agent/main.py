@@ -427,8 +427,10 @@ class SynqxAgent:
             "status": status,
             "records_in": data.get("records_in", 0),
             "records_out": data.get("records_out", 0),
+            "records_filtered": data.get("records_filtered", 0),
             "records_error": data.get("records_error", 0),
             "bytes_processed": data.get("bytes_processed", 0),
+            "quality_profile": data.get("quality_profile"),
             "error_message": data.get("error_message"),
             "sample_data": data.get("sample_data")
         }
