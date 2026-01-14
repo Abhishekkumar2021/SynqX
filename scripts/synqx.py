@@ -200,16 +200,29 @@ def calculate_checksum(file_path: Path) -> str:
     return sha.hexdigest()
 
 def force_kill_port(port: int):
-    """Robust cross-platform port clearing."""
-    try:
-        for conn in psutil.net_connections(kind='inet'):
-            if conn.laddr.port == port and conn.pid:
+    """Robust cross-platform port clearing. Optimized for speed."""
+    if platform.system() != "Windows":
+        try:
+            # Use lsof on Unix-like systems as it's significantly faster than psutil.net_connections()
+            output = subprocess.check_output(["lsof", "-t", f"-i:{port}"], stderr=subprocess.STDOUT, text=True)
+            for pid in output.split():
                 try:
-                    p = psutil.Process(conn.pid)
-                    p.kill()
-                    p.wait(timeout=2)
+                    os.kill(int(pid), signal.SIGKILL)
                 except:
                     pass
+            return
+        except:
+            pass
+
+    # Fallback to psutil for Windows or if lsof fails
+    try:
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                for conn in proc.connections(kind='inet'):
+                    if conn.laddr.port == port:
+                        proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
     except:
         pass
 
@@ -308,61 +321,74 @@ class Manager:
 
         # Clear port if needed
         if svc.get('port'):
-            # Check if something else is using the port
-            if not check_http_health(f"http://localhost:{svc['port']}", timeout=0.1):
-                force_kill_port(svc['port'])
+            # Check if port is in use
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.1)
+                if s.connect_ex(('localhost', svc['port'])) == 0:
+                    console.print(f"[warning]Port {svc['port']} is occupied. Evicting existing process...[/warning]")
+                    force_kill_port(svc['port'])
 
-        console.print(f"[info]Launching {name}...[/info]")
-        cmd = list(svc["cmd"])
-        cwd = svc["dir"]
-        
-        # Resolve executables
-        if cmd[0] == "python":
-            cmd[0] = get_venv_python(cwd)
-        elif cmd[0] == "npm":
-            resolved_npm = resolve_cmd("npm")
-            if resolved_npm:
-                cmd[0] = resolved_npm
-        else:
-            cmd[0] = get_venv_bin(cwd, cmd[0])
-
-        log_path = LOG_DIR / f"{name}.log"
-        log_file = open(log_path, "a")
-        
-        flags = {}
-        if platform.system() == "Windows":
-            flags['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
-        else:
-            flags['start_new_session'] = True
-
-        try:
-            proc = subprocess.Popen(
-                cmd, 
-                cwd=cwd, 
-                env={**os.environ, **svc.get("env", {})}, 
-                stdout=log_file, 
-                stderr=subprocess.STDOUT, 
-                **flags
-            )
+        with console.status(f"[info]Launching {name}...[/info]") as status:
+            cmd = list(svc["cmd"])
+            cwd = svc["dir"]
             
-            m = Meta(pid=proc.pid, name=name, start_time=time.time(), port=svc.get('port'))
-            self.save_meta(name, m)
-            
-            # Brief wait to see if it crashes immediately
-            time.sleep(2)
-            if psutil.pid_exists(proc.pid):
-                console.print(f"[success]✓ {name} online (PID: {proc.pid})[/success]")
-                return True
+            # Resolve executables
+            if cmd[0] == "python":
+                cmd[0] = get_venv_python(cwd)
+            elif cmd[0] == "npm":
+                resolved_npm = resolve_cmd("npm")
+                if resolved_npm:
+                    cmd[0] = resolved_npm
             else:
-                console.print(f"[error]✗ {name} died shortly after startup. Check {log_path}[/error]")
+                cmd[0] = get_venv_bin(cwd, cmd[0])
+
+            log_path = LOG_DIR / f"{name}.log"
+            log_file = open(log_path, "a")
+            
+            flags = {}
+            if platform.system() == "Windows":
+                flags['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
+            else:
+                flags['start_new_session'] = True
+
+            try:
+                proc = subprocess.Popen(
+                    cmd, 
+                    cwd=cwd, 
+                    env={**os.environ, **svc.get("env", {})}, 
+                    stdout=log_file, 
+                    stderr=subprocess.STDOUT, 
+                    **flags
+                )
+                
+                m = Meta(pid=proc.pid, name=name, start_time=time.time(), port=svc.get('port'))
+                self.save_meta(name, m)
+                
+                # Intelligent polling instead of blocking sleep
+                online = False
+                for _ in range(20): # Max 2 seconds polling
+                    if psutil.pid_exists(proc.pid):
+                        # If service survives initial burst
+                        if _ > 5: # Give it at least 0.5s
+                            online = True
+                            break
+                    else:
+                        break
+                    time.sleep(0.1)
+
+                if online:
+                    console.print(f"[success]✓ {name} online (PID: {proc.pid})[/success]")
+                    return True
+                else:
+                    console.print(f"[error]✗ {name} died shortly after startup. Check {log_path}[/error]")
+                    if fail_fast:
+                        sys.exit(1)
+                    return False
+            except Exception as e:
+                console.print(f"[error]Failed to spawn {name}: {e}[/error]")
                 if fail_fast:
                     sys.exit(1)
                 return False
-        except Exception as e:
-            console.print(f"[error]Failed to spawn {name}: {e}[/error]")
-            if fail_fast:
-                sys.exit(1)
-            return False
 
     def stop(self, name: str, force: bool = False):
         m = self.get_meta(name)
@@ -489,19 +515,27 @@ def status():
     t.add_column("Memory")
     t.add_column("Uptime")
     
-    for name in SERVICES.keys():
-        m = manager.get_meta(name)
-        if m and psutil.pid_exists(m.pid):
-            try:
-                p = psutil.Process(m.pid)
-                mem = f"{p.memory_info().rss/1024/1024:.1f} MB"
-                uptime_sec = time.time() - m.start_time
-                upt = f"{int(uptime_sec//60)}m {int(uptime_sec%60)}s"
-                t.add_row(name, "[green]RUNNING[/green]", str(m.pid), mem, upt)
-            except:
-                t.add_row(name, "[yellow]STALE[/yellow]", str(m.pid), "---", "---")
-        else:
-            t.add_row(name, "[red]STOPPED[/red]", "---", "---", "---")
+    with console.status("[info]Scanning services...[/info]"):
+        for name in SERVICES.keys():
+            m = manager.get_meta(name)
+            if m:
+                try:
+                    if psutil.pid_exists(m.pid):
+                        p = psutil.Process(m.pid)
+                        # Quick check to ensure it's still running and not a zombie
+                        if p.is_running() and p.status() != psutil.STATUS_ZOMBIE:
+                            mem = f"{p.memory_info().rss/1024/1024:.1f} MB"
+                            uptime_sec = time.time() - m.start_time
+                            upt = f"{int(uptime_sec//60)}m {int(uptime_sec%60)}s"
+                            t.add_row(name, "[green]RUNNING[/green]", str(m.pid), mem, upt)
+                        else:
+                            t.add_row(name, "[yellow]STALE[/yellow]", str(m.pid), "---", "---")
+                    else:
+                        t.add_row(name, "[red]STOPPED[/red]", "---", "---", "---")
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    t.add_row(name, "[red]STOPPED[/red]", "---", "---", "---")
+            else:
+                t.add_row(name, "[red]STOPPED[/red]", "---", "---", "---")
     console.print(t)
 
 @app.command()

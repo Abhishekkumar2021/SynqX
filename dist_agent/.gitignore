@@ -1,9 +1,0 @@
-# SynqX Agent Specific
-__pycache__/
-*.py[cod]
-.venv/
-.env
-.env.*
-*.log
-*.pid
-*.egg-info/
