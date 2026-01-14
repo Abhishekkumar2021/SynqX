@@ -549,7 +549,7 @@ def check():
     
     # 1. Config
     if not ENV_FILE.exists():
-        console.print("[red]❌ Configuration file not found (.env)[/red]")
+        console.print("[red][ERROR] Configuration file not found (.env)[/red]")
         return
     
     load_dotenv(ENV_FILE)
@@ -558,10 +558,10 @@ def check():
     api_key = os.getenv("SYNQX_API_KEY")
     
     if not all([api_url, client_id, api_key]):
-        console.print("[red]❌ Missing required configuration (URL, Client ID, or Key).[/red]")
+        console.print("[red][ERROR] Missing required configuration (URL, Client ID, or Key).[/red]")
         return
     
-    console.print(f"[green]✅ Config loaded ({ENV_FILE})[/green]")
+    console.print(f"[green][OK] Config loaded ({ENV_FILE})[/green]")
     
     # 2. Connectivity
     try:
@@ -572,13 +572,13 @@ def check():
         }
         resp = requests.post(f"{api_url}/agents/poll", json=[], headers=headers, timeout=5)
         if resp.status_code in [200, 422]:
-            console.print(f"[green]✅ Connected to SynqX Cloud ({resp.elapsed.total_seconds()*1000:.0f}ms)[/green]")
+            console.print(f"[green][OK] Connected to SynqX Cloud ({resp.elapsed.total_seconds()*1000:.0f}ms)[/green]")
         elif resp.status_code == 401:
-            console.print("[red]❌ Authentication Failed (Invalid ID or Key)[/red]")
+            console.print("[red][ERROR] Authentication Failed (Invalid ID or Key)[/red]")
         else:
-            console.print(f"[red]❌ Server returned error: HTTP {resp.status_code}[/red]")
+            console.print(f"[red][ERROR] Server returned error: HTTP {resp.status_code}[/red]")
     except Exception as e:
-        console.print(f"[red]❌ Connection failed: {e}[/red]")
+        console.print(f"[red][ERROR] Connection failed: {e}[/red]")
 
 @app.command()
 def stop():

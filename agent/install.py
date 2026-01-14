@@ -161,14 +161,14 @@ def main():
             # It might not be in PATH yet if we just installed it, so we try via python -m or direct call
             result = subprocess.run([sys.executable, "main.py", "--help"], capture_output=True, text=True)
             if result.returncode == 0:
-                logging.info("✅ Verification successful!")
+                logging.info("[OK] Verification successful!")
             else:
                 logging.debug(f"Verification help output: {result.stderr}")
         except Exception as e:
             logging.warning(f"Could not verify installation immediately: {e}")
 
         logging.info("\n" + "="*50)
-        logging.info("🎉 SynqX Agent Installation Complete!")
+        logging.info("SynqX Agent Installation Complete!")
         logging.info("="*50)
         
         if not is_venv():

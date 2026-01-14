@@ -594,7 +594,7 @@ class ServiceManager:
             metadata.status = ServiceStatus.RUNNING
             save_service_metadata(name, metadata)
             
-            logging.info(f"✓ {name} started successfully (PID: {proc.pid})")
+            logging.info(f"[OK] {name} started successfully (PID: {proc.pid})")
             return True
             
         except Exception as e:
@@ -643,7 +643,7 @@ class ServiceManager:
                     success = False
 
         if success:
-            logging.info(f"✓ {name} stopped")
+            logging.info(f"[OK] {name} stopped")
         else:
             logging.error(f"Failed to fully stop {name}")
             if metadata:
@@ -805,7 +805,7 @@ def install(args):
         if node_modules.exists():
             logging.info("Frontend node_modules present.")
         
-        logging.info("✅ Installation Complete!")
+        logging.info("[OK] Installation Complete!")
         return True
         
     except Exception as e:
@@ -842,7 +842,7 @@ def dev_start(args):
                 return False
     
     if success_count == len(svcs):
-        logging.info(f"✅ All {success_count} services started successfully")
+        logging.info(f"[OK] All {success_count} services started successfully")
         
         # Start monitoring if requested
         if args.monitor:
@@ -852,7 +852,7 @@ def dev_start(args):
         dev_status(args)
         
         # Show useful URLs
-        Colors.print("\n📍 Service URLs:", Colors.CYAN, bold=True)
+        Colors.print("\n-> Service URLs:", Colors.CYAN, bold=True)
         print(f"  API:      http://localhost:{API_PORT}")
         print(f"  Frontend: http://localhost:{FE_PORT}")
         print(f"  API Docs: http://localhost:{API_PORT}/docs")
@@ -876,7 +876,7 @@ def dev_stop(args):
     for svc_name in stop_order:
         service_manager.stop_service(svc_name, force=args.force if hasattr(args, 'force') else False)
     
-    logging.info("✅ All services stopped")
+    logging.info("[OK] All services stopped")
     return True
 
 def dev_restart(args):
@@ -887,7 +887,7 @@ def dev_restart(args):
 
 def dev_status(args):
     """Show detailed service status."""
-    Colors.print("\n📊 Service Status", Colors.HEADER, bold=True)
+    Colors.print("\nSTATS: Service Status", Colors.HEADER, bold=True)
     print("=" * 80)
     
     for name in SERVICES.keys():
@@ -961,7 +961,7 @@ def dev_logs(args):
 
 def dev_health(args):
     """Run health checks on all services."""
-    Colors.print("\n🏥 Health Check Results", Colors.HEADER, bold=True)
+    Colors.print("\nHEALTH: Health Check Results", Colors.HEADER, bold=True)
     print("=" * 80)
     
     all_healthy = True
@@ -991,9 +991,9 @@ def dev_health(args):
     print("=" * 80)
     
     if all_healthy:
-        logging.info("✅ All services are healthy")
+        logging.info("[OK] All services are healthy")
     else:
-        logging.warning("⚠️  Some services are unhealthy")
+        logging.warning("[WARN]  Some services are unhealthy")
     
     print()
     return all_healthy
@@ -1019,7 +1019,7 @@ def db_backup(name: str = None) -> Optional[Path]:
         # if db_file.exists():
         #     shutil.copy(db_file, backup_file)
         
-        logging.info(f"✓ Backup created: {backup_file}")
+        logging.info(f"[OK] Backup created: {backup_file}")
         return backup_file
     except Exception as e:
         logging.error(f"Backup failed: {e}")
@@ -1061,7 +1061,7 @@ def db_migrate(args):
             run_cmd([alembic_bin, "current"], cwd=backend_dir, capture=False)
         else:
             run_cmd([alembic_bin, "upgrade", "head"], cwd=backend_dir)
-            logging.info("✅ Database upgraded to head")
+            logging.info("[OK] Database upgraded to head")
             
             # Cleanup old backups
             db_cleanup_old_backups()
@@ -1083,7 +1083,7 @@ def db_revision(args):
     try:
         logging.info(f"Creating migration revision: {msg}")
         run_cmd([alembic_bin, "revision", "--autogenerate", "-m", msg], cwd=backend_dir)
-        logging.info("✅ Revision created successfully")
+        logging.info("[OK] Revision created successfully")
         return True
     except Exception as e:
         logging.error(f"Failed to create revision: {e}")
@@ -1102,7 +1102,7 @@ def db_rollback(args):
     try:
         logging.warning(f"Rolling back {steps} migration(s)...")
         run_cmd([alembic_bin, "downgrade", f"-{steps}"], cwd=backend_dir)
-        logging.info(f"✅ Rolled back {steps} migration(s)")
+        logging.info(f"[OK] Rolled back {steps} migration(s)")
         return True
     except Exception as e:
         logging.error(f"Rollback failed: {e}")
@@ -1125,7 +1125,7 @@ def db_seed(args):
     try:
         logging.info("Seeding database...")
         run_cmd([py, str(seed_script)], cwd=backend_dir)
-        logging.info("✅ Database seeded successfully")
+        logging.info("[OK] Database seeded successfully")
         return True
     except Exception as e:
         logging.error(f"Seeding failed: {e}")
@@ -1134,7 +1134,7 @@ def db_seed(args):
 def db_reset(args):
     """Reset database (drop all tables and re-migrate)."""
     if not args.confirm:
-        Colors.print("\n⚠️  WARNING: This will DROP ALL TABLES!", Colors.WARNING, bold=True)
+        Colors.print("\n[WARN]  WARNING: This will DROP ALL TABLES!", Colors.WARNING, bold=True)
         response = input("Type 'yes' to confirm: ")
         if response.lower() != 'yes':
             logging.info("Reset cancelled")
@@ -1155,7 +1155,7 @@ def db_reset(args):
         # Upgrade to head
         run_cmd([alembic_bin, "upgrade", "head"], cwd=backend_dir)
         
-        logging.info("✅ Database reset complete")
+        logging.info("[OK] Database reset complete")
         
         # Optionally seed
         if args.seed:
@@ -1174,7 +1174,7 @@ def db_status(args):
     alembic_bin = get_venv_bin(backend_dir, "alembic")
     
     try:
-        Colors.print("\n📊 Database Status", Colors.HEADER, bold=True)
+        Colors.print("\nSTATS: Database Status", Colors.HEADER, bold=True)
         print("=" * 80)
         
         print("\nCurrent revision:")
@@ -1281,7 +1281,7 @@ def perform_agent_build(version: str) -> Optional[Path]:
             if wheels:
                 lib_wheels.extend(wheels)
 
-        logging.info(f"  ✓ Built {len(lib_wheels)} library wheel(s)")
+        logging.info(f"  [OK] Built {len(lib_wheels)} library wheel(s)")
 
         # 3. Copy Agent Code
         logging.info("[2/4] Staging agent code...")
@@ -1371,9 +1371,9 @@ python main.py --help
         checksum_file = artifact_path.with_suffix('.tar.gz.sha256')
         checksum_file.write_text(f"{checksum}  {artifact_name}\n")
         
-        logging.info(f"  ✓ Artifact: {artifact_path.name}")
-        logging.info(f"  ✓ Checksum: {checksum[:16]}...")
-        logging.info(f"  ✓ Size: {artifact_path.stat().st_size / (1024*1024):.2f} MB")
+        logging.info(f"  [OK] Artifact: {artifact_path.name}")
+        logging.info(f"  [OK] Checksum: {checksum[:16]}...")
+        logging.info(f"  [OK] Size: {artifact_path.stat().st_size / (1024*1024):.2f} MB")
         
         # Create/Update LATEST symlink
         latest_path = ROOT_DIR / "synqx-agent-latest.tar.gz"
@@ -1384,9 +1384,9 @@ python main.py --help
         shutil.copy(artifact_path, latest_path)
         shutil.copy(checksum_file, latest_path.with_suffix('.tar.gz.sha256'))
         
-        logging.info(f"  ✓ Updated 'latest' pointer")
+        logging.info(f"  [OK] Updated 'latest' pointer")
         
-        logging.info(f"✅ Build Complete: {artifact_path}")
+        logging.info(f"[OK] Build Complete: {artifact_path}")
         return artifact_path
         
     except Exception as e:
@@ -1411,10 +1411,10 @@ def build_agent(args):
     artifact = perform_agent_build(version)
     
     if artifact:
-        logging.info("✅ Agent build successful")
+        logging.info("[OK] Agent build successful")
         
         # Show build summary
-        Colors.print("\n📦 Build Summary", Colors.HEADER, bold=True)
+        Colors.print("\nBUILD: Build Summary", Colors.HEADER, bold=True)
         print(f"  Version:   {version}")
         print(f"  Artifact:  {artifact.name}")
         print(f"  Location:  {artifact.parent}")
@@ -1428,7 +1428,7 @@ def build_agent(args):
         
         return True
     else:
-        logging.error("❌ Agent build failed")
+        logging.error("[ERROR] Agent build failed")
         return False
 
 def release_bump(args):
@@ -1453,13 +1453,13 @@ def release_bump(args):
         if not args.no_build:
             artifact = perform_agent_build(new_ver)
             if artifact:
-                logging.info("✅ Version bumped and built successfully")
+                logging.info("[OK] Version bumped and built successfully")
                 return True
             else:
                 logging.error("Build failed after version bump")
                 return False
         else:
-            logging.info("✅ Version bumped (build skipped)")
+            logging.info("[OK] Version bumped (build skipped)")
             return True
             
     except Exception as e:
@@ -1468,7 +1468,7 @@ def release_bump(args):
 
 def release_list(args):
     """List available releases."""
-    Colors.print("\n📦 Available Releases", Colors.HEADER, bold=True)
+    Colors.print("\nBUILD: Available Releases", Colors.HEADER, bold=True)
     print("=" * 80)
     
     artifacts = sorted(ROOT_DIR.glob("synqx-agent-v*.tar.gz"), reverse=True)
@@ -1485,7 +1485,7 @@ def release_list(args):
             
             # Check for checksum
             checksum_file = artifact.with_suffix('.tar.gz.sha256')
-            has_checksum = "✓" if checksum_file.exists() else "✗"
+            has_checksum = "[OK]" if checksum_file.exists() else "[FAIL]"
             
             print(f"  v{version:<10} {size_mb:>6.2f} MB  {mtime.strftime('%Y-%m-%d %H:%M')}  [SHA256: {has_checksum}]")
     
@@ -1495,7 +1495,7 @@ def release_list(args):
 # --- Commands: Config ---
 def config_show(args):
     """Show current configuration."""
-    Colors.print("\n⚙️  Current Configuration", Colors.HEADER, bold=True)
+    Colors.print("\nCONFIG:  Current Configuration", Colors.HEADER, bold=True)
     print("=" * 80)
     print(json.dumps(config._config, indent=2))
     print("=" * 80)
@@ -1515,7 +1515,7 @@ def config_set(args):
         parsed_value = value
     
     config.set(key, parsed_value)
-    logging.info(f"✓ Set {key} = {parsed_value}")
+    logging.info(f"[OK] Set {key} = {parsed_value}")
 
 def config_get(args):
     """Get a configuration value."""
@@ -1537,7 +1537,7 @@ def config_reset(args):
     
     config._config = DEFAULT_CONFIG.copy()
     config.save()
-    logging.info("✅ Configuration reset to defaults")
+    logging.info("[OK] Configuration reset to defaults")
 
 # --- Commands: Clean ---
 def clean(args):
@@ -1582,7 +1582,7 @@ def clean(args):
                 log_file.unlink()
                 removed_count += 1
     
-    logging.info(f"✅ Cleaned {removed_count} items")
+    logging.info(f"[OK] Cleaned {removed_count} items")
 
 # --- Main CLI ---
 def main():
