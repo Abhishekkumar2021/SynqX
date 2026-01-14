@@ -48,11 +48,20 @@ class LocalFileConnector(BaseConnector):
         # Prevent path traversal
         base = os.path.abspath(self._config_model.base_path)
         
+        # Normalize asset path separators to match OS (handle / from frontend)
+        # We also strip leading separators to ensure os.path.join works as relative append
+        asset_norm = asset.replace('/', os.sep)
+        if os.altsep:
+            asset_norm = asset_norm.replace(os.altsep, os.sep)
+            
+        # Strip potential leading separators to treat as relative
+        asset_norm = asset_norm.lstrip(os.sep)
+
         # If asset is already absolute and starts with base, use it
         if os.path.isabs(asset) and asset.startswith(base):
             return os.path.abspath(asset)
             
-        path = os.path.join(base, asset)
+        path = os.path.join(base, asset_norm)
         full_path = os.path.abspath(path)
         
         if not full_path.startswith(base):
@@ -350,9 +359,14 @@ class LocalFileConnector(BaseConnector):
         try:
             for entry in os.scandir(target_path):
                 stat_info = entry.stat()
+                # Get relative path using system separator
+                rel_path = os.path.relpath(entry.path, os.path.abspath(self._config_model.base_path))
+                # Normalize to forward slashes for API/Frontend consistency
+                rel_path_fwd = rel_path.replace(os.sep, '/')
+                
                 results.append({
                     "name": entry.name,
-                    "path": os.path.relpath(entry.path, os.path.abspath(self._config_model.base_path)),
+                    "path": rel_path_fwd,
                     "type": "directory" if entry.is_dir() else "file",
                     "size": stat_info.st_size,
                     "modified_at": stat_info.st_mtime
