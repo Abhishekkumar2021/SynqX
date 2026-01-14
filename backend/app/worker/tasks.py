@@ -600,6 +600,32 @@ def process_step_telemetry_task(job_id: int, step_update_data: dict) -> str:
                 error=Exception(step_update_data["error_message"]) if step_update_data.get("error_message") else None
             )
 
+            # Trigger Step Alerts
+            from app.services.alert_service import AlertService
+            from synqx_core.models.enums import AlertType, AlertLevel
+
+            node_name = step_run.node.name if step_run.node else f"Node {step_run.node_id}"
+            
+            if status == OperatorRunStatus.FAILED:
+                error_msg = step_update_data.get("error_message", "Unknown error")
+                AlertService.trigger_alerts(
+                    session,
+                    alert_type=AlertType.STEP_FAILURE,
+                    pipeline_id=job.pipeline_id,
+                    job_id=job.id,
+                    message=f"Step '{node_name}' failed: {error_msg}",
+                    level=AlertLevel.ERROR
+                )
+            elif status == OperatorRunStatus.SUCCESS:
+                AlertService.trigger_alerts(
+                    session,
+                    alert_type=AlertType.STEP_SUCCESS,
+                    pipeline_id=job.pipeline_id,
+                    job_id=job.id,
+                    message=f"Step '{node_name}' completed successfully",
+                    level=AlertLevel.SUCCESS
+                )
+
             return "Telemetry processed"
     except Exception as e:
         logger.error(f"Failed to process telemetry for job {job_id}: {e}")
@@ -621,8 +647,6 @@ def process_internal_ephemeral_job(job_id: int) -> str:
     from app.services.vault_service import VaultService
     from synqx_engine.connectors.factory import ConnectorFactory
     from app.utils.serialization import sanitize_for_json
-    import polars as pl
-    import io
     import base64
 
     try:
@@ -820,7 +844,7 @@ def check_sla_breaches() -> str:
                             )
                             DBLogger.log_job(session, job.id, "CRITICAL", msg)
                             breach_count += 1
-                    except Exception as e:
+                    except Exception:
                         logger.error(f"Invalid finish_by format for pipeline {pipeline.id}: {finish_by}")
 
             # 2. Check for pipelines that SHOULD have finished but haven't even started/succeeded
@@ -865,7 +889,7 @@ def check_sla_breaches() -> str:
                                 level=AlertLevel.CRITICAL
                             )
                             breach_count += 1
-                except Exception as e:
+                except Exception:
                     pass
 
             return f"SLA check completed. Identified {breach_count} violations."

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Cpu, Server, Zap } from 'lucide-react';
+import { Cpu, Server, Zap } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import type { SystemHealth } from '@/lib/api';
 import { motion } from 'framer-motion';
@@ -25,17 +25,6 @@ export const SystemHealthMonitor: React.FC<SystemHealthMonitorProps> = ({ data, 
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
-            {!hideHeader && (
-                <div className="pb-4 shrink-0 px-8 pt-8">
-                    <h3 className="text-xl font-bold tracking-tighter uppercase flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-primary" />
-                        System Infrastructure
-                    </h3>
-                    <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">
-                        Real-time resource utilization
-                    </p>
-                </div>
-            )}
             <div className={cn(
                 "flex-1 flex flex-col justify-around gap-6 px-8 pt-4 pb-10",
                 hideHeader && "pt-8"

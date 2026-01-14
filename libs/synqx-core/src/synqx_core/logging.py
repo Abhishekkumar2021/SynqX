@@ -1,4 +1,3 @@
-import logging
 import structlog
 
 def get_logger(name: str):

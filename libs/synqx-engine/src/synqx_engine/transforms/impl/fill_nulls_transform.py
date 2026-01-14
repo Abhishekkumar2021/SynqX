@@ -21,7 +21,7 @@ class FillNullsTransform(PolarsTransform):
     def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         value = self.config.get("value")
         strategy = self.config.get("strategy")
-        subset = self.config.get("subset")
+        self.config.get("subset")
         
         # Strategy mapping from Pandas names to Polars
         strategy_map = {

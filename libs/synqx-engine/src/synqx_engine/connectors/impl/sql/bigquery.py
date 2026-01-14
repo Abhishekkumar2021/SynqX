@@ -151,7 +151,7 @@ class BigQueryConnector(BaseConnector):
         from synqx_engine.connectors.impl.files.gcs import GCSConnector
         
         if not isinstance(stage_connector, GCSConnector):
-            logger.warning(f"BigQuery staged write requested with non-GCS connector. Falling back to direct load.")
+            logger.warning("BigQuery staged write requested with non-GCS connector. Falling back to direct load.")
             return self.write_batch(data, asset, mode=mode, **kwargs)
 
         self.connect()

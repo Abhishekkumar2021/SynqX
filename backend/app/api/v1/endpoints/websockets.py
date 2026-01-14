@@ -44,3 +44,10 @@ async def websocket_notifications(websocket: WebSocket, user_id: int):
     WebSocket endpoint to stream real-time notifications for a specific User.
     """
     await manager.connect_and_stream(websocket, f"user_notifications:{user_id}")
+
+@router.websocket("/ws/notifications/workspace/{workspace_id}")
+async def websocket_workspace_notifications(websocket: WebSocket, workspace_id: int):
+    """
+    WebSocket endpoint to stream real-time notifications for a specific Workspace.
+    """
+    await manager.connect_and_stream(websocket, f"workspace_notifications:{workspace_id}")

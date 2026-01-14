@@ -87,7 +87,6 @@ class ValidateTransform(PolarsTransform):
                     raise TransformationError(f"Strict validation failed. Example error: {first_error}")
 
                 if on_chunk_cb:
-                    import pandas as pd
                     on_chunk_cb(invalid_df.to_pandas(), direction="quarantine", error_count=error_count)
 
             yield valid_df

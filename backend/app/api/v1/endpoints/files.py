@@ -4,16 +4,9 @@ from sqlalchemy.orm import Session
 from app import models
 from app.api import deps
 from app.services.connection_service import ConnectionService
-from app.services.vault_service import VaultService
-from synqx_engine.connectors.factory import ConnectorFactory
 from synqx_core.models.user import User
 from app.core.logging import get_logger
-from app.services.ephemeral_service import EphemeralJobService
-from synqx_core.schemas.ephemeral import EphemeralJobCreate
-from synqx_core.models.enums import JobType, JobStatus
-from app.utils.agent import is_remote_group
 import os
-import time
 import base64
 
 router = APIRouter()

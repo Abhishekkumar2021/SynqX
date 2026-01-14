@@ -1,7 +1,7 @@
 import time
 import functools
 import random
-from typing import Any, Callable, Tuple, Type, Union
+from typing import Callable, Tuple, Type, Union
 from synqx_core.logging import get_logger
 
 logger = get_logger(__name__)

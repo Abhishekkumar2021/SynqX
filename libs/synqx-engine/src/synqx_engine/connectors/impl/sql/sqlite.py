@@ -179,8 +179,11 @@ class SQLiteConnector(BaseConnector):
         if offset is not None:
             query += f" OFFSET {int(offset)}"
 
-        chunksize_val = kwargs.pop("chunksize", None) or kwargs.pop("batch_size", None)
+        chunksize_val = kwargs.get("chunksize") or kwargs.get("batch_size")
         chunksize = int(chunksize_val) if chunksize_val and int(chunksize_val) > 0 else 10000
+
+        # CLEANUP: Remove internal keys
+        self._clean_internal_kwargs(kwargs)
 
         try:
             it = pd.read_sql_query(
@@ -207,6 +210,9 @@ class SQLiteConnector(BaseConnector):
             data_iter = data
 
         total = 0
+
+        # CLEANUP: Remove internal keys
+        self._clean_internal_kwargs(kwargs)
 
         try:
             for df in data_iter:
@@ -240,6 +246,9 @@ class SQLiteConnector(BaseConnector):
             if offset and "offset" not in clean_query.lower():
                 final_query += f" OFFSET {int(offset)}"
             
+            # CLEANUP: Remove internal keys
+            self._clean_internal_kwargs(kwargs)
+
             df = pd.read_sql_query(text(final_query), con=self._connection, **kwargs)
             return df.where(pd.notnull(df), None).to_dict(orient="records")
         except Exception as e:

@@ -275,13 +275,11 @@ class SQLConnector(BaseConnector):
                 query += f" OFFSET {int(offset)}"
         
         # UI uses 'batch_size', SQLAlchemy uses 'chunksize'
-        chunksize_val = kwargs.pop("chunksize", None) or kwargs.pop("batch_size", None)
+        chunksize_val = kwargs.get("chunksize") or kwargs.get("batch_size")
         chunksize = int(chunksize_val) if chunksize_val and int(chunksize_val) > 0 else 10000
         
-        # CLEANUP: Remove SynqX internal metadata that shouldn't reach pandas/sqlalchemy
-        internal_keys = ["ui", "connection_id", "batch_size", "table", "asset", "query", "incremental_filter"]
-        for key in internal_keys:
-            kwargs.pop(key, None)
+        # CLEANUP: Remove internal keys
+        self._clean_internal_kwargs(kwargs)
         
         try:
             for chunk in pd.read_sql_query(text(query), con=self._connection, chunksize=chunksize, params=params, **kwargs):
@@ -292,9 +290,8 @@ class SQLConnector(BaseConnector):
     def get_total_count(self, query_or_asset: str, is_query: bool = False, **kwargs) -> Optional[int]:
         self.connect()
         try:
-            # CLEANUP: Remove metadata
-            kwargs.pop("ui", None)
-            kwargs.pop("connection_id", None)
+            # CLEANUP: Remove internal keys
+            self._clean_internal_kwargs(kwargs)
             bind_params = kwargs.copy()
 
             if is_query:
@@ -322,9 +319,8 @@ class SQLConnector(BaseConnector):
     ) -> List[Dict[str, Any]]:
         self.connect()
         try:
-            # CLEANUP: Remove metadata
-            kwargs.pop("ui", None)
-            kwargs.pop("connection_id", None)
+            # CLEANUP: Remove internal keys
+            self._clean_internal_kwargs(kwargs)
             
             # Treat remaining kwargs as bind parameters
             bind_params = kwargs.copy()
@@ -366,10 +362,8 @@ class SQLConnector(BaseConnector):
     ) -> int:
         self.connect()
         
-        # CLEANUP: Remove SynqX internal metadata that shouldn't reach pandas
-        internal_keys = ["ui", "connection_id", "write_mode", "write_strategy", "table", "target_table"]
-        for key in internal_keys:
-            kwargs.pop(key, None)
+        # CLEANUP: Remove internal keys
+        self._clean_internal_kwargs(kwargs)
         
         name, schema = self.normalize_asset_identifier(asset)
         
@@ -417,10 +411,14 @@ class SQLConnector(BaseConnector):
                         for col in new_cols:
                             dtype = str(df[col].dtype).lower()
                             sql_type = "TEXT" 
-                            if "int" in dtype: sql_type = "BIGINT"
-                            elif "float" in dtype or "double" in dtype: sql_type = "DOUBLE PRECISION"
-                            elif "bool" in dtype: sql_type = "BOOLEAN"
-                            elif "datetime" in dtype: sql_type = "TIMESTAMP"
+                            if "int" in dtype:
+                                sql_type = "BIGINT"
+                            elif "float" in dtype or "double" in dtype:
+                                sql_type = "DOUBLE PRECISION"
+                            elif "bool" in dtype:
+                                sql_type = "BOOLEAN"
+                            elif "datetime" in dtype:
+                                sql_type = "TIMESTAMP"
                             elif "json" in dtype or "object" in dtype:
                                 sql_type = "JSONB" if "postgres" in str(self._engine.url).lower() else "TEXT"
                             

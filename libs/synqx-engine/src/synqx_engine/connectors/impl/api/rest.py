@@ -3,7 +3,6 @@ import httpx
 import pandas as pd
 from synqx_core.utils.data import is_df_empty
 from synqx_engine.connectors.base import BaseConnector
-from synqx_core.utils.data import is_df_empty
 from synqx_core.utils.resilience import retry
 from synqx_core.errors import ConfigurationError, DataTransferError
 from synqx_core.logging import get_logger

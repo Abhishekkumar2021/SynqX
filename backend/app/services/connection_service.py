@@ -72,9 +72,12 @@ class ConnectionService:
             # Map task to job type
             job_type = JobType.EXPLORER
             lower_name = task_name.lower()
-            if "discover_assets" in lower_name or "schema" in lower_name: job_type = JobType.METADATA
-            elif "test" in lower_name: job_type = JobType.TEST
-            elif "file" in lower_name or "archive" in lower_name or "delete" in lower_name: job_type = JobType.FILE
+            if "discover_assets" in lower_name or "schema" in lower_name:
+                job_type = JobType.METADATA
+            elif "test" in lower_name:
+                job_type = JobType.TEST
+            elif "file" in lower_name or "archive" in lower_name or "delete" in lower_name:
+                job_type = JobType.FILE
 
             job_in = EphemeralJobCreate(
                 job_type=job_type,
@@ -980,7 +983,7 @@ class ConnectionService:
         """
         from app.core.cache_manager import ResultCacheManager
         from synqx_core.models.explorer import QueryHistory
-        from synqx_core.models.enums import JobStatus, JobType
+        from synqx_core.models.enums import JobType
         
         connection = self.get_connection(connection_id, workspace_id=workspace_id)
         if not connection:

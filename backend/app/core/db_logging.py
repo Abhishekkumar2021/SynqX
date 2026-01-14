@@ -20,12 +20,12 @@ class DBLogger:
     """
 
     @staticmethod
-    def log_job(session: Session, job_id: int, level: str, message: str, metadata: Optional[Dict[str, Any]] = None, source: str = "system"):
+    def log_job(session: Session, job_id: int, level: str, message: str, metadata: Optional[Dict[str, Any]] = None, source: str = "system", timestamp: Optional[datetime] = None):
         """
         Writes a log entry to the job_logs table.
         """
         try:
-            timestamp = datetime.now(timezone.utc)
+            timestamp = timestamp or datetime.now(timezone.utc)
             log_id = None
             
             # Fetch workspace_id from job
@@ -68,12 +68,12 @@ class DBLogger:
             logger.error(f"Failed to write JobLog (Job {job_id}): {e}")
 
     @staticmethod
-    def log_step(session: Session, step_run_id: int, level: str, message: str, metadata: Optional[Dict[str, Any]] = None, source: str = "runner", job_id: Optional[int] = None):
+    def log_step(session: Session, step_run_id: int, level: str, message: str, metadata: Optional[Dict[str, Any]] = None, source: str = "runner", job_id: Optional[int] = None, timestamp: Optional[datetime] = None):
         """
         Writes a log entry to the step_logs table.
         """
         try:
-            timestamp = datetime.now(timezone.utc)
+            timestamp = timestamp or datetime.now(timezone.utc)
             log_id = None
             
             from synqx_core.models.execution import StepRun, PipelineRun, Job

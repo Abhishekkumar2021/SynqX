@@ -1,6 +1,4 @@
-import io
 import os
-import zipfile
 from typing import List
 from datetime import datetime, timezone
 
@@ -21,13 +19,12 @@ from app.services.agent_service import AgentService
 from app.services.ephemeral_service import EphemeralJobService
 from synqx_core.models.agent import Agent
 from synqx_core.models.user import User
-from synqx_core.models.execution import Job, JobStatus, PipelineRun
+from synqx_core.models.execution import Job, JobStatus, PipelineRun, StepRun
 from synqx_core.models.ephemeral import EphemeralJob
-from synqx_core.models.monitoring import JobLog
-from synqx_core.models.enums import PipelineRunStatus, OperatorRunStatus
+from synqx_core.models.enums import PipelineRunStatus
 from synqx_core.models.pipelines import PipelineVersion
 from app.services.vault_service import VaultService
-from app.engine.agent_core.state_manager import StateManager
+from app.core.db_logging import DBLogger
 
 from app.core.logging import get_logger
 
@@ -211,14 +208,36 @@ def upload_job_logs(
         raise HTTPException(403, "Invalid job access")
         
     for log_entry in logs:
-        db_log = JobLog(
-            job_id=job.id,
-            level=log_entry.level.upper(),
-            message=log_entry.message,
-            timestamp=log_entry.timestamp or datetime.now(timezone.utc),
-            details={"node_id": log_entry.node_id} if log_entry.node_id else None
-        )
-        db.add(db_log)
+        # If node_id is provided, try to find the corresponding StepRun
+        step_run_id = None
+        if log_entry.node_id and job.run:
+            step_run = db.query(StepRun).filter(
+                StepRun.pipeline_run_id == job.run.id,
+                StepRun.node_id == log_entry.node_id
+            ).first()
+            if step_run:
+                step_run_id = step_run.id
+
+        if step_run_id:
+            DBLogger.log_step(
+                db, 
+                step_run_id, 
+                log_entry.level, 
+                log_entry.message, 
+                job_id=job.id,
+                timestamp=log_entry.timestamp,
+                source="agent"
+            )
+        else:
+            DBLogger.log_job(
+                db, 
+                job.id, 
+                log_entry.level, 
+                log_entry.message, 
+                metadata={"node_id": log_entry.node_id} if log_entry.node_id else None,
+                timestamp=log_entry.timestamp,
+                source="agent"
+            )
     
     db.commit()
     return {"count": len(logs)}
@@ -250,10 +269,6 @@ def export_agent_package(
     If a portable build (synqx-agent-portable.tar.gz) exists, serves that.
     Otherwise, falls back to zipping the source on the fly.
     """
-    agent_name = data.agent_name
-    client_id = data.client_id
-    api_key = data.api_key
-    tags = data.tags
 
     # 1. Check for Portable Build Artifact
     # This is created by scripts/build_agent_release.sh
@@ -274,7 +289,7 @@ def export_agent_package(
         open(portable_archive, "rb"),
         media_type="application/gzip",
         headers={
-            "Content-Disposition": f"attachment; filename=synqx-agent-portable.tar.gz"
+            "Content-Disposition": "attachment; filename=synqx-agent-portable.tar.gz"
         }
     )
 

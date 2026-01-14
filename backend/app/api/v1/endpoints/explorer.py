@@ -2,23 +2,22 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+
 from app import models
 from app.api import deps
+from synqx_core.models.user import User
+from synqx_core.models.enums import JobType, JobStatus
+from synqx_core.models.ephemeral import EphemeralJob
+from synqx_core.models.explorer import QueryHistory
+from synqx_core.schemas.ephemeral import EphemeralJobResponse
+from app.services.ephemeral_service import EphemeralJobService
 from app.services import connection_service
 from app.services.vault_service import VaultService
 from synqx_engine.connectors.factory import ConnectorFactory
-from synqx_core.models.ephemeral import EphemeralJob
-from synqx_core.models.explorer import QueryHistory
-from synqx_core.models.user import User
-from synqx_core.models.enums import JobType, JobStatus
-from pydantic import BaseModel
-
-from app.services.ephemeral_service import EphemeralJobService
-from synqx_core.schemas.ephemeral import EphemeralJobCreate, EphemeralJobResponse
 from app.utils.agent import is_remote_group
-from app.utils.serialization import sanitize_for_json
 from app.core.logging import get_logger
-from app.core.cache_manager import ResultCacheManager
+from app.core.errors import AppError
 
 router = APIRouter()
 logger = get_logger(__name__)

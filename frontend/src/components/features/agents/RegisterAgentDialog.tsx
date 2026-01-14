@@ -6,7 +6,6 @@ import {
   Terminal, 
   ShieldCheck, 
   Box,
-  Code2,
   Zap,
   Loader2,
   ArrowRight,

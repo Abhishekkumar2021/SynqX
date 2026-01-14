@@ -63,9 +63,6 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
         }));
     }, [data, totalPipelines, colors]);
 
-    // const activeCount = data.find(d => d.name === 'Active')?.value || 0; // Unused without header
-    // const healthScore = totalPipelines > 0 ? Math.round((activeCount / totalPipelines) * 100) : 0; // Unused without header
-
     return (
         <div className="flex flex-col h-full">
             <div className="flex-1 flex flex-col items-center justify-center relative px-6 pb-8 pt-4">

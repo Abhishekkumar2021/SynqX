@@ -570,6 +570,7 @@ class ServiceManager:
                     env=env, 
                     stdout=log, 
                     stderr=subprocess.STDOUT,
+                    stdin=subprocess.DEVNULL,
                     **kwargs
                 )
             
@@ -876,6 +877,7 @@ def dev_stop(args):
         service_manager.stop_service(svc_name, force=args.force if hasattr(args, 'force') else False)
     
     logging.info("✅ All services stopped")
+    return True
 
 def dev_restart(args):
     """Restart development stack."""
@@ -945,7 +947,7 @@ def dev_logs(args):
         log_file = LOG_DIR / f"{args.service}.log"
         if not log_file.exists():
             logging.error(f"No log file for {args.service}")
-            return
+            return False
         
         logging.info(f"Tailing {args.service} logs (Ctrl+C to stop)...")
         try:
@@ -955,6 +957,7 @@ def dev_logs(args):
                 subprocess.run(["tail", "-f", str(log_file)])
         except KeyboardInterrupt:
             print()
+    return True
 
 def dev_health(args):
     """Run health checks on all services."""
@@ -993,6 +996,7 @@ def dev_health(args):
         logging.warning("⚠️  Some services are unhealthy")
     
     print()
+    return all_healthy
 
 # --- Commands: DB ---
 def db_backup(name: str = None) -> Optional[Path]:

@@ -1,4 +1,4 @@
-from typing import Iterator, List, Dict, Any
+from typing import Iterator, Dict, Any
 import polars as pl
 import hashlib
 from synqx_engine.transforms.polars_base import PolarsTransform

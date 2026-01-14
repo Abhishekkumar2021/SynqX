@@ -27,8 +27,7 @@ import {
   ArrowRight,
   Maximize2,
   Minimize2,
-  RefreshCw,
-  CheckCircle2
+  RefreshCw
 } from 'lucide-react';
 
 import { getLineageGraph, getImpactAnalysis, getColumnLineage, getColumnImpact } from '@/lib/api/lineage';

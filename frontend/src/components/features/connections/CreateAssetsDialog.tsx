@@ -15,9 +15,8 @@ import { type AssetBulkCreate, bulkCreateAssets } from '@/lib/api';
 import { AssetType, ConnectorType } from '@/lib/enums';
 import { ASSET_META } from '@/lib/asset-definitions';
 import { toast } from 'sonner';
-import { Plus, X, ArrowRightLeft, Sparkles, Loader2, Code, TrendingUp } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Code } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface CreateAssetsDialogProps {
@@ -88,7 +87,7 @@ export const CreateAssetsDialog: React.FC<CreateAssetsDialogProps> = ({ connecti
     const availableAssetTypes = CONNECTOR_ASSET_TYPES[connectorType] || DEFAULT_ASSET_TYPES;
     const defaultAssetType = availableAssetTypes[0];
 
-    const { register, control, handleSubmit, reset, watch, setValue } = useForm<FormValues>({
+    const { register, control, handleSubmit, reset, watch } = useForm<FormValues>({
         defaultValues: {
             assets: [{
                 name: '',

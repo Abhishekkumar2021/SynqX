@@ -202,6 +202,7 @@ class StateManager:
             # Update timing
             if status == OperatorRunStatus.RUNNING and not t_step_run.started_at:
                 t_step_run.started_at = datetime.now(timezone.utc)
+                DBLogger.log_step(self.db, t_step_run.id, "INFO", f"Step '{t_step_run.node.name if t_step_run.node else t_step_run.node_id}' execution started", job_id=self.job_id)
             
             if status in [OperatorRunStatus.SUCCESS, OperatorRunStatus.FAILED]:
                 t_step_run.completed_at = datetime.now(timezone.utc)
@@ -210,6 +211,9 @@ class StateManager:
                         t_step_run.completed_at - t_step_run.started_at
                     ).total_seconds()
                     t_step_run.duration_seconds = duration
+                
+                if status == OperatorRunStatus.SUCCESS:
+                    DBLogger.log_step(self.db, t_step_run.id, "INFO", f"Step '{t_step_run.node.name if t_step_run.node else t_step_run.node_id}' completed successfully", job_id=self.job_id)
             
             # Update metrics
             t_step_run.records_in = records_in
@@ -241,6 +245,11 @@ class StateManager:
             if error:
                 t_step_run.error_message = str(error)
                 t_step_run.error_type = type(error).__name__
+                DBLogger.log_step(self.db, t_step_run.id, "ERROR", f"Step '{t_step_run.node.name if t_step_run.node else t_step_run.node_id}' failed: {str(error)}", job_id=self.job_id)
+            elif status == OperatorRunStatus.FAILED:
+                # Log a generic error if status is failed but no error object was passed
+                error_msg = t_step_run.error_message or "unknown error"
+                DBLogger.log_step(self.db, t_step_run.id, "ERROR", f"Step '{t_step_run.node.name if t_step_run.node else t_step_run.node_id}' failed with {error_msg}", job_id=self.job_id)
             
             self.db.add(t_step_run)
             

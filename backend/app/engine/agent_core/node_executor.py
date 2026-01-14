@@ -80,7 +80,7 @@ class NodeExecutor:
             # Convert Polars to Pandas for standardized sniffing if needed
             if hasattr(df, "to_pandas"):
                 df = df.to_pandas()
-            json_str = sample_df.to_json(orient="records", date_format="iso")
+            json_str = df.to_json(orient="records", date_format="iso")
             sample = json.loads(json_str)
             
             return {
@@ -703,7 +703,6 @@ class NodeExecutor:
             )
             
             logger.error(f"[FAILED] Node '{node.name}' FAILED: {str(e)}", exc_info=True)
-            DBLogger.log_step(db, step_run.id, "ERROR", f"Terminal execution fault in node '{node.name}': {str(e)}", job_id=pipeline_run.job_id)
             
             raise e
     

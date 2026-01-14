@@ -5,7 +5,7 @@ import {
     Copy, FileCode, Sliders, X,
     Database, HardDriveUpload, CheckCircle2,
     PlayCircle, GitMerge, Layers,
-    Zap, History, Shield
+    History, Shield
 } from 'lucide-react';
 
 export interface OperatorDef {

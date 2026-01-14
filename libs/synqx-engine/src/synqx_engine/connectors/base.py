@@ -187,3 +187,18 @@ class BaseConnector(ABC):
 
     def supports_pushdown(self) -> bool:
         return False
+
+    def _clean_internal_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Removes internal SynqX metadata from kwargs to prevent passing them 
+        to underlying libraries (like pandas or sqlalchemy) that don't support them.
+        """
+        internal_keys = [
+            "ui", "connection_id", "batch_size", "incremental", 
+            "incremental_filter", "watermark_column", "WATERMARK_COLUMN", 
+            "table", "write_mode", "write_strategy", "target_table",
+            "schema_evolution_policy", "chunksize"
+        ]
+        for key in internal_keys:
+            kwargs.pop(key, None)
+        return kwargs

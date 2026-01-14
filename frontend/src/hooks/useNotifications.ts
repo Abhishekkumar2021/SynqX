@@ -14,7 +14,12 @@ export function useNotifications() {
     if (!user?.id) return;
 
     const wsBase = API_BASE_URL.replace(/^http/, 'ws');
-    const wsUrl = `${wsBase}/ws/notifications/${user.id}`;
+    // Prioritize workspace notifications to receive all team and system events
+    const channelPath = user.active_workspace_id 
+        ? `/ws/notifications/workspace/${user.active_workspace_id}`
+        : `/ws/notifications/${user.id}`;
+        
+    const wsUrl = `${wsBase}${channelPath}`;
     
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
@@ -55,7 +60,7 @@ export function useNotifications() {
     return () => {
       ws.close();
     };
-  }, [user?.id, queryClient]);
+  }, [user?.id, user?.active_workspace_id, queryClient]);
 
   return { isConnected };
 }

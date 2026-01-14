@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, Any, Dict, Iterator, Union
+from typing import Optional, Any, Iterator, Union
 import pandas as pd
 from sqlalchemy import text
 from synqx_engine.connectors.impl.sql.base import SQLConnector

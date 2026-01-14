@@ -2,7 +2,7 @@ from typing import Iterator, Dict
 import polars as pl
 from datetime import datetime, timezone
 from synqx_engine.transforms.polars_base import PolarsTransform
-from synqx_core.errors import ConfigurationError, TransformationError
+from synqx_core.errors import TransformationError
 from synqx_core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -70,7 +70,7 @@ class SCDType2Transform(PolarsTransform):
             yield result
             return
 
-        target_lf = pl.concat(target_lfs).filter(pl.col(is_curr) == True)
+        target_lf = pl.concat(target_lfs).filter(pl.col(is_curr))
         
         try:
             # Join delta and target to find:
