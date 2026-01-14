@@ -12,5 +12,6 @@
   "database": {
     "backup_before_migrate": true,
     "backup_retention_days": 7
-  }
+  },
+  "graceful_timeout": 10
 }

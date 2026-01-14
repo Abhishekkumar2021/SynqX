@@ -259,39 +259,117 @@ def update_ephemeral_job(
     EphemeralJobService.update_job(db, job_id, update)
     return {"status": "ok"}
 
+@router.get("/releases")
+def list_agent_releases(
+    current_user: User = Depends(deps.get_current_user),
+):
+    """
+    Returns a list of available agent releases from the distribution directory.
+    """
+    dist_dir = os.path.join(os.getcwd(), "dist", "agents")
+    if not os.path.exists(dist_dir):
+        # Try one level up if we are in backend/
+        dist_dir = os.path.join(os.getcwd(), "..", "dist", "agents")
+    
+    if not os.path.exists(dist_dir):
+        return []
+        
+    releases = []
+    for f in os.listdir(dist_dir):
+        if f.startswith("synqx-agent-v") and f.endswith(".tar.gz"):
+            version = f.replace("synqx-agent-v", "").replace(".tar.gz", "")
+            full_path = os.path.join(dist_dir, f)
+            stats = os.stat(full_path)
+            releases.append({
+                "version": version,
+                "filename": f,
+                "size_bytes": stats.st_size,
+                "created_at": datetime.fromtimestamp(stats.st_mtime, tz=timezone.utc).isoformat()
+            })
+    
+    return sorted(releases, key=lambda x: x["version"], reverse=True)
+
+@router.get("/download/{version_or_latest}")
+def download_agent_package(
+    version_or_latest: str = "latest",
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Downloads a specific version of the SynqX Agent or the 'latest' build.
+    """
+    dist_dir = os.path.join(os.getcwd(), "dist", "agents")
+    if not os.path.exists(dist_dir):
+        # Try one level up if we are in backend/
+        dist_dir = os.path.join(os.getcwd(), "..", "dist", "agents")
+
+    if version_or_latest == "latest":
+        filename = "synqx-agent-latest.tar.gz"
+    else:
+        # Sanitize version input
+        version = version_or_latest.lstrip('v')
+        filename = f"synqx-agent-v{version}.tar.gz"
+
+    file_path = os.path.join(dist_dir, filename)
+
+    if not os.path.exists(file_path):
+        logger.error(f"Agent artifact not found at {file_path}")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Agent package '{filename}' not found. Please ensure the build process has been run."
+        )
+
+    return StreamingResponse(
+        open(file_path, "rb"),
+        media_type="application/gzip",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+@router.get("/download/{version_or_latest}/checksum")
+def download_agent_checksum(
+    version_or_latest: str = "latest",
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Downloads the SHA256 checksum for a specific agent package.
+    """
+    dist_dir = os.path.join(os.getcwd(), "dist", "agents")
+    if not os.path.exists(dist_dir):
+        dist_dir = os.path.join(os.getcwd(), "..", "dist", "agents")
+
+    if version_or_latest == "latest":
+        filename = "synqx-agent-latest.tar.gz.sha256"
+    else:
+        version = version_or_latest.lstrip('v')
+        filename = f"synqx-agent-v{version}.tar.gz.sha256"
+
+    file_path = os.path.join(dist_dir, filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Checksum file '{filename}' not found."
+        )
+
+    return StreamingResponse(
+        open(file_path, "rb"),
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
 @router.post("/export")
 def export_agent_package(
     data: AgentExportRequest,
     db: Session = Depends(deps.get_db)
 ):
     """
-    Generates a pre-configured ZIP package of the SynqX Agent.
-    If a portable build (synqx-agent-portable.tar.gz) exists, serves that.
-    Otherwise, falls back to zipping the source on the fly.
+    Generates a pre-configured ZIP package of the SynqX Agent (Legacy Endpoint).
+    Now redirects to the modern download system.
     """
-
-    # 1. Check for Portable Build Artifact
-    # This is created by scripts/build_agent_release.sh
-    portable_archive = os.path.join(os.getcwd(), "synqx-agent-portable.tar.gz")
-    if not os.path.exists(portable_archive):
-         # Try one level up if we are in backend/
-         portable_archive = os.path.join(os.getcwd(), "..", "synqx-agent-portable.tar.gz")
-
-    if not os.path.exists(portable_archive):
-        logger.error("Portable agent artifact not found. Admin must run build script.")
-        raise HTTPException(
-            status_code=404, 
-            detail="Portable agent package not found. Please contact your system administrator to generate the release artifact."
-        )
-
-    # Serve the pre-built portable archive
-    return StreamingResponse(
-        open(portable_archive, "rb"),
-        media_type="application/gzip",
-        headers={
-            "Content-Disposition": "attachment; filename=synqx-agent-portable.tar.gz"
-        }
-    )
+    return download_agent_package("latest", db)
 
 @router.post("/poll")
 def poll_jobs(

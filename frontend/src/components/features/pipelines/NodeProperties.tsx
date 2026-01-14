@@ -15,7 +15,6 @@ import {
     Loader2,
     Sparkles,
     Shield,
-    FileCode,
     Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -68,7 +67,6 @@ interface NodePropertiesProps {
 
 // --- Automated Lineage Component ---
 const AutomatedLineageView = ({ assetId }: { assetId: number }) => {
-    const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
     const [lineageData, setLineageData] = useState<any>(null);
     const [loading, setLoading] = useState(false);
 
@@ -85,7 +83,6 @@ const AutomatedLineageView = ({ assetId }: { assetId: number }) => {
     }, [assets, assetId]);
 
     const fetchLineage = async (col: string) => {
-        setSelectedColumn(col);
         setLoading(true);
         try {
             const data = await getColumnLineage(assetId, col);

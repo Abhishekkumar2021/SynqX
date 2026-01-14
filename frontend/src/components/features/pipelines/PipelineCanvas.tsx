@@ -511,6 +511,8 @@ export const PipelineCanvas: React.FC = () => {
                         source_asset_id: nodeData.source_asset_id,
                         destination_asset_id: nodeData.destination_asset_id,
                         connection_id: nodeData.connection_id,
+                        write_strategy: nodeData.write_strategy || 'append',
+                        schema_evolution_policy: nodeData.schema_evolution_policy || 'strict',
                         max_retries: 3,
                         retry_strategy: RetryStrategy.FIXED,
                         retry_delay_seconds: 60

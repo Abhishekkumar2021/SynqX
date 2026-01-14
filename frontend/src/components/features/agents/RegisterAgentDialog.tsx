@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { 
   Plus, 
   Terminal, 
@@ -37,11 +37,12 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Command,
   CommandEmpty,
@@ -56,6 +57,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 
 // Existing Shared Components
@@ -284,29 +291,64 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
 
     const [installMethod, setInstallTab] = useState('manual');
     const [isDownloading, setIsDownloading] = useState(false);
+    const [selectedVersion, setSelectedVersion] = useState<string>('latest');
+
+    // Fetch available releases
+    const { data: releases } = useQuery({
+        queryKey: ['agent-releases'],
+        queryFn: async () => (await api.get('/agents/releases')).data
+    });
 
     const handleDownloadZip = async () => {
         setIsDownloading(true);
         try {
-            const response = await api.post('/agents/export', {
-                agent_name: agentName,
-                client_id: clientId,
-                api_key: apiKey,
-                tags: tags
-            }, { responseType: 'blob' });
+            const filename = selectedVersion === 'latest' 
+                ? 'synqx-agent-latest.tar.gz' 
+                : `synqx-agent-v${selectedVersion}.tar.gz`;
+
+            const response = await api.get(`/agents/download/${selectedVersion}`, { 
+                responseType: 'blob' 
+            });
             
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `synqx-agent-portable.tar.gz`);
+            link.setAttribute('download', filename);
             document.body.appendChild(link);
             link.click();
             link.remove();
-            toast.success("Portable Installer Downloaded");
-        } catch {
-            toast.error("Package Generation Failed");
+            toast.success(`${selectedVersion === 'latest' ? 'Latest' : selectedVersion} Agent Downloaded`);
+        } catch (err: any) {
+            toast.error("Download Failed", {
+                description: err.response?.data?.detail || "The requested agent version might not be available on the server."
+            });
         } finally {
             setIsDownloading(false);
+        }
+    };
+
+    const handleDownloadChecksum = async () => {
+        try {
+            const filename = selectedVersion === 'latest' 
+                ? 'synqx-agent-latest.tar.gz.sha256' 
+                : `synqx-agent-v${selectedVersion}.tar.gz.sha256`;
+
+            const response = await api.get(`/agents/download/${selectedVersion}/checksum`, { 
+                responseType: 'blob' 
+            });
+            
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Checksum Downloaded");
+        } catch (err: any) {
+            toast.error("Download Failed", {
+                description: "Checksum file not available."
+            });
         }
     };
 
@@ -337,9 +379,11 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
   -e SYNQX_TAGS="${tags}" \\
   synqx/agent:latest`;
 
+    const agentFileName = selectedVersion === 'latest' ? 'synqx-agent-latest.tar.gz' : `synqx-agent-v${selectedVersion}.tar.gz`;
+
     const pythonCommand = platform === 'windows' 
         ? `# 1. Extract Archive
-Expand-Archive synqx-agent-portable.tar.gz -DestinationPath .
+Expand-Archive ${agentFileName} -DestinationPath .
 cd dist_agent
 
 # 2. Run Installer
@@ -349,7 +393,7 @@ python3 install.py --api-url "${API_URL}" --client-id "${clientId}" --api-key "$
 .\\venv\\Scripts\\Activate.ps1
 synqx-agent start`
         : `# 1. Extract Archive
-tar -xzf synqx-agent-portable.tar.gz
+tar -xzf ${agentFileName}
 cd dist_agent
 
 # 2. Run Installer (Auto-configures & Installs Dependencies)
@@ -461,24 +505,62 @@ synqx-agent start`;
                         <div className="mt-6">
                             <TabsContent value="manual" className="mt-0 space-y-8 animate-in fade-in-50 duration-300">
                                 {/* ZIP Download Hero Section */}
-                                <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex items-center justify-between gap-6 group hover:border-primary/40 transition-all shadow-sm">
+                                <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 dark:bg-primary/10 flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-primary/40 transition-all shadow-sm">
                                     <div className="flex items-center gap-5">
                                         <div className="p-4 rounded-xl bg-background border border-primary/10 shadow-md group-hover:scale-110 transition-transform">
                                             <ArrowDownToLine className={cn("h-7 w-7 text-primary", isDownloading && "animate-bounce")} />
                                         </div>
                                         <div className="space-y-1">
                                             <h4 className="font-bold text-base tracking-tight text-foreground">Portable Agent Package</h4>
-                                            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed max-w-70">Self-contained installer with offline dependencies.</p>
+                                            <p className="text-[11px] text-muted-foreground font-medium leading-relaxed max-w-70">Self-contained installer with internal dependencies.</p>
                                         </div>
                                     </div>
-                                    <Button 
-                                        onClick={handleDownloadZip} 
-                                        disabled={isDownloading || !isNew} 
-                                        className="rounded-xl h-12 px-6 font-bold gap-2 shadow-lg shadow-primary/20 shrink-0 transition-all hover:scale-[1.02] active:scale-95 bg-primary text-primary-foreground"
-                                    >
-                                        {isDownloading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Download className="h-4.5 w-4.5" />}
-                                        Download Installer
-                                    </Button>
+                                    
+                                    <div className="flex items-center gap-3">
+                                        <Select value={selectedVersion} onValueChange={setSelectedVersion}>
+                                            <SelectTrigger className="h-10 rounded-xl font-bold text-[11px] uppercase gap-2 bg-background border-primary/10 hover:border-primary/30 min-w-[140px] focus:ring-0">
+                                                <SelectValue placeholder="Select Version">
+                                                    {selectedVersion === 'latest' ? 'Latest Stable' : `v${selectedVersion}`}
+                                                </SelectValue>
+                                            </SelectTrigger>
+                                            <SelectContent align="end" className="w-48 rounded-xl border-border/40 backdrop-blur-xl bg-background/95">
+                                                <SelectItem value="latest" className="rounded-lg font-bold py-2 cursor-pointer text-xs focus:bg-primary/10 focus:text-primary">
+                                                    Latest Stable
+                                                </SelectItem>
+                                                {releases?.map((rel: any) => (
+                                                    <SelectItem 
+                                                        key={rel.version} 
+                                                        value={rel.version} 
+                                                        className="rounded-lg font-bold py-2 cursor-pointer text-xs focus:bg-primary/10 focus:text-primary"
+                                                    >
+                                                        v{rel.version}
+                                                        {rel.version === '1.0.2' && <span className="ml-2 text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md inline-block">New</span>}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                        <div className="flex gap-2">
+                                            <Button 
+                                                onClick={handleDownloadChecksum} 
+                                                disabled={isDownloading || !isNew} 
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-12 w-12 rounded-xl border-primary/10 hover:border-primary/30 bg-background shadow-sm hover:text-primary transition-all hover:scale-[1.05]"
+                                                title="Download SHA256 Integrity Checksum"
+                                            >
+                                                <ShieldCheck className="h-4.5 w-4.5" />
+                                            </Button>
+                                            <Button 
+                                                onClick={handleDownloadZip} 
+                                                disabled={isDownloading || !isNew} 
+                                                className="rounded-xl h-12 px-6 font-bold gap-2 shadow-lg shadow-primary/20 shrink-0 transition-all hover:scale-[1.02] active:scale-95 bg-primary text-primary-foreground"
+                                            >
+                                                {isDownloading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Download className="h-4.5 w-4.5" />}
+                                                Download
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Manual Reference Section */}

@@ -1,6 +1,6 @@
 [project]
 name = "synqx-agent"
-version = "1.0.0"
+version = "1.0.1"
 description = "Universal Remote Execution Agent for SynqX"
 authors = [{ name = "SynqX Team" }]
 dependencies = [

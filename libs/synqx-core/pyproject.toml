@@ -1,6 +1,6 @@
 [project]
 name = "synqx-core"
-version = "0.1.0"
+version = "1.0.1"
 description = "Shared data contracts, models, and errors for Synqx"
 requires-python = ">=3.10"
 dependencies = [

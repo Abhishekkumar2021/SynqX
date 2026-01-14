@@ -334,6 +334,7 @@ class ParallelAgent:
                             
                             for attempt in range(max_attempts):
                                 try:
+                                    # Create a local context for capturing quality_profile
                                     results, quality_profile = self.executor.execute(n, inp, s_cb, log_cb)
                                     return results, quality_profile
                                 except Exception as exc:
