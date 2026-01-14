@@ -54,6 +54,11 @@ class EphemeralJobService:
             "job_id": job.id,
             "job_type": job.job_type.value
         })
+
+        # Trigger internal worker if NOT remote
+        if not is_remote:
+            from app.worker.tasks import process_internal_ephemeral_job
+            process_internal_ephemeral_job.delay(job.id)
         
         return job
 

@@ -50,62 +50,148 @@ class ConnectionService:
         config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Helper to trigger a remote task via the new EphemeralJob infrastructure.
-        Waits for completion and returns the result (sample_data).
+        Standardized Metadata/Interactive Task Router.
+        - Internal Agent: Synchronous execution (Direct).
+        - Remote Agent: Asynchronous execution (EphemeralJob).
         """
         from app.services.ephemeral_service import EphemeralJobService
         from synqx_core.schemas.ephemeral import EphemeralJobCreate
-        from synqx_core.models.enums import JobType
+        from synqx_core.models.enums import JobType, JobStatus
         from app.services.agent_service import AgentService
+        import sys
+        import platform
+        import os
 
-        # Fail early if no agents are online for this group
-        if is_remote_group(agent_group):
+        is_remote = is_remote_group(agent_group)
+
+        # --- BRANCH 1: REMOTE ASYNC EXECUTION ---
+        if is_remote:
             if not AgentService.is_group_active(self.db_session, workspace_id, agent_group):
-                raise AppError(f"No active agents found in group '{agent_group}'. Please ensure your remote agent is running.")
+                raise AppError(f"Remote Agent Group '{agent_group}' is currently offline. Verification aborted.")
 
-        # Determine Job Type
-        job_type = JobType.EXPLORER
-        if "discover_assets" in task_name.lower():
-            job_type = JobType.METADATA
-        elif "schema" in task_name.lower():
-            job_type = JobType.METADATA
-        elif "test" in task_name.lower():
-            job_type = JobType.TEST
+            # Map task to job type
+            job_type = JobType.EXPLORER
+            lower_name = task_name.lower()
+            if "discover_assets" in lower_name or "schema" in lower_name: job_type = JobType.METADATA
+            elif "test" in lower_name: job_type = JobType.TEST
+            elif "file" in lower_name or "archive" in lower_name or "delete" in lower_name: job_type = JobType.FILE
 
-        # 1. Create Ephemeral Job
-        job_in = EphemeralJobCreate(
-            job_type=job_type,
-            connection_id=connection_id,
-            payload=config,
-            agent_group=agent_group
-        )
-        
-        job = EphemeralJobService.create_job(
-            self.db_session,
-            workspace_id=workspace_id,
-            user_id=user_id,
-            data=job_in
-        )
-
-        # 2. Synchronous Wait (Polling)
-        # Timeout after 45 seconds for interactive tasks (Agents might be slow)
-        start_time = time.time()
-        while time.time() - start_time < 45:
-            self.db_session.expire_all()
-            from synqx_core.models.ephemeral import EphemeralJob
-            updated_job = self.db_session.query(EphemeralJob).get(job.id)
-            if updated_job.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
-                break
-            time.sleep(0.5)
+            job_in = EphemeralJobCreate(
+                job_type=job_type,
+                connection_id=connection_id,
+                payload=config,
+                agent_group=agent_group
+            )
             
-        if updated_job.status == JobStatus.FAILED:
-            error_detail = updated_job.error_message or 'No specific error provided by agent'
-            raise AppError(f"Remote execution failed for '{task_name}': {error_detail}")
-        
-        if updated_job.status != JobStatus.SUCCESS:
-            raise AppError(f"Interactive task '{task_name}' timed out after 45s. This usually happens if the remote agent is overloaded or has high latency.")
+            job = EphemeralJobService.create_job(self.db_session, workspace_id, user_id, job_in)
 
-        return updated_job.result_sample if updated_job.result_sample else {}
+            # Polling wait for remote agent
+            start_time = time.time()
+            from synqx_core.models.ephemeral import EphemeralJob
+            while time.time() - start_time < 45:
+                # BREAK ISOLATION: End current transaction block to see worker commits
+                self.db_session.commit() 
+                updated_job = self.db_session.query(EphemeralJob).filter(EphemeralJob.id == job.id).first()
+                
+                if updated_job.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
+                    break
+                time.sleep(0.5)
+                
+            if updated_job.status == JobStatus.FAILED:
+                raise AppError(f"Remote execution failed: {updated_job.error_message}")
+            if updated_job.status != JobStatus.SUCCESS:
+                raise AppError(f"Remote agent timed out performing '{task_name}'.")
+
+            return updated_job.result_sample if updated_job.result_sample else {}
+
+        # --- BRANCH 2: INTERNAL SYNCHRONOUS EXECUTION ---
+        else:
+            try:
+                connection = self.get_connection(connection_id)
+                if not connection:
+                    raise AppError("Internal Routing Error: Connection context missing.")
+
+                conn_cfg = VaultService.get_connector_config(connection)
+                
+                # Context Management for Scripts (Support isolated environments)
+                if connection.connector_type.value == "custom_script":
+                    dep_service = DependencyService(self.db_session, connection.id)
+                    python_exe = sys.executable
+                    python_env = dep_service.get_environment("python")
+                    if python_env and python_env.status == "ready":
+                        if platform.system() == "Windows":
+                            python_exe = os.path.join(python_env.path, "Scripts", "python.exe")
+                        else:
+                            python_exe = os.path.join(python_env.path, "bin", "python")
+
+                    conn_cfg["execution_context"] = {
+                        "python_executable": python_exe,
+                        "node_cwd": os.path.join(os.getcwd(), ".synqx", "envs", str(connection.id), "node")
+                    }
+
+                connector = ConnectorFactory.get_connector(connection.connector_type.value, conn_cfg)
+                
+                with connector.session():
+                    task_key = task_name.lower()
+                    
+                    if "discover_assets" in task_key:
+                        res = connector.discover_assets(
+                            pattern=config.get("pattern"),
+                            include_metadata=config.get("include_metadata", False)
+                        )
+                        return {"assets": sanitize_for_json(res)}
+                    
+                    elif "schema" in task_key:
+                        # Extract asset info safely to avoid multiple values error
+                        inf_config = config.copy()
+                        asset = inf_config.pop("asset", None)
+                        limit = inf_config.pop("limit", 1000)
+                        res = connector.infer_schema(asset, sample_size=limit, **inf_config)
+                        return {"schema": sanitize_for_json(res)}
+                    
+                    elif "test" in task_key:
+                        connector.test_connection()
+                        return {"success": True}
+                    
+                    elif "fetch sample data" in task_key:
+                        inf_config = config.copy()
+                        asset = inf_config.pop("asset", None)
+                        limit = inf_config.pop("limit", 100)
+                        res = connector.fetch_sample(asset, limit=limit, **inf_config)
+                        return {"rows": sanitize_for_json(res)}
+                    
+                    elif "list files" in task_key:
+                        res = connector.list_files(path=config.get("path", ""))
+                        return {"files": sanitize_for_json(res)}
+                    
+                    elif "create directory" in task_key:
+                        res = connector.create_directory(path=config.get("path"))
+                        return {"success": res}
+                    
+                    elif "download" in task_key:
+                        res = connector.download_file(path=config.get("path"))
+                        import base64
+                        return {"content": base64.b64encode(res).decode('utf-8')}
+                    
+                    elif "upload" in task_key or "write" in task_key:
+                        import base64
+                        content = base64.b64decode(config.get("content", ""))
+                        res = connector.upload_file(path=config.get("path"), content=content)
+                        return {"success": res}
+                    
+                    elif "delete" in task_key:
+                        res = connector.delete_file(path=config.get("path"))
+                        return {"success": res}
+                    
+                    elif "archive" in task_key or "zip" in task_key:
+                        res = connector.zip_directory(path=config.get("path"))
+                        import base64
+                        return {"content": base64.b64encode(res).decode('utf-8')}
+
+                return {}
+            except Exception as e:
+                logger.error(f"Internal sync execution failed: {e}", exc_info=True)
+                raise AppError(f"Direct connection failed: {str(e)}")
 
     def create_connection(self, connection_create: ConnectionCreate, user_id: int, workspace_id: Optional[int] = None) -> Connection:
         try:
@@ -846,61 +932,166 @@ class ConnectionService:
             )
 
     def get_sample_data(
-        self, asset_id: int, limit: int = 100, user_id: Optional[int] = None, workspace_id: Optional[int] = None
+        self, asset_id: int, limit: int = 100, user_id: Optional[int] = None, workspace_id: Optional[int] = None, agent_group: Optional[str] = None
     ) -> Dict[str, Any]:
         asset = self.get_asset(asset_id, user_id=user_id, workspace_id=workspace_id)
         if not asset:
             raise AppError(f"Asset {asset_id} not found")
 
-        agent_group = asset.connection.workspace.default_agent_group if asset.connection.workspace else None
+        if not agent_group:
+            agent_group = asset.connection.workspace.default_agent_group if asset.connection.workspace else "internal"
         
-        if is_remote_group(agent_group):
-            from app.engine.scheduler import Scheduler
-            Scheduler.dispatch_discovery(
-                self.db_session, 
+        try:
+            # --- UNIFIED ROUTING ---
+            task_config = {
+                "asset": asset.fully_qualified_name or asset.name,
+                "limit": limit,
+                **(asset.config or {})
+            }
+            sample_data = self._trigger_ephemeral_job(
                 asset.connection_id, agent_group, user_id, workspace_id,
-                force=True
+                "Fetch Sample Data", task_config
             )
+            
+            rows = sample_data.get("rows", [])
+            return {
+                "asset_id": asset_id,
+                "rows": sanitize_for_json(rows),
+                "count": len(rows)
+            }
+        except Exception as e:
+            raise AppError(f"Failed to fetch sample data: {str(e)}")
 
-        if is_remote_group(agent_group):
-            # --- REMOTE AGENT MODE ---
-            try:
-                task_config = {
-                    "asset": asset.fully_qualified_name or asset.name,
-                    "limit": limit
-                }
-                sample_data = self._trigger_ephemeral_job(
-                    asset.connection_id, agent_group, user_id, workspace_id,
-                    "Fetch Sample Data", task_config
-                )
-                
-                rows = sample_data.get("rows", [])
-                return {
-                    "asset_id": asset_id,
-                    "rows": rows,
-                    "count": len(rows)
-                }
-            except Exception as e:
-                raise AppError(f"Failed to fetch remote sample data: {str(e)}")
-        else:
-            # --- INTERNAL MODE ---
-            try:
-                config = VaultService.get_connector_config(asset.connection)
-                connector = ConnectorFactory.get_connector(
-                    asset.connection.connector_type.value, config
-                )
+    def execute_query_unified(
+        self,
+        connection_id: int,
+        query: str,
+        workspace_id: int,
+        user_id: int,
+        limit: int = 100,
+        offset: int = 0,
+        params: Optional[Dict[str, Any]] = None,
+        agent_group: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Traffic Controller for Explorer Queries.
+        - Synchronous + Cached for Internal Agents.
+        - Asynchronous + Job-based for Remote Agents.
+        """
+        from app.core.cache_manager import ResultCacheManager
+        from synqx_core.models.explorer import QueryHistory
+        from synqx_core.models.enums import JobStatus, JobType
+        
+        connection = self.get_connection(connection_id, workspace_id=workspace_id)
+        if not connection:
+            raise AppError("Connection not found")
 
-                asset_identifier = asset.fully_qualified_name or asset.name
-                with connector.session() as session:
-                    rows = session.fetch_sample(asset_identifier, limit=limit)
+        # 1. Cache Check
+        cached = ResultCacheManager.get_cached_result(connection_id, query, limit, offset, params or {})
+        if cached:
+            return {
+                "status": "success",
+                "results": cached["results"],
+                "summary": cached["summary"],
+                "execution_time_ms": 0,
+                "worker_id": "cache"
+            }
 
-                return {
-                    "asset_id": asset_id,
-                    "rows": sanitize_for_json(rows),
-                    "count": len(rows)
-                }
-            except Exception as e:
-                raise AppError(f"Failed to fetch sample data: {str(e)}")
+        # 2. Routing Decision
+        if not agent_group:
+            agent_group = connection.workspace.default_agent_group if connection.workspace else "internal"
+        
+        is_remote = is_remote_group(agent_group)
+
+        # --- BRANCH A: REMOTE (ASYNC) ---
+        if is_remote:
+            from app.services.ephemeral_service import EphemeralJobService
+            from synqx_core.schemas.ephemeral import EphemeralJobCreate
+            
+            job_in = EphemeralJobCreate(
+                job_type=JobType.EXPLORER,
+                connection_id=connection_id,
+                payload={
+                    "query": query,
+                    "limit": limit,
+                    "offset": offset,
+                    "params": params
+                },
+                agent_group=agent_group
+            )
+            
+            job = EphemeralJobService.create_job(
+                self.db_session, workspace_id, user_id, job_in
+            )
+            return {"type": "job", "job_id": job.id, "agent_group": agent_group}
+
+        # --- BRANCH B: INTERNAL (SYNC) ---
+        start_time = datetime.now(timezone.utc)
+        try:
+            config = VaultService.get_connector_config(connection)
+            connector = ConnectorFactory.get_connector(connection.connector_type.value, config)
+            
+            with connector.session():
+                try:
+                    results = connector.execute_query(query=query, limit=limit, offset=offset, **(params or {}))
+                    total_count = connector.get_total_count(query, is_query=True, **(params or {}))
+                except NotImplementedError:
+                    results = connector.fetch_sample(asset=query, limit=limit, offset=offset, **(params or {}))
+                    total_count = connector.get_total_count(query, is_query=False, **(params or {}))
+            
+            end_time = datetime.now(timezone.utc)
+            execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
+            
+            # Formatting
+            columns = list(results[0].keys()) if results else []
+            result_summary = sanitize_for_json({
+                "count": len(results), 
+                "total_count": total_count or len(results),
+                "columns": columns
+            })
+            
+            # Record History
+            history = QueryHistory(
+                connection_id=connection_id,
+                workspace_id=workspace_id,
+                query=query,
+                status="success",
+                execution_time_ms=execution_time_ms,
+                row_count=len(results),
+                created_at=start_time,
+                created_by=str(user_id)
+            )
+            self.db_session.add(history)
+            
+            # Cache Result
+            ResultCacheManager.set_cached_result(connection_id, query, limit, offset, params or {}, results, result_summary)
+            self.db_session.commit()
+
+            return {
+                "status": "success",
+                "results": results,
+                "summary": result_summary,
+                "execution_time_ms": execution_time_ms,
+                "history_id": history.id
+            }
+
+        except Exception as e:
+            logger.error(f"Internal SQL failed: {e}", exc_info=True)
+            # Log failure in history
+            history = QueryHistory(
+                connection_id=connection_id,
+                workspace_id=workspace_id,
+                query=query,
+                status="failed",
+                execution_time_ms=int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000),
+                row_count=0,
+                error_message=str(e),
+                created_at=start_time,
+                created_by=str(user_id)
+            )
+            self.db_session.add(history)
+            self.db_session.commit()
+            raise AppError(f"Direct query execution failed: {str(e)}")
 
     def _detect_breaking_changes(
         self, old_schema: Dict[str, Any], new_schema: Dict[str, Any]

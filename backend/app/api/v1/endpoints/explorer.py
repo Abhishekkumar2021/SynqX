@@ -52,197 +52,57 @@ def execute_connection_query(
     _: models.WorkspaceMember = Depends(deps.require_editor),
 ):
     """
-    Execute a raw query against a connection.
-    If Agent is remote, creates an EphemeralJob.
-    If Agent is internal, executes directly and saves to QueryHistory.
+    Execute a raw query against a connection using the unified service.
+    Handles both direct sync execution and async job queuing.
     """
     service = connection_service.ConnectionService(db)
-    connection = service.get_connection(
-        connection_id, 
-        user_id=current_user.id,
-        workspace_id=current_user.active_workspace_id
-    )
-    if not connection:
-        raise HTTPException(status_code=404, detail="Connection not found")
     
-    # --- RESOLVE AGENT GROUP ---
-    target_agent_group = request.agent_group or (connection.workspace.default_agent_group if connection.workspace else "internal")
-    is_remote = is_remote_group(target_agent_group)
-
-    # --- REMOTE EXECUTION ---
-    if is_remote:
-        job_in = EphemeralJobCreate(
-            job_type=JobType.EXPLORER,
+    try:
+        # Delegate all logic to the Service Layer
+        result = service.execute_query_unified(
             connection_id=connection_id,
-            payload={
-                "query": request.query,
-                "limit": request.limit,
-                "offset": request.offset,
-                "params": request.params
-            },
-            agent_group=target_agent_group
-        )
-        
-        job = EphemeralJobService.create_job(
-            db, 
+            query=request.query,
             workspace_id=current_user.active_workspace_id,
             user_id=current_user.id,
-            data=job_in
+            limit=request.limit,
+            offset=request.offset,
+            params=request.params,
+            agent_group=request.agent_group
         )
-        return job
 
-    # --- INTERNAL EXECUTION ---
-    # 1. Prepare Params & Cache Check
-    query = request.query
-    limit = request.limit or 100
-    offset = request.offset or 0
-    params = request.params or {}
-    
-    # PERFORMANCE: Check for cached result first
-    cached = ResultCacheManager.get_cached_result(connection_id, query, limit, offset, params)
-    if cached:
-        start_time = datetime.now(timezone.utc)
-        results = cached["results"]
-        result_summary = cached["summary"]
-        status = JobStatus.SUCCESS
-        error_msg = None
-        execution_time_ms = 0 # Cache hits are near-zero latency
-        
-        # Still record in history for observability
-        history = QueryHistory(
-            connection_id=connection_id,
-            workspace_id=current_user.active_workspace_id,
-            query=query,
-            status="success",
-            execution_time_ms=0,
-            row_count=len(results),
-            created_at=start_time,
-            created_by=str(current_user.id)
-        )
-        db.add(history)
-        db.commit()
-        db.refresh(history)
-        
+        # BRANCH A: Service created a background job (Remote Agent)
+        if result.get("type") == "job":
+            # The job was already created by the service, we just need to return it
+            job = db.query(EphemeralJob).get(result["job_id"])
+            return job
+
+        # BRANCH B: Service executed synchronously (Internal Agent)
+        # Construct a response object that matches the EphemeralJob schema
         return EphemeralJobResponse(
-            id=history.id,
+            id=result.get("history_id", 0),
             job_type=JobType.EXPLORER,
             connection_id=connection_id,
             workspace_id=current_user.active_workspace_id,
             user_id=current_user.id,
-            status=status,
+            status=JobStatus.SUCCESS,
             payload=request.model_dump(),
-            agent_group=target_agent_group,
-            started_at=start_time,
+            agent_group=result.get("agent_group", "internal"),
+            started_at=datetime.now(timezone.utc), # Approx
             completed_at=datetime.now(timezone.utc),
-            execution_time_ms=0,
-            result_summary=result_summary,
-            result_sample={"rows": results},
+            execution_time_ms=result.get("execution_time_ms", 0),
+            result_summary=result.get("summary"),
+            result_sample={"rows": result.get("results", [])},
             error_message=None,
-            worker_id="cache",
-            created_at=start_time,
+            worker_id=result.get("worker_id"),
+            created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc)
         )
-
-    # 2. Prepare Config & Connector
-    try:
-        config = VaultService.get_connector_config(connection)
         
-        # Inject Execution Context for Custom Script
-        if connection.connector_type.value == "custom_script":
-            from app.services.dependency_service import DependencyService
-            dep_service = DependencyService(db, connection.id, user_id=current_user.id)
-            exec_ctx = {}
-            exec_ctx.update(dep_service.get_execution_context("python"))
-            exec_ctx.update(dep_service.get_execution_context("node"))
-            config["execution_context"] = exec_ctx
-
-        connector = ConnectorFactory.get_connector(
-            connector_type=connection.connector_type.value, 
-            config=config
-        )
-        
-        # 3. Execute
-        start_time = datetime.now(timezone.utc)
-        status = JobStatus.SUCCESS
-        error_msg = None
-        results = []
-        total_count = 0
-        
-        try:
-            try:
-                results = connector.execute_query(query=query, limit=limit, offset=offset, **params)
-                total_count = connector.get_total_count(query, is_query=True, **params)
-            except NotImplementedError:
-                results = connector.fetch_sample(asset=query, limit=limit, offset=offset, **params)
-                total_count = connector.get_total_count(query, is_query=False, **params)
-        except Exception as e:
-            status = JobStatus.FAILED
-            error_msg = str(e)
-            logger.error(f"Internal query execution failed: {e}", exc_info=True)
-            
-        end_time = datetime.now(timezone.utc)
-        execution_time_ms = int((end_time - start_time).total_seconds() * 1000)
-        
-        # 4. Save to Legacy History (so it appears in history tab)
-        history = QueryHistory(
-            connection_id=connection_id,
-            workspace_id=current_user.active_workspace_id,
-            query=query,
-            status="success" if status == JobStatus.SUCCESS else "failed",
-            execution_time_ms=execution_time_ms,
-            row_count=len(results),
-            error_message=error_msg,
-            created_at=start_time,
-            created_by=str(current_user.id)
-        )
-        db.add(history)
-        db.commit()
-        db.refresh(history)
-        
-        # 5. Construct Response & Cache Success
-        
-        # Sample truncation logic
-        result_sample = {"rows": results}
-        if len(results) > 1000:
-            result_sample = {"rows": results[:1000], "is_truncated": True}
-
-        result_summary = None
-        if status == JobStatus.SUCCESS:
-            columns = list(results[0].keys()) if results else []
-            result_summary = sanitize_for_json({
-                "count": len(results), 
-                "total_count": total_count or 0,
-                "columns": columns
-            })
-            result_sample = sanitize_for_json(result_sample)
-            
-            # PERFORMANCE: Cache successful internal results
-            ResultCacheManager.set_cached_result(
-                connection_id, query, limit, offset, params, results, result_summary
-            )
-
-        return EphemeralJobResponse(
-            id=history.id, # Using history ID as surrogate
-            job_type=JobType.EXPLORER,
-            connection_id=connection_id,
-            workspace_id=current_user.active_workspace_id,
-            user_id=current_user.id,
-            status=status,
-            payload=request.model_dump(),
-            agent_group=target_agent_group,
-            started_at=start_time,
-            completed_at=end_time,
-            execution_time_ms=execution_time_ms,
-            result_summary=result_summary,
-            result_sample=result_sample,
-            error_message=error_msg,
-            worker_id=None,
-            created_at=start_time,
-            updated_at=end_time
-        )
-        
-    except Exception as e:
+    except AppError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Explorer API Fault: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during query execution")
 
 @router.get("/jobs/{job_id}", response_model=EphemeralJobResponse)
 def get_ephemeral_job(

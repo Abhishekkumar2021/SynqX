@@ -377,14 +377,50 @@ def get_venv_bin(project_path: Path, bin_name: str) -> str:
     
     return str(bin_path)
 
-def check_port_available(port: int, host: str = 'localhost') -> bool:
-    """Check if a port is available."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+def check_port_available(port: int, host: str = '0.0.0.0') -> bool:
+    """
+    Check if a port is available. 
+    Uses SO_REUSEADDR to accurately detect if a port is actually 
+    held by another listener or just in a recyclable state.
+    """
+    for h in ['127.0.0.1', '0.0.0.0']:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                s.bind((h, port))
+            except OSError:
+                return False
+    return True
+
+def force_kill_port(port: int):
+    """Aggressively kill any process listening on or attached to the specified port."""
+    if platform.system() == "Windows":
         try:
-            s.bind((host, port))
-            return True
-        except OSError:
-            return False
+            output = subprocess.check_output(["netstat", "-ano", "-p", "tcp"], text=True)
+            for line in output.splitlines():
+                if f":{port}" in line and "LISTENING" in line:
+                    pid = line.strip().split()[-1]
+                    logging.warning(f"Force killing PID {pid} on port {port}")
+                    subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
+        except Exception: pass
+    else:
+        try:
+            # 1. Targeted kill for the actual listener process
+            output = subprocess.check_output(["lsof", "-t", f"-iTCP:{port}", "-sTCP:LISTEN"], text=True)
+            for pid in output.splitlines():
+                if pid.strip():
+                    logging.warning(f"Force killing listener PID {pid} on port {port}")
+                    os.kill(int(pid), signal.SIGKILL)
+            
+            # 2. Sweep up any remaining orphans/zombies still attached to the port
+            output_remaining = subprocess.check_output(["lsof", "-t", f"-i:{port}"], text=True)
+            for pid in output_remaining.splitlines():
+                if pid.strip():
+                    try:
+                        logging.warning(f"Clearing orphaned process {pid} from port {port}")
+                        os.kill(int(pid), signal.SIGKILL)
+                    except (ProcessLookupError, OSError): pass
+        except Exception: pass
 
 def check_http_health(url: str, timeout: int = 2) -> bool:
     """Check if an HTTP endpoint is healthy."""
@@ -565,33 +601,53 @@ class ServiceManager:
             return False
     
     def stop_service(self, name: str, force: bool = False) -> bool:
-        """Stop a service gracefully."""
+        """Stop a service gracefully with optional aggressive cleanup."""
         metadata = get_service_metadata(name)
-        if not metadata:
+        svc = SERVICES.get(name)
+        port = svc.get('port') if svc else None
+        
+        success = True
+        if metadata:
+            if is_process_running(metadata.pid):
+                logging.info(f"Stopping {name} (PID: {metadata.pid})...")
+                metadata.status = ServiceStatus.STOPPING
+                save_service_metadata(name, metadata)
+                
+                timeout = 3 if force else config.get('graceful_shutdown_timeout', 10)
+                success = kill_process(metadata.pid, timeout)
+            
+            # Clean up metadata
+            (PID_DIR / f"{name}.json").unlink(missing_ok=True)
+        else:
             logging.debug(f"{name} is not running (no metadata)")
-            return True
-        
-        if not is_process_running(metadata.pid):
-            logging.debug(f"{name} is not running (process not found)")
-            # Clean up stale metadata
-            (PID_DIR / f"{name}.json").unlink(missing_ok=True)
-            return True
-        
-        logging.info(f"Stopping {name} (PID: {metadata.pid})...")
-        metadata.status = ServiceStatus.STOPPING
-        save_service_metadata(name, metadata)
-        
-        timeout = 3 if force else config.get('graceful_shutdown_timeout', 10)
-        success = kill_process(metadata.pid, timeout)
-        
+
+        # VERIFICATION: Ensure port is actually free if associated
+        if port:
+            port_free = False
+            # Wait up to 3s for OS to release port naturally
+            for _ in range(30):
+                if check_port_available(port):
+                    port_free = True
+                    break
+                time.sleep(0.1)
+            
+            if not port_free:
+                if force:
+                    logging.warning(f"Port {port} still busy for {name}. Initiating aggressive port clearing...")
+                    force_kill_port(port)
+                    time.sleep(0.5)
+                    success = check_port_available(port)
+                else:
+                    logging.error(f"Port {port} remains occupied after stopping {name}")
+                    success = False
+
         if success:
-            # Clean up
-            (PID_DIR / f"{name}.json").unlink(missing_ok=True)
             logging.info(f"✓ {name} stopped")
         else:
-            logging.error(f"Failed to stop {name}")
-            metadata.status = ServiceStatus.FAILED
-            save_service_metadata(name, metadata)
+            logging.error(f"Failed to fully stop {name}")
+            if metadata:
+                metadata.status = ServiceStatus.FAILED
+                save_service_metadata(name, metadata)
         
         return success
     

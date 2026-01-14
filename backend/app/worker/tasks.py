@@ -606,6 +606,146 @@ def process_step_telemetry_task(job_id: int, step_update_data: dict) -> str:
         raise
 
 
+@celery_app.task(
+    name="app.worker.tasks.process_internal_ephemeral_job",
+    queue="celery"
+)
+def process_internal_ephemeral_job(job_id: int) -> str:
+    """
+    Process an interactive/ephemeral job using the internal engine.
+    Used for 'internal' and 'auto' agent groups.
+    """
+    from synqx_core.models.ephemeral import EphemeralJob
+    from synqx_core.models.enums import JobStatus, JobType
+    from app.services.ephemeral_service import EphemeralJobService
+    from app.services.vault_service import VaultService
+    from synqx_engine.connectors.factory import ConnectorFactory
+    from app.utils.serialization import sanitize_for_json
+    import polars as pl
+    import io
+    import base64
+
+    try:
+        with session_scope() as session:
+            job = session.query(EphemeralJob).get(job_id)
+            if not job:
+                return "Job not found"
+
+            # Transition to RUNNING
+            job.status = JobStatus.RUNNING
+            job.started_at = datetime.now(timezone.utc)
+            session.commit()
+
+            # Execute logic
+            conn_data = job.connection
+            if not conn_data:
+                raise ValueError("Connection not found")
+
+            config = VaultService.get_connector_config(conn_data)
+            connector = ConnectorFactory.get_connector(conn_data.connector_type.value, config)
+            
+            payload = job.payload or {}
+            result_update = {"status": "success"}
+
+            with connector.session():
+                if job.job_type == JobType.METADATA:
+                    task_type = payload.get("task_type")
+                    if task_type == "infer_schema":
+                        asset = payload.get("asset")
+                        limit = payload.get("limit", 1000)
+                        schema = connector.infer_schema(asset, sample_size=limit)
+                        
+                        # Fetch sample rows
+                        try:
+                            rows = connector.fetch_sample(asset=asset, limit=10)
+                            result_update["result_sample"] = {"rows": rows, "schema": schema}
+                        except Exception:
+                            result_update["result_sample"] = {"schema": schema}
+                    
+                    elif task_type == "discover_assets":
+                        discovered = connector.discover_assets(
+                            pattern=payload.get("pattern"),
+                            include_metadata=payload.get("include_metadata", False)
+                        )
+                        result_update["result_sample"] = {"assets": discovered}
+
+                elif job.job_type == JobType.EXPLORER:
+                    query = payload.get("query")
+                    limit = int(payload.get("limit", 100))
+                    offset = int(payload.get("offset", 0))
+                    params = payload.get("params") or {}
+                    
+                    results = []
+                    total_count = 0
+                    
+                    try:
+                        results = connector.execute_query(query=query, limit=limit, offset=offset, **params)
+                        total_count = connector.get_total_count(query, is_query=True, **params)
+                    except NotImplementedError:
+                        results = connector.fetch_sample(asset=query, limit=limit, offset=offset, **params)
+                        total_count = connector.get_total_count(query, is_query=False, **params)
+                    
+                    result_update["result_sample"] = {"rows": results}
+                    result_update["result_summary"] = {
+                        "count": len(results),
+                        "total_count": total_count or len(results),
+                        "columns": list(results[0].keys()) if results else []
+                    }
+
+                elif job.job_type == JobType.FILE:
+                    action = payload.get("action")
+                    path = payload.get("path")
+                    if action == "list":
+                        res = connector.list_files(path=path or "")
+                        result_update["result_sample"] = {"files": res}
+                    elif action == "mkdir":
+                        res = connector.create_directory(path=path)
+                        result_update["result_summary"] = {"success": res}
+                    elif action == "read":
+                        res = connector.download_file(path=path)
+                        result_update["result_sample"] = {"content": base64.b64encode(res).decode('utf-8')}
+                    elif action == "write" or action == "save":
+                        content = payload.get("content")
+                        if action == "save":
+                            content = content.encode('utf-8')
+                        else:
+                            content = base64.b64decode(content)
+                        res = connector.upload_file(path=path, content=content)
+                        result_update["result_summary"] = {"success": res}
+                    elif action == "delete":
+                        res = connector.delete_file(path=path)
+                        result_update["result_summary"] = {"success": res}
+                    elif action == "zip":
+                        res = connector.zip_directory(path=path)
+                        result_update["result_sample"] = {"content": base64.b64encode(res).decode('utf-8')}
+
+                elif job.job_type == JobType.TEST:
+                    connector.test_connection()
+                    result_update["result_summary"] = {"message": "Verification Successful"}
+
+            # Finalize via Service
+            from synqx_core.schemas.ephemeral import EphemeralJobUpdate
+            update = EphemeralJobUpdate(
+                status=JobStatus.SUCCESS,
+                result_sample=sanitize_for_json(result_update.get("result_sample")),
+                result_summary=sanitize_for_json(result_update.get("result_summary"))
+            )
+            EphemeralJobService.update_job(session, job_id, update)
+
+            return "Internal ephemeral job completed"
+
+    except Exception as e:
+        logger.error(f"Failed to process internal ephemeral job {job_id}: {e}")
+        with session_scope() as session:
+            from synqx_core.schemas.ephemeral import EphemeralJobUpdate
+            update = EphemeralJobUpdate(
+                status=JobStatus.FAILED,
+                error_message=str(e)
+            )
+            EphemeralJobService.update_job(session, job_id, update)
+        raise
+
+
 # Helper functions
 
 
