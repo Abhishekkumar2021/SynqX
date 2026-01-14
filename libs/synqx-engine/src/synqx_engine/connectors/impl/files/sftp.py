@@ -344,13 +344,17 @@ class SFTPConnector(BaseConnector):
 
     def list_files(self, path: str = "") -> List[Dict[str, Any]]:
         self.connect()
-        target_path = path if path else self._config_model.base_path
+        # Normalize incoming path from frontend (replace \ with /)
+        clean_path = path.replace('\\', '/')
+        target_path = clean_path if clean_path else self._config_model.base_path
         results = []
         try:
             for entry in self._sftp.listdir_attr(target_path):
+                # Ensure the path in results uses forward slashes
+                res_path = posixpath.join(target_path, entry.filename)
                 results.append({
                     "name": entry.filename,
-                    "path": posixpath.join(target_path, entry.filename),
+                    "path": res_path.replace('\\', '/'),
                     "type": "directory" if stat.S_ISDIR(entry.st_mode) else "file",
                     "size": entry.st_size,
                     "modified_at": entry.st_mtime
