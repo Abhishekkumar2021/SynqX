@@ -127,6 +127,8 @@ class SyncMode(str, enum.Enum):
     FULL_LOAD = "full_load"
     INCREMENTAL = "incremental"
     CDC = "cdc"
+    LOG_TAILING = "log_tailing"
+    XMIN = "xmin"
 
 class SchemaEvolutionPolicy(str, enum.Enum):
     STRICT = "strict"

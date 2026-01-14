@@ -672,6 +672,8 @@ class PipelineService:
                 operator_type=node_data.operator_type,
                 operator_class=node_data.operator_class,
                 config=node_data.config or {},
+                sync_mode=node_data.sync_mode,
+                cdc_config=node_data.cdc_config or {},
                 order_index=node_data.order_index,
                 source_asset_id=node_data.source_asset_id,
                 destination_asset_id=node_data.destination_asset_id,

@@ -362,6 +362,55 @@ class NodeExecutor:
                     contract_validator = ContractValidator(node.data_contract)
                     DBLogger.log_step(db, step_run.id, "INFO", "Data Contract active. Pre-flight validation enabled.", job_id=pipeline_run.job_id)
 
+                # --- CDC / LOG TAILING LOGIC ---
+                from synqx_core.models.enums import SyncMode
+                if node.sync_mode == SyncMode.CDC or node.sync_mode == SyncMode.LOG_TAILING:
+                    cdc_config = node.cdc_config or {}
+                    slot_name = cdc_config.get("slot_name") or f"synqx_slot_{node.id}"
+                    pub_name = cdc_config.get("publication_name") or "synqx_pub"
+                    
+                    # 1. Fetch Resume Token (LSN/Position) from Watermark
+                    resume_token, _ = self._fetch_watermark(pipeline_run.pipeline_id, asset.id)
+                    
+                    DBLogger.log_step(
+                        db, step_run.id, "INFO", 
+                        f"Initiating Real-time CDC Stream [Slot: {slot_name}]" + 
+                        (f" resuming from {resume_token}" if resume_token else ""), 
+                        job_id=pipeline_run.job_id
+                    )
+                    
+                    try:
+                        # CDC is a blocking infinite loop in this process
+                        for chunk in connector.read_cdc(
+                            slot_name=slot_name,
+                            publication_name=pub_name,
+                            tables=[asset.name],
+                            resume_token=resume_token,
+                            **read_params
+                        ):
+                            # 2. Extract and Persist Checkpoint Token from chunk
+                            if not is_df_empty(chunk) and "_cdc_token" in chunk.columns:
+                                # Get the latest token from the last row of the chunk
+                                last_token = chunk["_cdc_token"].iloc[-1]
+                                if last_token:
+                                    self._persist_watermark(
+                                        pipeline_run.pipeline_id, 
+                                        asset.id, 
+                                        "_cdc_token", 
+                                        last_token
+                                    )
+
+                            # Process changes
+                            on_chunk(chunk, direction="out")
+                            
+                    except Exception as cdc_err:
+                        logger.error(f"CDC Stream interrupted: {cdc_err}")
+                        DBLogger.log_step(db, step_run.id, "ERROR", f"Real-time stream interrupted: {cdc_err}", job_id=pipeline_run.job_id)
+                        raise cdc_err
+                    
+                    # Terminate execution loop for this node since CDC is a continuous stream
+                    return [], {}
+
                 wm_col = self._get_watermark_column(asset) if asset.is_incremental_capable else None
                 max_val = None
                 

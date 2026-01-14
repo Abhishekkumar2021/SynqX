@@ -632,7 +632,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                     String(node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) : '',
                 write_strategy: (node.data as any).write_strategy || config.write_mode || 'append',
                 schema_evolution_policy: (node.data as any).schema_evolution_policy || 'strict',
-                incremental: config.incremental === true,
+                sync_mode: (node.data as any).sync_mode || config.sync_mode || 'full_load',
+                cdc_config: (node.data as any).cdc_config || config.cdc_config || {},
+                cdc_slot_name: (node.data as any).cdc_config?.slot_name || '',
+                cdc_publication_name: (node.data as any).cdc_config?.publication_name || 'synqx_pub',
+                cdc_server_id: (node.data as any).cdc_config?.server_id || 999,
+                incremental: config.incremental === true || (node.data as any).sync_mode === 'incremental',
                 watermark_column: config.watermark_column || '',
                 max_retries: node.data.max_retries ?? 3,
                 retry_strategy: (node.data as any).retry_strategy || 'fixed',
@@ -734,9 +739,20 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 config: {
                     ...baseConfig,
                     ...dynamicConfig,
-                    incremental: data.operator_type === 'source' ? data.incremental : undefined,
+                    sync_mode: data.operator_type === 'source' ? data.sync_mode : undefined,
+                    cdc_config: data.operator_type === 'source' && data.sync_mode === 'cdc' ? {
+                        slot_name: data.cdc_slot_name,
+                        publication_name: data.cdc_publication_name,
+                        server_id: data.cdc_server_id
+                    } : undefined,
+                    incremental: data.operator_type === 'source' ? (data.incremental || data.sync_mode === 'cdc') : undefined,
                     watermark_column: data.operator_type === 'source' ? data.watermark_column : undefined
                 },
+                sync_mode: data.operator_type === 'source' ? data.sync_mode : undefined,
+                cdc_config: data.operator_type === 'source' && data.sync_mode === 'cdc' ? {
+                    slot_name: data.cdc_slot_name,
+                    publication_name: data.cdc_publication_name
+                } : undefined,
                 column_mapping: colMapping,
                 write_strategy: data.operator_type === 'sink' ? data.write_strategy : undefined,
                 schema_evolution_policy: data.operator_type === 'sink' ? data.schema_evolution_policy : undefined,
@@ -929,16 +945,21 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                             </div>
                                             {nodeType === 'source' && (
                                                 <div className="space-y-4 pt-2">
-                                                    <div className="flex items-center space-x-2">
-                                                        <Checkbox 
-                                                            id="incremental" 
-                                                            checked={watch('incremental')} 
-                                                            onCheckedChange={(val) => setValue('incremental', val)} 
-                                                            disabled={!isEditor} 
-                                                        />
-                                                        <Label htmlFor="incremental" className="text-[10px] font-bold leading-none cursor-pointer">Incremental Sync</Label>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-bold flex items-center">Extraction Mode <HelpIcon content="Determines how data is read from the source." /></Label>
+                                                        <Controller control={control} name="sync_mode" render={({ field }) => (
+                                                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                                                                <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20"><SelectValue placeholder="Select mode" /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="full_load" className="text-xs font-bold">Full Load (Overwrite)</SelectItem>
+                                                                    <SelectItem value="incremental" className="text-xs font-bold">Incremental (Watermark)</SelectItem>
+                                                                    <SelectItem value="cdc" className="text-xs font-bold">Real-time CDC (Log Tailing)</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )} />
                                                     </div>
-                                                    {watch('incremental') && (
+
+                                                    {watch('sync_mode') === 'incremental' && (
                                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                                                             <Label className="text-[10px] font-bold">Watermark Column</Label>
                                                             <Input 
@@ -947,6 +968,37 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                                 readOnly={!isEditor} 
                                                                 className="h-8 text-[10px] font-mono bg-background/50" 
                                                             />
+                                                        </div>
+                                                    )}
+
+                                                    {watch('sync_mode') === 'cdc' && (
+                                                        <div className="space-y-4 p-4 rounded-xl bg-primary/5 border border-primary/10 animate-in zoom-in-95 duration-300">
+                                                            <div className="flex items-center gap-2">
+                                                                <Zap className="h-3 w-3 text-primary animate-pulse" />
+                                                                <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Zero-Infra Streaming</span>
+                                                            </div>
+                                                            <div className="space-y-3">
+                                                                {/* Dynamic fields based on connector type */}
+                                                                {connections?.find((c: any) => String(c.id) === selectedConnectionId)?.connector_type === 'mysql' ? (
+                                                                    <div className="space-y-1.5">
+                                                                        <Label className="text-[9px] font-bold text-muted-foreground uppercase">Replica Server ID</Label>
+                                                                        <Input type="number" {...register('cdc_server_id', { valueAsNumber: true })} className="h-8 text-[10px] font-mono" />
+                                                                        <p className="text-[8px] text-muted-foreground opacity-60">Must be unique across your MySQL cluster.</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="space-y-1.5">
+                                                                            <Label className="text-[9px] font-bold text-muted-foreground uppercase">Replication Slot</Label>
+                                                                            <Input {...register('cdc_slot_name')} placeholder="synqx_slot_1" className="h-8 text-[10px] font-mono" />
+                                                                        </div>
+                                                                        <div className="space-y-1.5">
+                                                                            <Label className="text-[9px] font-bold text-muted-foreground uppercase">Publication Name</Label>
+                                                                            <Input {...register('cdc_publication_name')} placeholder="synqx_pub" className="h-8 text-[10px] font-mono" />
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[8px] text-muted-foreground italic">Note: Ensure your database user has sufficient replication privileges.</p>
                                                         </div>
                                                     )}
                                                 </div>

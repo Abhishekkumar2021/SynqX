@@ -32,6 +32,7 @@ class SystemHealth(BaseModel):
     cpu_percent: float
     memory_usage_mb: float
     active_workers: int
+    active_cdc_streams: int = 0
 
 class FailingPipeline(BaseModel):
     id: int

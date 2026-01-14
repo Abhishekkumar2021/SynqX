@@ -79,6 +79,15 @@ class BaseConnector(ABC):
     ) -> Iterator[pd.DataFrame]:
         pass
 
+    def read_cdc(
+        self,
+        **kwargs
+    ) -> Iterator[pd.DataFrame]:
+        """
+        Optional method for connectors that support native CDC / Log Tailing.
+        """
+        raise NotImplementedError(f"CDC not supported for {self.__class__.__name__}")
+
     @abstractmethod
     def write_batch(
         self,
@@ -197,7 +206,7 @@ class BaseConnector(ABC):
             "ui", "connection_id", "batch_size", "incremental", 
             "incremental_filter", "watermark_column", "WATERMARK_COLUMN", 
             "table", "write_mode", "write_strategy", "target_table",
-            "schema_evolution_policy", "chunksize"
+            "schema_evolution_policy", "chunksize", "sync_mode", "cdc_config"
         ]
         for key in internal_keys:
             kwargs.pop(key, None)

@@ -1,9 +1,9 @@
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import func, case, and_, desc, or_
+from sqlalchemy import func, case, and_, desc, or_, distinct
 
-from synqx_core.models.pipelines import Pipeline
+from synqx_core.models.pipelines import Pipeline, PipelineNode
 from synqx_core.models.execution import Job, PipelineRun, StepRun
 from synqx_core.models.monitoring import Alert, AlertConfig
 from synqx_core.models.connections import Connection, Asset
@@ -11,7 +11,9 @@ from synqx_core.models.agent import Agent
 from synqx_core.models.user import User
 from synqx_core.models.audit import AuditLog
 from synqx_core.models.ephemeral import EphemeralJob
-from synqx_core.models.enums import PipelineStatus, JobStatus, OperatorRunStatus, AlertStatus, AgentStatus
+from synqx_core.models.enums import (
+    PipelineStatus, JobStatus, OperatorRunStatus, AlertStatus, AgentStatus, SyncMode
+)
 from synqx_core.schemas.dashboard import (
     DashboardStats, ThroughputDataPoint, PipelineDistribution, RecentActivity,
     SystemHealth, FailingPipeline, SlowestPipeline, DashboardAlert, ConnectorHealth,
@@ -464,6 +466,15 @@ class DashboardService:
                 )
                 resource_stats = scope_query(resource_query, Pipeline).first()
 
+                # Calculate Active CDC Streams
+                cdc_streams_query = self.db.query(func.count(distinct(Job.id))).join(Pipeline).join(PipelineNode, PipelineNode.pipeline_version_id == Job.pipeline_version_id).filter(
+                    and_(
+                        Job.status == JobStatus.RUNNING,
+                        PipelineNode.sync_mode == SyncMode.CDC
+                    )
+                )
+                active_cdc_count = scope_query(cdc_streams_query, Pipeline).scalar() or 0
+
                 cpu_val = 0.0
                 mem_val = 0.0
                 
@@ -495,7 +506,8 @@ class DashboardService:
                 system_health = SystemHealth(
                     cpu_percent=round(cpu_val, 1),
                     memory_usage_mb=round(mem_val, 1),
-                    active_workers=active_workers_count
+                    active_workers=active_workers_count,
+                    active_cdc_streams=active_cdc_count
                 )
             except Exception as e:
                 self.db.rollback()

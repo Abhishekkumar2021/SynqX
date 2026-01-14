@@ -178,6 +178,9 @@ class PipelineNode(Base, AuditMixin):
     guardrails: Mapped[Optional[list]] = mapped_column(JSON, default=list) # List of thresholds/rules
     quarantine_asset_id: Mapped[Optional[int]] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"))
 
+    # Real-time Capabilities
+    cdc_config: Mapped[Optional[dict]] = mapped_column(JSON, default=dict) # e.g. {"slot_name": "...", "publication": "..."}
+
     max_retries: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     retry_strategy: Mapped[RetryStrategy] = mapped_column(
         SQLEnum(RetryStrategy), default=RetryStrategy.FIXED, nullable=False

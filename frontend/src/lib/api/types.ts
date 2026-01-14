@@ -564,6 +564,7 @@ export interface SystemHealth {
   cpu_percent: number;
   memory_usage_mb: number;
   active_workers: number;
+  active_cdc_streams?: number;
 }
 
 export interface FailingPipeline {

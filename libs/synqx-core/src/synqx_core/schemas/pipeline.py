@@ -27,6 +27,9 @@ class PipelineNodeBase(BaseModel):
     guardrails: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
     quarantine_asset_id: Optional[int] = Field(None, gt=0)
 
+    # Real-time Capabilities
+    cdc_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
     max_retries: int = Field(default=3, ge=0, le=10)
     retry_strategy: RetryStrategy = Field(default=RetryStrategy.FIXED)
     retry_delay_seconds: int = Field(default=60, ge=0, le=3600)
@@ -50,6 +53,8 @@ class PipelineNodeUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=2000)
     config: Optional[Dict[str, Any]] = None
+    sync_mode: Optional[SyncMode] = None
+    cdc_config: Optional[Dict[str, Any]] = None
     max_retries: Optional[int] = Field(None, ge=0, le=10)
     timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
 
