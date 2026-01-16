@@ -318,9 +318,9 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
             link.click();
             link.remove();
             toast.success(`${selectedVersion === 'latest' ? 'Latest' : selectedVersion} Agent Downloaded`);
-        } catch (err: any) {
+        } catch {
             toast.error("Download Failed", {
-                description: err.response?.data?.detail || "The requested agent version might not be available on the server."
+                description: "The requested agent version might not be available on the server."
             });
         } finally {
             setIsDownloading(false);
@@ -345,7 +345,7 @@ export const SetupInstructions = ({clientId, apiKey, agentName, tags, isNew = fa
             link.click();
             link.remove();
             toast.success("Checksum Downloaded");
-        } catch (err: any) {
+        } catch {
             toast.error("Download Failed", {
                 description: "Checksum file not available."
             });
@@ -633,9 +633,9 @@ export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
             setGeneratedCreds(data);
             queryClient.invalidateQueries({ queryKey: ['agents'] });
         },
-        onError: (err: any) => {
+        onError: () => {
             toast.error("Registration Failed", {
-                description: err.response?.data?.detail || "Make sure the agent name is unique."
+                description: "Make sure the agent name is unique."
             });
         }
     });

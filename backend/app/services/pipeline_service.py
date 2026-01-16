@@ -8,7 +8,7 @@ from sqlalchemy import and_
 from synqx_core.models.pipelines import Pipeline, PipelineVersion, PipelineNode, PipelineEdge
 from synqx_core.models.execution import Job
 from synqx_core.models.agent import Agent
-from synqx_core.models.enums import PipelineStatus, JobStatus, OperatorType, RetryStrategy, AgentStatus
+from synqx_core.models.enums import PipelineStatus, JobStatus, OperatorType, RetryStrategy, AgentStatus, WriteStrategy, SchemaEvolutionPolicy
 from synqx_core.schemas.pipeline import (
     PipelineCreate,
     PipelineVersionCreate,
@@ -481,6 +481,8 @@ class PipelineService:
                     "status": "queued",
                     "message": f"Job successfully dispatched to agent '{selected_agent.name}'.",
                     "job_id": job.id,
+                    "pipeline_id": pipeline_id,
+                    "version_id": pipeline_version.id,
                     "queue": target_group,
                     "agent_name": selected_agent.name
                 }
@@ -504,6 +506,8 @@ class PipelineService:
                     "message": "Pipeline run successfully enqueued for background execution.",
                     "job_id": job.id,
                     "task_id": task.id,
+                    "pipeline_id": pipeline_id,
+                    "version_id": pipeline_version.id,
                 }
             else:
                 job.status = JobStatus.RUNNING
@@ -533,6 +537,8 @@ class PipelineService:
                     "status": "success",
                     "message": "Pipeline run completed successfully",
                     "job_id": job.id,
+                    "pipeline_id": pipeline_id,
+                    "version_id": pipeline_version.id,
                 }
         
         except Exception as e:
@@ -625,9 +631,11 @@ class PipelineService:
         for edge in version_data.edges:
             upstream_map[edge.to_node_id].append(edge.from_node_id)
 
-        # Validate multi-input operators
+        # Validate multi-input operators and required assets
         for node_id, upstream_nodes in upstream_map.items():
             node = node_map[node_id]
+            
+            # 1. Multi-input validation
             if len(upstream_nodes) > 1:
                 if node.operator_type not in [
                     OperatorType.MERGE,
@@ -638,6 +646,12 @@ class PipelineService:
                         f"Node '{node_id}' has {len(upstream_nodes)} inputs but "
                         f"operator type '{node.operator_type.value}' only supports single input"
                     )
+            
+            # 2. Required asset validation for Source/Sink
+            if node.operator_type == OperatorType.SOURCE and not node.source_asset_id:
+                raise ConfigurationError(f"Source node '{node_id}' must have a source asset defined.")
+            if node.operator_type == OperatorType.SINK and not node.destination_asset_id:
+                raise ConfigurationError(f"Sink node '{node_id}' must have a destination asset defined.")
 
     def _create_pipeline_version(
         self,
@@ -673,10 +687,19 @@ class PipelineService:
                 operator_class=node_data.operator_class,
                 config=node_data.config or {},
                 sync_mode=node_data.sync_mode,
-                cdc_config=node_data.cdc_config or {},
+                # Fix: Handle cdc_config correctly (ensure it's a dict)
+                cdc_config=node_data.cdc_config if isinstance(node_data.cdc_config, dict) else {},
                 order_index=node_data.order_index,
                 source_asset_id=node_data.source_asset_id,
                 destination_asset_id=node_data.destination_asset_id,
+                # New: Map missing fields from schema/request to model
+                write_strategy=getattr(node_data, 'write_strategy', WriteStrategy.APPEND),
+                schema_evolution_policy=getattr(node_data, 'schema_evolution_policy', SchemaEvolutionPolicy.STRICT),
+                guardrails=getattr(node_data, 'guardrails', []),
+                data_contract=getattr(node_data, 'data_contract', {}),
+                column_mapping=getattr(node_data, 'column_mapping', {}),
+                quarantine_asset_id=getattr(node_data, 'quarantine_asset_id', None),
+                # Retry logic
                 max_retries=node_data.max_retries or 0,
                 retry_strategy=node_data.retry_strategy or RetryStrategy.FIXED,
                 retry_delay_seconds=node_data.retry_delay_seconds or 60,

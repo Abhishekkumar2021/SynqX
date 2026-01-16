@@ -93,11 +93,17 @@ class DashboardService:
 
                 for group in groups:
                     if group not in group_counts:
-                        group_counts[group] = {"count": 0, "status": "active"}
+                        group_counts[group] = {"count": 0, "status": "offline", "online_count": 0}
+                    
                     group_counts[group]["count"] += 1
+                    if agent.status == AgentStatus.ONLINE:
+                        group_counts[group]["online_count"] += 1
+                        group_counts[group]["status"] = "online"
+                    elif agent.status == AgentStatus.BUSY and group_counts[group]["status"] != "online":
+                        group_counts[group]["status"] = "busy"
 
             agent_groups = [
-                AgentGroupStats(name=name, count=data["count"], status="active")
+                AgentGroupStats(name=name, count=data["count"], status=data["status"])
                 for name, data in group_counts.items()
             ]
 

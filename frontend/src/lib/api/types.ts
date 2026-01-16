@@ -306,6 +306,12 @@ export interface PipelineNode {
   retry_delay_seconds?: number;
   timeout_seconds?: number;
   position?: { x: number; y: number };
+  
+  // Advanced Orchestration
+  is_dynamic?: boolean;
+  mapping_expr?: string;
+  sub_pipeline_id?: number;
+  worker_tag?: string;
 }
 
 export interface PipelineEdge {

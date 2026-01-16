@@ -81,6 +81,8 @@ class OperatorType(str, enum.Enum):
     LOAD = "load"
     VALIDATE = "validate"
     NOOP = "noop"
+    SUB_PIPELINE = "sub_pipeline"
+    SWITCH = "switch"
 
     MERGE = "merge"
     UNION = "union"

@@ -26,7 +26,10 @@ import { Badge } from '@/components/ui/badge';
 import {
     Save, Play, ArrowLeft, Loader2, Layout,
     Rocket, Square, Pencil, History as HistoryIcon,
-    ExternalLink, Trash2, Plus, Undo, Redo
+    ExternalLink, Trash2, Plus, Undo, Redo,
+    Code, FileCode, GitCompare, XCircle, Info as InfoIcon,
+    X,
+    Search
 } from 'lucide-react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,6 +41,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { RetryStrategy } from '@/lib/enums';
+import Editor from '@monaco-editor/react';
 
 import {
     DropdownMenu,
@@ -68,7 +72,6 @@ import PipelineNode from '@/components/features/pipelines/PipelineNode';
 import GlowEdge from '@/components/features/pipelines/GlowEdge';
 import { NodeProperties } from '@/components/features/pipelines/NodeProperties';
 import { DeployCommitDialog } from '@/components/features/pipelines/DeployCommitDialog';
-import { GitCompare, XCircle, Info as InfoIcon } from 'lucide-react';
 
 const edgeTypes = {
     glow: GlowEdge,
@@ -88,14 +91,16 @@ import {
 import {
     NODE_DEFINITIONS,
     mapOperatorToNodeType,
-    mapNodeTypeToOperator
+    mapNodeTypeToOperator,
+    type OperatorDefinition
 } from '@/lib/pipeline-definitions';
+import { type AppNode } from '@/types/pipeline';
 
 /* --- Layout Engine --- */
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+const getLayoutedElements = (nodes: AppNode[], edges: Edge[]) => {
     dagreGraph.setGraph({ rankdir: 'LR', align: 'UL', ranksep: 180, nodesep: 80 });
     nodes.forEach((node) => dagreGraph.setNode(node.id, { width: 340, height: 200 }));
     edges.forEach((edge) => dagreGraph.setEdge(edge.source, edge.target));
@@ -129,9 +134,9 @@ export const PipelineCanvas: React.FC = () => {
     const { isAdmin, isEditor } = useWorkspace();
 
     // State
-    const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+    const [nodes, setNodes, onNodesChange] = useNodesState<AppNode>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-    const { undo, redo, takeSnapshot, canUndo, canRedo } = useUndoRedo();
+    const { undo, redo, takeSnapshot, canUndo, canRedo } = useUndoRedo<AppNode>();
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
@@ -141,6 +146,7 @@ export const PipelineCanvas: React.FC = () => {
     const [diffData, setDiffData] = useState<any>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const initializedVersionId = useRef<number | null>(null);
+    const [showLogicView, setShowLogicView] = useState(false);
 
     const flowTheme = useMemo(() => (theme === 'dark' ? 'dark' : 'light'), [theme]);
 
@@ -178,10 +184,31 @@ export const PipelineCanvas: React.FC = () => {
         merge: PipelineNode,
         validate: PipelineNode,
         noop: PipelineNode,
+        sub_pipeline: PipelineNode,
         default: PipelineNode
     }), []);
 
     const [opSearch, setOpSearch] = useState("");
+    const [canvasSearch, setCanvasSearch] = useState("");
+
+    // --- Search in Canvas ---
+    const filteredNodes = useMemo(() => {
+        if (!canvasSearch) return nodes;
+        return nodes.map(n => ({
+            ...n,
+            selected: n.data.label.toLowerCase().includes(canvasSearch.toLowerCase()) || n.id.toLowerCase().includes(canvasSearch.toLowerCase())
+        }));
+    }, [nodes, canvasSearch]);
+
+    const onCanvasSearch = (val: string) => {
+        setCanvasSearch(val);
+        if (val) {
+            const match = nodes.find(n => n.data.label.toLowerCase().includes(val.toLowerCase()));
+            if (match) {
+                fitView({ nodes: [match], duration: 800, padding: 0.5 });
+            }
+        }
+    };
 
     const filteredDefinitions = useMemo(() => {
         if (!opSearch) return NODE_DEFINITIONS;
@@ -193,6 +220,35 @@ export const PipelineCanvas: React.FC = () => {
             )
         })).filter(category => category.items.length > 0);
     }, [opSearch]);
+
+    const pipelinePayload = useMemo(() => {
+        const apiNodes = nodes.map(n => {
+            const nodeData = n.data;
+            return {
+                node_id: n.id,
+                name: nodeData.label,
+                operator_type: mapNodeTypeToOperator(n.type || 'default', nodeData.operator_class),
+                config: {
+                    ...(nodeData.config),
+                    ui: { position: n.position },
+                },
+                operator_class: nodeData.operator_class
+            };
+        });
+
+        const apiEdges = edges.map(e => ({
+            from_node_id: e.source,
+            to_node_id: e.target,
+            edge_type: 'data_flow'
+        }));
+
+        return {
+            name: pipelineName,
+            version: versionIdParam || 'Draft',
+            nodes: apiNodes,
+            edges: apiEdges
+        };
+    }, [nodes, edges, pipelineName, versionIdParam]);
 
     // --- Mutations ---
     const deleteMutation = useMutation({
@@ -222,7 +278,7 @@ export const PipelineCanvas: React.FC = () => {
                 const vData = await getPipelineVersion(parseInt(id!), parseInt(targetV!));
                 const bData = await getPipelineVersion(parseInt(id!), parseInt(baseV!));
 
-                const flowNodes: Node[] = vData.nodes.map((n: ApiNode) => {
+                const flowNodes: AppNode[] = vData.nodes.map((n: ApiNode) => {
                     let diffStatus: 'added' | 'removed' | 'modified' | 'none' = 'none';
                     if (diffData.nodes.added.includes(n.node_id)) diffStatus = 'added';
                     if (diffData.nodes.modified.some((m: any) => m.node_id === n.node_id)) diffStatus = 'modified';
@@ -254,6 +310,7 @@ export const PipelineCanvas: React.FC = () => {
                                 config: n.config,
                                 type: mapOperatorToNodeType(n.operator_type),
                                 operator_class: n.operator_class,
+                                status: 'idle',
                                 diffStatus: 'removed',
                             },
                             position: n.config?.ui?.position || { x: 0, y: 0 },
@@ -303,7 +360,7 @@ export const PipelineCanvas: React.FC = () => {
                 const layouted = getLayoutedElements(flowNodes, flowEdges);
                 setNodes(layouted.nodes);
                 setEdges(layouted.edges);
-                setTimeout(() => fitView({ padding: 0.2 }), 100);
+                setTimeout(() => fitView({ padding: 0.2, duration: 800 }), 100);
             };
             loadDiff();
             return;
@@ -321,7 +378,7 @@ export const PipelineCanvas: React.FC = () => {
         initializedVersionId.current = versionToLoad.id;
         setPipelineName(pipeline.name);
 
-        const flowNodes: Node[] = versionToLoad.nodes.map((n: ApiNode) => ({
+        const flowNodes: AppNode[] = versionToLoad.nodes.map((n: ApiNode) => ({
             id: n.node_id,
             type: mapOperatorToNodeType(n.operator_type),
             data: {
@@ -350,7 +407,7 @@ export const PipelineCanvas: React.FC = () => {
         setNodes(layouted.nodes);
         setEdges(layouted.edges);
 
-        setTimeout(() => fitView({ padding: 0.2 }), 100);
+        setTimeout(() => fitView({ padding: 0.2, duration: 800 }), 100);
     }, [pipeline, specificVersion, setNodes, setEdges, fitView, isDiffMode, diffData, id, baseV, targetV]);
 
     // --- Handlers ---
@@ -369,9 +426,8 @@ export const PipelineCanvas: React.FC = () => {
     const onAddNode = (type: string, operatorClass?: string, label?: string) => {
         takeSnapshot(nodes, edges);
         const newNodeId = `node_${Date.now()}`;
-        // Center the node somewhat in the view or randomize slightly
         const offset = Math.random() * 50;
-        const newNode: Node = {
+        const newNode: AppNode = {
             id: newNodeId,
             type: type,
             position: { x: 250 + offset, y: 250 + offset },
@@ -390,10 +446,10 @@ export const PipelineCanvas: React.FC = () => {
         });
     };
 
-    const onDuplicate = useCallback((node: Node) => {
+    const onDuplicate = useCallback((node: AppNode) => {
         takeSnapshot(nodes, edges);
         const newNodeId = `node_${Date.now()}`;
-        const newNode: Node = {
+        const newNode: AppNode = {
             ...node,
             id: newNodeId,
             position: { x: node.position.x + 50, y: node.position.y + 50 },
@@ -415,7 +471,6 @@ export const PipelineCanvas: React.FC = () => {
     // Undo/Redo & Duplicate Shortcuts
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            // Check if we are typing in an input (ignore shortcuts)
             if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
                 return;
             }
@@ -457,7 +512,7 @@ export const PipelineCanvas: React.FC = () => {
         if (event.altKey) {
             takeSnapshot(nodes, edges);
             const newNodeId = `node_${Date.now()}`;
-            const newNode: Node = {
+            const newNode: AppNode = {
                 ...JSON.parse(JSON.stringify(node)),
                 id: newNodeId,
                 selected: false,
@@ -495,27 +550,34 @@ export const PipelineCanvas: React.FC = () => {
             try {
                 setIsSaving(true);
 
-                const apiNodes = nodes.map(n => {
-                    const nodeData = n.data as any;
+                const apiNodes: ApiNode[] = nodes.map(n => {
+                    const nodeData = n.data;
                     return {
                         node_id: n.id,
-                        name: nodeData.label as string,
+                        name: nodeData.label,
                         operator_type: mapNodeTypeToOperator(n.type || 'default', nodeData.operator_class),
                         config: {
-                            ...(nodeData.config as object),
+                            ...(nodeData.config || {}),
                             ui: { position: n.position },
                             connection_id: nodeData.connection_id
                         },
                         order_index: 0,
-                        operator_class: (nodeData.operator_class as string) || 'pandas_transform',
+                        operator_class: nodeData.operator_class || 'pandas_transform',
                         source_asset_id: nodeData.source_asset_id,
                         destination_asset_id: nodeData.destination_asset_id,
                         connection_id: nodeData.connection_id,
                         write_strategy: nodeData.write_strategy || 'append',
                         schema_evolution_policy: nodeData.schema_evolution_policy || 'strict',
-                        max_retries: 3,
-                        retry_strategy: RetryStrategy.FIXED,
-                        retry_delay_seconds: 60
+                        // High-end Orchestration Fields
+                        is_dynamic: !!nodeData.is_dynamic,
+                        mapping_expr: nodeData.mapping_expr,
+                        sub_pipeline_id: nodeData.sub_pipeline_id,
+                        worker_tag: nodeData.worker_tag,
+                        // Retry logic
+                        max_retries: nodeData.max_retries ?? 3,
+                        retry_strategy: (nodeData.retry_strategy as RetryStrategy) || RetryStrategy.FIXED,
+                        retry_delay_seconds: nodeData.retry_delay_seconds ?? 60,
+                        timeout_seconds: nodeData.timeout_seconds ?? 3600
                     };
                 });
 
@@ -537,7 +599,6 @@ export const PipelineCanvas: React.FC = () => {
                     const createdPipeline = await createPipeline(payload);
 
                     if (deploy && createdPipeline.current_version) {
-                        // Initial version number is 1, but we need the ID
                         const versions = await getPipelineVersions(createdPipeline.id);
                         if (versions.length > 0) {
                             await publishPipelineVersion(createdPipeline.id, versions[0].id);
@@ -577,7 +638,6 @@ export const PipelineCanvas: React.FC = () => {
                         ? "Your changes are now live and will be used for future runs."
                         : "Work-in-progress changes have been saved."
                 });
-                // Close dialog if open
                 setDeployDialogOpen(false);
             }
         },
@@ -603,7 +663,7 @@ export const PipelineCanvas: React.FC = () => {
     return (
         <div className="flex flex-col h-full w-full p-2 md:p-4 gap-4">
 
-            {/* --- HEADER TOOLBAR (Simplified) --- */}
+            {/* --- HEADER TOOLBAR --- */}
             <header className="flex-none flex items-center justify-between px-2">
 
                 {/* Left: Identity */}
@@ -672,6 +732,22 @@ export const PipelineCanvas: React.FC = () => {
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-3">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className={cn("h-9 w-9 rounded-xl transition-all", showLogicView && "bg-primary/10 text-primary")}
+                                    onClick={() => setShowLogicView(!showLogicView)}
+                                >
+                                    <Code size={18} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View Pipeline Logic (YAML)</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
                     {!isNew && (
                         <AnimatePresence mode="wait">
                             {!isDiffMode && isEditor && (
@@ -773,227 +849,284 @@ export const PipelineCanvas: React.FC = () => {
             <div className="flex-1 w-full relative overflow-hidden bg-background rounded-xl border border-border/10">
                 <div className="absolute inset-0 bg-grid-subtle opacity-10 pointer-events-none" />
 
-                {/* Diff Mode Banner - Relocated to Bottom */}
-                {isDiffMode && (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-100 w-fit min-w-125 max-w-[90%] bg-background/60 backdrop-blur-2xl border border-amber-500/30 rounded-2xl px-6 py-4 flex items-center justify-between gap-8 shadow-2xl animate-in slide-in-from-bottom duration-500 ring-1 ring-white/5">
-                        <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center ring-1 ring-amber-500/20">
-                                <GitCompare className="h-5 w-5 text-amber-500" />
-                            </div>
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Comparison Mode</span>
-                                    <Badge className="h-4 px-1.5 bg-amber-500/20 text-amber-500 border-none text-[9px] font-bold">v{diffData?.base_version} → v{diffData?.target_version}</Badge>
-                                </div>
-                                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                                    <InfoIcon size={12} className="text-amber-500/60" />
-                                    Visualizing structural changes between selected versions.
-                                </span>
-                            </div>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/pipelines/${id}`)}
-                            className="h-10 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-500 hover:bg-amber-500 hover:text-white transition-all duration-300 gap-2 text-[10px] font-bold uppercase tracking-widest px-4"
-                        >
-                            Exit Diff <XCircle className="h-3.5 w-3.5" />
-                        </Button>
-                    </div>
-                )}
-
-                {/* Historical Version Banner - Relocated to Bottom for better UX */}
-                {versionIdParam && !isDiffMode && (
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-100 w-fit min-w-100 max-w-[90%] bg-background/60 backdrop-blur-2xl border border-primary/30 rounded-2xl px-6 py-4 flex items-center justify-between gap-8 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom duration-500 ring-1 ring-white/5">
-                        <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-                                <HistoryIcon className="h-5 w-5 text-primary" />
-                            </div>
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Read-Only Snapshot</span>
-                                    <Badge className="h-4 px-1.5 bg-primary/20 text-primary border-none text-[9px] font-bold">v{versionIdParam}</Badge>
-                                </div>
-                                <span className="text-xs font-medium text-muted-foreground">You are inspecting a historical state. Edits are disabled.</span>
-                            </div>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/pipelines/${id}`)}
-                            className="h-10 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 gap-2 text-[10px] font-bold uppercase tracking-widest px-4 group"
-                        >
-                            Exit View <ExternalLink className="h-3.5 w-3.5 group-hover:rotate-45 transition-transform" />
-                        </Button>
-                    </div>
-                )}
-
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    nodeTypes={nodeTypes}
-                    edgeTypes={edgeTypes}
-                    onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-                    onPaneClick={() => setSelectedNodeId(null)}
-                    onNodeDragStart={onNodeDragStart}
-                    onNodesDelete={() => takeSnapshot(nodes, edges)}
-                    onEdgesDelete={() => takeSnapshot(nodes, edges)}
-                    colorMode={flowTheme}
-                    minZoom={0.1}
-                    maxZoom={4}
-                    defaultEdgeOptions={{
-                        type: 'glow',
-                        style: { strokeWidth: 3 }
-                    }}
-                    proOptions={{ hideAttribution: true }}
-                    className="transition-colors duration-500 rounded-2xl border border-border"
-                >
-                    <Background
-                        variant={BackgroundVariant.Lines}
-                        gap={24}
-                        size={1}
-                        color={theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}
-                    />
-
-                    <Controls className="bg-background/40! backdrop-blur-xl! border-border/10! shadow-sm! rounded-xl! overflow-hidden m-4 border fill-foreground text-foreground transition-all hover:scale-105" showInteractive={false} />
-
-                    <MiniMap
-                        className="hidden md:block bg-background/40! backdrop-blur-xl! border-border/10! shadow-lg! rounded-2xl! overflow-hidden m-6 border"
-                        nodeColor={(node) => {
-                            if (node.type === 'source') return 'oklch(0.55 0.25 240)';
-                            if (node.type === 'sink') return 'oklch(0.62 0.19 145)';
-                            if (node.type === 'validate') return 'oklch(0.55 0.2 300)';
-                            return 'oklch(0.7 0.18 55)';
-                        }}
-                        maskColor="rgba(0,0,0,0.1)"
-                        style={{ opacity: 0.9, height: 140, width: 200 }}
-                        position="bottom-right"
-                    />
-                    {/* FLOATING TOOLBOX PANEL */}
-                    <AnimatePresence>
-                        {!isDiffMode && !versionIdParam && isEditor && (
-                            <Panel position="top-center" className="mt-4 pointer-events-none">
-                                <motion.div
-                                    initial={{ y: -20, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    exit={{ y: -20, opacity: 0 }}
-                                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                    className="flex items-center p-1.5 gap-1.5 glass-panel rounded-[2rem] shadow-2xl pointer-events-auto border-border/20 bg-background/60 backdrop-blur-3xl transition-all duration-500 hover:shadow-primary/10 hover:border-primary/20 ring-1 ring-white/5"
-                                >
-                                    {/* Primary Controls Group */}
-                                    <div className="flex items-center gap-1 px-2 border-r border-border/10 mr-1">
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => undo(nodes, edges, setNodes, setEdges)} disabled={!canUndo}>
-                                                        <Undo className="h-4 w-4 group-active:scale-90" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => redo(nodes, edges, setNodes, setEdges)} disabled={!canRedo}>
-                                                        <Redo className="h-4 w-4 group-active:scale-90" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={onLayout}>
-                                                        <Layout className="h-4 w-4 group-active:scale-90" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>Auto-Layout Canvas</TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
+                <div className="flex h-full w-full">
+                    <div className="flex-1 relative overflow-hidden">
+                        {/* Diff Mode Banner */}
+                        {isDiffMode && (
+                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-100 w-fit min-w-125 max-w-[90%] bg-background/60 backdrop-blur-2xl border border-amber-500/30 rounded-2xl px-6 py-4 flex items-center justify-between gap-8 shadow-2xl animate-in slide-in-from-bottom duration-500 ring-1 ring-white/5">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center ring-1 ring-amber-500/20">
+                                        <GitCompare className="h-5 w-5 text-amber-500" />
                                     </div>
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-500">Comparison Mode</span>
+                                            <Badge className="h-4 px-1.5 bg-amber-500/20 text-amber-500 border-none text-[9px] font-bold">v{diffData?.base_version} → v{diffData?.target_version}</Badge>
+                                        </div>
+                                        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                            <InfoIcon size={12} className="text-amber-500/60" />
+                                            Visualizing structural changes between selected versions.
+                                        </span>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => navigate(`/pipelines/${id}`)}
+                                    className="h-10 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-500 hover:bg-amber-500 hover:text-white transition-all duration-300 gap-2 text-[10px] font-bold uppercase tracking-widest px-4"
+                                >
+                                    Exit Diff <XCircle className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                        )}
 
-                                    {/* Unified Add Node Menu */}
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                className="h-9 rounded-2xl px-4 gap-2 bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:-translate-y-0.5 active:translate-y-0"
-                                            >
-                                                <Plus className="h-3.5 w-3.5 stroke-3" /> Add Operator
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent
-                                            align="center"
-                                            sideOffset={12}
-                                            className="w-64 bg-background/80 backdrop-blur-xl border-border/20 shadow-2xl rounded-2xl p-1.5 ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-200"
+                        {/* Historical Version Banner */}
+                        {versionIdParam && !isDiffMode && (
+                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-100 w-fit min-w-100 max-w-[90%] bg-background/60 backdrop-blur-2xl border border-primary/30 rounded-2xl px-6 py-4 flex items-center justify-between gap-8 shadow-2xl animate-in slide-in-from-bottom duration-500 ring-1 ring-white/5">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+                                        <HistoryIcon className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Read-Only Snapshot</span>
+                                            <Badge className="h-4 px-1.5 bg-primary/20 text-primary border-none text-[9px] font-bold">v{versionIdParam}</Badge>
+                                        </div>
+                                        <span className="text-xs font-medium text-muted-foreground">You are inspecting a historical state. Edits are disabled.</span>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => navigate(`/pipelines/${id}`)}
+                                    className="h-10 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 gap-2 text-[10px] font-bold uppercase tracking-widest px-4 group"
+                                >
+                                    Exit View <ExternalLink className="h-3.5 w-3.5 group-hover:rotate-45 transition-transform" />
+                                </Button>
+                            </div>
+                        )}
+
+                        <ReactFlow
+                            nodes={filteredNodes}
+                            edges={edges}
+                            onNodesChange={onNodesChange}
+                            onEdgesChange={onEdgesChange}
+                            onConnect={onConnect}
+                            nodeTypes={nodeTypes}
+                            edgeTypes={edgeTypes}
+                            onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+                            onPaneClick={() => setSelectedNodeId(null)}
+                            onNodeDragStart={onNodeDragStart}
+                            onNodesDelete={() => takeSnapshot(nodes, edges)}
+                            onEdgesDelete={() => takeSnapshot(nodes, edges)}
+                            colorMode={flowTheme}
+                            minZoom={0.1}
+                            maxZoom={4}
+                            snapToGrid={true}
+                            snapGrid={[12, 12]}
+                            defaultEdgeOptions={{
+                                type: 'glow',
+                                style: { strokeWidth: 3 }
+                            }}
+                            proOptions={{ hideAttribution: true }}
+                            className="transition-colors duration-500 rounded-2xl"
+                        >
+                            <Background
+                                variant={BackgroundVariant.Lines}
+                                gap={24}
+                                size={1}
+                                color={theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}
+                            />
+
+                            <Controls className="bg-background/40! backdrop-blur-xl! border-border/10! shadow-sm! rounded-xl! overflow-hidden m-4 border fill-foreground text-foreground transition-all hover:scale-105" showInteractive={false} />
+
+                            <MiniMap
+                                className="hidden md:block bg-background/40! backdrop-blur-xl! border-border/10! shadow-lg! rounded-2xl! overflow-hidden m-6 border"
+                                nodeColor={(node) => {
+                                    if (node.type === 'source') return 'oklch(0.55 0.25 240)';
+                                    if (node.type === 'sink') return 'oklch(0.62 0.19 145)';
+                                    if (node.type === 'validate') return 'oklch(0.55 0.2 300)';
+                                    return 'oklch(0.7 0.18 55)';
+                                }}
+                                maskColor="rgba(0,0,0,0.1)"
+                                style={{ opacity: 0.9, height: 140, width: 200 }}
+                                position="bottom-right"
+                            />
+                            {/* FLOATING TOOLBOX PANEL */}
+                            <AnimatePresence>
+                                {!isDiffMode && !versionIdParam && isEditor && (
+                                    <Panel position="top-center" className="mt-4 pointer-events-none">
+                                        <motion.div
+                                            initial={{ y: -20, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            exit={{ y: -20, opacity: 0 }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                            className="flex items-center p-1.5 gap-1.5 glass-panel rounded-[2rem] shadow-2xl pointer-events-auto border-border/20 bg-background/60 backdrop-blur-3xl transition-all duration-500 hover:shadow-primary/10 hover:border-primary/20 ring-1 ring-white/5"
                                         >
-                                            <div className="px-2 py-2 mb-1">
-                                                <div className="relative group">
-                                                    <Plus className="z-20 absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                                                    <Input
-                                                        placeholder="Search..."
-                                                        value={opSearch}
-                                                        onChange={(e) => setOpSearch(e.target.value)}
-                                                        className="h-8 pl-8 rounded-xl bg-muted/30 border-none text-xs focus-visible:ring-1 focus-visible:ring-primary/20 transition-all placeholder:text-[10px]"
-                                                        autoFocus
-                                                    />
-                                                </div>
+                                            {/* Canvas Node Search */}
+                                            <div className="flex items-center gap-2 px-3 border-r border-border/10 mr-1 group">
+                                                <Search className="h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                                <Input 
+                                                    placeholder="Find node..." 
+                                                    value={canvasSearch}
+                                                    onChange={(e) => onCanvasSearch(e.target.value)}
+                                                    className="h-8 w-32 border-none bg-transparent text-[11px] focus-visible:ring-0 placeholder:text-muted-foreground/50"
+                                                />
                                             </div>
-                                            <div className="max-h-75 overflow-y-auto custom-scrollbar px-1 space-y-2 pb-1">
-                                                {filteredDefinitions.length === 0 ? (
-                                                    <div className="py-8 text-center flex flex-col items-center gap-2">
-                                                        <div className="h-8 w-8 rounded-full bg-muted/20 flex items-center justify-center text-muted-foreground/30">
-                                                            <Plus className="h-4 w-4 rotate-45" />
-                                                        </div>
-                                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50">No matches</span>
-                                                    </div>
-                                                ) : (
-                                                    filteredDefinitions.map((category, idx) => (
-                                                        <div key={idx} className="space-y-0.5">
-                                                            <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 flex items-center gap-2">
-                                                                {category.category}
-                                                                <div className="h-px flex-1 bg-border/20" />
-                                                            </div>
-                                                            {category.items.map((item, i) => (
-                                                                <DropdownMenuItem
-                                                                    key={i}
-                                                                    className="group flex items-center gap-3 p-2 rounded-xl focus:bg-primary/5 focus:text-primary cursor-pointer transition-all duration-200"
-                                                                    onClick={() => onAddNode(item.type, (item as any).opClass, item.label)}
-                                                                >
-                                                                    <div className={cn(
-                                                                        "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border transition-all duration-300 group-hover:scale-105 group-hover:shadow-sm",
-                                                                        item.type === 'source' ? "bg-chart-1/10 border-chart-1/20 text-chart-1" :
-                                                                            item.type === 'sink' ? "bg-chart-2/10 border-chart-2/20 text-chart-2" :
-                                                                                item.type === 'validate' ? "bg-chart-4/10 border-chart-4/20 text-chart-4" :
-                                                                                    ['join', 'union', 'merge'].includes(item.type) ? "bg-chart-5/10 border-chart-5/20 text-chart-5" :
-                                                                                        "bg-chart-3/10 border-chart-3/20 text-chart-3"
-                                                                    )}>
-                                                                        <item.icon className="h-4 w-4" />
-                                                                    </div>
-                                                                    <div className="flex flex-col gap-0.5 overflow-hidden">
-                                                                        <span className="text-[11px] font-semibold tracking-tight">{item.label}</span>
-                                                                        <span className="text-[9px] text-muted-foreground/60 group-hover:text-primary/60 truncate leading-none">{item.desc}</span>
-                                                                    </div>
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
 
-                                </motion.div>
-                            </Panel>
+                                            {/* Primary Controls Group */}
+                                            <div className="flex items-center gap-1 px-2 border-r border-border/10 mr-1">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => undo(nodes, edges, setNodes, setEdges)} disabled={!canUndo}>
+                                                                <Undo className="h-4 w-4 group-active:scale-90" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => redo(nodes, edges, setNodes, setEdges)} disabled={!canRedo}>
+                                                                <Redo className="h-4 w-4 group-active:scale-90" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={onLayout}>
+                                                                <Layout className="h-4 w-4 group-active:scale-90" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Auto-Layout Canvas</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
+
+                                            {/* Unified Add Node Menu */}
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        className="h-9 rounded-2xl px-4 gap-2 bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                                    >
+                                                        <Plus className="h-3.5 w-3.5 stroke-3" /> Add Operator
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent
+                                                    align="center"
+                                                    sideOffset={12}
+                                                    className="w-64 bg-background/80 backdrop-blur-xl border-border/20 shadow-2xl rounded-2xl p-1.5 ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-200"
+                                                >
+                                                    <div className="px-2 py-2 mb-1">
+                                                        <div className="relative group">
+                                                            <Plus className="z-20 absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                                            <Input
+                                                                placeholder="Search..."
+                                                                value={opSearch}
+                                                                onChange={(e) => setOpSearch(e.target.value)}
+                                                                className="h-8 pl-8 rounded-xl bg-muted/30 border-none text-xs focus-visible:ring-1 focus-visible:ring-primary/20 transition-all placeholder:text-[10px]"
+                                                                autoFocus
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="max-h-75 overflow-y-auto custom-scrollbar px-1 space-y-2 pb-1">
+                                                        {filteredDefinitions.length === 0 ? (
+                                                            <div className="py-8 text-center flex flex-col items-center gap-2">
+                                                                <div className="h-8 w-8 rounded-full bg-muted/20 flex items-center justify-center text-muted-foreground/30">
+                                                                    <Plus className="h-4 w-4 rotate-45" />
+                                                                </div>
+                                                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50">No matches</span>
+                                                            </div>
+                                                        ) : (
+                                                            filteredDefinitions.map((category, idx) => (
+                                                                <div key={idx} className="space-y-0.5">
+                                                                    <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 flex items-center gap-2">
+                                                                        {category.category}
+                                                                        <div className="h-px flex-1 bg-border/20" />
+                                                                    </div>
+                                                                    {category.items.map((item: OperatorDefinition, i) => (
+                                                                        <DropdownMenuItem
+                                                                            key={i}
+                                                                            className="group flex items-center gap-3 p-2 rounded-xl focus:bg-primary/5 focus:text-primary cursor-pointer transition-all duration-200"
+                                                                            onClick={() => onAddNode(item.type, item.opClass, item.label)}
+                                                                        >
+                                                                            <div className={cn(
+                                                                                "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border transition-all duration-300 group-hover:scale-105 group-hover:shadow-sm",
+                                                                                item.type === 'source' ? "bg-chart-1/10 border-chart-1/20 text-chart-1" :
+                                                                                    item.type === 'sink' ? "bg-chart-2/10 border-chart-2/20 text-chart-2" :
+                                                                                        item.type === 'validate' ? "bg-chart-4/10 border-chart-4/20 text-chart-4" :
+                                                                                            ['join', 'union', 'merge'].includes(item.type) ? "bg-chart-5/10 border-chart-5/20 text-chart-5" :
+                                                                                                "bg-chart-3/10 border-chart-3/20 text-chart-3"
+                                                                            )}>
+                                                                                <item.icon className="h-4 w-4" />
+                                                                            </div>
+                                                                            <div className="flex flex-col gap-0.5 overflow-hidden">
+                                                                                <span className="text-[11px] font-semibold tracking-tight">{item.label}</span>
+                                                                                <span className="text-[9px] text-muted-foreground/60 group-hover:text-primary/60 truncate leading-none">{item.desc}</span>
+                                                                            </div>
+                                                                        </DropdownMenuItem>
+                                                                    ))}
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+
+                                        </motion.div>
+                                    </Panel>
+                                )}
+                            </AnimatePresence>
+                        </ReactFlow>
+                    </div>
+
+                    <AnimatePresence>
+                        {showLogicView && (
+                            <motion.div
+                                initial={{ x: 400, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                exit={{ x: 400, opacity: 0 }}
+                                className="w-128 border-l border-border/40 bg-background/50 backdrop-blur-3xl z-50 flex flex-col overflow-hidden shadow-2xl"
+                            >
+                                <div className="p-4 border-b border-border/40 bg-muted/10 flex items-center justify-between shrink-0">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                                            <FileCode size={14} />
+                                        </div>
+                                        <span className="text-xs font-bold uppercase tracking-widest text-foreground">Pipeline Manifest</span>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowLogicView(false)}>
+                                        <X size={14} />
+                                    </Button>
+                                </div>
+                                <div className="flex-1 overflow-hidden relative">
+                                    <Editor
+                                        height="100%"
+                                        language="json"
+                                        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                        value={JSON.stringify(pipelinePayload, null, 2)}
+                                        options={{
+                                            readOnly: true,
+                                            minimap: { enabled: false },
+                                            fontSize: 11,
+                                            padding: { top: 20 },
+                                            automaticLayout: true,
+                                            scrollBeyondLastLine: false,
+                                            fontFamily: '"Geist Mono Variable", monospace'
+                                        }}
+                                    />
+                                </div>
+                            </motion.div>
                         )}
                     </AnimatePresence>
-                </ReactFlow>
+                </div>
 
                 {/* Properties Inspector */}
                 <div className={cn(

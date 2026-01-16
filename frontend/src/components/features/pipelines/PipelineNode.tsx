@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn, formatNumber } from '@/lib/utils';
+import { type AppNode } from '@/types/pipeline';
 
 // --- Visual Mapping ---
 const NODE_CONFIG: Record<string, { icon: React.ElementType, colorVar: string, label: string }> = {
@@ -21,8 +22,8 @@ const NODE_CONFIG: Record<string, { icon: React.ElementType, colorVar: string, l
     default: { icon: Settings2, colorVar: "primary", label: "Node" },
 };
 
-const PipelineNode = ({ data, selected }: NodeProps) => {
-    const nodeData = data as any;
+const PipelineNode = ({ data, selected }: NodeProps<AppNode>) => {
+    const nodeData = data;
     const type = nodeData.type || 'default';
     const config = NODE_CONFIG[type] || NODE_CONFIG.default;
     const Icon = config.icon;
@@ -104,7 +105,13 @@ const PipelineNode = ({ data, selected }: NodeProps) => {
                                 isRunning ? "bg-primary/10 border-primary/20 text-primary" : "bg-muted/50 border-border/40 text-muted-foreground"
                             )}>
                                 {config.label}
+                                {['dbt', 'scd_type_2'].includes(nodeData.operator_class) && " • PRO"}
                             </span>
+                            {nodeData.guardrails?.length > 0 && (
+                                <div className="h-4 w-4 bg-amber-500/10 text-amber-500 rounded-md border border-amber-500/20 flex items-center justify-center shadow-sm">
+                                    <Zap size={8} fill="currentColor" className="animate-pulse" />
+                                </div>
+                            )}
                             {diffStatus !== 'none' && (
                                 <Badge className={cn(
                                     "text-[8px] font-bold uppercase tracking-widest h-4 px-1.5",

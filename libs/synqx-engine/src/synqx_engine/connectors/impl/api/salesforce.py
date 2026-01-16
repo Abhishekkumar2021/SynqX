@@ -3,7 +3,7 @@ import pandas as pd
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from synqx_engine.connectors.base import BaseConnector
-from synqx_core.errors import ConfigurationError, ConnectionFailedError
+from synqx_core.errors import ConfigurationError, ConnectionFailedError, DataTransferError
 from synqx_core.logging import get_logger
 
 try:
@@ -152,7 +152,6 @@ class SalesforceConnector(BaseConnector):
         **kwargs,
     ) -> int:
         self.connect()
-        # asset = SObject name
         
         if isinstance(data, pd.DataFrame):
             iterator = [data]
@@ -161,16 +160,34 @@ class SalesforceConnector(BaseConnector):
             
         total = 0
         for df in iterator:
+            # Clean data for Salesforce (NaN to None)
             records = df.replace({pd.NA: None, float('nan'): None}).to_dict(orient='records')
-            # Use bulk API or simple batch for writing? 
-            # simple-salesforce has some helpers
-            # For simplicity, we do row-by-row or small batch if possible
-            for record in records:
-                try:
-                    getattr(self._sf, asset).create(record)
-                    total += 1
-                except Exception as e:
-                    logger.error(f"Failed to create record in Salesforce: {e}")
+            
+            if not records:
+                continue
+
+            try:
+                # Use Bulk API for much better throughput
+                if len(records) > 50:
+                    logger.info(f"Using Salesforce Bulk API for {len(records)} records in '{asset}'")
+                    # bulk_create returns a list of results
+                    results = getattr(self._sf.bulk, asset).insert(records)
+                    successes = sum(1 for r in results if r.get('success'))
+                    total += successes
+                    if successes < len(records):
+                        logger.warning(f"Salesforce Bulk API: {len(records) - successes} records failed.")
+                else:
+                    # Simple API for small batches
+                    for record in records:
+                        try:
+                            getattr(self._sf, asset).create(record)
+                            total += 1
+                        except Exception as e:
+                            logger.error(f"Failed to create record in Salesforce: {e}")
+            except Exception as e:
+                logger.error(f"Salesforce Write Operation Failed: {e}")
+                raise DataTransferError(f"Salesforce Write Failed: {e}")
+                
         return total
 
     def execute_query(self, query: str, **kwargs) -> List[Dict[str, Any]]:

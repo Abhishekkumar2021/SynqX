@@ -17,6 +17,8 @@ import {
     Shield,
     Zap
 } from 'lucide-react';
+import Editor from '@monaco-editor/react';
+import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,13 +58,14 @@ import {
 import { getConnections, getConnectionAssets, getColumnLineage } from '@/lib/api';
 import { getNodeIcon, getOperatorDefinition, type OperatorField } from '@/lib/pipeline-definitions';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { type PipelineNodeData } from '@/types/pipeline';
 
 interface NodePropertiesProps {
-    node: Node | null;
+    node: Node<PipelineNodeData> | null;
     onClose: () => void;
-    onUpdate: (id: string, data: any) => void;
+    onUpdate: (id: string, data: Partial<PipelineNodeData>) => void;
     onDelete: (id: string) => void;
-    onDuplicate: (node: Node) => void;
+    onDuplicate: (node: Node<PipelineNodeData>) => void;
 }
 
 // --- Automated Lineage Component ---
@@ -564,6 +567,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
     const [activeTab, setActiveTab] = useState('settings');
     const [schemaMode, setSchemaMode] = useState<'visual' | 'manual'>('visual');
     const { isEditor, isAdmin } = useWorkspace();
+    const { theme } = useTheme();
 
     // Watchers
     const nodeType = (watch('operator_type') || '').toLowerCase();
@@ -607,9 +611,9 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
 
     useEffect(() => {
         if (node) {
-            const config = node.data.config as any || {};
-            const currentType = ((node.data.type as string) || (node.data.operator_type as string) || 'transform').toLowerCase();
-            const currentOpClass = (node.data.operator_class as string) || (currentType === 'source' ? 'extractor' : currentType === 'sink' ? 'loader' : 'pandas_transform');
+            const config = node.data.config || {};
+            const currentType = (node.data.type || node.data.operator_type || 'transform').toLowerCase();
+            const currentOpClass = node.data.operator_class || (currentType === 'source' ? 'extractor' : currentType === 'sink' ? 'loader' : 'pandas_transform');
 
             const mapping = node.data.column_mapping || {};
             const mappingArray = Object.entries(mapping).map(([target, source]) => ({ 
@@ -618,8 +622,8 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
             }));
 
             const formValues: any = {
-                label: (node.data.label as string) || '',
-                description: (node.data.description as string) || '',
+                label: node.data.label || '',
+                description: node.data.description || '',
                 operator_type: currentType,
                 operator_class: currentOpClass,
                 config: JSON.stringify(config, null, 2),
@@ -627,26 +631,30 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 connection_id: node.data.connection_id ? String(node.data.connection_id) : '',
                 asset_id: (node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) ? 
                     String(node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id) : '',
-                write_strategy: (node.data as any).write_strategy || config.write_mode || 'append',
-                schema_evolution_policy: (node.data as any).schema_evolution_policy || 'strict',
-                sync_mode: (node.data as any).sync_mode || config.sync_mode || 'full_load',
-                cdc_config: (node.data as any).cdc_config || config.cdc_config || {},
-                cdc_slot_name: (node.data as any).cdc_config?.slot_name || '',
-                cdc_publication_name: (node.data as any).cdc_config?.publication_name || 'synqx_pub',
-                cdc_server_id: (node.data as any).cdc_config?.server_id || 999,
-                incremental: config.incremental === true || (node.data as any).sync_mode === 'incremental',
+                write_strategy: node.data.write_strategy || config.write_mode || 'append',
+                schema_evolution_policy: node.data.schema_evolution_policy || 'strict',
+                sync_mode: node.data.sync_mode || config.sync_mode || 'full_load',
+                cdc_config: node.data.cdc_config || config.cdc_config || {},
+                cdc_slot_name: node.data.cdc_config?.slot_name || '',
+                cdc_publication_name: node.data.cdc_config?.publication_name || 'synqx_pub',
+                cdc_server_id: node.data.cdc_config?.server_id || 999,
+                incremental: config.incremental === true || node.data.sync_mode === 'incremental',
                 watermark_column: config.watermark_column || '',
                 max_retries: node.data.max_retries ?? 3,
-                retry_strategy: (node.data as any).retry_strategy || 'fixed',
+                retry_strategy: node.data.retry_strategy || 'fixed',
                 retry_delay_seconds: node.data.retry_delay_seconds ?? 60,
                 timeout_seconds: node.data.timeout_seconds ?? 3600,
-                data_contract_json: (node.data as any).data_contract ? 
-                    (typeof (node.data as any).data_contract === 'string' ? (node.data as any).data_contract : JSON.stringify((node.data as any).data_contract, null, 2)) : '',
-                contract_rules: (node.data as any).data_contract?.columns || [],
-                quarantine_asset_id: (node.data as any).quarantine_asset_id ? String((node.data as any).quarantine_asset_id) : '',
+                data_contract_json: node.data.data_contract ? 
+                    (typeof node.data.data_contract === 'string' ? node.data.data_contract : JSON.stringify(node.data.data_contract, null, 2)) : '',
+                contract_rules: node.data.data_contract?.columns || [],
+                quarantine_asset_id: node.data.quarantine_asset_id ? String(node.data.quarantine_asset_id) : '',
                 schema_rules: currentOpClass === 'validate' ? (config.schema || []) : [],
                 schema_json_manual: currentOpClass === 'validate' ? JSON.stringify(config.schema || [], null, 2) : '',
-                guardrails_list: (node.data as any).guardrails || []
+                guardrails_list: node.data.guardrails || [],
+                is_dynamic: !!node.data.is_dynamic,
+                mapping_expr: node.data.mapping_expr || '',
+                sub_pipeline_id: node.data.sub_pipeline_id ? String(node.data.sub_pipeline_id) : '',
+                worker_tag: node.data.worker_tag || ''
             };
 
             const def = getOperatorDefinition(currentOpClass);
@@ -728,7 +736,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 console.error("Failed to parse contract JSON", e);
             }
 
-            const payload: any = {
+            const payload: Partial<PipelineNodeData> = {
                 label: data.label,
                 description: data.description,
                 type: data.operator_type,
@@ -748,7 +756,8 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 sync_mode: data.operator_type === 'source' ? data.sync_mode : undefined,
                 cdc_config: data.operator_type === 'source' && data.sync_mode === 'cdc' ? {
                     slot_name: data.cdc_slot_name,
-                    publication_name: data.cdc_publication_name
+                    publication_name: data.cdc_publication_name,
+                    server_id: data.cdc_server_id
                 } : undefined,
                 column_mapping: colMapping,
                 write_strategy: data.operator_type === 'sink' ? data.write_strategy : undefined,
@@ -762,6 +771,10 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 retry_strategy: data.retry_strategy,
                 retry_delay_seconds: data.retry_delay_seconds,
                 timeout_seconds: data.timeout_seconds,
+                is_dynamic: data.is_dynamic,
+                mapping_expr: data.mapping_expr,
+                sub_pipeline_id: data.sub_pipeline_id ? parseInt(data.sub_pipeline_id) : undefined,
+                worker_tag: data.worker_tag
             };
 
             if (data.operator_type === 'source') payload.source_asset_id = payload.asset_id;
@@ -826,11 +839,55 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
             case 'textarea':
                 return (
                     <div key={field.name} className="space-y-2">
-                        <div className="flex items-center">
-                            <Label className="text-[10px] font-bold">{field.label}</Label>
-                            <HelpIcon content={field.tooltip} />
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center">
+                                                    <Label className="text-[10px] font-bold">{field.label}</Label>
+                                                    <HelpIcon content={field.tooltip} />
+                                                </div>
+                                                { (field.name === 'code' || field.name === 'script') && (
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="file"
+                                                            id={`upload-${field.name}`}
+                                                            className="hidden"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    const text = await file.text();
+                                                                    setValue(field.name, text);
+                                                                    toast.success("Script Imported", { description: `Successfully loaded ${file.name}` });
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Button 
+                                                            type="button" 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            className="h-6 px-2 text-[9px] font-bold gap-1.5 hover:bg-primary/10 hover:text-primary"
+                                                            onClick={() => document.getElementById(`upload-${field.name}`)?.click()}
+                                                        >
+                                                            <FileCode size={10} /> Import File
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="rounded-xl border border-border/40 overflow-hidden bg-background/50 h-64 relative">                            <Editor
+                                height="100%"
+                                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                defaultLanguage={field.name === 'code' || field.name === 'script' ? 'python' : field.type === 'json' ? 'json' : 'text'}
+                                value={watch(field.name)}
+                                onChange={(val) => setValue(field.name, val)}
+                                options={{
+                                    minimap: { enabled: false },
+                                    fontSize: 12,
+                                    lineNumbers: 'on',
+                                    scrollBeyondLastLine: false,
+                                    automaticLayout: true,
+                                    padding: { top: 10, bottom: 10 },
+                                    readOnly: !isEditor
+                                }}
+                            />
                         </div>
-                        <Textarea {...register(field.name)} placeholder={field.placeholder} readOnly={!isEditor} className="font-mono text-[10px] min-h-25 bg-background/50 rounded-lg" />
                         {field.description && <p className="text-[9px] text-muted-foreground">{field.description}</p>}
                     </div>
                 );
@@ -1218,20 +1275,87 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="advanced" className="m-0 h-full focus-visible:outline-none">
-                                <div className="p-6 space-y-4 h-full">
-                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expert Configuration</Label>
-                                    <Textarea {...register('config', { required: true })} className="font-mono text-[11px] min-h-112.5 bg-[#0a0a0a]/80 text-emerald-500 border-white/5 rounded-xl p-4 resize-none shadow-2xl" spellCheck={false} />
+                            <TabsContent value="advanced" className="m-0 focus-visible:outline-none">
+                                <div className="p-6 space-y-8 pb-32">
+                                    <div className="space-y-6">
+                                        <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Zap className="h-4 w-4 text-amber-500" />
+                                                <span className="text-xs font-bold uppercase tracking-widest">Dynamic Fan-out</span>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox 
+                                                        id="is_dynamic" 
+                                                        checked={watch('is_dynamic')} 
+                                                        onCheckedChange={(v) => setValue('is_dynamic', !!v)} 
+                                                    />
+                                                    <label htmlFor="is_dynamic" className="text-[10px] font-bold uppercase tracking-widest cursor-pointer">Enable Dynamic Mapping</label>
+                                                </div>
+                                                {watch('is_dynamic') && (
+                                                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                                        <Label className="text-[9px] font-bold text-muted-foreground uppercase">Mapping Expression</Label>
+                                                        <Input 
+                                                            {...register('mapping_expr')} 
+                                                            placeholder="e.g. inputs['node_id'].rows" 
+                                                            className="h-8 text-[10px] font-mono"
+                                                        />
+                                                        <p className="text-[8px] text-muted-foreground italic">Spawns parallel instances for each item in the list.</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Workflow className="h-4 w-4 text-primary" />
+                                                <span className="text-xs font-bold uppercase tracking-widest">Modular Orchestration</span>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-[9px] font-bold text-muted-foreground uppercase">Target Sub-pipeline ID</Label>
+                                                    <Input 
+                                                        type="number"
+                                                        {...register('sub_pipeline_id', { valueAsNumber: true })} 
+                                                        placeholder="Pipeline database ID..." 
+                                                        className="h-8 text-[10px] font-mono"
+                                                    />
+                                                    <p className="text-[8px] text-muted-foreground italic">Executes the specified pipeline as a logical child node.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expert JSON Configuration</Label>
+                                            <div className="h-96 rounded-xl border border-border/40 overflow-hidden shadow-2xl">
+                                                <Editor
+                                                    height="100%"
+                                                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                                    defaultLanguage="json"
+                                                    value={watch('config')}
+                                                    onChange={(val) => setValue('config', val)}
+                                                    options={{
+                                                        minimap: { enabled: false },
+                                                        fontSize: 11,
+                                                        padding: { top: 10 },
+                                                        automaticLayout: true,
+                                                        scrollBeyondLastLine: false,
+                                                        readOnly: !isEditor
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </TabsContent>
 
                             <TabsContent value="diff" className="m-0 space-y-6 focus-visible:outline-none">
                                 <div className="p-6 space-y-4">
-                                    <Badge className={cn("text-[10px] font-bold uppercase tracking-widest", (node.data as any).diffStatus === 'added' ? "bg-emerald-500/20 text-emerald-500" : (node.data as any).diffStatus === 'removed' ? "bg-destructive/20 text-destructive" : "bg-amber-500/20 text-amber-500")}>{String((node.data as any).diffStatus || '')}</Badge>
-                                    {(node.data as any).diffInfo?.changes?.config && (
+                                    <Badge className={cn("text-[10px] font-bold uppercase tracking-widest", node.data.diffStatus === 'added' ? "bg-emerald-500/20 text-emerald-500" : node.data.diffStatus === 'removed' ? "bg-destructive/20 text-destructive" : "bg-amber-500/20 text-amber-500")}>{String(node.data.diffStatus || '')}</Badge>
+                                    {node.data.diffInfo?.changes?.config && (
                                         <div className="space-y-2">
                                             <Label className="text-[10px] font-bold uppercase text-muted-foreground">Delta</Label>
-                                            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 overflow-hidden"><pre className="text-[10px] font-mono text-muted-foreground">{JSON.stringify((node.data as any).diffInfo.changes.config, null, 2)}</pre></div>
+                                            <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 overflow-hidden"><pre className="text-[10px] font-mono text-muted-foreground">{JSON.stringify(node.data.diffInfo.changes.config, null, 2)}</pre></div>
                                         </div>
                                     )}
                                 </div>

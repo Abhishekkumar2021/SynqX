@@ -139,8 +139,13 @@ export const PipelineGridItem: React.FC<PipelineGridItemProps> = ({ pipeline, on
                             >
                                 {pipeline.name}
                             </Link>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <PipelineStatusBadge status={pipeline.status} />
+                                {pipeline.tags && Object.keys(pipeline.tags).slice(0, 2).map(tag => (
+                                    <Badge key={tag} variant="secondary" className="h-4 px-1.5 text-[8px] font-bold uppercase tracking-tighter bg-primary/5 text-primary/60 border-primary/10">
+                                        {tag}
+                                    </Badge>
+                                ))}
                             </div>
                         </div>
                     </div>

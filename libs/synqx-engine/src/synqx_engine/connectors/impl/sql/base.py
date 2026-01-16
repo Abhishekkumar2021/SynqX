@@ -88,6 +88,37 @@ class SQLConnector(BaseConnector):
             logger.error(f"Connection test failed: {e}")
             return False
 
+    def check_health(self) -> Dict[str, Any]:
+        """
+        Deeper diagnostic for SQL connectors.
+        """
+        try:
+            import time
+            from datetime import datetime, timezone
+            start = time.time()
+            self.connect()
+            dialect = str(self._engine.dialect.name)
+            version = str(self._engine.dialect.server_version_info) if hasattr(self._engine.dialect, "server_version_info") else "unknown"
+            
+            # Execute simple ping
+            self._connection.execute(text("SELECT 1"))
+            latency = (time.time() - start) * 1000
+            
+            return {
+                "status": "healthy",
+                "dialect": dialect,
+                "server_version": version,
+                "latency_ms": round(latency, 2),
+                "pool_size": self._get_engine_options().get("pool_size"),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+
     def discover_assets(
         self,
         pattern: Optional[str] = None,

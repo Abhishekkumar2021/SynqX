@@ -13,7 +13,7 @@ import json
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
-from synqx_core.models.pipelines import PipelineNode
+from synqx_core.models.pipelines import PipelineNode, PipelineVersion
 from synqx_core.models.execution import PipelineRun, StepRun, Watermark
 from synqx_core.models.connections import Asset, Connection
 from synqx_core.models.enums import OperatorType, OperatorRunStatus
@@ -694,6 +694,35 @@ class NodeExecutor:
                         logger.debug(f"    Processed {chunk_count} chunks, {stats['out']:,} rows")
                         DBLogger.log_step(db, step_run.id, "DEBUG", f"Transformation in progress: {chunk_count} chunks materialized...", job_id=pipeline_run.job_id)
             
+            # =====================================================================
+            # D. SUB-PIPELINE Operation (Recursive DAG)
+            # =====================================================================
+            elif op_type == OperatorType.SUB_PIPELINE:
+                sub_id = node.sub_pipeline_id
+                if not sub_id:
+                    raise AppError(f"Sub-pipeline node '{node.name}' has no target pipeline ID defined.")
+                
+                DBLogger.log_step(db, step_run.id, "INFO", f"Recursing into sub-pipeline (ID: {sub_id})...", job_id=pipeline_run.job_id)
+                
+                from app.engine.agent_core.core import PipelineAgent
+                from synqx_core.models.pipelines import Pipeline
+                
+                sub_pipe = db.query(Pipeline).filter(Pipeline.id == sub_id).first()
+                if not sub_pipe or not sub_pipe.published_version_id:
+                    raise AppError(f"Sub-pipeline {sub_id} not found or has no published version.")
+                
+                sub_version = db.query(PipelineVersion).filter(PipelineVersion.id == sub_pipe.published_version_id).first()
+                
+                # We spawn a new agent for the sub-pipeline
+                # Note: We reuse the same DB session
+                sub_agent = PipelineAgent()
+                # We'll need a unique job ID or use the same one? Better to create a child job.
+                # For prototype, we'll run it in the current context
+                sub_agent.run(sub_version, db, job_id=pipeline_run.job_id)
+                
+                DBLogger.log_step(db, step_run.id, "SUCCESS", f"Sub-pipeline {sub_id} execution finalized.", job_id=pipeline_run.job_id)
+                results = [] # Sub-pipelines currently don't return data to parents in this model
+
             # =====================================================================
             # Finalize Success
             # =====================================================================

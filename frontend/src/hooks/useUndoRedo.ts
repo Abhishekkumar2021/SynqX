@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 
-export const useUndoRedo = () => {
-  const [past, setPast] = useState<{nodes: Node[], edges: Edge[]}[]>([]);
-  const [future, setFuture] = useState<{nodes: Node[], edges: Edge[]}[]>([]);
+export const useUndoRedo = <T extends Node = Node>() => {
+  const [past, setPast] = useState<{nodes: T[], edges: Edge[]}[]>([]);
+  const [future, setFuture] = useState<{nodes: T[], edges: Edge[]}[]>([]);
 
-  const takeSnapshot = useCallback((nodes: Node[], edges: Edge[]) => {
+  const takeSnapshot = useCallback((nodes: T[], edges: Edge[]) => {
     // Deep copy to ensure we don't store references that get mutated
     const nodesCopy = JSON.parse(JSON.stringify(nodes));
     const edgesCopy = JSON.parse(JSON.stringify(edges));
@@ -20,10 +20,10 @@ export const useUndoRedo = () => {
   }, []);
 
   const undo = useCallback((
-      currentNodes: Node[], 
+      currentNodes: T[], 
       currentEdges: Edge[], 
-      setNodes: (n: Node[]) => void, 
-      setEdges: (e: Edge[]) => void
+      setNodes: (n: T[] | ((nodes: T[]) => T[])) => void, 
+      setEdges: (e: Edge[] | ((edges: Edge[]) => Edge[])) => void
   ) => {
     if (past.length === 0) return;
     
@@ -44,10 +44,10 @@ export const useUndoRedo = () => {
   }, [past]);
 
   const redo = useCallback((
-      currentNodes: Node[], 
+      currentNodes: T[], 
       currentEdges: Edge[], 
-      setNodes: (n: Node[]) => void, 
-      setEdges: (e: Edge[]) => void
+      setNodes: (n: T[] | ((nodes: T[]) => T[])) => void, 
+      setEdges: (e: Edge[] | ((edges: Edge[]) => Edge[])) => void
   ) => {
     if (future.length === 0) return;
     

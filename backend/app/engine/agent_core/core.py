@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from synqx_engine.dag import DAG, DagCycleError
 from synqx_core.models.pipelines import PipelineVersion, PipelineNode
 from synqx_core.models.execution import PipelineRun
+from synqx_core.models.enums import OperatorRunStatus, RetryStrategy
+from synqx_core.utils.data import is_df_empty
 from app.core.errors import ConfigurationError, PipelineExecutionError
 from app.core.logging import get_logger
 from app.core.db_logging import DBLogger
@@ -51,11 +53,43 @@ class ParallelExecutionLayer:
         state_manager: StateManager,
         job_id: int,
     ) -> Dict[str, List[pd.DataFrame]]:
-        """Execute all nodes in a layer in parallel"""
+        """Execute all nodes in a layer in parallel, respecting edge conditions"""
         results = {}
         errors = []
+        
+        # --- CONDITIONAL EXECUTION FILTERING ---
+        executable_nodes = []
+        for node in nodes:
+            # A node is executable if ALL its incoming active edges evaluate to True
+            # (or if it has no incoming edges / no conditions)
+            incoming_edges = dag.get_incoming_edge_metadata(node.node_id)
+            is_branch_active = True
+            
+            for edge in incoming_edges:
+                condition = edge.get("condition")
+                if condition:
+                    try:
+                        # Simple evaluator for conditions like "inputs['prev'].count > 0"
+                        if not self._evaluate_condition(condition, data_cache):
+                            is_branch_active = False
+                            break
+                    except Exception as e:
+                        logger.warning(f"Failed to evaluate edge condition for node '{node.name}': {e}")
+            
+            if is_branch_active:
+                executable_nodes.append(node)
+            else:
+                DBLogger.log_job(state_manager.db, job_id, "INFO", f"Branching: Skipping node '{node.name}' due to False edge condition.")
+                # Mark as skipped in state
+                step_run = state_manager.create_step_run(pipeline_run.id, node.id, node.operator_type, node.order_index)
+                state_manager.update_step_status(step_run, OperatorRunStatus.SKIPPED, message="Branch condition evaluated to False")
 
-        if len(nodes) == 1:
+        if not executable_nodes:
+            return {}
+
+        if len(executable_nodes) == 1:
+            # ... (rest of sequential logic)
+
             # Single node - execute directly without threading overhead
             node = nodes[0]
             DBLogger.log_job(state_manager.db, job_id, "DEBUG", f"Executing node '{node.name}' sequentially (no parallel siblings).")
@@ -119,6 +153,25 @@ class ParallelExecutionLayer:
 
         return results
 
+    def _evaluate_condition(self, condition: str, data_cache: DataCache) -> bool:
+        """Evaluates simple boolean conditions for edge branching"""
+        try:
+            # Basic support for "inputs['node'].count > 0"
+            if "count" in condition:
+                import re
+                match = re.search(r"inputs\['(.+?)'\]", condition)
+                if match:
+                    node_id = match.group(1)
+                    data = data_cache.retrieve(node_id)
+                    count = sum(len(df) for df in data) if data else 0
+                    eval_expr = condition.replace(f"inputs['{node_id}'].count", str(count))
+                    return eval(eval_expr, {"__builtins__": {}}, {})
+            
+            # Fallback to simple eval
+            return eval(condition, {"__builtins__": {}}, {})
+        except Exception:
+            return True # Default to True on failure to avoid deadlocks
+
     def _execute_single_node(
         self,
         node: PipelineNode,
@@ -127,6 +180,80 @@ class ParallelExecutionLayer:
         dag: DAG,
         state_manager: StateManager,
         job_id: int,
+    ) -> List[pd.DataFrame]:
+        """Execute a single node, handling Dynamic Mapping if enabled"""
+        
+        # --- DYNAMIC MAPPING (FAN-OUT) LOGIC ---
+        if getattr(node, "is_dynamic", False) and node.mapping_expr:
+            return self._execute_dynamic_node(node, pipeline_run, data_cache, dag, state_manager, job_id)
+
+        return self._execute_node_with_retry(node, pipeline_run, data_cache, dag, state_manager, job_id)
+
+    def _execute_dynamic_node(
+        self,
+        node: PipelineNode,
+        pipeline_run: PipelineRun,
+        data_cache: DataCache,
+        dag: DAG,
+        state_manager: StateManager,
+        job_id: int,
+    ) -> List[pd.DataFrame]:
+        """Evaluates mapping expression and executes multiple parallel instances"""
+        
+        # 1. Resolve Mapping List
+        # In a real system, we'd use a safe eval or a specialized parser
+        # For now, we support simple literal lists or 'inputs[node].rows'
+        mapping_items = []
+        results = []
+        try:
+            expr = node.mapping_expr
+            if expr.startswith("[") and expr.endswith("]"):
+                import ast
+                mapping_items = ast.literal_eval(expr)
+            elif "inputs" in expr:
+                # Basic parser for "inputs['node_id'].count" or similar
+                # For prototype, we'll try to find the upstream node and get its count
+                import re
+                match = re.search(r"inputs\['(.+?)'\]", expr)
+                if match:
+                    up_node_id = match.group(1)
+                    up_data = data_cache.retrieve(up_node_id)
+                    if up_data:
+                        # Map over each row of the first chunk as an example
+                        mapping_items = up_data[0].to_dict('records') if not is_df_empty(up_data[0]) else []
+            
+            if not mapping_items:
+                DBLogger.log_job(state_manager.db, job_id, "WARNING", f"Dynamic node '{node.name}' mapping expression evaluated to an empty list. Skipping.")
+                return []
+
+            DBLogger.log_job(state_manager.db, job_id, "INFO", f"Dynamic Fan-out: Node '{node.name}' spawning {len(mapping_items)} parallel instances.")
+        except Exception as e:
+            raise PipelineExecutionError(f"Failed to evaluate mapping expression for node '{node.name}': {e}")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # We pass the mapping item as an override in the config
+            def run_instance(item):
+                # For prototype, we'll assume the executor knows how to handle 'dynamic_item' in config
+                instance_config = {**(node.config or {}), "_dynamic_item": item}
+                # We need a way to pass this config... 
+                # Better: modify the _execute_node_with_retry to take an optional config override
+                return self._execute_node_with_retry(node, pipeline_run, data_cache, dag, state_manager, job_id, config_override=instance_config)
+
+            futures = [executor.submit(run_instance, it) for i, it in enumerate(mapping_items)]
+            for future in concurrent.futures.as_completed(futures):
+                results.extend(future.result())
+
+        return results
+
+    def _execute_node_with_retry(
+        self,
+        node: PipelineNode,
+        pipeline_run: PipelineRun,
+        data_cache: DataCache,
+        dag: DAG,
+        state_manager: StateManager,
+        job_id: int,
+        config_override: Optional[Dict] = None
     ) -> List[pd.DataFrame]:
         """Execute a single node with proper session management and retry logic"""
         
@@ -151,6 +278,10 @@ class ParallelExecutionLayer:
                         raise PipelineExecutionError(
                             f"Failed to load pipeline run or node '{node.name}' in thread"
                         )
+
+                    # Inject config override if present (for Dynamic Mapping)
+                    if config_override:
+                        t_node.config = {**(t_node.config or {}), **config_override}
 
                     # Create thread-local state manager and executor
                     t_state_manager = StateManager(session, job_id)
@@ -211,7 +342,6 @@ class ParallelExecutionLayer:
 
     def _calculate_retry_delay(self, node: PipelineNode, attempt: int) -> int:
         """Calculate retry delay based on node configuration and attempt number"""
-        from synqx_core.models.enums import RetryStrategy
         
         base_delay = node.retry_delay_seconds or 60
         strategy = node.retry_strategy or RetryStrategy.FIXED
@@ -272,7 +402,12 @@ class PipelineAgent:
                     f"Self-loop detected: node '{from_node.node_id}' cannot connect to itself"
                 )
 
-            dag.add_edge(from_node.node_id, to_node.node_id)
+            dag.add_edge(
+                from_node.node_id, 
+                to_node.node_id, 
+                condition=edge.condition,
+                edge_type=edge.edge_type
+            )
             logger.debug(f"  → Edge: '{from_node.node_id}' → '{to_node.node_id}'")
 
         # Validate DAG structure (detect cycles)

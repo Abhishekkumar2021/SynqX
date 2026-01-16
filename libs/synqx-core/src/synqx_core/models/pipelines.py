@@ -181,6 +181,17 @@ class PipelineNode(Base, AuditMixin):
     # Real-time Capabilities
     cdc_config: Mapped[Optional[dict]] = mapped_column(JSON, default=dict) # e.g. {"slot_name": "...", "publication": "..."}
 
+    # Advanced Orchestration: Dynamic Mapping (Fan-out)
+    is_dynamic: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    mapping_expr: Mapped[Optional[str]] = mapped_column(String(500)) # e.g. "inputs['prev_node'].rows" or "[1,2,3]"
+
+    # Sub-pipeline Orchestration
+    sub_pipeline_id: Mapped[Optional[int]] = mapped_column(ForeignKey("pipelines.id", ondelete="SET NULL"))
+    sub_pipeline: Mapped[Optional["Pipeline"]] = relationship("Pipeline", foreign_keys=[sub_pipeline_id])
+
+    # Worker Routing (Heterogeneous DAGs)
+    worker_tag: Mapped[Optional[str]] = mapped_column(String(100)) # Route specific node to tagged workers
+
     max_retries: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     retry_strategy: Mapped[RetryStrategy] = mapped_column(
         SQLEnum(RetryStrategy), default=RetryStrategy.FIXED, nullable=False
@@ -230,6 +241,7 @@ class PipelineEdge(Base, AuditMixin):
     from_node_id: Mapped[int] = mapped_column(ForeignKey("pipeline_nodes.id", ondelete="CASCADE"), nullable=False)
     to_node_id: Mapped[int] = mapped_column(ForeignKey("pipeline_nodes.id", ondelete="CASCADE"), nullable=False)
     edge_type: Mapped[str] = mapped_column(String(50), default="data_flow", nullable=False)
+    condition: Mapped[Optional[str]] = mapped_column(String(500)) # e.g. "inputs['prev'].count > 0"
 
     version: Mapped["PipelineVersion"] = relationship(back_populates="edges")
     from_node: Mapped["PipelineNode"] = relationship(foreign_keys=[from_node_id], back_populates="outgoing_edges", lazy="selectin")

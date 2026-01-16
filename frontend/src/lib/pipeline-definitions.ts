@@ -346,11 +346,11 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 ]
             },
             {
-                label: "SCD Type 2", 
-                type: "transform", 
+                label: "SCD Type 2 (Alpha)", 
+                type: "merge", 
                 opClass: "scd_type_2", 
                 icon: History, 
-                desc: "Track history with versioned rows",
+                desc: "History tracking (Delta + Target inputs)",
                 fields: [
                     {
                         name: 'primary_key', label: 'Primary Key', type: 'text', configKey: 'primary_key', 
@@ -361,21 +361,6 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                         name: 'compare_columns', label: 'Compare Columns', type: 'text', configKey: 'compare_columns', 
                         description: 'Comma separated columns',
                         tooltip: 'Columns to check for changes to trigger a new version.'
-                    },
-                    {
-                        name: 'effective_from_col', label: 'Effective From Col', type: 'text', configKey: 'effective_from_col', 
-                        placeholder: 'synqx_effective_from',
-                        tooltip: 'Column for version start timestamp.'
-                    },
-                    {
-                        name: 'effective_to_col', label: 'Effective To Col', type: 'text', configKey: 'effective_to_col', 
-                        placeholder: 'synqx_effective_to',
-                        tooltip: 'Column for version end timestamp.'
-                    },
-                    {
-                        name: 'is_current_col', label: 'Is Current Col', type: 'text', configKey: 'is_current_col', 
-                        placeholder: 'synqx_is_current',
-                        tooltip: 'Boolean column for the latest version.'
                     }
                 ]
             },
@@ -384,7 +369,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 type: "transform", 
                 opClass: "code", 
                 icon: Zap, 
-                desc: "High-performance custom logic",
+                desc: "High-performance Polars/Pandas logic",
                 fields: [
                     {
                         name: 'code', label: 'Script', type: 'textarea', configKey: 'code', 
@@ -394,7 +379,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                 ]
             },
             {
-                label: "dbt Command", 
+                label: "dbt Command (Enterprise)", 
                 type: "transform", 
                 opClass: "dbt", 
                 icon: Workflow, 
@@ -411,10 +396,24 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                     }
                 ]
             },
-            { label: "No-Op", type: "noop", opClass: "noop", icon: Square, desc: "Pass-through (Testing)" }
-        ]
-    }
-];
+                        {
+                            label: "Sub-pipeline", 
+                            type: "sub_pipeline", 
+                            opClass: "sub_pipeline", 
+                            icon: Workflow, 
+                            desc: "Recurse into another logical pipeline",
+                            fields: [
+                                {
+                                    name: 'sub_pipeline_id', label: 'Target Pipeline ID', type: 'number', configKey: 'sub_pipeline_id', 
+                                    tooltip: 'The database ID of the pipeline to execute as a child.'
+                                }
+                            ]
+                        },
+                        {
+                            label: "No-Op", type: "noop", opClass: "noop", icon: Square, desc: "Pass-through (Testing)" }
+                    ]
+                }
+            ];
 
 // Helper: Map Backend OperatorType to Frontend Node Type
 export const mapOperatorToNodeType = (opType: string) => {

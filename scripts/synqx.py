@@ -19,14 +19,13 @@ import tarfile
 import hashlib
 import threading
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from dataclasses import dataclass, asdict
 
 # --- Mandatory Dependency Check ---
 MISSING = []
 try:
-    import typer
     from typer import Typer, Argument, Option
 except ImportError:
     MISSING.append("typer")
@@ -188,7 +187,7 @@ def check_http_health(url: str, timeout: int = 2) -> bool:
         import urllib.request
         with urllib.request.urlopen(url, timeout=timeout) as r:
             return r.status == 200
-    except:
+    except Exception:
         return False
 
 def calculate_checksum(file_path: Path) -> str:
@@ -208,10 +207,10 @@ def force_kill_port(port: int):
             for pid in output.split():
                 try:
                     os.kill(int(pid), signal.SIGKILL)
-                except:
+                except Exception:
                     pass
             return
-        except:
+        except Exception:
             pass
 
     # Fallback to psutil for Windows or if lsof fails
@@ -223,7 +222,7 @@ def force_kill_port(port: int):
                         proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
-    except:
+    except Exception:
         pass
 
 # --- Service Definitions ---
@@ -297,7 +296,7 @@ class Manager:
             return None
         try:
             return Meta.from_dict(json.loads(f.read_text()))
-        except:
+        except Exception:
             return None
 
     def save_meta(self, name: str, meta: Meta):
@@ -328,7 +327,7 @@ class Manager:
                     console.print(f"[warning]Port {svc['port']} is occupied. Evicting existing process...[/warning]")
                     force_kill_port(svc['port'])
 
-        with console.status(f"[info]Launching {name}...[/info]") as status:
+        with console.status(f"[info]Launching {name}...[/info]"):
             cmd = list(svc["cmd"])
             cwd = svc["dir"]
             
@@ -343,7 +342,6 @@ class Manager:
                 cmd[0] = get_venv_bin(cwd, cmd[0])
 
             log_path = LOG_DIR / f"{name}.log"
-            log_file = open(log_path, "a")
             
             flags = {}
             if platform.system() == "Windows":
@@ -352,14 +350,17 @@ class Manager:
                 flags['start_new_session'] = True
 
             try:
-                proc = subprocess.Popen(
-                    cmd, 
-                    cwd=cwd, 
-                    env={**os.environ, **svc.get("env", {})}, 
-                    stdout=log_file, 
-                    stderr=subprocess.STDOUT, 
-                    **flags
-                )
+                with open(log_path, "a") as log_file:
+                    proc = subprocess.Popen(
+                        cmd, 
+                        cwd=cwd, 
+                        env={**os.environ, **svc.get("env", {})}, 
+                        stdin=subprocess.DEVNULL,
+                        stdout=log_file, 
+                        stderr=subprocess.STDOUT, 
+                        close_fds=(platform.system() != "Windows"),
+                        **flags
+                    )
                 
                 m = Meta(pid=proc.pid, name=name, start_time=time.time(), port=svc.get('port'))
                 self.save_meta(name, m)
@@ -403,7 +404,7 @@ class Manager:
             for c in children:
                 try:
                     c.terminate()
-                except:
+                except Exception:
                     pass
             
             p.terminate()
@@ -414,7 +415,7 @@ class Manager:
                 for a in alive:
                     try:
                         a.kill()
-                    except:
+                    except Exception:
                         pass
         except psutil.NoSuchProcess:
             pass
@@ -428,8 +429,15 @@ manager = Manager()
 
 # --- Handlers ---
 app = Typer(name="synqx", help="Industrial CLI for SynqX Monorepo", no_args_is_help=True, rich_markup_mode="rich")
-db_app = Typer(help="Database management (Alembic)"); build_app = Typer(help="Build operations"); rel_app = Typer(help="Release & Versioning"); cfg_app = Typer(help="Configuration")
-app.add_typer(db_app, name="db"); app.add_typer(build_app, name="build"); app.add_typer(rel_app, name="release"); app.add_typer(cfg_app, name="config")
+db_app = Typer(help="Database management (Alembic)")
+build_app = Typer(help="Build operations")
+rel_app = Typer(help="Release & Versioning")
+cfg_app = Typer(help="Configuration")
+
+app.add_typer(db_app, name="db")
+app.add_typer(build_app, name="build")
+app.add_typer(rel_app, name="release")
+app.add_typer(cfg_app, name="config")
 
 @app.command()
 def setup():
@@ -581,7 +589,7 @@ def clean(logs: bool = Option(False, help="Also remove log files")):
         
     removed_count = 0
     for p in patterns:
-        for path in ROOT_DIR.rglob(p.split('/')[-1]) if '/' in p else ROOT_DIR.rglob(p):
+        for path in (ROOT_DIR.rglob(p.split('/')[-1]) if '/' in p else ROOT_DIR.rglob(p)):
             try:
                 if path.is_dir():
                     shutil.rmtree(path)
@@ -589,7 +597,7 @@ def clean(logs: bool = Option(False, help="Also remove log files")):
                 elif path.is_file():
                     path.unlink()
                     removed_count += 1
-            except:
+            except Exception:
                 pass
     console.print(f"[success]✓ Cleaned {removed_count} items.[/success]")
 
@@ -693,7 +701,7 @@ def rel_list():
     console.print(t)
 
 @rel_app.command("bump")
-def rel_bump(part: str = Argument(..., help="major, minor, or patch")):
+def rel_bump(part: str = Argument(..., help="major, minor, or_patch")):
     """Bump version across all components."""
     files = [
         ROOT_DIR / "agent" / "pyproject.toml", 
@@ -711,9 +719,12 @@ def rel_bump(part: str = Argument(..., help="major, minor, or patch")):
     v = list(map(int, cur.split('.')))
     
     if part == "major":
-        v[0] += 1; v[1] = 0; v[2] = 0
+        v[0] += 1
+        v[1] = 0
+        v[2] = 0
     elif part == "minor":
-        v[1] += 1; v[2] = 0
+        v[1] += 1
+        v[2] = 0
     elif part == "patch":
         v[2] += 1
     else:

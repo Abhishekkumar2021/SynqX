@@ -2,7 +2,7 @@ import pandas as pd
 import polars as pl
 import logging
 import concurrent.futures
-import threading
+import time
 import json
 import psutil
 import os
@@ -375,10 +375,15 @@ class ParallelAgent:
                                     "quality_profile": quality_profile
                                 })
                         except Exception as e:
+                            import traceback
                             self.metrics.failed_nodes += 1
-                            log_cb(f"[FAILED] Node '{nid}' aborted due to a terminal error: {str(e)}", nid)
+                            tb_str = traceback.format_exc()
+                            log_cb(f"[FAILED] Node '{nid}' aborted due to a terminal error:\n{tb_str}", nid)
                             if status_cb:
-                                status_cb(nid, "failed", {"error_message": str(e)})
+                                status_cb(nid, "failed", {
+                                    "error_message": str(e),
+                                    "traceback": tb_str
+                                })
                             raise e
 
             self.metrics.execution_end = datetime.now(timezone.utc)

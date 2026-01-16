@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useZenMode } from '@/hooks/useZenMode';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { SearchDialog } from './navigation/SearchDialog';
+import { GlobalCommandPalette } from './navigation/GlobalCommandPalette';
 import { DesktopSidebar } from './sidebar/DesktopSidebar';
 import { MobileSidebar } from './sidebar/MobileSidebar';
 import { TopHeader } from './header/TopHeader';
@@ -19,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = () => {
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isPaletteOpen, setIsPaletteOpen] = useState(false);
     const { isZenMode, setIsZenMode } = useZenMode();
 
     // Global CMD+K Shortcut
@@ -27,7 +27,7 @@ export const Layout: React.FC<LayoutProps> = () => {
         const down = (e: KeyboardEvent) => {
             if (e.key && e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
-                setIsSearchOpen((open) => !open);
+                setIsPaletteOpen((open) => !open);
             }
         };
         window.addEventListener("keydown", down, { capture: true });
@@ -59,11 +59,11 @@ export const Layout: React.FC<LayoutProps> = () => {
                 {/* --- Top Header --- */}
                 <TopHeader 
                     setIsMobileMenuOpen={setIsMobileMenuOpen}
-                    setIsSearchOpen={setIsSearchOpen}
+                    setIsPaletteOpen={setIsPaletteOpen}
                 />
 
-                {/* Search Dialog */}
-                <SearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+                {/* Global Command Palette */}
+                <GlobalCommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
 
                 <AnimatePresence>
                     {isZenMode && (

@@ -80,7 +80,7 @@ export const CodeBlock = ({
   }, [code]);
 
   const renderContent = (isExpanded: boolean) => (
-    <div className="relative w-full h-full group/content flex flex-col min-h-0">
+    <div className="relative w-full h-full group/content flex flex-col min-h-0 overflow-hidden">
       <div className="absolute inset-0 bg-noise opacity-[0.03] dark:opacity-[0.02] pointer-events-none" />
 
       {editable ? (
@@ -91,7 +91,7 @@ export const CodeBlock = ({
           placeholder={placeholder}
           className={cn(
             "font-mono bg-transparent border-0 focus-visible:ring-0 resize-none w-full relative z-10",
-            "overflow-y-auto custom-scrollbar flex-1",
+            "overflow-y-auto custom-scrollbar flex-1 min-h-0",
             wrap ? "whitespace-pre-wrap" : "whitespace-pre",
             isExpanded ? "text-sm leading-relaxed p-8" : "text-xs leading-relaxed p-5"
           )}
@@ -100,11 +100,11 @@ export const CodeBlock = ({
       ) : (
         <div
           className={cn(
-            "w-full h-full overflow-y-auto relative z-20 select-text cursor-text custom-scrollbar flex-1",
+            "w-full overflow-y-auto relative z-20 select-text cursor-text custom-scrollbar flex-1 min-h-0",
             "dark:[&_.shiki_span]:filter dark:[&_.shiki_span]:brightness-125",
             wrap ? "[&>pre]:whitespace-pre-wrap" : "[&>pre]:whitespace-pre",
             isExpanded ? "text-[13px]" : "text-[11px]",
-            "[&>pre]:bg-transparent! [&>pre]:m-0 [&>pre]:w-full [&>pre]:h-full",
+            "[&>pre]:bg-transparent! [&>pre]:m-0 [&>pre]:w-full [&>pre]:overflow-visible",
             isExpanded ? "[&>pre]:p-8 [&>pre]:leading-7" : "[&>pre]:p-5 [&>pre]:leading-6"
           )}
           onPointerDown={(e) => e.stopPropagation()}
@@ -180,7 +180,7 @@ export const CodeBlock = ({
   );
 
   return (
-    <div className={cn("relative", isMaximized && "z-[9999]")}>
+    <div className={cn("relative", isMaximized && "z-[9999]", maxHeight === '100%' || className?.includes('h-full') ? "h-full" : "")}>
       <div
         className={cn(
           "relative group transition-all duration-500 w-full flex flex-col overflow-hidden",
@@ -210,7 +210,7 @@ export const CodeBlock = ({
         )}
 
         {/* This container allows the internal scroll to happen */}
-        <div className="flex-1 min-h-0 bg-background/50">
+        <div className="flex-1 min-h-0 bg-background/50 overflow-hidden">
           {renderContent(false)}
         </div>
       </div>

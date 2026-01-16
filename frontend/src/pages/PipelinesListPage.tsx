@@ -26,6 +26,13 @@ import { useJobsListTelemetry } from '@/hooks/useJobsListTelemetry';
 import { useZenMode } from '@/hooks/useZenMode';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useAuth } from '@/hooks/useAuth';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 export const PipelinesListPage: React.FC = () => {
     const { isZenMode } = useZenMode();
@@ -39,6 +46,7 @@ export const PipelinesListPage: React.FC = () => {
     const [versionsOpen, setVersionsOpen] = useState(false);
     const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
     const [filter, setFilter] = useState('');
+    const [tagFilter, setTagFilter] = useState<string>('all');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isImporting, setIsExecutingImport] = useState(false);
 
@@ -66,8 +74,8 @@ export const PipelinesListPage: React.FC = () => {
                 description: `Execution started successfully. Job ID: ${data.job_id}`
             });
             queryClient.invalidateQueries({ queryKey: ['jobs'] });
-            queryClient.invalidateQueries({ queryKey: ['pipeline-stats', data.pipeline_id] }); // Invalidate stats for this pipeline
-            queryClient.invalidateQueries({ queryKey: ['dashboard'] }); // Refresh dashboard stats
+            queryClient.invalidateQueries({ queryKey: ['pipeline-stats', data.pipeline_id] }); 
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] }); 
         },
         onError: (err: any) => {
             toast.error("Trigger Failed", {
@@ -109,7 +117,19 @@ export const PipelinesListPage: React.FC = () => {
         }
     };
 
-    // Derived State
+    // Derived State: Unique Tags
+    const allTags = useMemo(() => {
+        if (!pipelines) return [];
+        const tags = new Set<string>();
+        pipelines.forEach(p => {
+            if (p.tags) {
+                Object.keys(p.tags).forEach(t => tags.add(t));
+            }
+        });
+        return Array.from(tags).sort();
+    }, [pipelines]);
+
+    // Derived State: Filtered Pipelines
     const enrichedPipelines = useMemo(() => {
         if (!pipelines) return []; 
         
@@ -118,11 +138,15 @@ export const PipelinesListPage: React.FC = () => {
             const lastJob = jobs.sort((a, b) => b.id - a.id)[0];
             const stats = pipelineStatsQueries.find(q => q.data?.pipeline_id === p.id)?.data;
             return { ...p, lastJob, stats };
-        }).filter(p =>
-            p.name.toLowerCase().includes(filter.toLowerCase()) ||
-            p.description?.toLowerCase().includes(filter.toLowerCase())
-        );
-    }, [pipelines, recentJobs, filter, pipelineStatsQueries]);
+        }).filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(filter.toLowerCase()) ||
+                                p.description?.toLowerCase().includes(filter.toLowerCase());
+            
+            const matchesTag = tagFilter === 'all' || (p.tags && Object.keys(p.tags).includes(tagFilter));
+            
+            return matchesSearch && matchesTag;
+        });
+    }, [pipelines, recentJobs, filter, tagFilter, pipelineStatsQueries]);
 
     if (isLoadingPipelines) return <LoadingSkeleton />;
 
@@ -198,23 +222,37 @@ export const PipelinesListPage: React.FC = () => {
                 {/* Toolbar */}
                 <div className="p-4 md:p-6 border-b border-border/40 bg-muted/20 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4 md:gap-6">
 
-                    {/* Search Bar */}
-                    <div className="relative w-full md:max-w-md group">
-                        <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-20" />
-                        <Input
-                            placeholder="Filter pipelines..."
-                            className="pl-11 h-11 rounded-xl bg-background/50 border-border/50 focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
-                            value={filter}
-                            onChange={(e) => setFilter(e.target.value)}
-                        />
+                    {/* Search & Tag Filter Group */}
+                    <div className="flex items-center gap-3 w-full md:max-w-2xl group">
+                        <div className="relative flex-1 group">
+                            <Search className="absolute left-4 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-20" />
+                            <Input
+                                placeholder="Filter pipelines..."
+                                className="pl-11 h-11 rounded-xl bg-background/50 border-border/50 focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                            />
+                        </div>
+
+                        <Select value={tagFilter} onValueChange={setTagFilter}>
+                            <SelectTrigger className="h-11 w-48 rounded-xl border-border/50 bg-background/50 backdrop-blur-md px-4 focus:ring-primary/20 hover:border-primary/40 hover:bg-background transition-all font-bold text-[10px] uppercase tracking-widest text-muted-foreground/60">
+                                <SelectValue placeholder="All Categories" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-border/40 bg-background/80 backdrop-blur-xl shadow-2xl p-1.5">
+                                <SelectItem value="all" className="rounded-xl font-bold text-[10px] uppercase tracking-widest py-2.5">All Categories</SelectItem>
+                                {allTags.map(tag => (
+                                    <SelectItem key={tag} value={tag} className="rounded-xl font-bold text-[10px] uppercase tracking-widest py-2.5">{tag}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Controls Group */}
                     <div className="flex items-center justify-between w-full md:w-auto gap-4">
-                        {/* Status Chip (Hidden on very small screens) */}
+                        {/* Status Chip */}
                         <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-muted-foreground bg-background/50 border border-border/50 px-4 py-2 rounded-full shadow-sm">
                             <Activity className="h-3.5 w-3.5 text-primary" />
-                            <span>{enrichedPipelines.length} Active</span>
+                            <span>{enrichedPipelines.length} Visible</span>
                         </div>
 
                         {/* View Toggle */}

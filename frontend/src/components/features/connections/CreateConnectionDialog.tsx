@@ -462,11 +462,37 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({ 
                                                                 </SelectContent>
                                                             </Select>
                                                         ) : field.type === 'textarea' ? (
-                                                            <Textarea
-                                                                {...f}
-                                                                placeholder={field.placeholder}
-                                                                className="min-h-[120px] rounded-xl bg-background border-border/40 font-mono text-xs shadow-sm resize-none"
-                                                            />
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center justify-end">
+                                                                    <input
+                                                                        type="file"
+                                                                        id={`upload-${field.name}`}
+                                                                        className="hidden"
+                                                                        onChange={async (e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) {
+                                                                                const text = await file.text();
+                                                                                f.onChange(text);
+                                                                                toast.success("File Imported", { description: `Successfully loaded ${file.name}` });
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <Button 
+                                                                        type="button" 
+                                                                        variant="ghost" 
+                                                                        size="sm" 
+                                                                        className="h-6 px-2 text-[9px] font-bold gap-1.5 hover:bg-primary/10 hover:text-primary"
+                                                                        onClick={() => document.getElementById(`upload-${field.name}`)?.click()}
+                                                                    >
+                                                                        <Plus className="h-3 w-3" /> Upload File
+                                                                    </Button>
+                                                                </div>
+                                                                <Textarea
+                                                                    {...f}
+                                                                    placeholder={field.placeholder}
+                                                                    className="min-h-[120px] rounded-xl bg-background border-border/40 font-mono text-xs shadow-sm resize-none"
+                                                                />
+                                                            </div>
                                                         ) : (
                                                             <div className="relative">
                                                                 <Input

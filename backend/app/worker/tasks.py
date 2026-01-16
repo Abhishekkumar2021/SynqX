@@ -10,6 +10,8 @@ from app.engine.agent_engine import PipelineAgent as PipelineRunner
 from app.core.db_logging import DBLogger
 from app.core.errors import ConfigurationError, PipelineExecutionError
 import httpx
+from sqlalchemy import cast
+from sqlalchemy.dialects.postgresql import JSONB
 
 logger = get_logger(__name__)
 
@@ -356,7 +358,7 @@ def execute_pipeline_task(self, job_id: int) -> str:
                         
                         # 2. Trigger Downstream Pipelines (Dependency Triggers)
                         downstream_pipelines = post_session.query(Pipeline).filter(
-                            Pipeline.upstream_pipeline_ids.contains([job.pipeline_id]),
+                            cast(Pipeline.upstream_pipeline_ids, JSONB).contains(cast([job.pipeline_id], JSONB)),
                             Pipeline.status == PipelineStatus.ACTIVE,
                             Pipeline.deleted_at.is_(None)
                         ).all()

@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, List, Iterator, Union, Generator
 from contextlib import contextmanager
 import pandas as pd
+import time
+from datetime import datetime, timezone
 from synqx_core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -44,6 +46,27 @@ class BaseConnector(ABC):
     @abstractmethod
     def test_connection(self) -> bool:
         pass
+
+    def check_health(self) -> Dict[str, Any]:
+        """
+        Performs a deep diagnostic check of the connection.
+        Default implementation just calls test_connection.
+        """
+        try:
+            start = time.time()
+            alive = self.test_connection()
+            latency = (time.time() - start) * 1000
+            return {
+                "status": "healthy" if alive else "unhealthy",
+                "latency_ms": round(latency, 2),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
 
     @contextmanager
     def session(self) -> Generator["BaseConnector", None, None]:

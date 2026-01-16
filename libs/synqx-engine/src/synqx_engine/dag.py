@@ -12,6 +12,7 @@ class DAG:
         self._graph: Dict[str, Set[str]] = defaultdict(set)
         self._reverse_graph: Dict[str, Set[str]] = defaultdict(set)
         self._nodes: Set[str] = set()
+        self._edge_metadata: Dict[Tuple[str, str], Dict] = {}
         self._topological_order: Optional[List[str]] = None
         self._layers: Optional[List[Set[str]]] = None
 
@@ -23,8 +24,8 @@ class DAG:
             self._reverse_graph.setdefault(node_id, set())
             self._invalidate_cache()
 
-    def add_edge(self, from_node: str, to_node: str) -> None:
-        """Add a directed edge from from_node to to_node."""
+    def add_edge(self, from_node: str, to_node: str, **kwargs) -> None:
+        """Add a directed edge from from_node to to_node with optional metadata."""
         if from_node == to_node:
             raise ValueError(f"Self-loops are not allowed: {from_node}")
         self.add_node(from_node)
@@ -32,6 +33,7 @@ class DAG:
         if to_node not in self._graph[from_node]:
             self._graph[from_node].add(to_node)
             self._reverse_graph[to_node].add(from_node)
+            self._edge_metadata[(from_node, to_node)] = kwargs
             self._invalidate_cache()
 
     def remove_node(self, node_id: str) -> None:
@@ -42,8 +44,10 @@ class DAG:
         # Remove all edges involving this node
         for neighbor in self._graph[node_id]:
             self._reverse_graph[neighbor].discard(node_id)
+            self._edge_metadata.pop((node_id, neighbor), None)
         for neighbor in self._reverse_graph[node_id]:
             self._graph[neighbor].discard(node_id)
+            self._edge_metadata.pop((neighbor, node_id), None)
 
         del self._graph[node_id]
         del self._reverse_graph[node_id]
@@ -56,7 +60,18 @@ class DAG:
             self._graph[from_node].discard(to_node)
         if to_node in self._reverse_graph:
             self._reverse_graph[to_node].discard(from_node)
+        self._edge_metadata.pop((from_node, to_node), None)
         self._invalidate_cache()
+
+    def get_incoming_edge_metadata(self, node_id: str) -> List[Dict]:
+        """Return metadata for all edges pointing to node_id."""
+        incoming = []
+        # get_upstream_nodes returns the 'from' nodes for edges pointing TO node_id
+        for upstream in self.get_upstream_nodes(node_id):
+            meta = self._edge_metadata.get((upstream, node_id), {}).copy()
+            meta['from_node'] = upstream
+            incoming.append(meta)
+        return incoming
 
     def get_nodes(self) -> Set[str]:
         """Return all nodes in the DAG."""

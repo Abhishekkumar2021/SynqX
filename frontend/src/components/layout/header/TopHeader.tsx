@@ -27,10 +27,10 @@ import { HEADER_VARIANTS } from '@/lib/animations';
 
 interface TopHeaderProps {
     setIsMobileMenuOpen: (isOpen: boolean) => void;
-    setIsSearchOpen: (isOpen: boolean) => void;
+    setIsPaletteOpen: (isOpen: boolean) => void;
 }
 
-export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIsSearchOpen }) => {
+export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIsPaletteOpen }) => {
     const location = useLocation();
     const { user } = useAuth();
     const { isZenMode, setIsZenMode } = useZenMode();
@@ -114,7 +114,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <motion.button 
-                                        onClick={() => setIsSearchOpen(true)}
+                                        onClick={() => setIsPaletteOpen(true)}
                                         whileHover={{ scale: 1.01 }}
                                         whileTap={{ scale: 0.99 }}
                                         className="h-10 w-60 hidden xl:flex items-center gap-3 px-4 rounded-xl border border-border/40 bg-muted/20 text-muted-foreground/60 transition-all group relative shadow-xs hover:shadow-md hover:border-primary/40 hover:bg-muted/30 active:bg-muted/50"

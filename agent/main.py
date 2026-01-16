@@ -9,8 +9,7 @@ import socket
 import signal
 import base64
 import subprocess
-import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from datetime import datetime, timezone
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
@@ -257,6 +256,16 @@ class SynqxAgent:
             duration_ms = int((time.time() - start_time) * 1000)
             self.report_job_status(job_id, "failed", str(e), duration_ms)
 
+    def validate_path(self, path: str) -> Path:
+        """Securely validate that path is within the sandbox."""
+        sandbox = HOME_CONFIG_DIR / "sandbox"
+        sandbox.mkdir(exist_ok=True)
+        
+        target = (sandbox / path).resolve()
+        if not str(target).startswith(str(sandbox.resolve())):
+            raise ValueError(f"Security Violation: Access denied to {path}")
+        return target
+
     def process_ephemeral_job(self, data: Dict[str, Any]):
         job_id = data["id"]
         job_type = data["type"]
@@ -309,8 +318,13 @@ class SynqxAgent:
 
             elif job_type == "file":
                 action = payload.get("action")
-                path = payload.get("path", "")
+                # SECURITY: Enforce sandbox
+                path = str(self.validate_path(payload.get("path", "")))
+                
                 if action == "list":
+                    # For listing, we might want to list relative to root, but here we list the sandboxed path
+                    # Connector logic might expect a full path or relative. 
+                    # Assuming connector.list_files handles local paths standardly.
                     result_update["result_sample"] = {"files": connector.list_files(path=path)}
                 elif action == "mkdir":
                     connector.create_directory(path=path)
@@ -323,17 +337,26 @@ class SynqxAgent:
                     connector.delete_file(path=path)
 
             elif job_type == "system":
+                # SYSTEM jobs are restricted to internal environment management only
                 action = payload.get("action")
                 lang = payload.get("language")
                 pkg = payload.get("package")
-                base = os.path.join(os.getcwd(), ".synqx", "envs", str(conn_data["id"]), lang)
-                os.makedirs(base, exist_ok=True)
+                
+                # Sandbox environments to .synqx-agent/envs
+                base = HOME_CONFIG_DIR / "envs" / str(conn_data["id"]) / lang
+                base.mkdir(parents=True, exist_ok=True)
+                
                 if action == "initialize":
                     if lang == "python":
-                        subprocess.check_call([sys.executable, "-m", "venv", os.path.join(base, "venv")])
+                        subprocess.check_call([sys.executable, "-m", "venv", str(base / "venv")])
                 elif action == "install":
-                    pip = os.path.join(base, "venv", "bin" if platform.system() != "Windows" else "Scripts", "pip")
-                    out = subprocess.check_output([pip, "install", pkg], text=True)
+                    # Sanitize package name to prevent chaining
+                    if not re.match(r"^[a-zA-Z0-9_\-==.<>]+$", pkg):
+                        raise ValueError(f"Invalid package name: {pkg}")
+                        
+                    bin_dir = "Scripts" if platform.system() == "Windows" else "bin"
+                    pip = base / "venv" / bin_dir / "pip"
+                    out = subprocess.check_output([str(pip), "install", pkg], text=True)
                     result_update["result_summary"] = {"output": out}
 
             result_update["execution_time_ms"] = int((time.time() - start_time) * 1000)
@@ -422,8 +445,8 @@ def start(
             if pid > 0:
                 console.print(f"[green]Agent started in background (PID: {pid})[/green]")
                 sys.exit(0)
-        except OSError as e:
-            console.print(f"[red]Fork failed:[/red] {e}")
+        except OSError:
+            console.print("[red]Fork failed:[/red]")
             sys.exit(1)
         
         os.setsid()
@@ -432,7 +455,7 @@ def start(
             pid = os.fork()
             if pid > 0:
                 sys.exit(0)
-        except OSError as e:
+        except OSError:
             sys.exit(1)
             
         # Redirect standard streams to devnull for daemon
