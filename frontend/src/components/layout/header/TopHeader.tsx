@@ -87,10 +87,13 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ setIsMobileMenuOpen, setIs
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="h-16 mx-4 mt-4 flex items-center justify-between shrink-0 z-40 relative px-4 rounded-2xl border border-border/40 bg-card/50 backdrop-blur-xl shadow-lg transition-all duration-500"
+                    className="h-16 mx-4 mt-4 flex items-center justify-between shrink-0 z-40 relative px-4 rounded-2xl border border-white/10 bg-gradient-to-r from-card/80 via-card/50 to-card/80 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 ring-1 ring-white/5 dark:ring-white/10 dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]"
                 >
+                    {/* Inner subtle noise/glow */}
+                    <div className="absolute inset-0 pointer-events-none rounded-2xl bg-gradient-to-b from-white/5 to-transparent opacity-20" />
+
                     {/* Left: Interactive Breadcrumbs */}
-                    <div className="flex items-center gap-4 flex-1 min-w-0 pr-4">
+                    <div className="flex items-center gap-4 flex-1 min-w-0 pr-4 relative z-10">
                         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                             <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 rounded-xl border border-border/40 bg-background/40 shadow-sm" onClick={() => setIsMobileMenuOpen(true)}>
                                 <Menu className="h-5 w-5" />

@@ -70,7 +70,10 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ isSidebarCollaps
                             )} />
                         </Button>
 
-                        <div className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col border border-border/40 bg-card/50 backdrop-blur-xl shadow-lg transition-all duration-500">
+                        <div className="absolute inset-0 rounded-2xl overflow-hidden flex flex-col border border-white/10 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-2xl shadow-[0_8px_32px_-4px_rgba(0,0,0,0.1)] transition-all duration-500 ring-1 ring-white/5 dark:ring-white/10 dark:shadow-[0_20px_60px_-10px_rgba(0,0,0,0.5)]">
+                            {/* Inner glow effect for depth */}
+                            <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-primary/5 via-transparent to-transparent opacity-50" />
+                            
                             {/* Brand Header - Minimal & Clean */}
                             <Link
                                 to="/"
