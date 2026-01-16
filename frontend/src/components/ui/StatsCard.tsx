@@ -52,15 +52,16 @@ export const StatsCard: React.FC<StatsCardProps> = ({
             whileHover={{ y: -4 }}
             transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-                "relative group overflow-hidden rounded-2xl border border-border/40 p-1",
-                "bg-card/95 dark:bg-card/98 backdrop-blur-3xl transition-all duration-500",
-                "shadow-sm hover:shadow-xl hover:border-primary/30",
-                active && "border-primary/40 ring-1 ring-primary/10 shadow-primary/5",
+                "relative group overflow-hidden rounded-2xl border border-white/10 p-1",
+                "bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-2xl transition-all duration-500",
+                "shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1",
+                "ring-1 ring-white/5 dark:ring-white/10",
+                active && "border-primary/40 ring-primary/20 shadow-[0_0_30px_-10px_rgba(var(--primary),0.3)]",
                 className
             )}
         >
-            {/* Top Rim Light */}
-            <div className="absolute inset-x-8 top-0 h-px bg-linear-to-r from-transparent via-white/20 to-transparent pointer-events-none z-20" />
+            {/* Top Rim Light - sharper */}
+            <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none z-20 opacity-50 group-hover:opacity-100 transition-opacity" />
 
             <div className="relative z-10 p-6 md:p-8 flex flex-col h-full min-h-40 justify-between">
                 {/* Header */}

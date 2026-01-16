@@ -105,12 +105,17 @@ export const DashboardWidget: React.FC<DashboardWidgetProps> = ({
         <>
             <motion.div 
                 className={cn(
-                    "glass-panel p-0! border-border/40 shadow-2xl shadow-black/5 overflow-hidden flex flex-col",
+                    "relative overflow-hidden flex flex-col rounded-3xl border border-white/10",
+                    "bg-gradient-to-b from-card/80 to-card/30 backdrop-blur-2xl",
+                    "shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-white/5 dark:ring-white/10 dark:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]",
                     className
                 )}
             >
+                {/* Inner Glow */}
+                <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/5 via-transparent to-transparent opacity-30" />
+                
                 {HeaderContent(false)}
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 relative z-10">
                     {children}
                 </div>
             </motion.div>

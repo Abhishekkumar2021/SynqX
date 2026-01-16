@@ -171,17 +171,21 @@ export const DashboardPage: React.FC = () => {
     return (
         <motion.div 
             className={cn(
-                "flex flex-col gap-8 pb-20",
+                "flex flex-col gap-8 pb-20 relative",
                 isZenMode && "pt-4"
             )}
             initial="hidden"
             animate="show"
             variants={container}
         >
+            {/* Background Texture Layers */}
+            <div className="absolute inset-0 bg-grid-subtle opacity-20 pointer-events-none -z-10" />
+            <div className="absolute inset-0 bg-noise opacity-[0.03] pointer-events-none -z-10" />
+            
             <PageMeta title="Dashboard" description="System overview and health metrics." />
 
             {/* --- Premium Production Header --- */}
-            <motion.div variants={item} className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 px-1">
+            <motion.div variants={item} className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8 px-1 relative z-10">
                 <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase tracking-[0.2em] shadow-sm">
                         <ShieldCheck className="h-3 w-3" />

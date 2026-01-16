@@ -38,8 +38,8 @@ const formatBytes = (bytes: number) => {
 const CustomTooltip = ({ active, payload, label, viewType }: any) => {
     if (active && payload && payload.length) {
         return (
-            <div className="rounded-xl border border-border/40 bg-background/95 backdrop-blur-xl p-3 shadow-xl animate-in fade-in-0 zoom-in-95 min-w-48 z-[1000] ring-1 ring-white/10">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-border/10 pb-1.5">
+            <div className="rounded-xl border border-white/10 bg-gradient-to-b from-card/90 to-card/60 backdrop-blur-2xl p-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] animate-in fade-in-0 zoom-in-95 min-w-48 z-[1000] ring-1 ring-white/5">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-white/10 pb-1.5">
                     {label}
                 </p>
                 <div className="space-y-2">
@@ -47,14 +47,15 @@ const CustomTooltip = ({ active, payload, label, viewType }: any) => {
                         <div key={index} className="flex items-center justify-between gap-6 text-[11px] font-bold">
                             <div className="flex items-center gap-2">
                                 <div
-                                    className="h-2 w-2 rounded-full shadow-sm"
+                                    className="h-2 w-2 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.2)]"
                                     style={{ 
                                         backgroundColor: entry.color || entry.fill,
+                                        boxShadow: `0 0 10px ${entry.color || entry.fill}40`
                                     }}
                                 />
                                 <span className="text-muted-foreground uppercase tracking-tight">{entry.name}:</span>
                             </div>
-                            <span className="font-mono text-foreground font-bold">
+                            <span className="font-mono text-foreground font-bold tracking-tight">
                                 {viewType === 'bytes' ? formatBytes(entry.value) : formatNumber(entry.value)}
                             </span>
                         </div>

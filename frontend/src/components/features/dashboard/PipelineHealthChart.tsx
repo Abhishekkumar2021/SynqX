@@ -29,14 +29,14 @@ const CustomTooltip = ({ active, payload }: any) => {
         const percentage = (item.value / total) * 100;
 
         return (
-            <div className="z-1000 rounded-xl border border-border/40 bg-background/95 backdrop-blur-xl p-3 shadow-xl animate-in fade-in-0 zoom-in-95 min-w-40 ring-1 ring-white/10">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-border/10 pb-1.5">
+            <div className="z-1000 rounded-xl border border-white/10 bg-gradient-to-b from-card/90 to-card/60 backdrop-blur-2xl p-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] animate-in fade-in-0 zoom-in-95 min-w-40 ring-1 ring-white/5">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 border-b border-white/10 pb-1.5">
                     {item.name}
                 </p>
                 <div className="flex items-center gap-3">
                     <div
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: item.payload.fill }}
+                        className="h-2.5 w-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.2)]"
+                        style={{ backgroundColor: item.payload.fill, boxShadow: `0 0 10px ${item.payload.fill}60` }}
                     />
                     <div className="flex flex-col">
                         <span className="text-sm font-bold text-foreground tracking-tight">{item.value} Entities</span>
@@ -88,7 +88,7 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
                                             <Cell
                                                 key={`cell-${index}`}
                                                 fill={entry.fill}
-                                                className="hover:opacity-80 transition-all duration-500 outline-none cursor-pointer"
+                                                className="hover:opacity-80 transition-all duration-500 outline-none cursor-pointer filter hover:brightness-110"
                                             />
                                         ))}
                                     </Pie>
@@ -101,7 +101,7 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
                             </ResponsiveContainer>
 
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-2">
-                                <div className="flex flex-col items-center justify-center bg-background/60 backdrop-blur-xl h-24 w-24 rounded-full border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.2)] ring-1 ring-white/5">
+                                <div className="flex flex-col items-center justify-center bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-xl h-24 w-24 rounded-full border border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] ring-1 ring-white/5">
                                     <span className="text-4xl font-bold tabular-nums text-foreground tracking-tighter">
                                         {totalPipelines}
                                     </span>
@@ -116,11 +116,11 @@ export const PipelineHealthChart: React.FC<PipelineHealthChartProps> = ({ data, 
                             {dataWithTotal.map((item) => (
                                 <div 
                                     key={item.name} 
-                                    className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/40 hover:bg-muted/40 transition-colors"
+                                    className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-b from-muted/20 to-muted/5 border border-white/5 hover:border-primary/20 hover:from-primary/5 hover:to-transparent transition-all duration-300"
                                 >
                                     <div className="flex items-center gap-2.5">
                                         <div 
-                                            className="h-2 w-2 rounded-full ring-2 ring-background" 
+                                            className="h-2 w-2 rounded-full ring-2 ring-background/50 shadow-sm" 
                                             style={{ backgroundColor: item.fill }} 
                                         />
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{item.name}</span>
