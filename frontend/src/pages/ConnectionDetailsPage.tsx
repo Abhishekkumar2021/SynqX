@@ -21,9 +21,7 @@ import {
     Server, 
     MoreVertical, Trash2, Pencil, 
     CheckCircle2, 
-    Terminal, 
-    HardDrive
-} from 'lucide-react';
+    Terminal} from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -49,15 +47,22 @@ import {
     Dialog,
     DialogContent
 } from "@/components/ui/dialog";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { CreateConnectionDialog } from '@/components/features/connections/CreateConnectionDialog';
 import { PageMeta } from '@/components/common/PageMeta';
 import { useMemo, useState } from 'react';
 import { useZenMode } from '@/hooks/useZenMode';
 import { motion } from 'framer-motion';
 import { AssetsTabContent } from '@/components/features/connections/AssetsTabContent';
+import { OSDUBrowser } from '@/components/features/connections/domain/osdu/OSDUBrowser';
+import { ProSourceBrowser } from '@/components/features/connections/domain/prosource/ProSourceBrowser';
 import { ConnectionConfigStats } from '@/components/features/connections/ConnectionConfigStats';
 import { EnvironmentInfo } from '@/components/features/connections/EnvironmentInfo';
-import { LiveFileExplorer } from '@/components/features/connections/LiveFileExplorer';
 import { useWorkspace } from '@/hooks/useWorkspace';
 
 export const ConnectionDetailsPage: React.FC = () => {
@@ -81,12 +86,6 @@ export const ConnectionDetailsPage: React.FC = () => {
         queryFn: () => getConnection(connectionId),
         retry: 1
     });
-
-    const isFileBased = useMemo(() => {
-        if (!connection) return false;
-        const type = String(connection.connector_type).toLowerCase();
-        return ['local_file', 's3', 'gcs', 'azure_blob', 'sftp', 'ftp'].includes(type);
-    }, [connection]);
 
     const { data: envInfo } = useQuery({
         queryKey: ['connectionEnvironment', connectionId],
@@ -321,30 +320,63 @@ export const ConnectionDetailsPage: React.FC = () => {
                         Explore Data
                     </Button>
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => testMutation.mutate()}
-                        disabled={testMutation.isPending}
-                        className={cn(
-                            "h-11 px-5 rounded-2xl border-border/40 bg-background/40 backdrop-blur-md hover:shadow-lg transition-all shadow-sm font-semibold gap-2 min-w-40",
-                            testMutation.isSuccess && "text-emerald-600 dark:text-emerald-500 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20"
-                        )}
-                    >
-                        {testMutation.isPending ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                        ) : testMutation.isSuccess ? (
-                            <CheckCircle2 className="h-4 w-4" />
-                        ) : (
-                            <Activity className="h-4 w-4" />
-                        )}
-                        {testMutation.isPending 
-                            ? (isRemote ? 'Testing Agent...' : 'Testing...') 
-                            : testMutation.isSuccess 
-                                ? (isRemote ? 'Verified on Agent' : 'Connection Healthy')
-                                : 'Test Connection'
-                        }
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => testMutation.mutate()}
+                                        disabled={testMutation.isPending}
+                                        className={cn(
+                                            "h-11 px-5 rounded-2xl border-border/40 bg-background/40 backdrop-blur-md hover:shadow-lg transition-all shadow-sm font-semibold gap-2 min-w-40",
+                                            (testMutation.isSuccess && testMutation.data?.success) && "text-emerald-600 dark:text-emerald-500 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20",
+                                            (testMutation.isError || (testMutation.isSuccess && testMutation.data && !testMutation.data.success)) && "text-destructive border-destructive/30 bg-destructive/10 hover:bg-destructive/20"
+                                        )}
+                                    >
+                                        {testMutation.isPending ? (
+                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                        ) : (testMutation.isSuccess && testMutation.data?.success) ? (
+                                            <CheckCircle2 className="h-4 w-4" />
+                                        ) : (testMutation.isError || (testMutation.isSuccess && testMutation.data && !testMutation.data.success)) ? (
+                                            <AlertTriangle className="h-4 w-4" />
+                                        ) : (
+                                            <Activity className="h-4 w-4" />
+                                        )}
+                                        {testMutation.isPending 
+                                            ? (isRemote ? 'Testing Agent...' : 'Testing...') 
+                                            : (testMutation.isSuccess && testMutation.data?.success)
+                                                ? (isRemote ? 'Verified on Agent' : 'Connection Healthy')
+                                                : (testMutation.isError || (testMutation.isSuccess && testMutation.data && !testMutation.data.success))
+                                                    ? 'Test Failed'
+                                                    : 'Test Connection'
+                                        }
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="max-w-xs text-xs font-medium bg-background/95 backdrop-blur-xl border-border/40 shadow-xl rounded-xl p-3">
+                                {testMutation.data ? (
+                                    <div className="space-y-1">
+                                        <p className={cn("font-bold", testMutation.data.success ? "text-emerald-500" : "text-destructive")}>
+                                            {testMutation.data.success ? "Connection Successful" : "Connection Failed"}
+                                        </p>
+                                        <p className="opacity-90 leading-relaxed">{testMutation.data.message}</p>
+                                        {testMutation.data.latency_ms && (
+                                            <p className="text-muted-foreground pt-1 border-t border-border/30 mt-2 flex items-center gap-1.5">
+                                                <Clock className="h-3 w-3" />
+                                                Latency: {testMutation.data.latency_ms.toFixed(2)}ms
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : testMutation.error ? (
+                                    <p className="text-destructive">
+                                        An error occurred while testing the connection. Check console for details.
+                                    </p>
+                                ) : (
+                                    <p>Click to verify connectivity to the data source.</p>
+                                )}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -410,16 +442,6 @@ export const ConnectionDetailsPage: React.FC = () => {
                             Assets
                         </TabsTrigger>
 
-                        {isFileBased && (
-                            <TabsTrigger
-                                value="explorer"
-                                className="gap-2"
-                            >
-                                <HardDrive className="h-3.5 w-3.5" />
-                                Explore
-                            </TabsTrigger>
-                        )}
-
                         <TabsTrigger
                             value="configuration"
                             className="gap-2"
@@ -445,22 +467,36 @@ export const ConnectionDetailsPage: React.FC = () => {
                     isZenMode ? "h-[calc(100vh-10rem)]" : "h-[calc(100vh-16rem)]"
                 )}>
                     <TabsContent value="assets" className="h-full mt-0 focus-visible:outline-none">
-                        <AssetsTabContent
-                            connectionId={connectionId}
-                            connectorType={connection.connector_type}
-                            assets={assets}
-                            discoveredAssets={discoveredAssets}
-                            isLoading={loadingAssets || discoverMutation.isPending}
-                            onDiscover={() => discoverMutation.mutate()}
-                            setDiscoveredAssets={setDiscoveredAssets}
-                        />
+                        {String(connection.connector_type).toLowerCase() === 'osdu' ? (
+                            <OSDUBrowser
+                                connectionId={connectionId}
+                                connectionName={connection.name}
+                                assets={discoveredAssets}
+                                isLoading={loadingAssets || discoverMutation.isPending}
+                                onDiscover={() => discoverMutation.mutate()}
+                                mode="management"
+                            />
+                        ) : String(connection.connector_type).toLowerCase() === 'prosource' ? (
+                            <ProSourceBrowser
+                                connectionId={connectionId}
+                                connectionName={connection.name}
+                                assets={discoveredAssets}
+                                isLoading={loadingAssets || discoverMutation.isPending}
+                                onDiscover={() => discoverMutation.mutate()}
+                                mode="management"
+                            />
+                        ) : (
+                            <AssetsTabContent
+                                connectionId={connectionId}
+                                connectorType={connection.connector_type}
+                                assets={assets}
+                                discoveredAssets={discoveredAssets}
+                                isLoading={loadingAssets || discoverMutation.isPending}
+                                onDiscover={() => discoverMutation.mutate()}
+                                setDiscoveredAssets={setDiscoveredAssets}
+                            />
+                        )}
                     </TabsContent>
-
-                    {isFileBased && (
-                        <TabsContent value="explorer" className="h-full mt-0 focus-visible:outline-none">
-                            <LiveFileExplorer connectionId={connectionId} />
-                        </TabsContent>
-                    )}
 
                     <TabsContent value="configuration" className="h-full mt-0 focus-visible:outline-none">
                         <ConnectionConfigStats

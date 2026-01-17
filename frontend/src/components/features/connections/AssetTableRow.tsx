@@ -294,6 +294,9 @@ export const AssetTableRow: React.FC<AssetTableRowProps> = ({ asset, connectionI
                                 selectedRows={selectedRows}
                                 hideHeader={false}
                                 title={isMaximized ? "Sample Data Preview" : undefined}
+                                variant="embedded"
+                                noBorder
+                                noBackground
                             />
                         </div>
                     </DialogContent>

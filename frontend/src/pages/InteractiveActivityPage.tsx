@@ -165,7 +165,9 @@ export const InteractiveActivityPage: React.FC = () => {
                                     isLoading={false}
                                     title="Materialized Data Fragment"
                                     description={selectedJob.payload.query || selectedJob.payload.action}
-                                    className="bg-transparent backdrop-blur-none"
+                                    variant="embedded"
+                                    noBorder
+                                    noBackground
                                 />
                             </div>
 

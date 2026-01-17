@@ -39,6 +39,9 @@ class ConnectorType(str, enum.Enum):
     SALESFORCE = "salesforce"
     HUBSPOT = "hubspot"
     STRIPE = "stripe"
+    # Domain
+    OSDU = "osdu"
+    PROSOURCE = "prosource"
     # Generic
     CUSTOM_SCRIPT = "custom_script"
     SINGER_TAP = "singer_tap"

@@ -191,6 +191,19 @@ class ConnectionService:
                         import base64
                         return {"content": base64.b64encode(res).decode('utf-8')}
 
+                    elif "metadata" in task_key:
+                        method_name = config.get("method")
+                        if not method_name:
+                            raise AppError("Metadata method name missing.")
+                        
+                        if not hasattr(connector, method_name):
+                            raise AppError(f"Connector {connection.connector_type.value} does not support {method_name}")
+                        
+                        method = getattr(connector, method_name)
+                        params = config.get("params", {})
+                        res = method(**params)
+                        return {"metadata": sanitize_for_json(res)}
+
                 return {}
             except Exception as e:
                 logger.error(f"Internal sync execution failed: {e}", exc_info=True)

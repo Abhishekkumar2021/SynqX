@@ -11,6 +11,7 @@ from synqx_engine.connectors.impl.sql.mariadb import MariaDBConnector
 from synqx_engine.connectors.impl.sql.duckdb import DuckDBConnector
 
 ConnectorFactory.register_connector("postgres", PostgresConnector)
+ConnectorFactory.register_connector("postgresql", PostgresConnector)
 ConnectorFactory.register_connector("mysql", MySQLConnector)
 ConnectorFactory.register_connector("sqlite", SQLiteConnector)
 ConnectorFactory.register_connector("mssql", MSSQLConnector)

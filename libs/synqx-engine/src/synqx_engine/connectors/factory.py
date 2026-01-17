@@ -24,9 +24,11 @@ class ConnectorFactory:
 
     @classmethod
     def get_connector(cls, connector_type: str, config: Dict[str, Any]) -> BaseConnector:
-        # Auto-discover if registry is empty
-        if not cls._registry:
+        # Check if already registered
+        if connector_type.lower() not in cls._registry:
             try:
+                # Force import of the implementation package to trigger registration
+                # of any connectors that haven't been loaded yet.
                 import synqx_engine.connectors.impl # noqa: F401
             except ImportError:
                 pass

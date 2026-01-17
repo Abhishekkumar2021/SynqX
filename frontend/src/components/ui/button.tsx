@@ -65,6 +65,20 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, isLoading = false, loadingText, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
 
+    // If asChild is true, we must ensure only a single child is passed to Slot.
+    // In that case, we don't inject the Loader2 sibling.
+    if (asChild) {
+      return (
+        <Comp
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...props}
+        >
+          {children}
+        </Comp>
+      )
+    }
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}

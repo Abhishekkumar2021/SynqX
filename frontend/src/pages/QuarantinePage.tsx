@@ -433,6 +433,9 @@ export const QuarantinePage = () => {
               isMaximized={isMaximized}
               title="Forensic Records"
               description="Sample of rejected data captured during execution"
+              variant="embedded"
+              noBorder
+              noBackground
             />
           </div>
         </DialogContent>

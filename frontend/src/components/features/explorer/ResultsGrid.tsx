@@ -70,6 +70,9 @@ interface ResultsGridProps {
     selectedRows?: Set<number>;
     hideHeader?: boolean;
     className?: string;
+    variant?: 'standalone' | 'embedded' | 'flat';
+    noBorder?: boolean;
+    noBackground?: boolean;
 }
 
 type Density = 'compact' | 'standard' | 'comfortable';
@@ -83,7 +86,10 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     onSelectRows,
     selectedRows,
     hideHeader = false,
-    className
+    className,
+    variant = 'standalone',
+    noBorder = false,
+    noBackground = false
 }) => {
     // --- Table State ---
     const [sorting, setSorting] = useState<SortingState>([]);
@@ -249,7 +255,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     const handleExport = (format: 'json' | 'csv') => {
         if (!data || table.getRowModel().rows.length === 0) return;
         
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-') ;
+        const timestamp = new Date().toISOString().replaceAll(/[:.]/g, '-') ;
         const visibleCols = table.getVisibleLeafColumns().filter(c => c.id !== 'select' && c.id !== 'index');
         const rows = table.getFilteredRowModel().rows; // Export all filtered rows, not just paginated
 
@@ -272,7 +278,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
                         try { val = JSON.stringify(val); } catch { val = '[Object]'; }
                     }
                     // Proper CSV escaping: wrap in quotes and escape internal quotes
-                    return `"${String(val ?? '').replace(/"/g, '""')}"`;
+                    return `"${String(val ?? '').replaceAll('"', '""')}"`;
                 }).join(',')
             ).join('\n');
             downloadFile(`${headers}\n${csvRows}`, `export_${timestamp}.csv`, 'text/csv');
@@ -286,8 +292,8 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
         comfortable: { cell: "px-6 py-4 text-sm", header: "px-6 py-4 h-12" }
     };
 
-    if (isLoading) return <LoadingSkeleton message={loadingMessage} />;
-    if (!data) return <EmptyState />;
+    if (isLoading) return <LoadingSkeleton message={loadingMessage} noBackground={noBackground} />;
+    if (!data) return <EmptyState noBackground={noBackground} />;
 
     const results = data.results || (data as any).rows || [];
     const columnsData = data.columns || [];
@@ -428,163 +434,180 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
         </div>
     );
 
-    return (
-        <MaximizablePanel
-            title={!hideHeader ? headerLeft : null}
-            headerActions={!hideHeader ? headerRight : null}
-            className={cn("h-full", className)}
-        >
-             {/* Table Area */}
-            <div className="flex-1 overflow-auto custom-scrollbar bg-card/5 relative min-h-0 h-full flex flex-col">
-                <div className="flex-1 overflow-auto">
-                    <table className="w-full text-left border-separate border-spacing-0 min-w-max relative">
-                         <thead className="sticky top-0 z-40">
-                             {table.getHeaderGroups().map(headerGroup => (
-                                <tr key={headerGroup.id} className="bg-background/90 backdrop-blur-xl border-b border-border/50 shadow-sm">
-                                    {headerGroup.headers.map(header => {
-                                        // Pinning Styles
-                                        const pinStyles = getCommonPinningStyles(header.column);
-                                        const isPinned = header.column.getIsPinned();
-                                        const isLastLeft = isPinned === 'left' && header.column.getIsLastColumn('left');
-                                        const isFirstRight = isPinned === 'right' && header.column.getIsFirstColumn('right');
-                                        
-                                        return (
-                                            <th
-                                                key={header.id}
+    const gridContent = (
+        <div className={cn(
+            "flex-1 overflow-hidden relative min-h-0 h-full flex flex-col",
+            noBackground && "bg-transparent",
+        )}>
+            <div className="flex-1 overflow-auto custom-scrollbar">
+                <table className="w-full text-left border-separate border-spacing-0 min-w-max relative">
+                     <thead className="sticky top-0 z-40">
+                         {table.getHeaderGroups().map(headerGroup => (
+                            <tr key={headerGroup.id} className="bg-background/90 backdrop-blur-xl border-b border-border/50 shadow-sm">
+                                {headerGroup.headers.map(header => {
+                                    const pinStyles = getCommonPinningStyles(header.column);
+                                    const isPinned = header.column.getIsPinned();
+                                    const isLastLeft = isPinned === 'left' && header.column.getIsLastColumn('left');
+                                    const isFirstRight = isPinned === 'right' && header.column.getIsFirstColumn('right');
+                                    
+                                    return (
+                                        <th
+                                            key={header.id}
+                                            style={pinStyles}
+                                            className={cn(
+                                                "border-r border-b-2 border-border/60 last:border-r-0 bg-background/90 backdrop-blur-xl transition-colors",
+                                                densityConfig[density].header,
+                                                (header.column.getIsSorted() || header.column.getIsFiltered()) && "bg-primary/5",
+                                                isPinned && "z-50 bg-background/95 backdrop-blur-md",
+                                                isLastLeft && "border-r-2 border-r-border/60 shadow-[4px_0_4px_-2px_rgba(0,0,0,0.1)]",
+                                                isFirstRight && "border-l-2 border-l-border/60 shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]"
+                                            )}
+                                        >
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(header.column.columnDef.header, header.getContext())}
+                                        </th>
+                                    );
+                                })}
+                            </tr>
+                        ))}
+                    </thead>
+                    <tbody className="divide-y divide-border/10">
+                         {table.getRowModel().rows.length === 0 ? (
+                             <tr>
+                                <td colSpan={columns.length} className="h-24 text-center text-muted-foreground text-xs font-medium">
+                                    No results match your filters.
+                                </td>
+                            </tr>
+                         ) : (
+                            table.getRowModel().rows.map(row => (
+                                <tr 
+                                    key={row.id}
+                                    data-state={row.getIsSelected() && "selected"}
+                                    className={cn(
+                                        "group/row transition-colors hover:bg-muted/50",
+                                        "even:bg-muted/30 odd:bg-transparent",
+                                        row.getIsSelected() && "bg-primary/10"
+                                    )}
+                                >
+                                    {row.getVisibleCells().map(cell => {
+                                         const pinStyles = getCommonPinningStyles(cell.column);
+                                         const isPinned = cell.column.getIsPinned();
+                                         const isLastLeft = isPinned === 'left' && cell.column.getIsLastColumn('left');
+                                         const isFirstRight = isPinned === 'right' && cell.column.getIsFirstColumn('right');
+
+                                         return (
+                                            <td
+                                                key={cell.id}
                                                 style={pinStyles}
                                                 className={cn(
-                                                    "border-r border-b-2 border-border/60 last:border-r-0 bg-background/90 backdrop-blur-xl transition-colors",
-                                                    densityConfig[density].header,
-                                                    (header.column.getIsSorted() || header.column.getIsFiltered()) && "bg-primary/5",
-                                                    isPinned && "z-50 bg-background/95 backdrop-blur-md",
+                                                    "border-r border-b border-border/40 last:border-r-0 max-w-md",
+                                                    cell.column.id === 'select' || cell.column.id === 'index' ? "p-0" : densityConfig[density].cell,
+                                                    cell.column.getIsFiltered() && "bg-primary/2",
+                                                    isPinned && "z-30 bg-background/95 backdrop-blur-md",
                                                     isLastLeft && "border-r-2 border-r-border/60 shadow-[4px_0_4px_-2px_rgba(0,0,0,0.1)]",
                                                     isFirstRight && "border-l-2 border-l-border/60 shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]"
                                                 )}
                                             >
-                                                {header.isPlaceholder
-                                                    ? null
-                                                    : flexRender(header.column.columnDef.header, header.getContext())}
-                                            </th>
-                                        );
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </td>
+                                         );
                                     })}
                                 </tr>
-                            ))}
-                        </thead>
-                        <tbody className="divide-y divide-border/10">
-                             {table.getRowModel().rows.length === 0 ? (
-                                 <tr>
-                                    <td colSpan={columns.length} className="h-24 text-center text-muted-foreground text-xs font-medium">
-                                        No results match your filters.
-                                    </td>
-                                </tr>
-                             ) : (
-                                table.getRowModel().rows.map(row => (
-                                    <tr 
-                                        key={row.id}
-                                        data-state={row.getIsSelected() && "selected"}
-                                        className={cn(
-                                            "group/row transition-colors hover:bg-muted/50",
-                                            "even:bg-muted/30 odd:bg-transparent",
-                                            row.getIsSelected() && "bg-primary/10"
-                                        )}
-                                    >
-                                        {row.getVisibleCells().map(cell => {
-                                             const pinStyles = getCommonPinningStyles(cell.column);
-                                             const isPinned = cell.column.getIsPinned();
-                                             const isLastLeft = isPinned === 'left' && cell.column.getIsLastColumn('left');
-                                             const isFirstRight = isPinned === 'right' && cell.column.getIsFirstColumn('right');
-
-                                             return (
-                                                <td
-                                                    key={cell.id}
-                                                    style={pinStyles}
-                                                    className={cn(
-                                                        "border-r border-b border-border/40 last:border-r-0 max-w-md",
-                                                        cell.column.id === 'select' || cell.column.id === 'index' ? "p-0" : densityConfig[density].cell,
-                                                        cell.column.getIsFiltered() && "bg-primary/2",
-                                                        isPinned && "z-30 bg-background/95 backdrop-blur-md",
-                                                        isLastLeft && "border-r-2 border-r-border/60 shadow-[4px_0_4px_-2px_rgba(0,0,0,0.1)]",
-                                                        isFirstRight && "border-l-2 border-l-border/60 shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]"
-                                                    )}
-                                                >
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </td>
-                                             );
-                                        })}
-                                    </tr>
-                                ))
-                             )}
-                        </tbody>
-                    </table>
-                </div>
-
-                 {/* Footer Control Bar */}
-                 <footer className="px-5 py-2 bg-muted/20 border-t border-border/40 flex items-center justify-between shrink-0 z-50">
-                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rows</span>
-                             <Select 
-                                value={String(table.getState().pagination.pageSize)}
-                                onValueChange={(v) => table.setPageSize(Number(v))}
-                            >
-                                 <SelectTrigger className="h-7 w-16 text-[10px]">
-                                    <SelectValue />
-                                 </SelectTrigger>
-                                 <SelectContent className="">
-                                    {[10, 25, 50, 100, 500].map(size => (
-                                         <SelectItem key={size} value={String(size)} className="text-[10px] font-bold">{size}</SelectItem>
-                                    ))}
-                                 </SelectContent>
-                             </Select>
-                        </div>
-                        <div className="h-4 w-px bg-border/40" />
-                        <span className="text-[10px] font-medium text-muted-foreground">
-                            Page <span className="text-foreground font-bold">{table.getState().pagination.pageIndex + 1}</span> of <span className="text-foreground font-bold">{table.getPageCount()}</span>
-                        </span>
-                     </div>
-
-                     <div className="flex items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-lg disabled:opacity-30"
-                            onClick={() => table.setPageIndex(0)}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            <ChevronsLeft size={14} />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-lg disabled:opacity-30"
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            <ChevronLeft size={14} />
-                        </Button>
-                        
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-lg disabled:opacity-30"
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            <ChevronRight size={14} />
-                        </Button>
-                         <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-lg disabled:opacity-30"
-                            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            <ChevronsRight size={14} />
-                        </Button>
-                     </div>
-                </footer>
+                            ))
+                         )}
+                    </tbody>
+                </table>
             </div>
-        </MaximizablePanel>
+
+             <footer className={cn(
+                 "px-5 py-2 bg-muted/20 border-t border-border/40 flex items-center justify-between shrink-0 z-50",
+                 noBackground && "bg-transparent"
+             )}>
+                 <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rows</span>
+                         <Select 
+                            value={String(table.getState().pagination.pageSize)}
+                            onValueChange={(v) => table.setPageSize(Number(v))}
+                        >
+                             <SelectTrigger className="h-7 w-16 text-[10px]">
+                                <SelectValue />
+                             </SelectTrigger>
+                             <SelectContent className="">
+                                {[10, 25, 50, 100, 500].map(size => (
+                                     <SelectItem key={size} value={String(size)} className="text-[10px] font-bold">{size}</SelectItem>
+                                ))}
+                             </SelectContent>
+                         </Select>
+                    </div>
+                    <div className="h-4 w-px bg-border/40" />
+                    <span className="text-[10px] font-medium text-muted-foreground">
+                        Page <span className="text-foreground font-bold">{table.getState().pagination.pageIndex + 1}</span> of <span className="text-foreground font-bold">{table.getPageCount()}</span>
+                    </span>
+                 </div>
+
+                 <div className="flex items-center gap-1">
+                    <Button
+                        variant="ghost" size="icon" className="h-7 w-7 rounded-lg disabled:opacity-30"
+                        onClick={() => table.setPageIndex(0)} disabled={!table.getCanPreviousPage()}
+                    >
+                        <ChevronsLeft size={14} />
+                    </Button>
+                    <Button
+                        variant="ghost" size="icon" className="h-7 w-7 rounded-lg disabled:opacity-30"
+                        onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}
+                    >
+                        <ChevronLeft size={14} />
+                    </Button>
+                    <Button
+                        variant="ghost" size="icon" className="h-7 w-7 rounded-lg disabled:opacity-30"
+                        onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}
+                    >
+                        <ChevronRight size={14} />
+                    </Button>
+                     <Button
+                        variant="ghost" size="icon" className="h-7 w-7 rounded-lg disabled:opacity-30"
+                        onClick={() => table.setPageIndex(table.getPageCount() - 1)} disabled={!table.getCanNextPage()}
+                    >
+                        <ChevronsRight size={14} />
+                    </Button>
+                 </div>
+            </footer>
+        </div>
+    );
+
+    if (variant === 'standalone') {
+        return (
+            <MaximizablePanel
+                title={hideHeader ? null : headerLeft}
+                headerActions={hideHeader ? null : headerRight}
+                className={cn("h-full", className)}
+            >
+                {gridContent}
+            </MaximizablePanel>
+        );
+    }
+
+    return (
+        <div className={cn(
+            "h-full flex flex-col min-h-0", 
+            !noBorder && "border border-border/40 rounded-2xl overflow-hidden shadow-sm",
+            !noBackground && "bg-card/30 backdrop-blur-md",
+            className
+        )}>
+            {!hideHeader && (
+                <div className={cn(
+                    "border-b border-border/20 flex flex-col sm:flex-row items-center justify-between shrink-0 gap-3 px-4 py-2 bg-muted/5"
+                )}>
+                    {headerLeft}
+                    {headerRight}
+                </div>
+            )}
+            <div className="flex-1 min-h-0 relative">
+                {gridContent}
+            </div>
+        </div>
     );
 };
 
@@ -745,8 +768,11 @@ const getCommonPinningStyles = (column: Column<any>): React.CSSProperties => {
   };
 };
 
-const LoadingSkeleton = ({ message }: { message?: string | null }) => (
-    <div className="flex-1 h-full flex flex-col items-center justify-center p-6 gap-6 bg-background/50 animate-pulse overflow-hidden">
+const LoadingSkeleton = ({ message, noBackground }: { message?: string | null, noBackground?: boolean }) => (
+    <div className={cn(
+        "flex-1 h-full flex flex-col items-center justify-center p-6 gap-6 bg-background/50 animate-pulse overflow-hidden",
+        noBackground && "bg-transparent"
+    )}>
         <div className="relative mb-4">
             <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full animate-pulse" />
             <Loader2 className="h-12 w-12 text-primary animate-spin relative z-10" />
@@ -766,8 +792,11 @@ const LoadingSkeleton = ({ message }: { message?: string | null }) => (
     </div>
 );
 
-const EmptyState = ({ message, description }: { message?: string, description?: string }) => (
-    <div className="flex-1 h-full flex flex-col items-center justify-center text-muted-foreground gap-8 bg-card/5 animate-in fade-in duration-1000">
+const EmptyState = ({ message, description, noBackground }: { message?: string, description?: string, noBackground?: boolean }) => (
+    <div className={cn(
+        "flex-1 h-full flex flex-col items-center justify-center text-muted-foreground gap-8 bg-card/5 animate-in fade-in duration-1000",
+        noBackground && "bg-transparent"
+    )}>
         <div className="relative group">
             <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full group-hover:bg-primary/20 transition-all duration-700" />
             <div className="relative h-24 w-24 rounded-[2.5rem] glass-card flex items-center justify-center border-0 shadow-2xl">

@@ -61,7 +61,7 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({ 
         queryFn: () => queryClient.getQueryData(['connections']) as any[] || []
     });
 
-    const categories = ['All', 'Database', 'Warehouse', 'File', 'API', 'Generic'];
+    const categories = ['All', 'Domain', 'Database', 'Warehouse', 'File', 'API', 'Generic'];
 
     const filteredConnectors = Object.entries(CONNECTOR_META).filter(([_, meta]) => {
         const matchesSearch = meta.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -487,16 +487,19 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({ 
                                                                         <Plus className="h-3 w-3" /> Upload File
                                                                     </Button>
                                                                 </div>
-                                                                <Textarea
-                                                                    {...f}
-                                                                    placeholder={field.placeholder}
-                                                                    className="min-h-[120px] rounded-xl bg-background border-border/40 font-mono text-xs shadow-sm resize-none"
-                                                                />
+                                                                                                                                    <Textarea
+                                                                                                                                        {...f}
+                                                                                                                                        value={f.value ?? ''}
+                                                                                                                                        placeholder={field.placeholder}
+                                                                                                                                        className="min-h-[120px] rounded-xl bg-background border-border/40 font-mono text-xs shadow-sm resize-none"
+                                                                                                                                    />
+                                                                
                                                             </div>
                                                         ) : (
                                                             <div className="relative">
                                                                 <Input
                                                                     {...f}
+                                                                    value={f.value ?? ''}
                                                                     type={field.type}
                                                                     min={field.min}
                                                                     placeholder={field.placeholder}

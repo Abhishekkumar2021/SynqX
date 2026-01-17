@@ -536,6 +536,9 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                             isLoading={isLoadingIn && !step?.sample_data?.in} 
                                             title="Ingress Buffer"
                                             description="First 100 records retrieved from source"
+                                            variant="embedded"
+                                            noBorder
+                                            noBackground
                                         />
                                     </div>
                                 </TabsContent>
@@ -547,6 +550,9 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                             isLoading={isLoadingOut && !(step?.sample_data?.out || Array.isArray(step?.sample_data))} 
                                             title="Egress Buffer"
                                             description="First 100 records emitted to downstream"
+                                            variant="embedded"
+                                            noBorder
+                                            noBackground
                                         />
                                     </div>
                                 </TabsContent>
@@ -558,6 +564,9 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                                             isLoading={isLoadingQuarantine && !step?.sample_data?.quarantine} 
                                             title="Quarantine Buffer"
                                             description="Violations captured during validation"
+                                            variant="embedded"
+                                            noBorder
+                                            noBackground
                                         />
                                     </div>
                                 </TabsContent>
@@ -748,6 +757,9 @@ export const StepRunInspector: React.FC<StepRunInspectorProps> = ({
                             } 
                             title={maximizedDirection === 'in' ? "Ingress Data Stream" : maximizedDirection === 'out' ? "Egress Data Stream" : "Quarantine Data Stream"}
                             description={maximizedDirection === 'quarantine' ? "Violations captured during validation" : `Full buffer inspection for ${nodeLabel}`}
+                            variant="embedded"
+                            noBorder
+                            noBackground
                         />
                     </MaximizePortal>
                 )}

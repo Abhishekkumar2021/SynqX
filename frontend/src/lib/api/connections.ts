@@ -201,3 +201,15 @@ export const uninstallDependency = async (
   );
   return data;
 };
+
+export const getConnectionMetadata = async (
+  connectionId: number,
+  method: string,
+  params: any = {}
+) => {
+  const { data } = await api.post<any>(
+    `/connections/${connectionId}/metadata`,
+    { method, params }
+  );
+  return data;
+};

@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 
@@ -881,6 +881,37 @@ def get_asset_sample_data(
                 "message": "Failed to fetch sample data",
             },
         )
+
+
+@router.post(
+    "/{connection_id}/metadata",
+    summary="Get Connection Metadata",
+    description="Fetch domain-specific metadata (e.g. OSDU schemas, legal tags) from the connection",
+)
+def get_connection_metadata(
+    connection_id: int,
+    method: str = Body(..., embed=True),
+    params: Dict[str, Any] = Body(default={}, embed=True),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_viewer),
+):
+    try:
+        service = ConnectionService(db)
+        result = service._trigger_ephemeral_job(
+            connection_id=connection_id,
+            agent_group=None, # Default to internal if not specified, service will handle it
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+            task_name="metadata",
+            config={"method": method, "params": params}
+        )
+        return result
+    except AppError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to fetch metadata: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get(

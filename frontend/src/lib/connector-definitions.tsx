@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import {
-    Database, Cloud, HardDrive, Globe, FileJson, Server, Code, FileSpreadsheet
+    Database, Cloud, HardDrive, Globe, FileJson, Server, Code, FileSpreadsheet, Layers
 } from 'lucide-react';
 
 export interface ConnectorMetadata {
@@ -10,7 +10,7 @@ export interface ConnectorMetadata {
     name: string;
     description: string;
     icon: React.ReactNode;
-    category: 'Database' | 'Warehouse' | 'File' | 'API' | 'Generic';
+    category: 'Database' | 'Warehouse' | 'File' | 'API' | 'Generic' | 'Domain';
     color: string;
     popular?: boolean;
 }
@@ -23,6 +23,14 @@ export const SafeIcon = ({ icon, className }: { icon: React.ReactNode, className
 };
 
 export const CONNECTOR_META: Record<string, ConnectorMetadata> = {
+    osdu: {
+        id: 'osdu', name: 'OSDU Data Platform', description: 'Open Subsurface Data Universe (Energy Data).',
+        icon: <Layers />, category: 'Domain', color: "text-blue-600 bg-blue-600/10 border-blue-600/20", popular: true
+    },
+    prosource: {
+        id: 'prosource', name: 'SLB ProSource', description: 'Seabed/LogDB Corporate Data Management.',
+        icon: <Database />, category: 'Domain', color: "text-indigo-600 bg-indigo-600/10 border-indigo-600/20", popular: true
+    },
     postgresql: { 
         id: 'postgresql', name: 'PostgreSQL', description: 'Advanced open-source relational database.', 
         icon: <Database />, category: 'Database', color: "text-blue-500 bg-blue-500/10 border-blue-500/20", popular: true 
@@ -150,6 +158,23 @@ export const CONNECTOR_META: Record<string, ConnectorMetadata> = {
 };
 
 export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
+    osdu: {
+        fields: [
+            { name: "osdu_url", label: "OSDU Instance URL", type: "text", required: true, placeholder: "https://osdu.example.com" },
+            { name: "data_partition_id", label: "Data Partition ID", type: "text", required: true, placeholder: "opendes" },
+            { name: "auth_token", label: "Bearer Token", type: "password", required: true },
+        ]
+    },
+    prosource: {
+        fields: [
+            { name: "host", label: "Host", type: "text", required: true, placeholder: "oracle.example.com" },
+            { name: "port", label: "Port", type: "number", required: true, defaultValue: 1521 },
+            { name: "database", label: "Service Name / SID", type: "text", required: true },
+            { name: "username", label: "Username", type: "text", required: true },
+            { name: "password", label: "Password", type: "password", required: true },
+            { name: "project_scope", label: "Project Filter (Optional)", type: "text", placeholder: "e.g. GOM_2024" },
+        ]
+    },
     postgresql: {
         fields: [
             { name: "host", label: "Host Address", type: "text", required: true, placeholder: "e.g. db.example.com" },
