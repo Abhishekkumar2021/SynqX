@@ -17,6 +17,7 @@ class PipelineNodeBase(BaseModel):
     destination_asset_id: Optional[int] = Field(None, gt=0)
     connection_id: Optional[int] = None
     guardrails: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    sub_pipeline_id: Optional[int] = None
     
     # Real-time Capabilities
     sync_mode: SyncMode = Field(default=SyncMode.FULL_LOAD)
@@ -49,6 +50,7 @@ class PipelineNodeUpdate(BaseModel):
     cdc_config: Optional[Dict[str, Any]] = None
     max_retries: Optional[int] = Field(None, ge=0, le=10)
     timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
+    sub_pipeline_id: Optional[int] = None
 
 
 class PipelineNodeRead(PipelineNodeBase):

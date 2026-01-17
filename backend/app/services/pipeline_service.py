@@ -648,9 +648,9 @@ class PipelineService:
                     )
             
             # 2. Required asset validation for Source/Sink
-            if node.operator_type == OperatorType.SOURCE and not node.source_asset_id:
+            if node.operator_type == OperatorType.EXTRACT and not node.source_asset_id:
                 raise ConfigurationError(f"Source node '{node_id}' must have a source asset defined.")
-            if node.operator_type == OperatorType.SINK and not node.destination_asset_id:
+            if node.operator_type == OperatorType.LOAD and not node.destination_asset_id:
                 raise ConfigurationError(f"Sink node '{node_id}' must have a destination asset defined.")
 
     def _create_pipeline_version(
@@ -699,6 +699,11 @@ class PipelineService:
                 data_contract=getattr(node_data, 'data_contract', {}),
                 column_mapping=getattr(node_data, 'column_mapping', {}),
                 quarantine_asset_id=getattr(node_data, 'quarantine_asset_id', None),
+                # Advanced Orchestration
+                sub_pipeline_id=getattr(node_data, 'sub_pipeline_id', None),
+                is_dynamic=getattr(node_data, 'is_dynamic', False),
+                mapping_expr=getattr(node_data, 'mapping_expr', None),
+                worker_tag=getattr(node_data, 'worker_tag', None),
                 # Retry logic
                 max_retries=node_data.max_retries or 0,
                 retry_strategy=node_data.retry_strategy or RetryStrategy.FIXED,

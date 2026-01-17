@@ -72,11 +72,11 @@ import PipelineNode from '@/components/features/pipelines/PipelineNode';
 import GlowEdge from '@/components/features/pipelines/GlowEdge';
 import { NodeProperties } from '@/components/features/pipelines/NodeProperties';
 import { DeployCommitDialog } from '@/components/features/pipelines/DeployCommitDialog';
+import { PipelineVersionDialog } from '@/components/features/pipelines/PipelineVersionDialog';
 
 const edgeTypes = {
     glow: GlowEdge,
 };
-import { PipelineVersionDialog } from '@/components/features/pipelines/PipelineVersionDialog';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import {
     AlertDialog,
@@ -196,7 +196,7 @@ export const PipelineCanvas: React.FC = () => {
         if (!canvasSearch) return nodes;
         return nodes.map(n => ({
             ...n,
-            selected: n.data.label.toLowerCase().includes(canvasSearch.toLowerCase()) || n.id.toLowerCase().includes(canvasSearch.toLowerCase())
+            selected: n.data.label?.toLowerCase().includes(canvasSearch.toLowerCase()) || n.id.toLowerCase().includes(canvasSearch.toLowerCase())
         }));
     }, [nodes, canvasSearch]);
 
@@ -293,7 +293,13 @@ export const PipelineCanvas: React.FC = () => {
                             operator_class: n.operator_class,
                             status: 'idle',
                             diffStatus: diffStatus,
-                            diffInfo: diffData.nodes.modified.find((m: any) => m.node_id === n.node_id)
+                            diffInfo: diffData.nodes.modified.find((m: any) => m.node_id === n.node_id),
+                            sub_pipeline_id: n.sub_pipeline_id,
+                            is_dynamic: n.is_dynamic,
+                            mapping_expr: n.mapping_expr,
+                            worker_tag: n.worker_tag,
+                            guardrails: n.guardrails,
+                            readOnly: true,
                         },
                         position: n.config?.ui?.position || { x: 0, y: 0 },
                     };
@@ -389,7 +395,19 @@ export const PipelineCanvas: React.FC = () => {
                 status: 'idle',
                 source_asset_id: n.source_asset_id,
                 destination_asset_id: n.destination_asset_id,
-                connection_id: n.connection_id || n.config?.connection_id
+                connection_id: n.connection_id || n.config?.connection_id,
+                sub_pipeline_id: n.sub_pipeline_id,
+                is_dynamic: n.is_dynamic,
+                mapping_expr: n.mapping_expr,
+                worker_tag: n.worker_tag,
+                guardrails: n.guardrails,
+                readOnly: !!versionIdParam,
+                onDuplicate: (node: AppNode) => onDuplicate(node),
+                onDelete: (nodeId: string) => {
+                    takeSnapshot(nodes, edges);
+                    setNodes(nds => nds.filter(n => n.id !== nodeId));
+                    setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
+                }
             },
             position: n.config?.ui?.position || { x: 0, y: 0 },
         }));
@@ -436,11 +454,17 @@ export const PipelineCanvas: React.FC = () => {
                 type: type,
                 operator_class: operatorClass || 'pandas_transform',
                 config: {},
-                status: 'idle'
+                status: 'idle',
+                onDuplicate: (node: AppNode) => onDuplicate(node),
+                onDelete: (nodeId: string) => {
+                    setNodes(nds => nds.filter(n => n.id !== nodeId));
+                    setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
+                }
             },
         };
         setNodes((nds) => nds.concat(newNode));
         setSelectedNodeId(newNodeId);
+        setShowLogicView(false);
         toast.success("Operator Added", {
             description: `Added ${label} to the canvas.`
         });
@@ -456,13 +480,19 @@ export const PipelineCanvas: React.FC = () => {
             data: {
                 ...node.data,
                 label: `${node.data.label} (Copy)`,
-                status: 'idle'
+                status: 'idle',
+                onDuplicate: (node: AppNode) => onDuplicate(node),
+                onDelete: (nodeId: string) => {
+                    setNodes(nds => nds.filter(n => n.id !== nodeId));
+                    setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
+                }
             },
             selected: true
         };
 
         setNodes((nds) => [...nds.map(n => ({ ...n, selected: false })), newNode]);
         setSelectedNodeId(newNodeId);
+        setShowLogicView(false);
         toast.success("Operator Duplicated", {
             description: `Created copy of ${node.data.label}`
         });
@@ -739,7 +769,10 @@ export const PipelineCanvas: React.FC = () => {
                                     variant="ghost" 
                                     size="icon" 
                                     className={cn("h-9 w-9 rounded-xl transition-all", showLogicView && "bg-primary/10 text-primary")}
-                                    onClick={() => setShowLogicView(!showLogicView)}
+                                    onClick={() => {
+                                        setShowLogicView(!showLogicView);
+                                        if (!showLogicView) setSelectedNodeId(null);
+                                    }}
                                 >
                                     <Code size={18} />
                                 </Button>
@@ -914,8 +947,21 @@ export const PipelineCanvas: React.FC = () => {
                             onConnect={onConnect}
                             nodeTypes={nodeTypes}
                             edgeTypes={edgeTypes}
-                            onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-                            onPaneClick={() => setSelectedNodeId(null)}
+                            onNodeDoubleClick={(_, node) => {
+                                setSelectedNodeId(node.id);
+                                setShowLogicView(false);
+                            }}
+                            onNodeClick={(_, node) => {
+                                // Just handle selection on single click, don't open properties
+                                setNodes((nds) => nds.map((n) => ({
+                                    ...n,
+                                    selected: n.id === node.id
+                                })));
+                            }}
+                            onPaneClick={() => {
+                                setSelectedNodeId(null);
+                                setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+                            }}
                             onNodeDragStart={onNodeDragStart}
                             onNodesDelete={() => takeSnapshot(nodes, edges)}
                             onEdgesDelete={() => takeSnapshot(nodes, edges)}
@@ -955,131 +1001,167 @@ export const PipelineCanvas: React.FC = () => {
                             {/* FLOATING TOOLBOX PANEL */}
                             <AnimatePresence>
                                 {!isDiffMode && !versionIdParam && isEditor && (
-                                    <Panel position="top-center" className="mt-4 pointer-events-none">
+                                    <Panel position="top-center" className="mt-6 pointer-events-none flex items-center gap-3">
+                                        
+                                        {/* Group 1: History */}
                                         <motion.div
                                             initial={{ y: -20, opacity: 0 }}
                                             animate={{ y: 0, opacity: 1 }}
                                             exit={{ y: -20, opacity: 0 }}
-                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                            className="flex items-center p-1.5 gap-1.5 glass-panel rounded-[2rem] shadow-2xl pointer-events-auto border-border/20 bg-background/60 backdrop-blur-3xl transition-all duration-500 hover:shadow-primary/10 hover:border-primary/20 ring-1 ring-white/5"
+                                            transition={{ delay: 0.05 }}
+                                            className="pointer-events-auto flex items-center p-1 gap-1 glass-panel rounded-2xl shadow-xl border-border/40 bg-background/60 backdrop-blur-xl h-12"
                                         >
-                                            {/* Canvas Node Search */}
-                                            <div className="flex items-center gap-2 px-3 border-r border-border/10 mr-1 group">
-                                                <Search className="h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all disabled:opacity-30" 
+                                                            onClick={() => undo(nodes, edges, setNodes, setEdges)} 
+                                                            disabled={!canUndo}
+                                                        >
+                                                            <Undo className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom" className="text-[10px] font-bold uppercase tracking-widest">Undo</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all disabled:opacity-30" 
+                                                            onClick={() => redo(nodes, edges, setNodes, setEdges)} 
+                                                            disabled={!canRedo}
+                                                        >
+                                                            <Redo className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom" className="text-[10px] font-bold uppercase tracking-widest">Redo</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                            <div className="w-px h-5 bg-border/30 mx-1" />
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all active:scale-95" 
+                                                            onClick={onLayout}
+                                                        >
+                                                            <Layout className="h-4.5 w-4.5" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom" className="font-bold text-[10px] uppercase tracking-widest">Auto Layout</TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </motion.div>
+
+                                        {/* Group 2: Search */}
+                                        <motion.div
+                                            initial={{ y: -20, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            exit={{ y: -20, opacity: 0 }}
+                                            transition={{ delay: 0.05 }}
+                                            className="pointer-events-auto flex items-center p-1 gap-2 glass-panel rounded-2xl shadow-xl border-border/40 bg-background/60 backdrop-blur-xl h-12"
+                                        >
+                                            <div className="relative group w-32 focus-within:w-48 transition-all duration-300 ml-1">
+                                                <Search className="z-20 absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                                 <Input 
+                                                    id="canvas-search"
                                                     placeholder="Find node..." 
                                                     value={canvasSearch}
                                                     onChange={(e) => onCanvasSearch(e.target.value)}
-                                                    className="h-8 w-32 border-none bg-transparent text-[11px] focus-visible:ring-0 placeholder:text-muted-foreground/50"
+                                                    className="h-9 pl-8 pr-2 rounded-xl bg-muted/30 border-transparent hover:bg-muted/50 focus-visible:bg-background focus-visible:border-primary/20 text-[11px] font-medium shadow-none transition-all placeholder:text-muted-foreground/50"
                                                 />
                                             </div>
+                                        </motion.div>
 
-                                            {/* Primary Controls Group */}
-                                            <div className="flex items-center gap-1 px-2 border-r border-border/10 mr-1">
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => undo(nodes, edges, setNodes, setEdges)} disabled={!canUndo}>
-                                                                <Undo className="h-4 w-4 group-active:scale-90" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={() => redo(nodes, edges, setNodes, setEdges)} disabled={!canRedo}>
-                                                                <Redo className="h-4 w-4 group-active:scale-90" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Redo (Ctrl+Y)</TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group" onClick={onLayout}>
-                                                                <Layout className="h-4 w-4 group-active:scale-90" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Auto-Layout Canvas</TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            </div>
-
-                                            {/* Unified Add Node Menu */}
+                                        {/* Action: Add */}
+                                        <motion.div
+                                            initial={{ y: -20, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            exit={{ y: -20, opacity: 0 }}
+                                            transition={{ delay: 0.1 }}
+                                            className="pointer-events-auto"
+                                        >
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button
-                                                        className="h-9 rounded-2xl px-4 gap-2 bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                                        className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/30 hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all p-0 border border-primary/20"
                                                     >
-                                                        <Plus className="h-3.5 w-3.5 stroke-3" /> Add Operator
+                                                        <Plus className="h-6 w-6 stroke-[2.5]" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent
                                                     align="center"
-                                                    sideOffset={12}
-                                                    className="w-64 bg-background/80 backdrop-blur-xl border-border/20 shadow-2xl rounded-2xl p-1.5 ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-200"
+                                                    sideOffset={16}
+                                                    className="w-72 bg-background/90 backdrop-blur-2xl border-border/20 shadow-2xl rounded-2xl p-2 ring-1 ring-white/10 animate-in fade-in zoom-in-95 duration-200"
                                                 >
-                                                    <div className="px-2 py-2 mb-1">
+                                                    <div className="px-2 py-2 mb-2">
                                                         <div className="relative group">
-                                                            <Plus className="z-20 absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                                            <Plus className="z-20 absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                                             <Input
-                                                                placeholder="Search..."
+                                                                placeholder="Add operator..."
                                                                 value={opSearch}
                                                                 onChange={(e) => setOpSearch(e.target.value)}
-                                                                className="h-8 pl-8 rounded-xl bg-muted/30 border-none text-xs focus-visible:ring-1 focus-visible:ring-primary/20 transition-all placeholder:text-[10px]"
+                                                                className="h-9 pl-10 rounded-xl bg-muted/40 border-transparent text-sm focus-visible:ring-2 focus-visible:ring-primary/20 transition-all placeholder:text-muted-foreground/50 font-medium"
                                                                 autoFocus
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="max-h-75 overflow-y-auto custom-scrollbar px-1 space-y-2 pb-1">
+                                                    <div className="max-h-80 overflow-y-auto custom-scrollbar px-1 space-y-3 pb-1">
                                                         {filteredDefinitions.length === 0 ? (
-                                                            <div className="py-8 text-center flex flex-col items-center gap-2">
-                                                                <div className="h-8 w-8 rounded-full bg-muted/20 flex items-center justify-center text-muted-foreground/30">
-                                                                    <Plus className="h-4 w-4 rotate-45" />
+                                                            <div className="py-10 text-center flex flex-col items-center gap-3">
+                                                                <div className="h-10 w-10 rounded-full bg-muted/30 flex items-center justify-center text-muted-foreground/40">
+                                                                    <Plus className="h-5 w-5 rotate-45" />
                                                                 </div>
-                                                                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50">No matches</span>
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <span className="text-xs font-bold text-foreground">No matches found</span>
+                                                                    <span className="text-[10px] text-muted-foreground">Try a different search term</span>
+                                                                </div>
                                                             </div>
                                                         ) : (
                                                             filteredDefinitions.map((category, idx) => (
-                                                                <div key={idx} className="space-y-0.5">
-                                                                    <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/40 flex items-center gap-2">
+                                                                <div key={idx} className="space-y-1">
+                                                                    <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 flex items-center gap-3">
                                                                         {category.category}
-                                                                        <div className="h-px flex-1 bg-border/20" />
+                                                                        <div className="h-px flex-1 bg-border/30" />
                                                                     </div>
-                                                                    {category.items.map((item: OperatorDefinition, i) => (
-                                                                        <DropdownMenuItem
-                                                                            key={i}
-                                                                            className="group flex items-center gap-3 p-2 rounded-xl focus:bg-primary/5 focus:text-primary cursor-pointer transition-all duration-200"
-                                                                            onClick={() => onAddNode(item.type, item.opClass, item.label)}
-                                                                        >
-                                                                            <div className={cn(
-                                                                                "h-8 w-8 shrink-0 rounded-lg flex items-center justify-center border transition-all duration-300 group-hover:scale-105 group-hover:shadow-sm",
-                                                                                item.type === 'source' ? "bg-chart-1/10 border-chart-1/20 text-chart-1" :
-                                                                                    item.type === 'sink' ? "bg-chart-2/10 border-chart-2/20 text-chart-2" :
-                                                                                        item.type === 'validate' ? "bg-chart-4/10 border-chart-4/20 text-chart-4" :
-                                                                                            ['join', 'union', 'merge'].includes(item.type) ? "bg-chart-5/10 border-chart-5/20 text-chart-5" :
-                                                                                                "bg-chart-3/10 border-chart-3/20 text-chart-3"
-                                                                            )}>
-                                                                                <item.icon className="h-4 w-4" />
-                                                                            </div>
-                                                                            <div className="flex flex-col gap-0.5 overflow-hidden">
-                                                                                <span className="text-[11px] font-semibold tracking-tight">{item.label}</span>
-                                                                                <span className="text-[9px] text-muted-foreground/60 group-hover:text-primary/60 truncate leading-none">{item.desc}</span>
-                                                                            </div>
-                                                                        </DropdownMenuItem>
-                                                                    ))}
+                                                                    <div className="grid gap-1">
+                                                                        {category.items.map((item: OperatorDefinition, i) => (
+                                                                            <DropdownMenuItem
+                                                                                key={i}
+                                                                                className="group flex items-center gap-3 p-2.5 rounded-xl focus:bg-primary/5 focus:text-primary cursor-pointer transition-all duration-200 outline-none"
+                                                                                onClick={() => onAddNode(item.type, item.opClass, item.label)}
+                                                                            >
+                                                                                <div className={cn(
+                                                                                    "h-9 w-9 shrink-0 rounded-lg flex items-center justify-center border transition-all duration-300 group-hover:scale-105 group-hover:shadow-md",
+                                                                                    item.type === 'source' ? "bg-chart-1/10 border-chart-1/20 text-chart-1 group-hover:bg-chart-1/20" :
+                                                                                        item.type === 'sink' ? "bg-chart-2/10 border-chart-2/20 text-chart-2 group-hover:bg-chart-2/20" :
+                                                                                            item.type === 'validate' ? "bg-chart-4/10 border-chart-4/20 text-chart-4 group-hover:bg-chart-4/20" :
+                                                                                                ['join', 'union', 'merge'].includes(item.type) ? "bg-chart-5/10 border-chart-5/20 text-chart-5 group-hover:bg-chart-5/20" :
+                                                                                                    "bg-chart-3/10 border-chart-3/20 text-chart-3 group-hover:bg-chart-3/20"
+                                                                                )}>
+                                                                                    <item.icon className="h-4.5 w-4.5" />
+                                                                                </div>
+                                                                                <div className="flex flex-col gap-0.5 overflow-hidden">
+                                                                                    <span className="text-xs font-bold tracking-tight text-foreground/90 group-hover:text-primary transition-colors">{item.label}</span>
+                                                                                    <span className="text-[10px] text-muted-foreground/60 truncate leading-none font-medium">{item.desc}</span>
+                                                                                </div>
+                                                                            </DropdownMenuItem>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
                                                             ))
                                                         )}
                                                     </div>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
-
                                         </motion.div>
                                     </Panel>
                                 )}
@@ -1090,23 +1172,27 @@ export const PipelineCanvas: React.FC = () => {
                     <AnimatePresence>
                         {showLogicView && (
                             <motion.div
-                                initial={{ x: 400, opacity: 0 }}
+                                initial={{ x: "100%", opacity: 0 }}
                                 animate={{ x: 0, opacity: 1 }}
-                                exit={{ x: 400, opacity: 0 }}
-                                className="w-128 border-l border-border/40 bg-background/50 backdrop-blur-3xl z-50 flex flex-col overflow-hidden shadow-2xl"
+                                exit={{ x: "100%", opacity: 0 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                className="absolute top-0 right-0 w-full md:w-128 h-full border-l border-white/10 bg-gradient-to-b from-card/95 to-card/90 backdrop-blur-3xl z-[70] flex flex-col overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] ring-1 ring-white/5"
                             >
-                                <div className="p-4 border-b border-border/40 bg-muted/10 flex items-center justify-between shrink-0">
-                                    <div className="flex items-center gap-2">
-                                        <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                                            <FileCode size={14} />
+                                <div className="p-6 border-b border-white/10 bg-muted/20 flex items-center justify-between shrink-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm">
+                                            <FileCode size={18} />
                                         </div>
-                                        <span className="text-xs font-bold uppercase tracking-widest text-foreground">Pipeline Manifest</span>
+                                        <div>
+                                            <h3 className="font-bold text-sm text-foreground uppercase tracking-tight">Pipeline Manifest</h3>
+                                            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">Read-only JSON</p>
+                                        </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowLogicView(false)}>
-                                        <X size={14} />
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors" onClick={() => setShowLogicView(false)}>
+                                        <X size={18} />
                                     </Button>
                                 </div>
-                                <div className="flex-1 overflow-hidden relative">
+                                <div className="flex-1 overflow-hidden relative bg-[#0a0a0a]/50">
                                     <Editor
                                         height="100%"
                                         language="json"
@@ -1130,7 +1216,7 @@ export const PipelineCanvas: React.FC = () => {
 
                 {/* Properties Inspector */}
                 <div className={cn(
-                    "absolute top-0 right-0 w-full md:w-128 h-full glass-panel rounded-none! shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden z-[60] transition-all duration-700 cubic-bezier(0.32, 0.72, 0, 1) border-l border-border/20",
+                    "absolute top-0 right-0 w-full md:w-128 h-full border-l border-white/10 bg-gradient-to-b from-card/95 to-card/90 backdrop-blur-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)] ring-1 ring-white/5 flex flex-col overflow-hidden z-[60] transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)",
                     selectedNode ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
                 )}>
                     {selectedNode && (

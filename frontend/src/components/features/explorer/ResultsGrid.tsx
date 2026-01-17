@@ -52,6 +52,7 @@ import {
     type Column,
 } from "@tanstack/react-table"
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { MaximizablePanel } from '@/components/ui/maximizable-panel';
 
 // Extend QueryResponse locally if missing total_count
 interface ExtendedQueryResponse extends QueryResponse {
@@ -311,276 +312,279 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
         setColumnFilters([]);
     };
 
-    return (
-        <div className={cn("flex-1 flex flex-col min-h-0 h-full bg-background/60 dark:bg-background/40 backdrop-blur-2xl backdrop-saturate-150 relative overflow-hidden isolate text-foreground", className)}>
-            <div className="absolute inset-x-0 top-0 h-px bg-white/40 dark:bg-white/10 pointer-events-none z-50" />
-
-            {/* Header Control Bar */}
-            {!hideHeader && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 bg-muted/20 border-b border-border/40 shrink-0 z-50 gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {title && (
-                            <div className="flex flex-col mr-2 shrink-0">
-                                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-foreground truncate max-w-30 sm:max-w-none">{title}</span>
-                                {description && <span className="text-[9px] text-muted-foreground font-medium truncate max-w-30 sm:max-w-none hidden xs:block">{description}</span>}
-                            </div>
-                        )}
-                        <div className="relative flex-1 max-w-60 group">
-                            <ListFilter className={cn(
-                                "z-20 absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 transition-colors",
-                                globalFilter ? "text-primary" : "text-muted-foreground group-focus-within:text-primary"
-                            )} />
-                            <Input
-                                placeholder="Search..."
-                                className="h-8 pl-9 rounded-xl bg-background/50 border-border/40 text-[11px] font-semibold focus:ring-4 focus:ring-primary/10 transition-all shadow-none"
-                                value={globalFilter ?? ''}
-                                onChange={(e) => setGlobalFilter(e.target.value)}
-                            />
-                        </div>
-                         <div className="flex items-center gap-1.5 shrink-0">
-                             <Badge variant="outline" className="h-5 px-2 rounded-full border-border/50 text-[9px] font-bold uppercase tracking-tight text-muted-foreground/60 bg-muted/20 whitespace-nowrap">
-                                {formatNumber(table.getFilteredRowModel().rows.length)}
-                                {data.total_count !== undefined && data.total_count !== null && (
-                                    <span className="ml-1 opacity-40">/ {formatNumber(data.total_count)}</span>
-                                )}
-                            </Badge>
-                            {activeFilterCount > 0 && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            onClick={clearAllFilters}
-                                            className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
-                                        >
-                                            <X size={12} />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Clear Filters</TooltipContent>
-                                </Tooltip>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
-                        {/* Density & Settings */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-primary/5 text-muted-foreground hover:text-primary transition-all">
-                                    <Settings2 size={15} />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-48 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 " align="end">
-                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Density</DropdownMenuLabel>
-                                <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
-                                    <DropdownMenuRadioItem value="compact" className="text-xs font-medium rounded-lg">Compact</DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="standard" className="text-xs font-medium rounded-lg">Standard</DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="comfortable" className="text-xs font-medium rounded-lg">Comfortable</DropdownMenuRadioItem>
-                                </DropdownMenuRadioGroup>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        {/* Columns */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 rounded-xl gap-2 text-xs font-medium bg-muted/30 hover:bg-primary/5 text-muted-foreground hover:text-primary transition-all px-2 md:px-3">
-                                    <Columns size={14} />
-                                    <span className="hidden md:inline">Columns</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 max-h-96 overflow-y-auto custom-scrollbar " align="end">
-                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Visible Columns</DropdownMenuLabel>
-                                {table.getAllColumns().filter(c => c.id !== 'select' && c.id !== 'index').map(column => (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                                        className="text-xs font-medium cursor-pointer rounded-lg"
-                                    >
-                                        <span className="truncate">{column.id}</span>
-                                    </DropdownMenuCheckboxItem>
-                                ))}
-                                <DropdownMenuSeparator className="bg-border/30" />
-                                <DropdownMenuItem onClick={() => table.toggleAllColumnsVisible(true)} className="text-xs cursor-pointer rounded-lg justify-center text-primary font-semibold">
-                                    Reset to All
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                         {/* Export */}
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 rounded-xl gap-2 font-bold uppercase text-[10px] tracking-widest bg-primary/5 hover:bg-primary/10 text-primary transition-all px-2 md:px-3">
-                                    <Download size={14} />
-                                    <span className="hidden md:inline">Export</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                             <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-2 " align="end">
-                                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Data Formats</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => handleExport('json')} className="rounded-lg gap-3 py-2.5 cursor-pointer">
-                                    <FileJson className="h-4 w-4 text-orange-500" />
-                                    <span className="font-bold text-xs uppercase">JSON Registry</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExport('csv')} className="rounded-lg gap-3 py-2.5 cursor-pointer">
-                                    <FileText className="h-4 w-4 text-blue-500" />
-                                    <span className="font-bold text-xs uppercase">CSV Spreadsheet</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
+    const headerLeft = (
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+            {title && (
+                <div className="flex flex-col mr-2 shrink-0">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-foreground truncate max-w-30 sm:max-w-none">{title}</span>
+                    {description && <span className="text-[9px] text-muted-foreground font-medium truncate max-w-30 sm:max-w-none hidden xs:block">{description}</span>}
                 </div>
             )}
+            <div className="relative flex-1 max-w-60 group">
+                <ListFilter className={cn(
+                    "z-20 absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 transition-colors",
+                    globalFilter ? "text-primary" : "text-muted-foreground group-focus-within:text-primary"
+                )} />
+                <Input
+                    placeholder="Search..."
+                    className="h-8 pl-9 rounded-xl bg-background/50 border-border/40 text-[11px] font-semibold focus:ring-4 focus:ring-primary/10 transition-all shadow-none"
+                    value={globalFilter ?? ''}
+                    onChange={(e) => setGlobalFilter(e.target.value)}
+                />
+            </div>
+             <div className="flex items-center gap-1.5 shrink-0">
+                 <Badge variant="outline" className="h-5 px-2 rounded-full border-border/50 text-[9px] font-bold uppercase tracking-tight text-muted-foreground/60 bg-muted/20 whitespace-nowrap">
+                    {formatNumber(table.getFilteredRowModel().rows.length)}
+                    {data.total_count !== undefined && data.total_count !== null && (
+                        <span className="ml-1 opacity-40">/ {formatNumber(data.total_count)}</span>
+                    )}
+                </Badge>
+                {activeFilterCount > 0 && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button 
+                                type="button"
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={clearAllFilters}
+                                className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full"
+                            >
+                                <X size={12} />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Clear Filters</TooltipContent>
+                    </Tooltip>
+                )}
+            </div>
+        </div>
+    );
 
+    const headerRight = (
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
+            {/* Density & Settings */}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-primary/5 text-muted-foreground hover:text-primary transition-all">
+                        <Settings2 size={15} />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-48 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 " align="end">
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Density</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup value={density} onValueChange={(v) => setDensity(v as Density)}>
+                        <DropdownMenuRadioItem value="compact" className="text-xs font-medium rounded-lg">Compact</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="standard" className="text-xs font-medium rounded-lg">Standard</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="comfortable" className="text-xs font-medium rounded-lg">Comfortable</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Columns */}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 rounded-xl gap-2 text-xs font-medium bg-muted/30 hover:bg-primary/5 text-muted-foreground hover:text-primary transition-all px-2 md:px-3">
+                        <Columns size={14} />
+                        <span className="hidden md:inline">Columns</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-1 max-h-96 overflow-y-auto custom-scrollbar " align="end">
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Visible Columns</DropdownMenuLabel>
+                    {table.getAllColumns().filter(c => c.id !== 'select' && c.id !== 'index').map(column => (
+                        <DropdownMenuCheckboxItem
+                            key={column.id}
+                            checked={column.getIsVisible()}
+                            onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                            className="text-xs font-medium cursor-pointer rounded-lg"
+                        >
+                            <span className="truncate">{column.id}</span>
+                        </DropdownMenuCheckboxItem>
+                    ))}
+                    <DropdownMenuSeparator className="bg-border/30" />
+                    <DropdownMenuItem onClick={() => table.toggleAllColumnsVisible(true)} className="text-xs cursor-pointer rounded-lg justify-center text-primary font-semibold">
+                        Reset to All
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+
+             {/* Export */}
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 rounded-xl gap-2 font-bold uppercase text-[10px] tracking-widest bg-primary/5 hover:bg-primary/10 text-primary transition-all px-2 md:px-3">
+                        <Download size={14} />
+                        <span className="hidden md:inline">Export</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                 <DropdownMenuContent className="w-56 glass-panel border-border/40 rounded-2xl shadow-2xl p-2 " align="end">
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest opacity-40 px-3 py-2">Data Formats</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleExport('json')} className="rounded-lg gap-3 py-2.5 cursor-pointer">
+                        <FileJson className="h-4 w-4 text-orange-500" />
+                        <span className="font-bold text-xs uppercase">JSON Registry</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExport('csv')} className="rounded-lg gap-3 py-2.5 cursor-pointer">
+                        <FileText className="h-4 w-4 text-blue-500" />
+                        <span className="font-bold text-xs uppercase">CSV Spreadsheet</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+    );
+
+    return (
+        <MaximizablePanel
+            title={!hideHeader ? headerLeft : null}
+            headerActions={!hideHeader ? headerRight : null}
+            className={cn("h-full", className)}
+        >
              {/* Table Area */}
-            <div className="flex-1 overflow-auto custom-scrollbar bg-card/5 relative min-h-0">
-                <table className="w-full text-left border-separate border-spacing-0 min-w-max relative">
-                     <thead className="sticky top-0 z-40">
-                         {table.getHeaderGroups().map(headerGroup => (
-                            <tr key={headerGroup.id} className="bg-background/90 backdrop-blur-xl border-b border-border/50 shadow-sm">
-                                {headerGroup.headers.map(header => {
-                                    // Pinning Styles
-                                    const pinStyles = getCommonPinningStyles(header.column);
-                                    const isPinned = header.column.getIsPinned();
-                                    const isLastLeft = isPinned === 'left' && header.column.getIsLastColumn('left');
-                                    const isFirstRight = isPinned === 'right' && header.column.getIsFirstColumn('right');
-                                    
-                                    return (
-                                        <th
-                                            key={header.id}
-                                            style={pinStyles}
-                                            className={cn(
-                                                "border-r border-b-2 border-border/60 last:border-r-0 bg-background/90 backdrop-blur-xl transition-colors",
-                                                densityConfig[density].header,
-                                                (header.column.getIsSorted() || header.column.getIsFiltered()) && "bg-primary/5",
-                                                isPinned && "z-50 bg-background/95 backdrop-blur-md",
-                                                isLastLeft && "border-r-2 border-r-border/60 shadow-[4px_0_4px_-2px_rgba(0,0,0,0.1)]",
-                                                isFirstRight && "border-l-2 border-l-border/60 shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]"
-                                            )}
-                                        >
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(header.column.columnDef.header, header.getContext())}
-                                        </th>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </thead>
-                    <tbody className="divide-y divide-border/10">
-                         {table.getRowModel().rows.length === 0 ? (
-                             <tr>
-                                <td colSpan={columns.length} className="h-24 text-center text-muted-foreground text-xs font-medium">
-                                    No results match your filters.
-                                </td>
-                            </tr>
-                         ) : (
-                            table.getRowModel().rows.map(row => (
-                                <tr 
-                                    key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                    className={cn(
-                                        "group/row transition-colors hover:bg-muted/50",
-                                        "even:bg-muted/30 odd:bg-transparent",
-                                        row.getIsSelected() && "bg-primary/10"
-                                    )}
-                                >
-                                    {row.getVisibleCells().map(cell => {
-                                         const pinStyles = getCommonPinningStyles(cell.column);
-                                         const isPinned = cell.column.getIsPinned();
-                                         const isLastLeft = isPinned === 'left' && cell.column.getIsLastColumn('left');
-                                         const isFirstRight = isPinned === 'right' && cell.column.getIsFirstColumn('right');
-
-                                         return (
-                                            <td
-                                                key={cell.id}
+            <div className="flex-1 overflow-auto custom-scrollbar bg-card/5 relative min-h-0 h-full flex flex-col">
+                <div className="flex-1 overflow-auto">
+                    <table className="w-full text-left border-separate border-spacing-0 min-w-max relative">
+                         <thead className="sticky top-0 z-40">
+                             {table.getHeaderGroups().map(headerGroup => (
+                                <tr key={headerGroup.id} className="bg-background/90 backdrop-blur-xl border-b border-border/50 shadow-sm">
+                                    {headerGroup.headers.map(header => {
+                                        // Pinning Styles
+                                        const pinStyles = getCommonPinningStyles(header.column);
+                                        const isPinned = header.column.getIsPinned();
+                                        const isLastLeft = isPinned === 'left' && header.column.getIsLastColumn('left');
+                                        const isFirstRight = isPinned === 'right' && header.column.getIsFirstColumn('right');
+                                        
+                                        return (
+                                            <th
+                                                key={header.id}
                                                 style={pinStyles}
                                                 className={cn(
-                                                    "border-r border-b border-border/40 last:border-r-0 max-w-md",
-                                                    cell.column.id === 'select' || cell.column.id === 'index' ? "p-0" : densityConfig[density].cell,
-                                                    cell.column.getIsFiltered() && "bg-primary/2",
-                                                    isPinned && "z-30 bg-background/95 backdrop-blur-md",
+                                                    "border-r border-b-2 border-border/60 last:border-r-0 bg-background/90 backdrop-blur-xl transition-colors",
+                                                    densityConfig[density].header,
+                                                    (header.column.getIsSorted() || header.column.getIsFiltered()) && "bg-primary/5",
+                                                    isPinned && "z-50 bg-background/95 backdrop-blur-md",
                                                     isLastLeft && "border-r-2 border-r-border/60 shadow-[4px_0_4px_-2px_rgba(0,0,0,0.1)]",
                                                     isFirstRight && "border-l-2 border-l-border/60 shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]"
                                                 )}
                                             >
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </td>
-                                         );
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(header.column.columnDef.header, header.getContext())}
+                                            </th>
+                                        );
                                     })}
                                 </tr>
-                            ))
-                         )}
-                    </tbody>
-                </table>
-            </div>
+                            ))}
+                        </thead>
+                        <tbody className="divide-y divide-border/10">
+                             {table.getRowModel().rows.length === 0 ? (
+                                 <tr>
+                                    <td colSpan={columns.length} className="h-24 text-center text-muted-foreground text-xs font-medium">
+                                        No results match your filters.
+                                    </td>
+                                </tr>
+                             ) : (
+                                table.getRowModel().rows.map(row => (
+                                    <tr 
+                                        key={row.id}
+                                        data-state={row.getIsSelected() && "selected"}
+                                        className={cn(
+                                            "group/row transition-colors hover:bg-muted/50",
+                                            "even:bg-muted/30 odd:bg-transparent",
+                                            row.getIsSelected() && "bg-primary/10"
+                                        )}
+                                    >
+                                        {row.getVisibleCells().map(cell => {
+                                             const pinStyles = getCommonPinningStyles(cell.column);
+                                             const isPinned = cell.column.getIsPinned();
+                                             const isLastLeft = isPinned === 'left' && cell.column.getIsLastColumn('left');
+                                             const isFirstRight = isPinned === 'right' && cell.column.getIsFirstColumn('right');
 
-             {/* Footer Control Bar */}
-             <footer className="px-5 py-2 bg-muted/20 border-t border-border/40 flex items-center justify-between shrink-0 z-50">
-                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rows</span>
-                         <Select 
-                            value={String(table.getState().pagination.pageSize)}
-                            onValueChange={(v) => table.setPageSize(Number(v))}
+                                             return (
+                                                <td
+                                                    key={cell.id}
+                                                    style={pinStyles}
+                                                    className={cn(
+                                                        "border-r border-b border-border/40 last:border-r-0 max-w-md",
+                                                        cell.column.id === 'select' || cell.column.id === 'index' ? "p-0" : densityConfig[density].cell,
+                                                        cell.column.getIsFiltered() && "bg-primary/2",
+                                                        isPinned && "z-30 bg-background/95 backdrop-blur-md",
+                                                        isLastLeft && "border-r-2 border-r-border/60 shadow-[4px_0_4px_-2px_rgba(0,0,0,0.1)]",
+                                                        isFirstRight && "border-l-2 border-l-border/60 shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]"
+                                                    )}
+                                                >
+                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                </td>
+                                             );
+                                        })}
+                                    </tr>
+                                ))
+                             )}
+                        </tbody>
+                    </table>
+                </div>
+
+                 {/* Footer Control Bar */}
+                 <footer className="px-5 py-2 bg-muted/20 border-t border-border/40 flex items-center justify-between shrink-0 z-50">
+                     <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rows</span>
+                             <Select 
+                                value={String(table.getState().pagination.pageSize)}
+                                onValueChange={(v) => table.setPageSize(Number(v))}
+                            >
+                                 <SelectTrigger className="h-7 w-16 text-[10px]">
+                                    <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent className="">
+                                    {[10, 25, 50, 100, 500].map(size => (
+                                         <SelectItem key={size} value={String(size)} className="text-[10px] font-bold">{size}</SelectItem>
+                                    ))}
+                                 </SelectContent>
+                             </Select>
+                        </div>
+                        <div className="h-4 w-px bg-border/40" />
+                        <span className="text-[10px] font-medium text-muted-foreground">
+                            Page <span className="text-foreground font-bold">{table.getState().pagination.pageIndex + 1}</span> of <span className="text-foreground font-bold">{table.getPageCount()}</span>
+                        </span>
+                     </div>
+
+                     <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-lg disabled:opacity-30"
+                            onClick={() => table.setPageIndex(0)}
+                            disabled={!table.getCanPreviousPage()}
                         >
-                             <SelectTrigger className="h-7 w-16 text-[10px]">
-                                <SelectValue />
-                             </SelectTrigger>
-                             <SelectContent className="">
-                                {[10, 25, 50, 100, 500].map(size => (
-                                     <SelectItem key={size} value={String(size)} className="text-[10px] font-bold">{size}</SelectItem>
-                                ))}
-                             </SelectContent>
-                         </Select>
-                    </div>
-                    <div className="h-4 w-px bg-border/40" />
-                    <span className="text-[10px] font-medium text-muted-foreground">
-                        Page <span className="text-foreground font-bold">{table.getState().pagination.pageIndex + 1}</span> of <span className="text-foreground font-bold">{table.getPageCount()}</span>
-                    </span>
-                 </div>
-
-                 <div className="flex items-center gap-1">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg disabled:opacity-30"
-                        onClick={() => table.setPageIndex(0)}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        <ChevronsLeft size={14} />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg disabled:opacity-30"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        <ChevronLeft size={14} />
-                    </Button>
-                    
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg disabled:opacity-30"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        <ChevronRight size={14} />
-                    </Button>
-                     <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg disabled:opacity-30"
-                        onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        <ChevronsRight size={14} />
-                    </Button>
-                 </div>
-            </footer>
-
-        </div>
+                            <ChevronsLeft size={14} />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-lg disabled:opacity-30"
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                        >
+                            <ChevronLeft size={14} />
+                        </Button>
+                        
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-lg disabled:opacity-30"
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                        >
+                            <ChevronRight size={14} />
+                        </Button>
+                         <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-lg disabled:opacity-30"
+                            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                            disabled={!table.getCanNextPage()}
+                        >
+                            <ChevronsRight size={14} />
+                        </Button>
+                     </div>
+                </footer>
+            </div>
+        </MaximizablePanel>
     );
 };
 

@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, Copy, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import Editor from '@monaco-editor/react';
 import { cn } from '@/lib/utils';
 import { codeToHtml } from 'shiki';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -39,7 +39,6 @@ export const CodeBlock = ({
   const [highlightedCode, setHighlightedCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { theme } = useTheme();
 
   const isDark = useMemo(() =>
@@ -74,6 +73,7 @@ export const CodeBlock = ({
 
   const handleCopy = useCallback(async (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    e?.preventDefault();
     await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -84,18 +84,24 @@ export const CodeBlock = ({
       <div className="absolute inset-0 bg-noise opacity-[0.03] dark:opacity-[0.02] pointer-events-none" />
 
       {editable ? (
-        <Textarea
-          ref={textareaRef}
+        <Editor
+          height="100%"
+          theme={isDark ? 'vs-dark' : 'light'}
+          defaultLanguage={language}
           value={code}
-          onChange={(e) => onChange?.(e.target.value)}
-          placeholder={placeholder}
-          className={cn(
-            "font-mono bg-transparent border-0 focus-visible:ring-0 resize-none w-full relative z-10",
-            "overflow-y-auto custom-scrollbar flex-1 min-h-0",
-            wrap ? "whitespace-pre-wrap" : "whitespace-pre",
-            isExpanded ? "text-sm leading-relaxed p-8" : "text-xs leading-relaxed p-5"
-          )}
-          spellCheck={false}
+          onChange={(val) => onChange?.(val || '')}
+          options={{
+            minimap: { enabled: false },
+            fontSize: isExpanded ? 14 : 12,
+            lineNumbers: 'on',
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            padding: { top: isExpanded ? 20 : 10, bottom: 10 },
+            fontFamily: '"Geist Mono Variable", monospace',
+            wordWrap: wrap ? 'on' : 'off',
+            renderLineHighlight: 'none',
+            contextmenu: false,
+          }}
         />
       ) : (
         <div
@@ -150,6 +156,7 @@ export const CodeBlock = ({
 
               <div className="flex items-center gap-2">
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   onClick={handleCopy}
@@ -160,6 +167,7 @@ export const CodeBlock = ({
                 </Button>
 
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => setIsMaximized(false)}
@@ -199,10 +207,10 @@ export const CodeBlock = ({
             isHovering ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
           )}>
             <div className="flex items-center gap-1 p-1 rounded-lg bg-background/80 backdrop-blur-md border border-border/40 shadow-sm">
-              <Button size="icon" variant="ghost" onClick={handleCopy} title="Copy Code" className="h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary">
+              <Button type="button" size="icon" variant="ghost" onClick={handleCopy} title="Copy Code" className="h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary">
                 {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
               </Button>
-              <Button size="icon" variant="ghost" onClick={() => setIsMaximized(true)} title="Maximize" className="h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary">
+              <Button type="button" size="icon" variant="ghost" onClick={() => setIsMaximized(true)} title="Maximize" className="h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary">
                 <Maximize2 size={14} />
               </Button>
             </div>

@@ -43,9 +43,10 @@ const GlowEdge = ({
         if (isError) return 'var(--color-destructive)';
         if (isAdded) return '#10b981';
         if (isRemoved) return '#ef4444';
-        if (isHighlighted) return 'var(--color-primary)';
         return 'var(--color-primary)';
     };
+
+    const showAnimation = isRunning || isAdded;
 
     return (
         <>
@@ -55,7 +56,7 @@ const GlowEdge = ({
                 markerEnd={markerEnd}
                 style={{
                     ...style,
-                    strokeWidth: isHighlighted ? 4 : (isAdded || isRemoved ? 3 : 2),
+                    strokeWidth: (isHighlighted ? 4 : (isAdded || isRemoved ? 3 : 2)),
                     stroke: getEdgeColor(),
                     strokeDasharray: isRemoved ? '8,8' : undefined,
                     opacity: isHighlighted || selected || isAdded || isRemoved ? 1 : (hasActiveHighlight ? 0.05 : 0.4),
@@ -64,10 +65,10 @@ const GlowEdge = ({
             />
 
             {/* Moving Point Effect (Particle) */}
-            {(isRunning || isAdded) && (
+            {showAnimation && (
                 <circle r="3" fill={getEdgeColor()} className={cn("drop-shadow-[0_0_5px_currentColor]", isAdded ? "text-emerald-500" : "text-primary")}>
                     <animateMotion
-                        dur={isAdded ? "3s" : "1.5s"}
+                        dur="1.5s"
                         repeatCount="indefinite"
                         path={edgePath}
                     />

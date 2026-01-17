@@ -182,7 +182,9 @@
   --chart-2: oklch(0.7 0.18 145);
   --chart-3: oklch(0.78 0.16 55);
   --chart-4: oklch(0.68 0.22 300);
-  --chart-5: oklch(0.65 0.22 25);
+  --sidebar-accent-foreground: var(--sidebar-primary);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {

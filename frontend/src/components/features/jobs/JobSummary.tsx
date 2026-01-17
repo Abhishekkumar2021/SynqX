@@ -6,13 +6,14 @@ import {
     Activity, Terminal, AlertCircle,
     RefreshCw, Cpu, HardDrive, History, XCircle,
     ArrowDownToLine, ArrowUpFromLine, ShieldAlert,
-    Server, Box
+    Server, Box, TrendingUp, BarChart3
 } from 'lucide-react';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn, formatNumber, formatDurationMs, formatBytes } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { StepRunInspector } from './StepRunInspector';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 
 interface JobSummaryProps {
     job: any;
@@ -47,22 +48,57 @@ const WatermarkBadge = ({ pipelineId, assetId }: { pipelineId: number, assetId?:
     );
 };
 
-const formatBytes = (bytes: number) => {
-    if (!bytes) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-};
+const PerformanceAnalytics = ({ steps }: { steps: any[] }) => {
+    const data = steps.map((s, i) => ({
+        name: s.node?.name || `Step ${i+1}`,
+        duration: s.duration_seconds || 0,
+        throughput: (s.records_out || 0) / (s.duration_seconds || 1),
+    }));
 
-const formatDuration = (ms: number | null) => {
-    if (ms === null || ms === undefined) return '—';
-    if (ms < 1000) return `${ms.toFixed(0)}ms`;
-    const seconds = ms / 1000;
-    if (seconds < 60) return `${seconds.toFixed(1)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in slide-in-from-bottom-4 duration-700">
+            <div className="p-6 rounded-[2rem] border border-border/40 bg-card/30 backdrop-blur-xl space-y-4">
+                <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-amber-500" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Latency Distribution (s)</span>
+                    </div>
+                </div>
+                <div className="h-32 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data}>
+                            <Bar dataKey="duration" radius={[4, 4, 0, 0]}>
+                                {data.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.duration > 60 ? 'oklch(0.62 0.19 25)' : 'oklch(0.7 0.18 55)'} fillOpacity={0.4} stroke={entry.duration > 60 ? 'oklch(0.62 0.19 25)' : 'oklch(0.7 0.18 55)'} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+            <div className="p-6 rounded-[2rem] border border-border/40 bg-card/30 backdrop-blur-xl space-y-4">
+                <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Throughput Velocity (rps)</span>
+                    </div>
+                </div>
+                <div className="h-32 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data}>
+                            <defs>
+                                <linearGradient id="colorThroughput" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="oklch(0.62 0.19 145)" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="oklch(0.62 0.19 145)" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <Area type="monotone" dataKey="throughput" stroke="oklch(0.62 0.19 145)" fillOpacity={1} fill="url(#colorThroughput)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
@@ -185,7 +221,7 @@ export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
                         <div className="p-5 rounded-[1.5rem] border border-border/40 bg-card/30 backdrop-blur-md flex flex-col justify-between flex-1">
                             <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/50">Total Time</span>
                             <div className="flex items-end justify-between">
-                                <span className="text-2xl font-bold text-foreground">{formatDuration(job.execution_time_ms)}</span>
+                                <span className="text-2xl font-bold text-foreground">{formatDurationMs(job.execution_time_ms)}</span>
                                 <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
                                     <Clock className="h-4 w-4 text-purple-500" />
                                 </div>
@@ -193,6 +229,9 @@ export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* --- Performance Analytics --- */}
+                {steps.length > 0 && <PerformanceAnalytics steps={steps} />}
 
                 {/* --- Metrics Highlights --- */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -324,26 +363,27 @@ export const JobSummary: React.FC<JobSummaryProps> = ({ job, run }) => {
                                                         )}
                                                     </div>
                                                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[9px] font-bold text-muted-foreground/50 uppercase tracking-wider">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={cn(sIsRunning && "text-primary")}>{step.status}</span>
-                                                            <span className="h-0.5 w-0.5 rounded-full bg-border" />
-                                                            <span>{formatDuration(step.duration_seconds * 1000)}</span>
-                                                        </div>
-                                                        
-                                                        {step.source_asset_id && (
-                                                            <>
-                                                                <span className="h-0.5 w-0.5 rounded-full bg-border hidden sm:block" />
-                                                                <WatermarkBadge pipelineId={job.pipeline_id} assetId={step.source_asset_id} />
-                                                            </>
+                                                                                                                    <div className="flex items-center gap-2">
+                                                                                                                        <span className={cn(sIsRunning && "text-primary")}>{step.status}</span>
+                                                                                                                        <span className="h-0.5 w-0.5 rounded-full bg-border" />
+                                                                                                                        <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-amber-500/5 border border-amber-500/10">
+                                                                                                                            <Clock size={10} className="text-amber-500/60" />
+                                                                                                                            <span className="text-amber-600/80">{formatDurationMs(step.duration_seconds * 1000)}</span>
+                                                                                                                        </div>
+                                                                                                                    </div>                                                        
+                                                        {step.records_out > 0 && (
+                                                            <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-emerald-500/5 border border-emerald-500/10">
+                                                                <Activity size={10} className="text-emerald-500/60" />
+                                                                <span className="text-emerald-600/80">{((step.records_out || 0) / (step.duration_seconds || 1)).toFixed(1)} rps</span>
+                                                            </div>
                                                         )}
 
                                                         {(step.cpu_percent > 0 || step.memory_mb > 0) && (
-                                                            <>
-                                                                <span className="h-0.5 w-0.5 rounded-full bg-border" />
-                                                                <span className="flex items-center gap-1"><Cpu size={10} className="text-muted-foreground/30" /> {step.cpu_percent?.toFixed(1)}%</span>
-                                                                <span className="h-0.5 w-0.5 rounded-full bg-border" />
+                                                            <div className="flex items-center gap-3 px-2 py-0.5 rounded-md bg-muted/20 border border-border/10">
+                                                                <span className="flex items-center gap-1"><Cpu size={10} className="text-muted-foreground/30" /> {step.cpu_percent?.toFixed(0)}%</span>
+                                                                <span className="h-3 w-px bg-border/40" />
                                                                 <span className="flex items-center gap-1"><HardDrive size={10} className="text-muted-foreground/30" /> {step.memory_mb?.toFixed(0)}MB</span>
-                                                            </>
+                                                            </div>
                                                         )}
                                                         {step.bytes_processed > 0 && (
                                                             <>

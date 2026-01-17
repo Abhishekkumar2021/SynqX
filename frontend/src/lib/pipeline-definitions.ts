@@ -401,13 +401,7 @@ export const NODE_DEFINITIONS: { category: string; items: OperatorDefinition[] }
                             type: "sub_pipeline", 
                             opClass: "sub_pipeline", 
                             icon: Workflow, 
-                            desc: "Recurse into another logical pipeline",
-                            fields: [
-                                {
-                                    name: 'sub_pipeline_id', label: 'Target Pipeline ID', type: 'number', configKey: 'sub_pipeline_id', 
-                                    tooltip: 'The database ID of the pipeline to execute as a child.'
-                                }
-                            ]
+                            desc: "Recurse into another logical pipeline"
                         },
                         {
                             label: "No-Op", type: "noop", opClass: "noop", icon: Square, desc: "Pass-through (Testing)" }

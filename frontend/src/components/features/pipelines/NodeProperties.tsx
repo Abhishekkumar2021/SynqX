@@ -15,9 +15,11 @@ import {
     Loader2,
     Sparkles,
     Shield,
-    Zap
+    Zap,
+    FileCode,
+    Workflow
 } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import { CodeBlock } from '@/components/ui/docs/CodeBlock';
 import { useTheme } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,7 +57,7 @@ import {
     AlertDialogCancel,
     AlertDialogAction,
 } from '@/components/ui/alert-dialog';
-import { getConnections, getConnectionAssets, getColumnLineage } from '@/lib/api';
+import { getConnections, getConnectionAssets, getColumnLineage, getPipelines } from '@/lib/api';
 import { getNodeIcon, getOperatorDefinition, type OperatorField } from '@/lib/pipeline-definitions';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { type PipelineNodeData } from '@/types/pipeline';
@@ -600,6 +602,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
         enabled: !!selectedConnectionId && !isNaN(parseInt(selectedConnectionId)),
     });
 
+    // Fetch Pipelines for Sub-pipeline selection
+    const { data: pipelines, isLoading: isLoadingPipelines } = useQuery({
+        queryKey: ['pipelines-list'],
+        queryFn: getPipelines,
+    });
+
     const filteredAssets = useMemo(() => {
         if (!assets) return [];
         return assets.filter((a: any) => {
@@ -871,23 +879,15 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="rounded-xl border border-border/40 overflow-hidden bg-background/50 h-64 relative">                            <Editor
-                                height="100%"
-                                theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                defaultLanguage={field.name === 'code' || field.name === 'script' ? 'python' : field.type === 'json' ? 'json' : 'text'}
-                                value={watch(field.name)}
-                                onChange={(val) => setValue(field.name, val)}
-                                options={{
-                                    minimap: { enabled: false },
-                                    fontSize: 12,
-                                    lineNumbers: 'on',
-                                    scrollBeyondLastLine: false,
-                                    automaticLayout: true,
-                                    padding: { top: 10, bottom: 10 },
-                                    readOnly: !isEditor
-                                }}
-                            />
-                        </div>
+                                            <CodeBlock
+                                                code={watch(field.name) || ''}
+                                                language={field.name === 'code' || field.name === 'script' ? 'python' : field.type === 'json' ? 'json' : 'text'}
+                                                editable={isEditor}
+                                                onChange={(val) => setValue(field.name, val)}
+                                                maxHeight="256px"
+                                                rounded
+                                                className="border-border/40 bg-background/50"
+                                            />
                         {field.description && <p className="text-[9px] text-muted-foreground">{field.description}</p>}
                     </div>
                 );
@@ -1313,12 +1313,28 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                             </div>
                                             <div className="space-y-4">
                                                 <div className="space-y-2">
-                                                    <Label className="text-[9px] font-bold text-muted-foreground uppercase">Target Sub-pipeline ID</Label>
-                                                    <Input 
-                                                        type="number"
-                                                        {...register('sub_pipeline_id', { valueAsNumber: true })} 
-                                                        placeholder="Pipeline database ID..." 
-                                                        className="h-8 text-[10px] font-mono"
+                                                    <Label className="text-[9px] font-bold text-muted-foreground uppercase">Target Sub-pipeline</Label>
+                                                    <Controller
+                                                        control={control}
+                                                        name="sub_pipeline_id"
+                                                        render={({ field }) => (
+                                                            <Select 
+                                                                onValueChange={field.onChange} 
+                                                                value={field.value ? String(field.value) : undefined} 
+                                                                disabled={!isEditor || isLoadingPipelines}
+                                                            >
+                                                                <SelectTrigger className="h-8 text-[10px] font-medium bg-background/50 border-border/40">
+                                                                    <SelectValue placeholder={isLoadingPipelines ? "Loading..." : "Select pipeline..."} />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {pipelines?.map((p: any) => (
+                                                                        <SelectItem key={p.id} value={String(p.id)} className="text-xs">
+                                                                            <span className="font-bold">{p.name}</span> <span className="text-muted-foreground ml-2">#{p.id}</span>
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
                                                     />
                                                     <p className="text-[8px] text-muted-foreground italic">Executes the specified pipeline as a logical child node.</p>
                                                 </div>
@@ -1327,23 +1343,15 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
 
                                         <div className="space-y-4">
                                             <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expert JSON Configuration</Label>
-                                            <div className="h-96 rounded-xl border border-border/40 overflow-hidden shadow-2xl">
-                                                <Editor
-                                                    height="100%"
-                                                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                                    defaultLanguage="json"
-                                                    value={watch('config')}
-                                                    onChange={(val) => setValue('config', val)}
-                                                    options={{
-                                                        minimap: { enabled: false },
-                                                        fontSize: 11,
-                                                        padding: { top: 10 },
-                                                        automaticLayout: true,
-                                                        scrollBeyondLastLine: false,
-                                                        readOnly: !isEditor
-                                                    }}
-                                                />
-                                            </div>
+                                            <CodeBlock
+                                                code={watch('config') || '{}'}
+                                                language="json"
+                                                editable={isEditor}
+                                                onChange={(val) => setValue('config', val)}
+                                                maxHeight="384px"
+                                                rounded
+                                                className="shadow-2xl border-border/40"
+                                            />
                                         </div>
                                     </div>
                                 </div>
