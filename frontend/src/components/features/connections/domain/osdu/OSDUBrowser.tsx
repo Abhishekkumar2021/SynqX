@@ -1,246 +1,189 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo } from 'react';
 import { 
-    Search, Layers, Database, ChevronRight, 
-    Globe, BookOpen, ExternalLink,
-    RefreshCw, HelpCircle, CheckSquare, Square, Save, Loader2
+    Search, RefreshCw, Save, Loader2,
+    LayoutGrid, List, Plus, Sparkles, CheckCircle2,
+    Grid3X3, Filter
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { 
     Sheet,
     SheetContent
 } from "@/components/ui/sheet";
+import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { bulkCreateAssets } from '@/lib/api/connections';
+import { bulkCreateAssets, discoverAssetSchema, type Asset } from '@/lib/api';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Shared Components
-import { ExplorerContentHeader } from '../../../explorer/components/ExplorerContentHeader';
-import { DiscoverySkeleton } from '../../../explorer/components/DiscoverySkeleton';
 import { OSDUKindDetails } from './components/OSDUKindDetails';
+import { AssetTableRow } from '../../AssetTableRow';
+import { AssetGridItem } from '../../AssetGridItem';
+import { CreateAssetsDialog } from '../../CreateAssetsDialog';
+import { DiscoveredAssetCard } from '../../DiscoveredAssetCard';
 
-// --- Types ---
+// Local Components
+import { OSDUKind, ViewMode } from './types';
+import { DomainCatalogSkeleton } from './components/DomainCatalogSkeleton';
+import { FilterToolbar } from './components/FilterToolbar';
+import { DomainGroupCard } from './components/DomainGroupCard';
+import { RichKindCard } from './components/RichKindCard';
+import { ManagedOSDUCard } from './components/ManagedOSDUCard';
 
-interface OSDUKind {
-    name: string;
-    type: string;
-    rows: number;
-    schema: string;
-    metadata?: {
-        authority: string;
-        source: string;
-        entity_type: string;
-        group: string;
-        entity_name: string;
-        version: string;
-        acl?: any;
-        legal?: any;
-    };
-}
 
 interface OSDUBrowserProps {
     connectionId: number;
     connectionName: string;
-    assets: OSDUKind[];
+    assets: OSDUKind[]; // These are discovered kinds
+    registeredAssets?: Asset[]; // These are already managed in Synqx
     isLoading: boolean;
     onDiscover: () => void;
-    mode?: 'management' | 'exploration';
 }
-
-// --- Sub-components ---
-
-const DomainSidebar: React.FC<{
-    activeGroup: string;
-    setActiveGroup: (group: string) => void;
-    domainGroups: [string, number][];
-    searchQuery: string;
-    setSearchQuery: (query: string) => void;
-}> = ({ activeGroup, setActiveGroup, domainGroups, searchQuery, setSearchQuery }) => (
-    <aside className="w-72 flex flex-col border-r border-border/40 bg-muted/5 shrink-0">
-        <div className="p-6 border-b border-border/20 space-y-4">
-            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                Subsurface Domains
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-4 w-4 p-0 hover:bg-transparent">
-                                <HelpCircle className="h-3.5 w-3.5 cursor-help" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent className="text-[10px] uppercase font-bold tracking-tight">Logical grouping of OSDU Kinds.</TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            </div>
-            <div className="relative group">
-                <Search className="z-20 absolute left-3 top-3 h-3.5 w-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-                <Input 
-                    placeholder="Filter kinds..." value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 h-9 rounded-xl bg-background border-border/40 text-xs shadow-none"
-                />
-            </div>
-        </div>
-        <ScrollArea className="flex-1">
-            <nav className="p-3 space-y-1">
-                {domainGroups.map(([group, count]) => (
-                    <button
-                        key={group} onClick={() => setActiveGroup(group)}
-                        className={cn(
-                            "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all group relative",
-                            activeGroup === group 
-                                ? "bg-primary/10 text-primary shadow-sm" 
-                                : "text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                        )}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className={cn("h-1.5 w-1.5 rounded-full transition-all", activeGroup === group ? "bg-primary scale-125" : "bg-border/60")} />
-                            <span className="truncate capitalize font-bold">{group.replace(/-/g, ' ')}</span>
-                        </div>
-                        <Badge variant="outline" className={cn("text-[9px] font-mono border-none h-5 px-1.5", activeGroup === group ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground")}>
-                            {count}
-                        </Badge>
-                    </button>
-                ))}
-            </nav>
-        </ScrollArea>
-        <div className="p-4 border-t border-border/20 bg-muted/10">
-            <Button variant="ghost" size="sm" asChild className="w-full justify-start gap-2 text-[10px] font-bold text-primary hover:bg-primary/5 cursor-pointer uppercase tracking-tight">
-                <a href="https://community.opengroup.org/osdu/data/data-definitions" target="_blank" rel="noreferrer">
-                    <BookOpen className="h-3.5 w-3.5" /> 
-                    <span>OSDU Data Models</span> 
-                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-                </a>
-            </Button>
-        </div>
-    </aside>
-);
-
-const KindCard: React.FC<{
-    asset: OSDUKind;
-    isSelected: boolean;
-    onSelect: () => void;
-    onToggleRegistration: () => void;
-    isRegistered: boolean;
-    getGroupColor: (group: string) => string;
-    mode: 'management' | 'exploration';
-}> = ({ asset, isSelected, onSelect, onToggleRegistration, isRegistered, getGroupColor, mode }) => (
-    <div className="relative group">
-        <button
-            onClick={onSelect}
-            className={cn(
-                "w-full flex flex-col items-start p-6 rounded-[2.5rem] border border-border/40 bg-card/40 hover:bg-muted/40 hover:border-primary/40 hover:shadow-2xl transition-all text-left relative overflow-hidden",
-                (mode === 'management' && isRegistered) && "border-primary/60 bg-primary/5 shadow-inner"
-            )}
-        >
-            <div className="absolute top-0 right-0 p-4 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
-                <Layers className="h-20 w-20 rotate-12" />
-            </div>
-            <Badge className={cn("text-[9px] uppercase tracking-wider font-bold mb-4 border-none shadow-sm", getGroupColor(asset.metadata?.group || ''))}>
-                {asset.metadata?.group || 'Core'}
-            </Badge>
-            <h4 className="text-[15px] font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors line-clamp-1 pr-10">{asset.metadata?.entity_name || asset.name}</h4>
-            <p className="text-[11px] text-muted-foreground font-medium line-clamp-2 opacity-70 leading-relaxed mb-6 h-8">{asset.name}</p>
-            <div className="mt-auto pt-4 border-t border-border/20 w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-tight">
-                <span className="flex items-center gap-2 text-muted-foreground/80">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> 
-                    {asset.rows?.toLocaleString()} Active Records
-                </span>
-                <div className="h-7 w-7 rounded-xl bg-primary/0 group-hover:bg-primary/10 flex items-center justify-center transition-all">
-                    <ChevronRight className="h-4 w-4 text-primary" />
-                </div>
-            </div>
-        </button>
-        
-        {/* Selection Overlay */}
-        {mode === 'management' && (
-            <button 
-                onClick={(e) => { e.stopPropagation(); onToggleRegistration(); }}
-                className="absolute top-4 right-4 z-10 p-2 rounded-full transition-all"
-            >
-                {isRegistered ? (
-                    <CheckSquare className="h-5 w-5 text-primary fill-primary/10" />
-                ) : (
-                    <Square className="h-5 w-5 text-muted-foreground/30 hover:text-primary opacity-0 group-hover:opacity-100" />
-                )}
-            </button>
-        )}
-    </div>
-);
 
 // --- Main Component ---
 
 export const OSDUBrowser: React.FC<OSDUBrowserProps> = ({ 
     connectionId,
-    connectionName,
-    assets, 
+    assets = [], 
+    registeredAssets = [],
     isLoading, 
-    onDiscover,
-    mode = 'management'
+    onDiscover
 }) => {
+    const [activeView, setActiveView] = useState<'managed' | 'discovery'>(registeredAssets.length > 0 ? 'managed' : 'discovery');
+    const [viewMode, setViewMode] = useState<ViewMode>('domain');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedGroup, setSelectedGroup] = useState('All');
+    const [selectedSource, setSelectedSource] = useState<string | null>(null);
+    const [selectedAuthority, setSelectedAuthority] = useState<string | null>(null);
+    const [selectedEntityType, setSelectedEntityType] = useState<string | null>(null);
     const [selectedKind, setSelectedKind] = useState<OSDUKind | null>(null);
-    const [activeGroup, setActiveGroup] = useState<string>('All');
     const [selectedForRegistration, setSelectedForRegistration] = useState<Set<string>>(new Set());
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
     
     const queryClient = useQueryClient();
 
     const registerMutation = useMutation({
-        mutationFn: (kinds: OSDUKind[]) => bulkCreateAssets(connectionId, {
-            assets: kinds.map(k => ({
-                name: k.metadata?.entity_name || k.name,
-                asset_type: 'table',
-                fully_qualified_name: k.name,
-                is_source: true,
-                is_destination: false,
-                schema_metadata: {
-                    osdu_kind: k.name,
-                    group: k.metadata?.group,
-                    version: k.metadata?.version,
-                    acl: k.metadata?.acl,
-                    legal: k.metadata?.legal
-                }
-            }))
-        }),
+        mutationFn: async (kinds: OSDUKind[]) => {
+            const data = await bulkCreateAssets(connectionId, {
+                assets: kinds.map(k => ({
+                    name: k.metadata?.entity_name || k.name,
+                    asset_type: 'osdu_kind',
+                    fully_qualified_name: k.name,
+                    is_source: true,
+                    is_destination: true,
+                    connection_id: connectionId,
+                    schema_metadata: {
+                        osdu_kind: k.name,
+                        group: k.metadata?.group,
+                        version: k.metadata?.version,
+                        acl: k.metadata?.acl,
+                        legal: k.metadata?.legal
+                    }
+                }))
+            });
+
+            if (data.created_ids?.length > 0) {
+                data.created_ids.forEach(id => discoverAssetSchema(connectionId, id));
+            }
+            return data;
+        },
         onSuccess: (data) => {
-            toast.success("Assets Registered", { description: `Successfully registered ${data.successful_creates} assets.` });
+            toast.success("Registration Successful", { 
+                description: `Managed ${data.successful_creates} new OSDU Kinds.` 
+            });
             setSelectedForRegistration(new Set());
             queryClient.invalidateQueries({ queryKey: ['assets', connectionId] });
+            setActiveView('managed');
         },
         onError: (err: any) => toast.error("Registration Failed", { description: err.message })
     });
 
-    const domainGroups = useMemo(() => {
-        const groups: Record<string, number> = { 'All': assets.length };
-        assets.forEach(a => {
-            const g = a.metadata?.group || 'Other';
-            groups[g] = (groups[g] || 0) + 1;
-        });
-        return Object.entries(groups).sort((a, b) => {
-            if (a[0] === 'All') return -1;
-            if (b[0] === 'All') return 1;
-            return b[1] - a[1];
-        });
-    }, [assets]);
-
-    const filteredAssets = useMemo(() => {
+    const filteredDiscovery = useMemo(() => {
         return assets.filter(a => {
             const matchesSearch = a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                                  (a.metadata?.entity_name || '').toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesGroup = activeGroup === 'All' || a.metadata?.group === activeGroup;
-            return matchesSearch && matchesGroup;
+            const matchesGroup = selectedGroup === 'All' || a.metadata?.group === selectedGroup;
+            const matchesSource = !selectedSource || a.metadata?.source === selectedSource;
+            const matchesAuthority = !selectedAuthority || a.metadata?.authority === selectedAuthority;
+            const matchesType = !selectedEntityType || a.metadata?.entity_type === selectedEntityType;
+            return matchesSearch && matchesGroup && matchesSource && matchesAuthority && matchesType;
         });
-    }, [assets, searchQuery, activeGroup]);
+    }, [assets, searchQuery, selectedGroup, selectedSource, selectedAuthority, selectedEntityType]);
+
+    const filteredManaged = useMemo(() => {
+        return registeredAssets.filter(a => {
+            const matchesSearch = a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                 (a.fully_qualified_name || '').toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesGroup = selectedGroup === 'All' || a.schema_metadata?.group === selectedGroup;
+            
+            // Extract source/authority from kind name for managed assets if not explicitly in metadata
+            const kindName = a.schema_metadata?.osdu_kind || a.fully_qualified_name || a.name;
+            const parts = kindName.split(':');
+            const authority = a.schema_metadata?.authority || (parts.length === 4 ? parts[0] : null);
+            const source = a.schema_metadata?.source || (parts.length === 4 ? parts[1] : null);
+            const entityType = a.schema_metadata?.entity_type || (parts.length === 4 ? parts[2] : null);
+
+            const matchesSource = !selectedSource || source === selectedSource;
+            const matchesAuthority = !selectedAuthority || authority === selectedAuthority;
+            const matchesType = !selectedEntityType || entityType === selectedEntityType;
+
+            return matchesSearch && matchesGroup && matchesSource && matchesAuthority && matchesType;
+        });
+    }, [registeredAssets, searchQuery, selectedGroup, selectedSource, selectedAuthority, selectedEntityType]);
+
+    const discoveryGroups = useMemo(() => {
+        const groups: Record<string, number> = {};
+        assets.forEach(a => {
+            const g = a.metadata?.group || 'other';
+            groups[g] = (groups[g] || 0) + 1;
+        });
+        return Object.entries(groups).sort((a, b) => b[1] - a[1]);
+    }, [assets]);
+
+    const managedGroups = useMemo(() => {
+        const groups: Record<string, number> = {};
+        registeredAssets.forEach(a => {
+            const g = a.schema_metadata?.group || 'other';
+            groups[g] = (groups[g] || 0) + 1;
+        });
+        return Object.entries(groups).sort((a, b) => b[1] - a[1]);
+    }, [registeredAssets]);
+
+    // Extract unique sources and authorities for filters
+    const { availableSources, availableAuthorities, availableEntityTypes } = useMemo(() => {
+        const activeSet = activeView === 'managed' ? registeredAssets : assets;
+        const sources = new Set<string>();
+        const authorities = new Set<string>();
+        const entityTypes = new Set<string>();
+
+        activeSet.forEach((item: any) => {
+            if (activeView === 'managed') {
+                const kindName = item.schema_metadata?.osdu_kind || item.fully_qualified_name || item.name;
+                const parts = kindName.split(':');
+                const auth = item.schema_metadata?.authority || (parts.length === 4 ? parts[0] : null);
+                const src = item.schema_metadata?.source || (parts.length === 4 ? parts[1] : null);
+                const type = item.schema_metadata?.entity_type || (parts.length === 4 ? parts[2] : null);
+                if (auth) authorities.add(auth);
+                if (src) sources.add(src);
+                if (type) entityTypes.add(type);
+            } else {
+                if (item.metadata?.authority) authorities.add(item.metadata.authority);
+                if (item.metadata?.source) sources.add(item.metadata.source);
+                if (item.metadata?.entity_type) entityTypes.add(item.metadata.entity_type);
+            }
+        });
+
+        return {
+            availableSources: Array.from(sources).sort(),
+            availableAuthorities: Array.from(authorities).sort(),
+            availableEntityTypes: Array.from(entityTypes).sort()
+        };
+    }, [assets, registeredAssets, activeView]);
 
     const toggleSelection = (kindName: string) => {
         const next = new Set(selectedForRegistration);
@@ -249,120 +192,317 @@ export const OSDUBrowser: React.FC<OSDUBrowserProps> = ({
         setSelectedForRegistration(next);
     };
 
+    const handleSelectAllDiscovery = (checked: boolean) => {
+        if (checked) setSelectedForRegistration(new Set(filteredDiscovery.map(a => a.name)));
+        else setSelectedForRegistration(new Set());
+    };
+
     const handleBulkRegister = () => {
         const selectedKinds = assets.filter(a => selectedForRegistration.has(a.name));
         registerMutation.mutate(selectedKinds);
     };
 
-    const getGroupColor = (group: string) => {
-        const colors: Record<string, string> = {
-            'master-data': 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-            'reference-data': 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
-            'work-product-component': 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-            'abstract': 'text-purple-500 bg-purple-500/10 border-purple-500/20',
-            'All': 'text-primary bg-primary/10 border-primary/20'
-        };
-        return colors[group] || 'text-muted-foreground bg-muted/10 border-border/40';
-    };
-
-    if (isLoading && assets.length === 0) {
-        return <DiscoverySkeleton />;
-    }
-
     return (
-        <div className="flex flex-col h-full bg-transparent">
-            {/* Unified Context Header */}
-            <ExplorerContentHeader 
-                name={connectionName} 
-                type={mode === 'exploration' ? "OSDU EXPLORER" : "OSDU DATA PLATFORM"}
-                actions={
-                    <div className="flex items-center gap-2">
-                        <AnimatePresence>
-                            {(mode === 'management' && selectedForRegistration.size > 0) && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                >
-                                    <Button 
-                                        variant="default" 
-                                        size="sm" 
-                                        onClick={handleBulkRegister}
-                                        disabled={registerMutation.isPending}
-                                        className="rounded-xl h-8 px-4 gap-2 text-[10px] font-bold shadow-lg shadow-primary/20"
-                                    >
-                                        {registerMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                                        <span>REGISTER {selectedForRegistration.size} ASSETS</span>
-                                    </Button>
+        <div className="h-full flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden relative">
+            {/* --- Toolbar --- */}
+            <div className="p-4 md:p-5 border-b border-border/40 bg-muted/10 flex flex-col md:flex-row items-center justify-between shrink-0 gap-4 md:gap-6">
+                <div className="flex items-center gap-4">
+                    <div className="flex bg-muted/30 p-1 rounded-xl border border-border/20">
+                        <button 
+                            onClick={() => { setActiveView('managed'); setSelectedGroup('All'); setSelectedSource(null); setSelectedAuthority(null); setSelectedEntityType(null); }}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                                activeView === 'managed' ? "bg-background text-primary shadow-sm shadow-primary/5" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <CheckCircle2 size={12} /> Registry ({registeredAssets.length})
+                        </button>
+                        <button 
+                            onClick={() => { setActiveView('discovery'); setSelectedGroup('All'); setSelectedSource(null); setSelectedAuthority(null); setSelectedEntityType(null); }}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                                activeView === 'discovery' ? "bg-amber-500 text-white shadow-sm shadow-amber-500/20" : "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            <Sparkles size={12} /> Discovery ({assets.length})
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-60 group">
+                        <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors z-20" />
+                        <Input
+                            placeholder={`Filter ${activeView === 'managed' ? 'registry' : 'discovery'}...`}
+                            className="pl-9 h-9 rounded-xl bg-background/50 border-border/40 text-xs shadow-none"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="flex items-center bg-background/50 border border-border/40 rounded-lg p-0.5">
+                        <Button
+                            variant="ghost" size="icon" 
+                            className={cn("h-7 w-7 rounded-md transition-all", viewMode === 'list' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted")}
+                            onClick={() => setViewMode('list')}
+                        >
+                            <List className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                            variant="ghost" size="icon" 
+                            className={cn("h-7 w-7 rounded-md transition-all", viewMode === 'grid' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted")}
+                            onClick={() => setViewMode('grid')}
+                        >
+                            <LayoutGrid className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                            variant="ghost" size="icon" 
+                            className={cn("h-7 w-7 rounded-md transition-all", viewMode === 'domain' ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:bg-muted")}
+                            onClick={() => setViewMode('domain')}
+                            title="Grouped Domain View"
+                        >
+                            <Grid3X3 className="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
+
+                    {activeView === 'discovery' ? (
+                        <>
+                            <AnimatePresence>
+                                {selectedForRegistration.size > 0 && (
+                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+                                        <Button variant="default" size="sm" onClick={handleBulkRegister} disabled={registerMutation.isPending} className="h-9 px-4 gap-2 text-xs font-bold rounded-xl shadow-lg shadow-primary/20">
+                                            {registerMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                                            Register {selectedForRegistration.size}
+                                        </Button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                            <Button variant="outline" size="icon" onClick={onDiscover} disabled={isLoading} className="h-9 w-9 rounded-xl border-border/40">
+                                <RefreshCw className={cn("h-4 w-4 text-muted-foreground", isLoading && "animate-spin")} />
+                            </Button>
+                        </>
+                    ) : (
+                        <Button size="sm" className="h-9 px-4 gap-2 text-xs font-bold rounded-xl" onClick={() => setIsCreateOpen(true)}>
+                            <Plus size={14} />
+                            Add Asset
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            {/* --- Main Layout --- */}
+            <div className="flex-1 flex overflow-hidden relative">
+                {isLoading && assets.length === 0 ? (
+                    <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50">
+                        <DomainCatalogSkeleton />
+                    </div>
+                ) : (
+                    <main className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border/50 hover:scrollbar-thumb-border/80 scrollbar-track-transparent">
+                        <AnimatePresence mode="wait">
+                            {/* --- DOMAIN CATALOG VIEW --- */}
+                            {viewMode === 'domain' ? (
+                                <motion.div key="domain" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8 p-6">
+                                    {/* Top Level Categories */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 px-1">
+                                            <Filter className="h-4 w-4 text-muted-foreground" />
+                                            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Domain Groups</h3>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                            <DomainGroupCard 
+                                                group="All" 
+                                                count={activeView === 'managed' ? registeredAssets.length : assets.length} 
+                                                isSelected={selectedGroup === 'All'}
+                                                onClick={() => setSelectedGroup('All')}
+                                            />
+                                            {(activeView === 'managed' ? managedGroups : discoveryGroups).map(([group, count]) => (
+                                                <DomainGroupCard 
+                                                    key={group} 
+                                                    group={group} 
+                                                    count={count} 
+                                                    isSelected={selectedGroup === group}
+                                                    onClick={() => setSelectedGroup(group)}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Advanced Filter Toolbar */}
+                                    <div className="flex items-center justify-between px-1 border-b border-border/40 pb-4">
+                                        <div className="flex items-center gap-4">
+                                            <FilterToolbar 
+                                                sources={availableSources}
+                                                authorities={availableAuthorities}
+                                                entityTypes={availableEntityTypes}
+                                                selectedSource={selectedSource}
+                                                selectedAuthority={selectedAuthority}
+                                                selectedEntityType={selectedEntityType}
+                                                onSelectSource={setSelectedSource}
+                                                onSelectAuthority={setSelectedAuthority}
+                                                onSelectEntityType={setSelectedEntityType}
+                                                onClearAll={() => { setSelectedSource(null); setSelectedAuthority(null); setSelectedEntityType(null); }}
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] font-mono text-muted-foreground/60">{activeView === 'managed' ? filteredManaged.length : filteredDiscovery.length} items</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Filtered Results List */}
+                                    <div className="space-y-4">
+                                        <div className="grid gap-3">
+                                            {activeView === 'managed' ? (
+                                                 filteredManaged.length > 0 ? (
+                                                    filteredManaged.map(asset => (
+                                                        <ManagedOSDUCard key={asset.id} asset={asset} connectionId={connectionId} />
+                                                    ))
+                                                 ) : (
+                                                    <div className="p-12 text-center border rounded-2xl border-dashed">
+                                                        <p className="text-muted-foreground text-sm">No managed assets match your filters.</p>
+                                                    </div>
+                                                 )
+                                            ) : (
+                                                filteredDiscovery.length > 0 ? (
+                                                    filteredDiscovery.map(kind => (
+                                                        <RichKindCard 
+                                                            key={kind.name} 
+                                                            kind={kind} 
+                                                            selected={selectedForRegistration.has(kind.name)} 
+                                                            onSelect={() => toggleSelection(kind.name)}
+                                                            onClick={() => setSelectedKind(kind)}
+                                                        />
+                                                    ))
+                                                ) : (
+                                                    <div className="p-12 text-center border rounded-2xl border-dashed">
+                                                        <p className="text-muted-foreground text-sm">No discovered assets match your filters.</p>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                /* --- LEGACY VIEWS (List/Grid) --- */
+                                <motion.div key="legacy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                    {activeView === 'managed' ? (
+                                        viewMode === 'list' ? (
+                                            <Table wrapperClassName="rounded-none border-none shadow-none">
+                                                <TableHeader className="bg-muted/20 border-b border-border/40 sticky top-0 z-10 backdrop-blur-md">
+                                                    <TableRow className="hover:bg-transparent border-none">
+                                                        <TableHead className="pl-6 font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Asset</TableHead>
+                                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Type</TableHead>
+                                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Schema</TableHead>
+                                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Volume</TableHead>
+                                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Size</TableHead>
+                                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Last Update</TableHead>
+                                                        <TableHead className="text-right pr-6 font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody className="divide-y divide-border/30">
+                                                    {filteredManaged.map((asset) => (
+                                                        <AssetTableRow key={asset.id} asset={asset} connectionId={connectionId} />
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                                                {filteredManaged.map((asset) => (
+                                                    <AssetGridItem key={asset.id} asset={asset} connectionId={connectionId} />
+                                                ))}
+                                            </div>
+                                        )
+                                    ) : (
+                                        viewMode === 'list' ? (
+                                            <Table wrapperClassName="rounded-none border-none shadow-none">
+                                                <TableHeader className="bg-muted/30 border-b border-border/40 sticky top-0 z-10 backdrop-blur-md">
+                                                    <TableRow className="hover:bg-transparent border-none">
+                                                        <TableHead className="w-12 pl-6">
+                                                            <Checkbox
+                                                                checked={selectedForRegistration.size > 0 && selectedForRegistration.size === filteredDiscovery.length}
+                                                                onCheckedChange={(checked) => handleSelectAllDiscovery(Boolean(checked))}
+                                                                className="border-amber-500/50 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                                                            />
+                                                        </TableHead>
+                                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Asset Name</TableHead>
+                                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70">Domain Group</TableHead>
+                                                        <TableHead className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/70 text-right pr-6">Records</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {filteredDiscovery.map((kind) => (
+                                                        <TableRow 
+                                                            key={kind.name} 
+                                                            className={cn(
+                                                                "hover:bg-amber-500/5 transition-colors border-b border-amber-500/10 group cursor-pointer",
+                                                                selectedForRegistration.has(kind.name) && "bg-amber-500/5"
+                                                            )}
+                                                            onClick={() => toggleSelection(kind.name)}
+                                                        >
+                                                            <TableCell className="pl-6 py-2.5">
+                                                                <Checkbox
+                                                                    checked={selectedForRegistration.has(kind.name)}
+                                                                    onCheckedChange={() => toggleSelection(kind.name)}
+                                                                    className="border-amber-500/30 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-bold text-sm text-foreground/80 group-hover:text-amber-700 transition-colors">
+                                                                        {kind.metadata?.entity_name || kind.name}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-muted-foreground/60 font-mono truncate">{kind.name}</span>
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant="outline" className="capitalize text-[9px] font-bold tracking-widest bg-muted/50 border-amber-500/20 text-muted-foreground">
+                                                                    {kind.metadata?.group || 'other'}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-right pr-6 py-2.5 font-mono text-[11px] font-bold text-muted-foreground">
+                                                                {kind.rows?.toLocaleString() || 0}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                                                {filteredDiscovery.map(kind => (
+                                                    <DiscoveredAssetCard
+                                                        key={kind.name}
+                                                        asset={{ ...kind, asset_type: 'osdu_kind' }}
+                                                        selected={selectedForRegistration.has(kind.name)}
+                                                        onSelect={() => toggleSelection(kind.name)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )
+                                    )}
                                 </motion.div>
                             )}
                         </AnimatePresence>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={onDiscover} 
-                            disabled={isLoading}
-                            className="rounded-xl h-8 px-4 gap-2 text-[10px] font-bold border-border/40 bg-background/50 transition-all hover:bg-primary/5"
-                        >
-                            <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} /> 
-                            <span>{isLoading ? 'SCANNING PARTITION...' : 'RE-SCAN REGISTRY'}</span>
-                        </Button>
-                    </div>
-                }
-            />
+                    </main>
+                )
+            }
+        </div>
 
-            <div className="flex-1 flex overflow-hidden">
-                <DomainSidebar
-                    activeGroup={activeGroup}
-                    setActiveGroup={setActiveGroup}
-                    domainGroups={domainGroups}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                />
-
-                {/* --- Main Discovery Grid --- */}
-                <main className="flex-1 flex flex-col min-w-0 bg-background/20 relative">
-                    {isLoading && assets.length > 0 && (
-                        <div className="absolute top-0 inset-x-0 h-1 bg-primary/20 z-50">
-                            <motion.div 
-                                className="h-full bg-primary" 
-                                animate={{ width: ["0%", "100%"] }} 
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} 
-                            />
-                        </div>
-                    )}
-                    <ScrollArea className="flex-1">
-                        <div className="p-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-20">
-                            {filteredAssets.map(asset => (
-                                <KindCard
-                                    key={asset.name}
-                                    asset={asset}
-                                    isSelected={selectedKind?.name === asset.name}
-                                    onSelect={() => setSelectedKind(asset)}
-                                    onToggleRegistration={() => toggleSelection(asset.name)}
-                                    isRegistered={selectedForRegistration.has(asset.name)}
-                                    getGroupColor={getGroupColor}
-                                    mode={mode}
-                                />
-                            ))}
-                        </div>
-                    </ScrollArea>
-                </main>
-            </div>
-
-            {/* --- Details Side Drawer --- */}
+            {/* --- Overlays --- */}
             <Sheet open={!!selectedKind} onOpenChange={(o) => !o && setSelectedKind(null)}>
-                <SheetContent side="right" className="sm:max-w-xl p-0 flex flex-col bg-background/95 backdrop-blur-3xl border-l border-border/40">
+                <SheetContent side="right" className="sm:max-w-xl p-0 flex flex-col bg-background/95 backdrop-blur-3xl border-l border-border/40 shadow-2xl">
                     {selectedKind && (
                         <OSDUKindDetails 
-                            kind={selectedKind} 
-                            connectionId={connectionId} 
-                            onClose={() => setSelectedKind(null)} 
-                            initialTab={mode === 'exploration' ? 'data' : 'overview'}
+                            kind={selectedKind} connectionId={connectionId} 
+                            onClose={() => setSelectedKind(null)} initialTab="overview"
                         />
                     )}
                 </SheetContent>
             </Sheet>
+
+            <CreateAssetsDialog 
+                connectionId={connectionId} connectorType={'osdu'} 
+                open={isCreateOpen} onOpenChange={setIsCreateOpen}
+            />
         </div>
     );
 };

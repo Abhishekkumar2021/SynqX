@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-    Layers, Globe, Shield, BookOpen, Clock, 
-    ExternalLink, History, Settings2, FileSearch, ArrowLeft,
+    Layers, Globe, Shield, History, Settings2, FileSearch, ArrowLeft,
     Play, Loader2, Info, Lock, Scale, Tag, Database
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { executeQuery } from '@/lib/api/ephemeral';
 import { getConnectionMetadata } from '@/lib/api/connections';
 import { toast } from 'sonner';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 // --- Helper Components ---
 
@@ -41,7 +39,32 @@ export const OSDUKindDetails: React.FC<OSDUKindDetailsProps> = ({
     initialTab = 'overview'
 }) => {
     const [luceneQuery, setLuceneQuery] = useState('*:*');
-    
+
+    // Fetch full record sample if ACLs are missing (due to fast discovery)
+    const recordQuery = useQuery({
+        queryKey: ['osdu', 'record-sample', connectionId, kind.name],
+        queryFn: () => executeQuery(connectionId, { 
+            query: '*:*', 
+            limit: 1,
+            params: { kind: kind.name }
+        }),
+        enabled: !kind.metadata?.acl || !kind.metadata?.legal,
+    });
+
+    const fullMetadata = useMemo(() => {
+        const base = kind.metadata || {};
+        if (recordQuery.data?.result_sample?.rows?.length > 0) {
+            const record = recordQuery.data.result_sample.rows[0];
+            return {
+                ...base,
+                acl: record.acl || base.acl,
+                legal: record.legal || base.legal,
+                tags: record.tags || base.tags
+            };
+        }
+        return base;
+    }, [kind.metadata, recordQuery.data]);
+
     const searchMutation = useMutation({
         mutationFn: (query: string) => executeQuery(connectionId, { 
             query, 
@@ -83,11 +106,11 @@ export const OSDUKindDetails: React.FC<OSDUKindDetailsProps> = ({
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
                         <Badge variant="secondary" className="text-[10px] uppercase tracking-[0.1em] font-bold px-2 py-0.5 rounded-lg bg-primary/10 text-primary border-none">
-                            {kind.metadata?.group?.replace(/-/g, ' ')}
+                            {fullMetadata?.group?.replace(/-/g, ' ')}
                         </Badge>
                     </div>
                     <SheetTitle className="text-2xl font-bold tracking-tight leading-tight">
-                        {kind.metadata?.entity_name || kind.name}
+                        {fullMetadata?.entity_name || kind.name}
                     </SheetTitle>
                     <SheetDescription className="text-xs font-mono font-medium opacity-70 flex items-center gap-2 pt-1">
                         <Globe className="h-3 w-3" /> {kind.name}
@@ -164,7 +187,7 @@ export const OSDUKindDetails: React.FC<OSDUKindDetailsProps> = ({
                             </p>
                         </div>
 
-                        <div className="flex-1 min-h-0">
+                        <div className="flex-1 min-h-0 relative">
                             <ResultsGrid 
                                 data={searchResults} 
                                 isLoading={searchMutation.isPending} 
