@@ -447,3 +447,22 @@
       0 0 0 4px var(--color-primary);
   }
 }
+
+@utility custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-foreground/10 rounded-full transition-colors;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    @apply bg-foreground/20;
+  }
+}

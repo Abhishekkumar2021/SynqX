@@ -72,7 +72,6 @@ export const DeployCommitDialog: React.FC<DeployCommitDialogProps> = ({
                                     rounded
                                     maxHeight="200px"
                                     className="text-sm"
-                                    placeholder="Describe what changed in this version... (e.g. Optimized join logic, fixed filter predicates)"
                                 />
                             </div>
                         </div>

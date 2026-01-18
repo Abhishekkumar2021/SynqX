@@ -471,8 +471,8 @@ export const LineagePage = () => {
         <motion.div 
             layout
             className={cn(
-                "flex flex-col h-full w-full gap-2",
-                isZenMode ? "fixed inset-0 z-50 bg-background p-4 pt-2" : "relative px-6 pt-2 pb-6"
+                "flex flex-col h-full w-full gap-6 md:gap-8 px-1",
+                isZenMode ? "fixed inset-0 z-50 bg-background p-4 pt-2" : "relative pb-6"
             )}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >

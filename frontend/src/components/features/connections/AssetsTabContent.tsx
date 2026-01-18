@@ -116,15 +116,10 @@ export const AssetsTabContent = ({
             return bulkCreateAssets(connectionId, { assets: assetsToCreate });
         },
         onSuccess: (data) => {
-            const totalSuccess = data.successful_creates + (data.updated_count || 0);
-            if (totalSuccess === data.total_requested) {
-                toast.success("Discovery Import Complete", {
-                    description: data.updated_count > 0 
-                        ? `${data.successful_creates} assets created, ${data.updated_count} updated.`
-                        : `All ${data.successful_creates} selected assets are now managed.`,
-                    icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                });
-            } else if (totalSuccess > 0) {
+            const totalSuccess = data.successful_creates;
+            toast.success("Bulk Import Complete", {
+                description: `${data.successful_creates} assets created.`
+            }); else if (totalSuccess > 0) {
                 toast.warning("Partial Import Success", {
                     description: `${totalSuccess} assets processed (${data.successful_creates} new), ${data.failed_creates} failed.`,
                     icon: <AlertTriangle className="h-4 w-4 text-amber-500" />

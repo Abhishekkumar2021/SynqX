@@ -255,11 +255,21 @@ export const ConnectionDetailsPage: React.FC = () => {
         </div>
     );
 
+    const handleExplore = () => {
+        if (!connection) return;
+        const type = connection.connector_type.toLowerCase();
+        let explorerType = 'sql';
+        if (type === 'osdu' || type === 'prosource') explorerType = 'osdu';
+        else if (['local_file', 's3', 'gcs', 'azure_blob', 'sftp', 'ftp'].includes(type)) explorerType = 'file';
+        
+        navigate(`/explorer/${explorerType}/${connection.id}`);
+    };
+
     return (
         <motion.div 
             className={cn(
-                "flex flex-col gap-6 md:gap-8 p-4 md:p-0",
-                isZenMode ? "h-[calc(100vh-3rem)]" : "h-[calc(100vh-8rem)]"
+                "flex flex-col gap-6 md:gap-8 px-1",
+                isZenMode ? "h-[calc(100vh-4rem)]" : "h-[calc(100vh-8rem)]"
             )}
         >
             <PageMeta title={connection.name} description={`Manage ${connection.name} connection details.`} />
@@ -286,7 +296,7 @@ export const ConnectionDetailsPage: React.FC = () => {
                             </h2>
                             <Badge variant="outline" className={cn(
                                 "uppercase text-[10px] tracking-widest font-bold px-2.5 py-1 rounded-lg shadow-sm mt-1",
-                                connection.health_status === 'active'
+                                connection.health_status === 'active' || connection.health_status === 'healthy'
                                     ? "text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 border-emerald-500/30"
                                     : "text-muted-foreground border-border bg-muted/50"
                             )}>
@@ -314,7 +324,7 @@ export const ConnectionDetailsPage: React.FC = () => {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/explorer?connectionId=${connection.id}`)}
+                        onClick={handleExplore}
                         className="h-11 px-5 rounded-2xl border-border/40 bg-background/40 backdrop-blur-md hover:shadow-lg transition-all shadow-sm font-semibold gap-2"
                     >
                         <Search className="h-4 w-4 text-primary" />

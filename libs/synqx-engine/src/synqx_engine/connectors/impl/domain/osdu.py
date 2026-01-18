@@ -545,6 +545,106 @@ class OSDUConnector(BaseConnector):
 
         return total_written
 
+    def get_ancestry(self, record_id: str) -> Dict[str, Any]:
+        """
+        Retrieves parent and child lineage for a specific record.
+        Uses the technical metadata fields 'ancestry' or 'parents'.
+        """
+        try:
+            record = self.get_record(record_id)
+            ancestry = record.get("ancestry", {})
+            parents = ancestry.get("parents", [])
+            
+            # If no explicit ancestry, check for common relationship fields in 'data'
+            # that might indicate parentage (e.g. MasterDataID)
+            return {
+                "record_id": record_id,
+                "parents": parents,
+                "kind": record.get("kind"),
+                "raw_ancestry": ancestry
+            }
+        except Exception as e:
+            logger.error(f"Failed to fetch ancestry for {record_id}: {e}")
+            return {"parents": [], "error": str(e)}
+
+    def get_record_relationships(self, record_id: str) -> List[Dict[string, Any]]:
+        """
+        Finds all records that reference this record or are referenced by it.
+        This performs a search query for any records containing this ID.
+        """
+        try:
+            # 1. Records this record references (Outbound)
+            record = self.get_record(record_id)
+            data = record.get("data", {})
+            outbound = []
+            for key, value in data.items():
+                if isinstance(value, str) and ":" in value and len(value.split(":")) > 2:
+                    outbound.append({
+                        "field": key,
+                        "target_id": value,
+                        "direction": "outbound"
+                    })
+
+            # 2. Records referencing this record (Inbound)
+            # We search for the record_id in all fields
+            url = f"{self.base_url}/api/search/v2/query"
+            payload = {
+                "kind": "*:*:*:*",
+                "query": f"\"{record_id}\"", # Quote for exact match in any field
+                "limit": 50
+            }
+            resp = requests.post(url, headers=self.headers, json=payload)
+            inbound = []
+            if resp.status_code == 200:
+                results = resp.json().get("results", [])
+                for res in results:
+                    if res.get("id") != record_id:
+                        inbound.append({
+                            "source_id": res.get("id"),
+                            "kind": res.get("kind"),
+                            "direction": "inbound"
+                        })
+
+            return {"outbound": outbound, "inbound": inbound}
+        except Exception as e:
+            logger.error(f"Failed to resolve record relationships for {record_id}: {e}")
+            return {"outbound": [], "inbound": []}
+
+    def get_spatial_data(self, record_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Extracts spatial location information (Wgs84 coordinates) from a record.
+        """
+        try:
+            record = self.get_record(record_id)
+            data = record.get("data", {})
+            
+            # Common OSDU Spatial Locations
+            spatial = data.get("SpatialLocation", {}) or data.get("SpatialArea", {})
+            wgs84 = spatial.get("Wgs84Coordinates")
+            
+            if wgs84:
+                return wgs84
+            
+            # Fallback: Search for lat/long fields
+            # Some older or custom schemas use flat fields
+            lat = data.get("Latitude") or data.get("Lat")
+            lon = data.get("Longitude") or data.get("Long") or data.get("Lon")
+            
+            if lat is not None and lon is not None:
+                return {
+                    "type": "FeatureCollection",
+                    "features": [{
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [float(lon), float(lat)]
+                        }
+                    }]
+                }
+            return None
+        except Exception:
+            return None
+
     def execute_query(
         self,
         query: str,
@@ -554,11 +654,21 @@ class OSDUConnector(BaseConnector):
     ) -> List[Dict[str, Any]]:
         kind = kwargs.get("kind", "*:*:*:*")
         url = f"{self.base_url}/api/search/v2/query"
+        
+        # Support for advanced search features (sorting, spatial)
         payload = {
             "kind": kind,
             "query": query,
-            "limit": limit or 100
+            "limit": limit or 100,
+            "offset": offset or 0
         }
+        
+        if kwargs.get("sort"):
+            payload["sort"] = kwargs.get("sort")
+            
+        if kwargs.get("spatial_filter"):
+            payload["spatialFilter"] = kwargs.get("spatial_filter")
+
         resp = requests.post(url, headers=self.headers, json=payload)
         resp.raise_for_status()
         return resp.json().get("results", [])

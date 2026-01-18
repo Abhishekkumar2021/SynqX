@@ -60,12 +60,76 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
         activeResultId: undefined
     }]);
     const [activeTabId, setActiveTabId] = useState('1');
+    const [isMaximized, setIsMaximized] = useState(false);
+    const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
 
     const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId) || tabs[0], [tabs, activeTabId]);
     const activeResult = useMemo(() => {
         if (!activeTab.results || activeTab.results.length === 0) return null;
         return activeTab.results.find(r => r.id === activeTab.activeResultId) || activeTab.results[activeTab.results.length - 1];
     }, [activeTab]);
+
+    const handlePaginationChange = async (updater: any) => {
+        if (!activeResult) return;
+        
+        const currentPagination = activeResult.pagination || { pageIndex: 0, pageSize: queryLimit };
+        const newPagination = typeof updater === 'function' ? updater(currentPagination) : updater;
+        
+        // Update state with new pagination (optimistic/loading)
+        setTabs(prev => prev.map(t => {
+            if (t.id === activeTabId) {
+                return {
+                    ...t,
+                    results: t.results.map(r => r.id === activeResult.id ? { ...r, pagination: newPagination } : r)
+                };
+            }
+            return t;
+        }));
+
+        // Execute fetch
+        setIsExecuting(true);
+        setExecutionMessage(`Fetching page ${newPagination.pageIndex + 1}...`);
+        
+        try {
+            const job = await executeQuery(connectionId, { 
+                query: activeResult.statement, 
+                limit: newPagination.pageSize, 
+                offset: newPagination.pageIndex * newPagination.pageSize 
+            });
+            
+            // Poll if async
+            let finalJob = job;
+            if (job.status === 'queued' || job.status === 'running') {
+                finalJob = await pollJob(job.id);
+            }
+
+            // Update result data
+            setTabs(prev => prev.map(t => {
+                if (t.id === activeTabId) {
+                    return {
+                        ...t,
+                        results: t.results.map(r => r.id === activeResult.id ? {
+                            ...r,
+                            data: { 
+                                results: finalJob.result_sample?.rows || [], 
+                                columns: finalJob.result_summary?.columns || [], 
+                                count: finalJob.result_summary?.count || 0,
+                                total_count: finalJob.result_summary?.total_count || r.data.total_count // Preserve total if not returned
+                            },
+                            duration: finalJob.execution_time_ms || 0,
+                            pagination: newPagination
+                        } : r)
+                    };
+                }
+                return t;
+            }));
+        } catch (err: any) {
+            toast.error("Pagination Failed", { description: err.message });
+        } finally {
+            setIsExecuting(false);
+            setExecutionMessage(null);
+        }
+    };
 
     const pollJob = async (jobId: number): Promise<any> => {
         for (let i = 0; i < 60; i++) {
@@ -218,9 +282,11 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
                     data: { 
                         results: job.result_sample?.rows || [], 
                         columns: job.result_summary?.columns || [], 
-                        count: job.result_summary?.count || 0 
+                        count: job.result_summary?.count || 0,
+                        total_count: job.result_summary?.total_count
                     },
-                    duration: job.execution_time_ms || 0
+                    duration: job.execution_time_ms || 0,
+                    pagination: { pageIndex: 0, pageSize: queryLimit }
                 };
                 
                 setTabs(prev => prev.map(t => {
@@ -266,7 +332,7 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
 
     return (
         <TooltipProvider>
-            <ResizablePanelGroup direction="horizontal">
+            <ResizablePanelGroup direction="horizontal" className="h-full">
                 <ResizablePanel defaultSize={20} minSize={15} className="bg-muted/5 border-r border-border/40">
                     <SchemaBrowser connectionId={connectionId} onAction={(type, sql) => {
                         if (type === 'insert' && editorRef.current) {
@@ -285,13 +351,13 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
                 <ResizablePanel defaultSize={80}>
                     <ResizablePanelGroup direction="vertical">
                         <ResizablePanel defaultSize={50} minSize={20} className="flex flex-col relative overflow-hidden bg-background">
-                            <div className="h-10 flex items-center gap-1 px-2 border-b border-border/40 bg-muted/10 shrink-0 overflow-x-auto no-scrollbar">
+                            <div className="h-10 flex items-center gap-1 px-2 border-b border-border/40 bg-muted/10 shrink-0 overflow-x-auto">
                                 {tabs.map(tab => (
                                     <div 
                                         key={tab.id} 
                                         onClick={() => setActiveTabId(tab.id)} 
                                         className={cn(
-                                            "group flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all", 
+                                            "group flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer transition-all shrink-0 whitespace-nowrap", 
                                             activeTabId === tab.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/40"
                                         )}
                                     > 
@@ -309,13 +375,22 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
                                         )}
                                     </div>
                                 ))}
-                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => {
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg shrink-0" onClick={() => {
                                     const id = Math.random().toString(36).substr(2, 9);
                                     setTabs(p => [...p, { id, title: `query_${p.length}.sql`, query: '', language: 'sql', results: [] }]);
                                     setActiveTabId(id);
                                 }}><Plus size={14} /></Button>
                             </div>
-                            <div className="h-12 border-b border-border/40 flex items-center justify-between px-4 bg-muted/5 shrink-0">
+                            <div className="flex-1">
+                                <Editor
+                                    onMount={handleEditorDidMount}
+                                    height="100%" language="sql" value={activeTab.query}
+                                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                                    onChange={(v) => setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, query: v || '' } : t))}
+                                    options={{ minimap: { enabled: false }, fontSize: 13, automaticLayout: true, fontFamily: '"Geist Mono Variable", Menlo, monospace' }}
+                                />
+                            </div>
+                            <div className="h-12 border-t border-border/40 flex items-center justify-between px-4 bg-muted/5 shrink-0">
                                 <div className="flex items-center gap-2">
                                     <div className="flex items-center bg-background/50 rounded-xl p-0.5 border border-border/40 shadow-sm mr-2">
                                         <Tooltip>
@@ -369,33 +444,33 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
                                     <TooltipContent>Execution History</TooltipContent>
                                 </Tooltip>
                             </div>
-                            <div className="flex-1">
-                                <Editor
-                                    onMount={handleEditorDidMount}
-                                    height="100%" language="sql" value={activeTab.query}
-                                    theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                                    onChange={(v) => setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, query: v || '' } : t))}
-                                    options={{ minimap: { enabled: false }, fontSize: 13, automaticLayout: true, fontFamily: '"Geist Mono Variable", Menlo, monospace' }}
-                                />
-                            </div>
                         </ResizablePanel>
                         <ResizableHandle withHandle />
                         <ResizablePanel defaultSize={50} minSize={10} className="flex flex-col overflow-hidden bg-card/5">
-                            <div className="flex-1 relative">
+                            <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
                                 <ResultsGrid 
                                     data={activeResult ? activeResult.data : null} 
                                     isLoading={isExecuting} 
+                                    isMaximized={isMaximized}
+                                    onToggleMaximize={() => setIsMaximized(!isMaximized)}
                                     variant="embedded"
                                     noBorder
                                     noBackground
-                                    title={
-                                        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
+                                    selectedRows={selectedRows}
+                                    onSelectRows={setSelectedRows}
+                                    manualPagination
+                                    pageCount={activeResult?.data.total_count ? Math.ceil(activeResult.data.total_count / (activeResult.pagination?.pageSize || queryLimit)) : -1}
+                                    pagination={activeResult?.pagination || { pageIndex: 0, pageSize: queryLimit }}
+                                    onPaginationChange={handlePaginationChange}
+                                    title={null}
+                                    tabs={
+                                        <>
                                             {activeTab.results.map((res, idx) => (
                                                 <div 
                                                     key={res.id}
                                                     onClick={() => setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, activeResultId: res.id } : t))}
                                                     className={cn(
-                                                        "group flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-bold cursor-pointer transition-all whitespace-nowrap border",
+                                                        "group flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-bold cursor-pointer transition-all whitespace-nowrap border shrink-0",
                                                         activeTab.activeResultId === res.id ? "bg-primary/10 text-primary border-primary/20 shadow-sm" : "text-muted-foreground hover:bg-muted/40 border-transparent"
                                                     )}
                                                 > 
@@ -417,9 +492,9 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
                                                 </div>
                                             ))}
                                             {activeTab.results.length === 0 && !isExecuting && (
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-40">No Results</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-40 px-2">No Results</span>
                                             )}
-                                        </div>
+                                        </>
                                     }
                                     description={isExecuting ? executionMessage || 'Running...' : undefined}
                                 />

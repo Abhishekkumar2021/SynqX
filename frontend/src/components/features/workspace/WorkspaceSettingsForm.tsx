@@ -242,7 +242,6 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                                 rounded
                                 maxHeight="200px"
                                 className="text-sm"
-                                placeholder="Document the primary goals and data integrations for this workspace..."
                             />
                         </div>
                     </div>

@@ -159,7 +159,7 @@ export const AuditLogsPage: React.FC = () => {
     return (
         <div 
             className={cn(
-                "flex flex-col gap-6 md:gap-8",
+                "flex flex-col gap-6 md:gap-8 px-1",
                 isZenMode ? "h-[calc(100vh-4rem)]" : "h-[calc(100vh-8rem)]"
             )}
         >

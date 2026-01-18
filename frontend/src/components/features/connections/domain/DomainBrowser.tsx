@@ -372,12 +372,10 @@ export const DomainBrowser: React.FC<DomainBrowserProps> = ({
         onSuccess: (data) => {
             if (!data) return;
             
-            const totalSuccess = data.successful_creates + (data.updated_count || 0);
+            const totalSuccess = data.successful_creates;
             if (totalSuccess === data.total_requested) {
                 toast.success("Registration Complete", {
-                    description: data.updated_count > 0 
-                        ? `${data.successful_creates} entities created, ${data.updated_count} updated.`
-                        : `All ${data.successful_creates} domain entities are now managed.`,
+                    description: `All ${data.successful_creates} domain entities are now managed.`,
                     icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 });
             } else if (totalSuccess > 0) {
@@ -387,7 +385,7 @@ export const DomainBrowser: React.FC<DomainBrowserProps> = ({
                 });
             } else {
                 toast.error("Registration Failed", {
-                    description: "No entities could be registered or updated.",
+                    description: "No entities could be registered.",
                     icon: <XCircle className="h-4 w-4 text-destructive" />
                 });
             }

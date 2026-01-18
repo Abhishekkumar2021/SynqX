@@ -63,7 +63,7 @@ export const AgentsPage = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className={cn(
-                "flex flex-col gap-6 md:gap-8",
+                "flex flex-col gap-6 md:gap-8 px-1",
                 isZenMode ? "h-[calc(100vh-3rem)]" : "h-full"
             )}
         >

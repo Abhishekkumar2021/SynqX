@@ -36,7 +36,7 @@ export const WorkspaceTeamPage: React.FC = () => {
 
     return (
         <div className={cn(
-            "flex flex-col h-full gap-6 md:gap-8",
+            "flex flex-col h-full gap-6 md:gap-8 px-1",
             isZenMode ? "min-h-[calc(100vh-4rem)]" : "min-h-[80vh]"
         )}>
             <PageMeta title="Team Management" description="Manage your workspace team and permissions." />

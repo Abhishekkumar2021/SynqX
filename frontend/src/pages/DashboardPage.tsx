@@ -171,7 +171,7 @@ export const DashboardPage: React.FC = () => {
     return (
         <motion.div 
             className={cn(
-                "flex flex-col gap-8 pb-20 relative",
+                "flex flex-col gap-8 pb-20 relative px-1",
                 isZenMode && "pt-4"
             )}
             initial="hidden"

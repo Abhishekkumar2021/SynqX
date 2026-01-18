@@ -34,6 +34,9 @@ const WorkspaceTeamPage = lazy(() => import('./pages/WorkspaceTeamPage').then(mo
 const AlertsPage = lazy(() => import('./pages/AlertsPage').then(module => ({ default: module.AlertsPage })));
 const OperatorsPage = lazy(() => import('./pages/OperatorsPage').then(module => ({ default: module.OperatorsPage })));
 const ExplorerPage = lazy(() => import('./pages/ExplorerPage').then(module => ({ default: module.ExplorerPage })));
+const OSDUExplorerPage = lazy(() => import('./pages/explorer/OSDUExplorerPage').then(module => ({ default: module.OSDUExplorerPage })));
+const SQLExplorerPage = lazy(() => import('./pages/explorer/SQLExplorerPage').then(module => ({ default: module.SQLExplorerPage })));
+const FileExplorerPage = lazy(() => import('./pages/explorer/FileExplorerPage').then(module => ({ default: module.FileExplorerPage })));
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage').then(module => ({ default: module.AuditLogsPage })));
 const QuarantinePage = lazy(() => import('./pages/QuarantinePage').then(module => ({ default: module.QuarantinePage })));
 const LineagePage = lazy(() => import('./pages/LineagePage').then(module => ({ default: module.LineagePage })));
@@ -297,6 +300,9 @@ const AppRoutes = () => (
     <Route element={<ProtectedRoute />}>
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/explorer" element={<ExplorerPage />} />
+      <Route path="/explorer/osdu/:id" element={<OSDUExplorerPage />} />
+      <Route path="/explorer/sql/:id" element={<SQLExplorerPage />} />
+      <Route path="/explorer/file/:id" element={<FileExplorerPage />} />
 
       <Route path="/connections" element={<ConnectionsPage />} />
       <Route path="/connections/:id" element={<ConnectionDetailsPage />} />

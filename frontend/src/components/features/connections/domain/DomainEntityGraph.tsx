@@ -26,13 +26,11 @@ import {
     Binary,
     Network,
     Sparkles,
-    Expand,
     Search,
     Maximize2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -43,7 +41,6 @@ import { useTheme } from '@/hooks/useTheme';
 // --- Custom Edge Component ---
 
 const RelationshipEdge = ({
-  id,
   sourceX,
   sourceY,
   targetX,

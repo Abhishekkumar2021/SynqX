@@ -6,6 +6,7 @@ export interface ResultItem {
     statement: string;
     data: QueryResponse;
     duration?: number;
+    pagination?: { pageIndex: number; pageSize: number; };
 }
 
 export interface QueryTab {

@@ -225,7 +225,7 @@ export const QuarantinePage = () => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "flex flex-col gap-6 md:gap-8 p-4 md:p-0",
+        "flex flex-col gap-6 md:gap-8 px-1",
         isZenMode ? "h-[calc(100vh-3rem)]" : "h-[calc(100vh-8rem)]"
       )}
     >
@@ -393,18 +393,20 @@ export const QuarantinePage = () => {
                         <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                 </div>
-                <DialogDescription className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
-                  <span className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors" onClick={() => navigate(`/pipelines/${inspectingItem?.pipeline_id}`)}>
-                    <Workflow className="h-3.5 w-3.5" /> {inspectingItem?.pipeline_name}
-                  </span>
-                  <span className="h-3 w-px bg-border/60" />
-                  <span className="flex items-center gap-1.5">
-                    <Database className="h-3.5 w-3.5" /> {inspectingItem?.node_name}
-                  </span>
-                  <span className="h-3 w-px bg-border/60" />
-                  <span className="text-destructive font-bold">
-                    {formatNumber(inspectingItem?.row_count || 0)} Rejected Records
-                  </span>
+                <DialogDescription asChild className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1.5 hover:text-primary cursor-pointer transition-colors" onClick={() => navigate(`/pipelines/${inspectingItem?.pipeline_id}`)}>
+                      <Workflow className="h-3.5 w-3.5" /> {inspectingItem?.pipeline_name}
+                    </span>
+                    <span className="h-3 w-px bg-border/60" />
+                    <span className="flex items-center gap-1.5">
+                      <Database className="h-3.5 w-3.5" /> {inspectingItem?.node_name}
+                    </span>
+                    <span className="h-3 w-px bg-border/60" />
+                    <span className="text-destructive font-bold">
+                      {formatNumber(inspectingItem?.row_count || 0)} Rejected Records
+                    </span>
+                  </div>
                 </DialogDescription>
               </div>
             </div>

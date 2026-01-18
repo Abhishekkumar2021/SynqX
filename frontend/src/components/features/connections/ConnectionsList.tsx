@@ -15,7 +15,8 @@ import {
     Clock,
     Workflow,
     Zap,
-    Cpu
+    Cpu,
+    Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -67,6 +68,16 @@ const ConnectionCard = ({
     const isTesting = testingId === connection.id;
     const stats = connection.usage_stats;
     const impact = connection.impact;
+
+    const handleExplore = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const type = connection.connector_type.toLowerCase();
+        let explorerType = 'sql';
+        if (type === 'osdu' || type === 'prosource') explorerType = 'osdu';
+        else if (['local_file', 's3', 'gcs', 'azure_blob', 'sftp', 'ftp'].includes(type)) explorerType = 'file';
+        
+        navigate(`/explorer/${explorerType}/${connection.id}`);
+    };
 
     return (
         <motion.div
@@ -133,6 +144,9 @@ const ConnectionCard = ({
                             <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/60 shadow-lg p-1">
                                 <DropdownMenuItem onClick={() => navigate(`/connections/${connection.id}`)} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     <ArrowRight className="mr-2 h-3.5 w-3.5 opacity-70" /> View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleExplore} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
+                                    <Search className="mr-2 h-3.5 w-3.5 opacity-70 text-primary" /> Explore Data
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => onTest?.(connection.id)} disabled={isTesting || !onTest} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     {isTesting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-2 h-3.5 w-3.5 opacity-70" />}
@@ -349,6 +363,9 @@ const ConnectionRow = ({
                                 <DropdownMenuItem onClick={() => navigate(`/connections/${connection.id}`)} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     <ArrowRight className="mr-2 h-3.5 w-3.5 opacity-70" /> View Details
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={handleExplore} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
+                                    <Search className="mr-2 h-3.5 w-3.5 opacity-70 text-primary" /> Explore Data
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => onTest?.(connection.id)} disabled={isTesting || !onTest} className="rounded-lg font-medium text-xs py-2 cursor-pointer">
                                     {isTesting ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-2 h-3.5 w-3.5 opacity-70" />}
                                     Test Connection
@@ -457,7 +474,7 @@ export const ConnectionsList: React.FC<ConnectionsListProps> = ({
             <div className="">
                 <AnimatePresence mode="popLayout">
                     {viewMode === 'grid' ? (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                        <div className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                             {connections.map((connection) => (
                                 <ConnectionCard
                                     key={connection.id}

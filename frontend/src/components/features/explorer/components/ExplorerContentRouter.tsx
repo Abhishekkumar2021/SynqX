@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 
 // Domain Explorers
 import { DomainBrowser } from '@/components/features/connections/domain/DomainBrowser';
+import { OSDUExplorer } from './osdu/OSDUExplorer';
 import { LiveFileExplorer } from '@/components/features/connections/LiveFileExplorer';
 import { SQLExplorer } from './SQLExplorer';
 import { ExplorerZeroState } from './ExplorerZeroState';
@@ -51,9 +52,17 @@ export const ExplorerContentRouter: React.FC<ExplorerContentRouterProps> = ({
     }
 
     // Branch 2: Domain Explorers
-    if (explorerType === 'osdu' || explorerType === 'prosource') {
+    if (explorerType === 'osdu') {
         return (
-            <motion.div key={explorerType} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full">
+            <motion.div key="osdu" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full">
+                <OSDUExplorer connectionId={parseInt(selectedConnectionId)} />
+            </motion.div>
+        );
+    }
+
+    if (explorerType === 'prosource') {
+        return (
+            <motion.div key="prosource" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full">
                 <DomainBrowser 
                     connectionId={parseInt(selectedConnectionId)} 
                     connectionName={connectionName}
