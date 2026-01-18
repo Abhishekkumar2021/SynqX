@@ -36,6 +36,9 @@ export interface PipelineNodeData {
     sync_mode?: string;
     cdc_config?: Record<string, any>;
     watermark_column?: string;
+    onSettings?: (nodeId: string) => void;
+    onDuplicate?: (nodeId: string) => void;
+    onDelete?: (nodeId: string) => void;
     [key: string]: any;
 }
 

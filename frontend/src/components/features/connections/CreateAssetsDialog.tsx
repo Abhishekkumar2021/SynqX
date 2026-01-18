@@ -14,7 +14,7 @@ import { type AssetBulkCreate, bulkCreateAssets } from '@/lib/api';
 import { AssetType, ConnectorType } from '@/lib/enums';
 import { ASSET_META } from '@/lib/asset-definitions';
 import { toast } from 'sonner';
-import { Plus, X, Sparkles, Loader2, Code, Database, Globe, ArrowRightLeft, CheckCircle2, AlertTriangle, XCircle, ShieldAlert } from 'lucide-react';
+import { Plus, X, Sparkles, Loader2, Code, Database, CheckCircle2, AlertTriangle, XCircle, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CodeBlock } from '@/components/ui/docs/CodeBlock';

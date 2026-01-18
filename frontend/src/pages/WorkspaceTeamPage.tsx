@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getWorkspaceMembers } from '@/lib/api';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useZenMode } from '@/hooks/useZenMode';
 import { cn } from '@/lib/utils';
 import { PageMeta } from '@/components/common/PageMeta';
+import { useSearchParams } from 'react-router-dom';
 
 // Segregated Components
 import { TeamHeader } from '@/components/features/workspace/TeamHeader';
@@ -16,9 +17,26 @@ export const WorkspaceTeamPage: React.FC = () => {
     const { user: currentUser } = useAuth();
     const { isZenMode } = useZenMode();
     const queryClient = useQueryClient();
+    const [searchParams, setSearchParams] = useSearchParams();
     
-    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-    const [searchQuery, setSearchQuery] = useState('');
+    // URL Synced State
+    const viewMode = (searchParams.get('view') as 'list' | 'grid') || 'list';
+    const searchQuery = searchParams.get('q') || '';
+
+    const setViewMode = (val: 'list' | 'grid') => {
+        setSearchParams(prev => {
+            prev.set('view', val);
+            return prev;
+        });
+    };
+
+    const setSearchQuery = (val: string) => {
+        setSearchParams(prev => {
+            if (val) prev.set('q', val);
+            else prev.delete('q');
+            return prev;
+        });
+    };
 
     const { data: members, isLoading } = useQuery({
         queryKey: ['workspace-members', activeWorkspace?.id],

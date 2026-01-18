@@ -102,7 +102,7 @@ const FilterToolbar = ({
     onClearAll: () => void
 }) => {
     // Unified value extractor for filter options
-    const getFilterValue = (item: any, filterId: string, getValueFn: (i: any) => string | undefined) => {
+    const getFilterValue = useCallback((item: any, filterId: string, getValueFn: (i: any) => string | undefined) => {
         // 1. Try explicit getValue (Discovery items)
         let val = getValueFn(item);
         
@@ -123,7 +123,7 @@ const FilterToolbar = ({
             }
         }
         return val;
-    };
+    }, [config]);
 
     // Dynamically compute unique values for each filter
     const filterOptions = useMemo(() => {
@@ -138,7 +138,7 @@ const FilterToolbar = ({
             });
         });
         return options;
-    }, [config, items]);
+    }, [config, items, getFilterValue]);
 
     return (
         <div className="flex items-center gap-2 flex-wrap">
@@ -414,8 +414,8 @@ export const DomainBrowser: React.FC<DomainBrowserProps> = ({
         if (!config) return [];
         return items.filter(item => {
             // 1. Search
-            const title = config.card.getTitle(item).toLowerCase();
-            const subtitle = config.card.getSubtitle(item).toLowerCase();
+            const title = (config.card.getTitle(item) || '').toLowerCase();
+            const subtitle = (config.card.getSubtitle(item) || '').toLowerCase();
             const search = searchQuery.toLowerCase();
             if (searchQuery && !title.includes(search) && !subtitle.includes(search)) return false;
 
@@ -507,15 +507,6 @@ export const DomainBrowser: React.FC<DomainBrowserProps> = ({
         }
     }, [activeView, discoveryGroups, managedGroups]);
     
-    // Safety check if no config is found for this connector
-    if (!config) {
-        return (
-            <div className="p-8 text-center">
-                <h3 className="text-lg font-bold">Unsupported Domain Connector</h3>
-                <p className="text-muted-foreground">No domain configuration found for {connectorType}.</p>
-            </div>
-        );
-    }
     // --- Handlers ---
     const toggleSelection = (id: string) => {
         const next = new Set(selectedForRegistration);
@@ -525,6 +516,7 @@ export const DomainBrowser: React.FC<DomainBrowserProps> = ({
     };
 
     const handleSelectGroup = (groupItems: any[], shouldSelect: boolean) => {
+        if (!config) return;
         const groupFqns = groupItems.map(i => config.registration.getFqn(i));
         const next = new Set(selectedForRegistration);
         if (shouldSelect) {
@@ -536,6 +528,7 @@ export const DomainBrowser: React.FC<DomainBrowserProps> = ({
     };
 
     const handleSelectAll = (shouldSelect: boolean) => {
+        if (!config) return;
         if (shouldSelect) {
             const allFqns = filteredDiscovery.map(i => config.registration.getFqn(i));
             setSelectedForRegistration(new Set(allFqns));
@@ -544,10 +537,24 @@ export const DomainBrowser: React.FC<DomainBrowserProps> = ({
         }
     };
 
-    const allFilteredFqns = useMemo(() => new Set(filteredDiscovery.map(i => config.registration.getFqn(i))), [filteredDiscovery, config]);
+    const allFilteredFqns = useMemo(() => {
+        if (!config) return new Set();
+        return new Set(filteredDiscovery.map(i => config.registration.getFqn(i)));
+    }, [filteredDiscovery, config]);
+    
     const selectedCount = selectedForRegistration.size;
     const isAllSelected = selectedCount > 0 && selectedCount === allFilteredFqns.size;
     const isSomeSelected = selectedCount > 0 && selectedCount < allFilteredFqns.size;
+
+    // Safety check if no config is found for this connector
+    if (!config) {
+        return (
+            <div className="p-8 text-center">
+                <h3 className="text-lg font-bold">Unsupported Domain Connector</h3>
+                <p className="text-muted-foreground">No domain configuration found for {connectorType}.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex flex-col rounded-3xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl overflow-hidden relative">

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getConnections } from '@/lib/api';
 import { PageMeta } from '@/components/common/PageMeta';
@@ -8,7 +8,7 @@ import {
     Search, ArrowRight, Activity,
     Server, Cpu, X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useZenMode } from '@/hooks/useZenMode';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,16 @@ const CATEGORY_MAP: Record<string, { label: string, icon: any, color: string, ro
 export const ExplorerPage: React.FC = () => {
     const navigate = useNavigate();
     const { isZenMode } = useZenMode();
-    const [search, setSearch] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const search = searchParams.get('q') || '';
+
+    const setSearch = (val: string) => {
+        setSearchParams(prev => {
+            if (val) prev.set('q', val);
+            else prev.delete('q');
+            return prev;
+        });
+    };
 
     const { data: connections = [], isLoading } = useQuery({ 
         queryKey: ['connections'], 

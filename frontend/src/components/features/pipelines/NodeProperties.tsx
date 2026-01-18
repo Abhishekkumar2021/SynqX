@@ -70,7 +70,7 @@ interface NodePropertiesProps {
     onClose: () => void;
     onUpdate: (id: string, data: Partial<PipelineNodeData>) => void;
     onDelete: (id: string) => void;
-    onDuplicate: (node: Node<PipelineNodeData>) => void;
+    onDuplicate: (nodeId: string) => void;
 }
 
 // --- Automated Lineage Component ---
@@ -1582,7 +1582,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
 
                     <div className="p-6 border-t border-border/40 bg-muted/20 flex items-center gap-3 backdrop-blur-md">
                         {isEditor && <Button type="submit" className="flex-1 rounded-xl h-10 font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20"><Save size={14} className="mr-2" /> Save Config</Button>}
-                        {isEditor && <Button type="button" variant="secondary" size="icon" onClick={() => onDuplicate(node)} className="h-10 w-10 rounded-xl"><Copy size={16} /></Button>}
+                        {isEditor && <Button type="button" variant="secondary" size="icon" onClick={() => onDuplicate(node.id)} className="h-10 w-10 rounded-xl"><Copy size={16} /></Button>}
                         {isAdmin && <AlertDialog><AlertDialogTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-muted-foreground/40 hover:text-destructive"><Trash2 size={18} /></Button></AlertDialogTrigger>
                             <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-2xl bg-background/95 shadow-2xl">
                                 <AlertDialogHeader><AlertDialogTitle className="text-xl font-bold uppercase tracking-tighter">De-provision Node?</AlertDialogTitle><AlertDialogDescription className="font-medium text-sm">This will permanently remove the operator.</AlertDialogDescription></AlertDialogHeader>

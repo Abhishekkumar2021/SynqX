@@ -35,7 +35,7 @@ import { useZenMode } from '@/hooks/useZenMode';
 import { PageMeta } from '@/components/common/PageMeta';
 import { cn, formatNumber, formatRelativeTime } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ResultsGrid } from '@/components/features/explorer/ResultsGrid';
 import { ViewToggle } from '@/components/common/ViewToggle';
 
@@ -190,11 +190,29 @@ const QuarantineListItem = ({ item, onInspect }: { item: any, onInspect: (item: 
 export const QuarantinePage = () => {
   const { isZenMode } = useZenMode();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [timeRange] = useState('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [inspectingItem, setInspectingItem] = useState<any | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
+
+  // URL Synced State
+  const searchQuery = searchParams.get('q') || '';
+  const timeRange = searchParams.get('range') || 'all';
+  const viewMode = (searchParams.get('view') as 'grid' | 'list') || 'list';
+
+  const setSearchQuery = (val: string) => {
+    setSearchParams(prev => {
+        if (val) prev.set('q', val);
+        else prev.delete('q');
+        return prev;
+    });
+  };
+
+  const setViewMode = (val: 'grid' | 'list') => {
+    setSearchParams(prev => {
+        prev.set('view', val);
+        return prev;
+    });
+  };
 
   const { data: stats, isLoading: isLoadingStats, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard-stats', timeRange],

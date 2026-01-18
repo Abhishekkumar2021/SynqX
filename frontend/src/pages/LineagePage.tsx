@@ -49,6 +49,7 @@ import { useZenMode } from '@/hooks/useZenMode';
 import { useTheme } from '@/hooks/useTheme';
 import { useLineagePathHighlight } from '@/hooks/useLineagePathHighlight';
 import type { LineageGraph, LineageNode } from '@/lib/api/types';
+import { useSearchParams } from 'react-router-dom';
 
 // --- Types & Constants ---
 
@@ -103,18 +104,27 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
 interface LineageGraphProps {
     graphData: LineageGraph | undefined;
-    searchQuery: string;
 }
 
-const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) => {
+const LineageGraphComponent = ({ graphData }: LineageGraphProps) => {
     const { fitView } = useReactFlow();
     const { theme } = useTheme();
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-    const [selectedAsset, setSelectedAsset] = useState<Node<AssetNodeData> | null>(null);
     const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const searchQuery = searchParams.get('q') || '';
+    const assetId = searchParams.get('asset');
 
     const flowTheme = useMemo(() => (theme === 'dark' ? 'dark' : 'light'), [theme]);
+
+    // Derived State
+    const selectedAsset = useMemo(() => 
+        assetId && nodes.length > 0 
+            ? (nodes.find(n => n.id === assetId) as Node<AssetNodeData> || null) 
+            : null
+    , [assetId, nodes]);
 
     // 1. Fetch Impact Analysis when a node is selected
     const { data: impactData, isLoading: isLoadingImpact } = useQuery({
@@ -212,15 +222,30 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
     }, [highlightedNodes, highlightedEdges, setNodes, setEdges]);
 
     const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-        // Cast node to our specific type safely or assert it
-        setSelectedAsset(node as Node<AssetNodeData>);
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('asset', node.id);
+            return next;
+        });
         setSelectedColumn(null);
         fitView({ nodes: [{ id: node.id }], duration: 1000, padding: 2 });
-    }, [fitView]);
+    }, [fitView, setSearchParams]);
 
     const onPaneClick = useCallback(() => {
-        setSelectedAsset(null);
-    }, []);
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('asset');
+            return next;
+        });
+    }, [setSearchParams]);
+
+    const handleCloseSidebar = () => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('asset');
+            return next;
+        });
+    };
 
     return (
         <div className="h-full w-full relative group overflow-hidden bg-background/30 rounded-2xl border border-border">
@@ -276,7 +301,7 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
                                 <h2 className="text-lg font-bold tracking-tight mb-1">Impact Analysis</h2>
                                 <p className="text-xs text-muted-foreground">Tracing dependencies for <span className="text-foreground font-bold">{selectedAsset.data.label}</span></p>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setSelectedAsset(null)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={handleCloseSidebar}>
                                 <Minimize2 className="h-4 w-4" />
                             </Button>
                         </div>
@@ -458,7 +483,17 @@ const LineageGraphComponent = ({ graphData, searchQuery }: LineageGraphProps) =>
 
 export const LineagePage = () => {
     const { isZenMode } = useZenMode();
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const searchQuery = searchParams.get('q') || '';
+
+    const setSearchQuery = (val: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (val) next.set('q', val);
+            else next.delete('q');
+            return next;
+        });
+    };
 
     // Fetch Graph Data
     const { data: graphData, isLoading, refetch } = useQuery({
@@ -551,10 +586,11 @@ export const LineagePage = () => {
                     </div>
                  ) : (
                     <ReactFlowProvider>
-                        <LineageGraphComponent graphData={graphData} searchQuery={searchQuery} />
+                        <LineageGraphComponent graphData={graphData} />
                     </ReactFlowProvider>
                  )}
             </motion.div>
         </motion.div>
     );
 };
+

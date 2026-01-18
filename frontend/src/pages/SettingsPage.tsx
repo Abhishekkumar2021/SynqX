@@ -63,8 +63,24 @@ export const SettingsPage: React.FC = () => {
     // Danger Zone State
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    const [notificationSearchQuery, setNotificationSearchQuery] = useState('');
-    const [notificationViewMode, setNotificationViewMode] = useState<ViewMode>('list');
+    // URL Synced State for Notifications Tab
+    const notificationSearchQuery = searchParams.get('q') || '';
+    const notificationViewMode = (searchParams.get('view') as ViewMode) || 'list';
+
+    const setNotificationSearchQuery = (val: string) => {
+        setSearchParams(prev => {
+            if (val) prev.set('q', val);
+            else prev.delete('q');
+            return prev;
+        });
+    };
+
+    const setNotificationViewMode = (val: ViewMode) => {
+        setSearchParams(prev => {
+            prev.set('view', val);
+            return prev;
+        });
+    };
 
     // Profile Mutation
     const profileMutation = useMutation({

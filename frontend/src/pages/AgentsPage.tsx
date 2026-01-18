@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { useZenMode } from '@/hooks/useZenMode';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { cn } from '@/lib/utils';
+import { useSearchParams } from 'react-router-dom';
 
 import { PageMeta } from '@/components/common/PageMeta';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -21,12 +22,62 @@ export const AgentsPage = () => {
     const queryClient = useQueryClient();
     const { isZenMode } = useZenMode();
     const { isEditor } = useWorkspace();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    // State
-    const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-    const [inspectingAgent, setInspectingAgent] = useState<any | null>(null);
-    const [filter, setFilter] = useState('');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    // URL Synced State
+    const filter = searchParams.get('q') || '';
+    const viewMode = (searchParams.get('view') as 'grid' | 'list') || 'grid';
+    const isRegisterOpen = searchParams.get('action') === 'register';
+    const inspectId = searchParams.get('inspect');
+
+    const setFilter = (val: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (val) next.set('q', val);
+            else next.delete('q');
+            return next;
+        });
+    };
+
+    const setViewMode = (val: 'grid' | 'list') => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('view', val);
+            return next;
+        });
+    };
+
+    const openRegister = () => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('action', 'register');
+            return next;
+        });
+    };
+
+    const closeRegister = () => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('action');
+            return next;
+        });
+    };
+
+    const inspectAgent = (agent: any) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('inspect', String(agent.id));
+            return next;
+        });
+    };
+
+    const closeInspect = () => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('inspect');
+            return next;
+        });
+    };
 
     // Data Fetching
     const { data: agents, isLoading } = useQuery({
@@ -34,6 +85,10 @@ export const AgentsPage = () => {
         queryFn: getAgents,
         refetchInterval: 10000 
     });
+
+    const inspectingAgent = useMemo(() => 
+        agents?.find((a: any) => String(a.id) === inspectId) || null
+    , [agents, inspectId]);
 
     const deleteMutation = useMutation({
         mutationFn: deleteAgent,
@@ -69,7 +124,7 @@ export const AgentsPage = () => {
         >
             <PageMeta title="Agents" description="Manage and monitor your remote execution agents." />
             
-            <AgentsHeader onCreate={isEditor ? () => setIsRegisterOpen(true) : undefined} />
+            <AgentsHeader onCreate={isEditor ? openRegister : undefined} />
 
             <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
                 <AgentsToolbar 
@@ -84,7 +139,7 @@ export const AgentsPage = () => {
                     agents={filteredAgents}
                     isLoading={isLoading}
                     viewMode={viewMode}
-                    onInspect={setInspectingAgent}
+                    onInspect={inspectAgent}
                     onDelete={(id) => deleteMutation.mutate(id)}
                 />
             </div>
@@ -92,12 +147,12 @@ export const AgentsPage = () => {
             {/* Registration Dialog */}
             <RegisterAgentDialog 
                 open={isRegisterOpen} 
-                onOpenChange={setIsRegisterOpen} 
+                onOpenChange={(open) => !open && closeRegister()} 
                 agents={agents}
             />
 
             {/* Inspection Dialog */}
-            <Dialog open={!!inspectingAgent} onOpenChange={(v) => !v && setInspectingAgent(null)}>
+            <Dialog open={!!inspectingAgent} onOpenChange={(v) => !v && closeInspect()}>
                 <DialogContent className="sm:max-w-[850px] rounded-2xl p-0 overflow-hidden border-none shadow-2xl ring-1 ring-white/10 dark:ring-white/5 max-h-[85vh] flex flex-col">
                     <VisuallyHidden.Root>
                         <DialogTitle>Agent Details</DialogTitle>
@@ -109,7 +164,7 @@ export const AgentsPage = () => {
                             apiKey="••••••••••••••••" 
                             agentName={inspectingAgent.name}
                             tags={inspectingAgent.tags?.groups?.join(',') || 'default'}
-                            onClose={() => setInspectingAgent(null)}
+                            onClose={closeInspect}
                         />
                     )}
                 </DialogContent>

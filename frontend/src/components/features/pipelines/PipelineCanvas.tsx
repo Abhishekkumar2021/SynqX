@@ -120,12 +120,46 @@ const getLayoutedElements = (nodes: AppNode[], edges: Edge[]) => {
 
 export const PipelineCanvas: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
     const versionIdParam = searchParams.get('version');
     const isDiffMode = searchParams.get('diff') === 'true';
     const baseV = searchParams.get('base');
     const targetV = searchParams.get('target');
+
+    // URL Synced State
+    const selectedNodeId = searchParams.get('node');
+    const showLogicView = searchParams.get('view') === 'logic';
+
+    const setSelectedNodeId = (nodeId: string | null) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (nodeId) next.set('node', nodeId);
+            else next.delete('node');
+            return next;
+        });
+    };
+
+    const setShowLogicView = (show: boolean) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (show) next.set('view', 'logic');
+            else next.delete('view');
+            
+            // If showing logic view, clear selection to avoid overlap confusion
+            if (show) next.delete('node'); 
+            return next;
+        });
+    };
+
+    const openNodeProperties = (nodeId: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('node', nodeId);
+            next.delete('view');
+            return next;
+        });
+    };
 
     const isNew = id === 'new';
     const queryClient = useQueryClient();
@@ -137,7 +171,6 @@ export const PipelineCanvas: React.FC = () => {
     const [nodes, setNodes, onNodesChange] = useNodesState<AppNode>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
     const { undo, redo, takeSnapshot, canUndo, canRedo } = useUndoRedo<AppNode>();
-    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isRunning, setIsRunning] = useState(false);
     const [pipelineName, setPipelineName] = useState("Untitled Pipeline");
@@ -146,7 +179,6 @@ export const PipelineCanvas: React.FC = () => {
     const [diffData, setDiffData] = useState<any>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const initializedVersionId = useRef<number | null>(null);
-    const [showLogicView, setShowLogicView] = useState(false);
 
     const flowTheme = useMemo(() => (theme === 'dark' ? 'dark' : 'light'), [theme]);
 
@@ -401,8 +433,8 @@ export const PipelineCanvas: React.FC = () => {
                 mapping_expr: n.mapping_expr,
                 worker_tag: n.worker_tag,
                 guardrails: n.guardrails,
-                readOnly: !!versionIdParam,
-                onDuplicate: (node: AppNode) => onDuplicate(node),
+                onSettings: (nodeId: string) => openNodeProperties(nodeId),
+                onDuplicate: (id: string) => onDuplicateRef.current?.(id),
                 onDelete: (nodeId: string) => {
                     takeSnapshot(nodes, edges);
                     setNodes(nds => nds.filter(n => n.id !== nodeId));
@@ -455,7 +487,8 @@ export const PipelineCanvas: React.FC = () => {
                 operator_class: operatorClass || 'pandas_transform',
                 config: {},
                 status: 'idle',
-                onDuplicate: (node: AppNode) => onDuplicate(node),
+                onSettings: (nodeId: string) => openNodeProperties(nodeId),
+                onDuplicate: (id: string) => onDuplicateRef.current?.(id),
                 onDelete: (nodeId: string) => {
                     setNodes(nds => nds.filter(n => n.id !== nodeId));
                     setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
@@ -463,15 +496,19 @@ export const PipelineCanvas: React.FC = () => {
             },
         };
         setNodes((nds) => nds.concat(newNode));
-        setSelectedNodeId(newNodeId);
-        setShowLogicView(false);
+        openNodeProperties(newNodeId);
         toast.success("Operator Added", {
             description: `Added ${label} to the canvas.`
         });
     };
 
-    const onDuplicate = useCallback((node: AppNode) => {
+    const onDuplicateRef = useRef<((nodeId: string) => void) | null>(null);
+
+    const onDuplicate = useCallback((nodeId: string) => {
         takeSnapshot(nodes, edges);
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
         const newNodeId = `node_${Date.now()}`;
         const newNode: AppNode = {
             ...node,
@@ -481,7 +518,8 @@ export const PipelineCanvas: React.FC = () => {
                 ...node.data,
                 label: `${node.data.label} (Copy)`,
                 status: 'idle',
-                onDuplicate: (node: AppNode) => onDuplicate(node),
+                onSettings: (nodeId: string) => openNodeProperties(nodeId),
+                onDuplicate: (id: string) => onDuplicateRef.current?.(id),
                 onDelete: (nodeId: string) => {
                     setNodes(nds => nds.filter(n => n.id !== nodeId));
                     setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
@@ -491,12 +529,15 @@ export const PipelineCanvas: React.FC = () => {
         };
 
         setNodes((nds) => [...nds.map(n => ({ ...n, selected: false })), newNode]);
-        setSelectedNodeId(newNodeId);
-        setShowLogicView(false);
+        openNodeProperties(newNodeId);
         toast.success("Operator Duplicated", {
             description: `Created copy of ${node.data.label}`
         });
     }, [nodes, edges, takeSnapshot, setNodes]);
+
+    useEffect(() => {
+        onDuplicateRef.current = onDuplicate;
+    }, [onDuplicate]);
 
     // Undo/Redo & Duplicate Shortcuts
     useEffect(() => {
@@ -769,10 +810,7 @@ export const PipelineCanvas: React.FC = () => {
                                     variant="ghost" 
                                     size="icon" 
                                     className={cn("h-9 w-9 rounded-xl transition-all", showLogicView && "bg-primary/10 text-primary")}
-                                    onClick={() => {
-                                        setShowLogicView(!showLogicView);
-                                        if (!showLogicView) setSelectedNodeId(null);
-                                    }}
+                                    onClick={() => setShowLogicView(!showLogicView)}
                                 >
                                     <Code size={18} />
                                 </Button>
@@ -948,8 +986,7 @@ export const PipelineCanvas: React.FC = () => {
                             nodeTypes={nodeTypes}
                             edgeTypes={edgeTypes}
                             onNodeDoubleClick={(_, node) => {
-                                setSelectedNodeId(node.id);
-                                setShowLogicView(false);
+                                openNodeProperties(node.id);
                             }}
                             onNodeClick={(_, node) => {
                                 // Just handle selection on single click, don't open properties

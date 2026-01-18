@@ -117,9 +117,11 @@ export const AssetsTabContent = ({
         },
         onSuccess: (data) => {
             const totalSuccess = data.successful_creates;
-            toast.success("Bulk Import Complete", {
-                description: `${data.successful_creates} assets created.`
-            }); else if (totalSuccess > 0) {
+            if (totalSuccess === data.total_requested) {
+                toast.success("Bulk Import Complete", {
+                    description: `${data.successful_creates} assets created.`
+                });
+            } else if (totalSuccess > 0) {
                 toast.warning("Partial Import Success", {
                     description: `${totalSuccess} assets processed (${data.successful_creates} new), ${data.failed_creates} failed.`,
                     icon: <AlertTriangle className="h-4 w-4 text-amber-500" />

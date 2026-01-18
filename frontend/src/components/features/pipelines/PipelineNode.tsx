@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import React, { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { useNavigate } from 'react-router-dom';
@@ -31,7 +31,7 @@ const NODE_CONFIG: Record<string, { icon: React.ElementType, colorVar: string, l
     default: { icon: Settings2, colorVar: "primary", label: "Node" },
 };
 
-const PipelineNode = ({ data, selected }: NodeProps<AppNode>) => {
+const PipelineNode = ({ id, data, selected }: NodeProps<AppNode>) => {
     const navigate = useNavigate();
     const nodeData = data;
     const type = nodeData.type || 'default';
@@ -176,7 +176,10 @@ const PipelineNode = ({ data, selected }: NodeProps<AppNode>) => {
                                         <DropdownMenuContent align="end" className="w-44 rounded-2xl bg-background/95 backdrop-blur-xl border-border/40 shadow-2xl p-1.5 ring-1 ring-white/10">
                                             <DropdownMenuItem 
                                                 className="text-[10px] font-bold uppercase tracking-widest gap-3 py-2.5 rounded-xl cursor-pointer"
-                                                onClick={(e) => e.stopPropagation()}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (nodeData.onSettings) nodeData.onSettings(id);
+                                                }}
                                             >
                                                 <Settings2 size={14} className="opacity-60" /> Node Settings
                                             </DropdownMenuItem>
@@ -184,7 +187,7 @@ const PipelineNode = ({ data, selected }: NodeProps<AppNode>) => {
                                                 className="text-[10px] font-bold uppercase tracking-widest gap-3 py-2.5 rounded-xl cursor-pointer"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (nodeData.onDuplicate) nodeData.onDuplicate(data);
+                                                    if (nodeData.onDuplicate) nodeData.onDuplicate(id);
                                                 }}
                                             >
                                                 <Copy size={14} className="opacity-60" /> Duplicate
@@ -194,7 +197,7 @@ const PipelineNode = ({ data, selected }: NodeProps<AppNode>) => {
                                                 className="text-[10px] font-bold uppercase tracking-widest gap-3 py-2.5 rounded-xl text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (nodeData.onDelete) nodeData.onDelete(data.id);
+                                                    if (nodeData.onDelete) nodeData.onDelete(id);
                                                 }}
                                             >
                                                 <Trash size={14} /> Delete Node

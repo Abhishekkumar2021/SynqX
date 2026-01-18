@@ -9,7 +9,7 @@ import {
     Plus, Workflow, Activity, Search,
     Laptop, FileUp, Loader2
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { PipelineSettingsDialog } from '@/components/features/pipelines/PipelineSettingsDialog';
 import { PipelineVersionDialog } from '@/components/features/pipelines/PipelineVersionDialog';
@@ -38,17 +38,79 @@ export const PipelinesListPage: React.FC = () => {
     const { isZenMode } = useZenMode();
     const { isEditor, activeWorkspace } = useWorkspace();
     const { user } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
     
     useJobsListTelemetry();
 
     const queryClient = useQueryClient();
-    const [settingsOpen, setSettingsOpen] = useState(false);
-    const [versionsOpen, setVersionsOpen] = useState(false);
-    const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
-    const [filter, setFilter] = useState('');
-    const [tagFilter, setTagFilter] = useState<string>('all');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isImporting, setIsExecutingImport] = useState(false);
+
+    // URL Synced State
+    const filter = searchParams.get('q') || '';
+    const tagFilter = searchParams.get('tag') || 'all';
+    const viewMode = (searchParams.get('view') as 'grid' | 'list') || 'grid';
+    const settingsId = searchParams.get('settings');
+    const historyId = searchParams.get('history');
+
+    const setFilter = (val: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (val) next.set('q', val);
+            else next.delete('q');
+            return next;
+        });
+    };
+
+    const setTagFilter = (val: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (val && val !== 'all') next.set('tag', val);
+            else next.delete('tag');
+            return next;
+        });
+    };
+
+    const setViewMode = (val: 'grid' | 'list') => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('view', val);
+            return next;
+        });
+    };
+
+    const openSettings = (pipeline: Pipeline) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('settings', String(pipeline.id));
+            next.delete('history');
+            return next;
+        });
+    };
+
+    const closeSettings = () => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('settings');
+            return next;
+        });
+    };
+
+    const openVersions = (pipeline: Pipeline) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('history', String(pipeline.id));
+            next.delete('settings');
+            return next;
+        });
+    };
+
+    const closeVersions = () => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('history');
+            return next;
+        });
+    };
 
     // Data Fetching
     const { data: pipelines, isLoading: isLoadingPipelines } = useQuery({ queryKey: ['pipelines'], queryFn: getPipelines });
@@ -56,6 +118,15 @@ export const PipelinesListPage: React.FC = () => {
         queryKey: ['jobs', 'recent'],
         queryFn: () => getJobs(),
     });
+
+    // Derived Dialog State
+    const settingsPipeline = useMemo(() => 
+        pipelines?.find(p => String(p.id) === settingsId) || null
+    , [pipelines, settingsId]);
+
+    const historyPipeline = useMemo(() => 
+        pipelines?.find(p => String(p.id) === historyId) || null
+    , [pipelines, historyId]);
 
     // Fetch stats for all pipelines
     const pipelineStatsQueries = useQueries({
@@ -85,15 +156,6 @@ export const PipelinesListPage: React.FC = () => {
     });
 
     // Handlers
-    const openSettings = (pipeline: Pipeline) => {
-        setSelectedPipeline(pipeline);
-        setSettingsOpen(true);
-    };
-
-    const openVersions = (pipeline: Pipeline) => {
-        setSelectedPipeline(pipeline);
-        setVersionsOpen(true);
-    };
 
     const handleImportYAML = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -311,18 +373,18 @@ export const PipelinesListPage: React.FC = () => {
 
             {/* --- Settings Dialog --- */}
             <PipelineSettingsDialog
-                pipeline={selectedPipeline}
-                open={settingsOpen}
-                onOpenChange={setSettingsOpen}
+                pipeline={settingsPipeline}
+                open={!!settingsPipeline}
+                onOpenChange={(open) => !open && closeSettings()}
             />
 
             {/* --- Versions Dialog --- */}
-            {selectedPipeline && (
+            {historyPipeline && (
                 <PipelineVersionDialog
-                    pipelineId={selectedPipeline.id}
-                    pipelineName={selectedPipeline.name}
-                    open={versionsOpen}
-                    onOpenChange={setVersionsOpen}
+                    pipelineId={historyPipeline.id}
+                    pipelineName={historyPipeline.name}
+                    open={!!historyPipeline}
+                    onOpenChange={(open) => !open && closeVersions()}
                 />
             )}
         </motion.div>

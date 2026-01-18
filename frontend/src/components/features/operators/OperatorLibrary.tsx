@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
     Search, ArrowRightLeft, Info
 } from 'lucide-react';
@@ -11,12 +11,56 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { type OperatorDef, OPERATORS } from '@/types/operator';
 import { OperatorDetailDialog } from './OperatorDetailDialog';
+import { useSearchParams } from 'react-router-dom';
 
 export const OperatorLibrary: React.FC = () => {
-    const [selectedOp, setSelectedOp] = useState<OperatorDef | null>(null);
-    const [search, setSearch] = useState("");
-    const [filterCategory, setFilterCategory] = useState<string>("all");
-    const [viewMode, setViewMode] = useState<ViewMode>('grid');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // URL Synced State
+    const search = searchParams.get('q') || '';
+    const filterCategory = searchParams.get('category') || 'all';
+    const viewMode = (searchParams.get('view') as ViewMode) || 'grid';
+    const opParam = searchParams.get('op');
+
+    // Derived State
+    const selectedOp = useMemo(() => 
+        opParam ? OPERATORS.find(o => o.type === opParam) || null : null
+    , [opParam]);
+
+    const setSearch = (val: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (val) next.set('q', val);
+            else next.delete('q');
+            return next;
+        });
+    };
+
+    const setFilterCategory = (val: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (val && val !== 'all') next.set('category', val);
+            else next.delete('category');
+            return next;
+        });
+    };
+
+    const setViewMode = (val: ViewMode) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('view', val);
+            return next;
+        });
+    };
+
+    const handleSelectOp = (op: OperatorDef | null) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (op) next.set('op', op.type);
+            else next.delete('op');
+            return next;
+        });
+    };
 
     const filtered = useMemo(() => OPERATORS.filter(t => {
         const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -83,7 +127,7 @@ export const OperatorLibrary: React.FC = () => {
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ duration: 0.2, delay: idx * 0.01 }}
-                                    onClick={() => setSelectedOp(op)}
+                                    onClick={() => handleSelectOp(op)}
                                     className="group relative flex flex-col rounded-[2rem] border border-border/50 bg-card/40 backdrop-blur-md p-6 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1 cursor-pointer h-full"
                                 >
                                     {/* Hover Glow */}
@@ -136,7 +180,7 @@ export const OperatorLibrary: React.FC = () => {
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.2, delay: idx * 0.01 }}
-                                    onClick={() => setSelectedOp(op)}
+                                    onClick={() => handleSelectOp(op)}
                                     className="grid grid-cols-12 items-center px-6 py-3 rounded-xl border border-border/40 bg-card/30 hover:bg-card/60 transition-all cursor-pointer group"
                                 >
                                     <div className="col-span-4 flex items-center gap-4">
@@ -193,7 +237,7 @@ export const OperatorLibrary: React.FC = () => {
             <OperatorDetailDialog 
                 selectedOp={selectedOp} 
                 open={!!selectedOp} 
-                onOpenChange={(open) => !open && setSelectedOp(null)} 
+                onOpenChange={(open) => !open && handleSelectOp(null)} 
             />
         </div>
     );

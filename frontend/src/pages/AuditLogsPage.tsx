@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuditLogs, searchUsers, exportAuditLogs } from '@/lib/api';
 import { PageMeta } from '@/components/common/PageMeta';
@@ -24,21 +23,49 @@ import { AuditLogGridItem } from '@/components/features/audit/AuditLogGridItem';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ViewToggle } from '@/components/common/ViewToggle';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
 
 export const AuditLogsPage: React.FC = () => {
     const { isZenMode } = useZenMode();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-    const [filters, setFilters] = useState({ 
-        eventType: 'all', 
-        userId: 'all',
-        status: 'all'
-    });
-    const [dateRange, setDateRange] = useState<{ from: Date | undefined; to?: Date | undefined } | undefined>();
-    const [sortBy, setSortBy] = useState('created_at');
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-    const [page, setPage] = useState(0);
-    const [limit, setLimit] = useState(20);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Derived State from URL
+    const searchQuery = searchParams.get('q') || '';
+    const viewMode = (searchParams.get('view') as 'list' | 'grid') || 'list';
+    const filters = {
+        eventType: searchParams.get('eventType') || 'all',
+        userId: searchParams.get('userId') || 'all',
+        status: searchParams.get('status') || 'all'
+    };
+    const dateRange = useMemo(() => {
+        const from = searchParams.get('from');
+        const to = searchParams.get('to');
+        if (!from) return undefined;
+        return { from: new Date(from), to: to ? new Date(to) : undefined };
+    }, [searchParams]);
+    
+    const sortBy = searchParams.get('sort') || 'created_at';
+    const sortOrder = (searchParams.get('order') as 'asc' | 'desc') || 'desc';
+    const page = parseInt(searchParams.get('page') || '0');
+    const limit = parseInt(searchParams.get('limit') || '20');
+
+    // Helper to update params
+    const updateParams = (updates: Record<string, string | null | undefined>) => {
+        setSearchParams(prev => {
+            Object.entries(updates).forEach(([key, value]) => {
+                if (value === null || value === undefined || value === '') {
+                    prev.delete(key);
+                } else {
+                    prev.set(key, value);
+                }
+            });
+            // Reset page on filter changes (if not explicitly setting page)
+            if (!('page' in updates)) {
+                prev.set('page', '0');
+            }
+            return prev;
+        });
+    };
 
     const { data, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['auditLogs', page, limit, filters, dateRange, sortBy, sortOrder],
@@ -81,10 +108,9 @@ export const AuditLogsPage: React.FC = () => {
 
     const toggleSort = (field: string) => {
         if (sortBy === field) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+            updateParams({ order: sortOrder === 'asc' ? 'desc' : 'asc', page: page.toString() }); // keep page
         } else {
-            setSortBy(field);
-            setSortOrder('desc');
+            updateParams({ sort: field, order: 'desc', page: page.toString() });
         }
     };
 
@@ -94,10 +120,14 @@ export const AuditLogsPage: React.FC = () => {
     };
 
     const resetFilters = () => {
-        setFilters({ eventType: 'all', userId: 'all', status: 'all' });
-        setDateRange(undefined);
-        setSearchQuery('');
-        setPage(0);
+        setSearchParams({}); // Clear all
+    };
+
+    const handleDateRangeSelect = (range: any) => {
+        updateParams({
+            from: range?.from?.toISOString(),
+            to: range?.to?.toISOString()
+        });
     };
 
     const handleExport = async () => {
@@ -220,7 +250,7 @@ export const AuditLogsPage: React.FC = () => {
                         <Input 
                             placeholder="Filter events..." 
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => updateParams({ q: e.target.value })}
                             className="pl-9 h-10 rounded-xl bg-background/50 border-border/50 focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all shadow-none text-xs font-medium"
                         />
                     </div>
@@ -249,11 +279,11 @@ export const AuditLogsPage: React.FC = () => {
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0 rounded-3xl border-border/60 shadow-2xl" align="start">
-                                <Calendar mode="range" selected={dateRange} onSelect={setDateRange} />
+                                <Calendar mode="range" selected={dateRange} onSelect={handleDateRangeSelect} />
                             </PopoverContent>
                         </Popover>
                         
-                        <Select value={filters.userId} onValueChange={(v) => setFilters(f => ({...f, userId: v}))}>
+                        <Select value={filters.userId} onValueChange={(v) => updateParams({ userId: v })}>
                             <SelectTrigger className="h-10 border-border/50 rounded-xl bg-background/50 w-35 text-[10px] uppercase tracking-widest shadow-sm transition-all hover:border-primary/30">
                                 <Filter className="h-3 w-3 mr-1.5 opacity-40" />
                                 <SelectValue placeholder="Actor" />
@@ -268,7 +298,7 @@ export const AuditLogsPage: React.FC = () => {
                             </SelectContent>
                         </Select>
 
-                        <Select value={filters.status} onValueChange={(v) => setFilters(f => ({...f, status: v}))}>
+                        <Select value={filters.status} onValueChange={(v) => updateParams({ status: v })}>
                             <SelectTrigger className="h-10 border-border/40 rounded-xl bg-background/50 w-27.5 text-[10px] uppercase tracking-widest text-foreground shadow-sm transition-all hover:border-primary/30">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
@@ -279,7 +309,7 @@ export const AuditLogsPage: React.FC = () => {
                             </SelectContent>
                         </Select>
 
-                        <Select value={filters.eventType} onValueChange={(v) => setFilters(f => ({...f, eventType: v}))}>
+                        <Select value={filters.eventType} onValueChange={(v) => updateParams({ eventType: v })}>
                             <SelectTrigger className="h-10 border-border/40 rounded-xl bg-background/50 w-32.5 text-[10px] uppercase tracking-widest text-foreground shadow-sm transition-all hover:border-primary/30">
                                 <SelectValue placeholder="Type" />
                             </SelectTrigger>
@@ -294,7 +324,7 @@ export const AuditLogsPage: React.FC = () => {
                             </SelectContent>
                         </Select>
 
-                        <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+                        <ViewToggle viewMode={viewMode} setViewMode={(v) => updateParams({ view: v, page: page.toString() })} />
 
                         {hasActiveFilters && (
                             <Button 
@@ -391,7 +421,7 @@ export const AuditLogsPage: React.FC = () => {
                         
                         <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline">Limit</span>
-                            <Select value={limit.toString()} onValueChange={(val) => { setLimit(Number(val)); setPage(0); }}>
+                            <Select value={limit.toString()} onValueChange={(val) => updateParams({ limit: val, page: '0' })}>
                                 <SelectTrigger className="h-8 w-20 rounded-xl bg-background/50 text-[10px] border-border/40">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -410,7 +440,7 @@ export const AuditLogsPage: React.FC = () => {
                             variant="ghost" 
                             size="sm" 
                             disabled={page === 0} 
-                            onClick={() => { setPage(p => Math.max(0, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+                            onClick={() => { updateParams({ page: Math.max(0, page - 1).toString() }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
                             className="rounded-xl h-8 px-4 text-[10px] font-bold uppercase tracking-widest disabled:opacity-20"
                         >
                             Prev
@@ -427,7 +457,7 @@ export const AuditLogsPage: React.FC = () => {
                                 return (
                                     <button
                                         key={pageNum}
-                                        onClick={() => setPage(pageNum)}
+                                        onClick={() => updateParams({ page: pageNum.toString() })}
                                         className={cn(
                                             "h-7 w-7 rounded-lg text-[10px] font-bold transition-all",
                                             page === pageNum 
@@ -444,7 +474,7 @@ export const AuditLogsPage: React.FC = () => {
                             variant="ghost" 
                             size="sm" 
                             disabled={page >= totalPages - 1} 
-                            onClick={() => { setPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+                            onClick={() => { updateParams({ page: (page + 1).toString() }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
                             className="rounded-xl h-8 px-4 text-[10px] font-bold uppercase tracking-widest disabled:opacity-20 flex items-center gap-2"
                         >
                             Next

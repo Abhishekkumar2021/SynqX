@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useMemo } from 'react';
 import {
-    Table as TableIcon, Eye, RefreshCw, FileJson, Terminal, Minimize2, Maximize2,
+    Table as TableIcon, Eye, RefreshCw, Terminal, Minimize2, Maximize2,
     Download, MoreHorizontal, Activity, Layers, Database, FileText, FileCode,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

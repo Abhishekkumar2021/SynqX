@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-    Search, Database, Network, FileText, 
+    Search, Database, Network, 
     Layers, RefreshCw,
-    Download, Info, ChevronRight,
+    Download, 
     ArrowLeft, ExternalLink, Globe, Shield, Activity,
-    X, Navigation, Eye, Hash, Link2, Binary, Trash2,
+    X, Navigation, Hash, Binary, Trash2,
     LayoutGrid, Save, Map as MapIcon, History,
-    Fingerprint, ShieldCheck, HelpCircle, Terminal,
-    ArrowUpRight, GitBranch, Share2
+    ShieldCheck, HelpCircle, Terminal,
+    GitBranch
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { getConnectionMetadata } from '@/lib/api/connections';
 import { ResultsGrid } from "@/components/features/explorer/ResultsGrid";
 import { DomainEntityGraph } from '../../../connections/domain/DomainEntityGraph';
@@ -26,10 +26,7 @@ import { CodeBlock } from '@/components/ui/docs/CodeBlock';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Tooltip,
-    TooltipContent,
     TooltipProvider,
-    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
     Popover,

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     getConnection,
@@ -71,9 +71,19 @@ export const ConnectionDetailsPage: React.FC = () => {
     const { activeWorkspace } = useWorkspace();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const connectionId = parseInt(id!);
     const queryClient = useQueryClient();
-    const [activeTab, setActiveTab] = useState('assets');
+    
+    // URL Synced State
+    const activeTab = searchParams.get('tab') || 'assets';
+    const setActiveTab = (val: string) => {
+        setSearchParams(prev => {
+            prev.set('tab', val);
+            return prev;
+        });
+    };
+
     const [discoveredAssets, setDiscoveredAssets] = useState<any[]>([]);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

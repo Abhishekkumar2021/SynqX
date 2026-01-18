@@ -18,6 +18,7 @@ import { motion } from 'framer-motion';
 import { useZenMode } from '@/hooks/useZenMode';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { cn } from '@/lib/utils';
+import { useSearchParams } from 'react-router-dom';
 
 import { ConnectionsHeader } from '@/components/features/connections/ConnectionsHeader';
 import { ConnectionsToolbar } from '@/components/features/connections/ConnectionsToolbar';
@@ -29,20 +30,56 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 
 export const ConnectionsPage: React.FC = () => {
     const queryClient = useQueryClient();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [connectionToDelete, setConnectionToDelete] = useState<any | null>(null);
-    const [editingConnection, setEditingConnection] = useState<any | null>(null);
     const [testingId, setTestingId] = useState<number | null>(null);
-    const [filter, setFilter] = useState('');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [searchParams, setSearchParams] = useSearchParams();
     const { isZenMode } = useZenMode();
     const { isAdmin, isEditor } = useWorkspace();
+
+    // URL Synced State
+    const filter = searchParams.get('q') || '';
+    const viewMode = (searchParams.get('view') as 'grid' | 'list') || 'grid';
+    const editId = searchParams.get('edit');
+    const isCreateOpen = searchParams.get('action') === 'create';
+
+    const setFilter = (val: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (val) next.set('q', val);
+            else next.delete('q');
+            return next;
+        });
+    };
+
+    const setViewMode = (val: 'grid' | 'list') => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('view', val);
+            return next;
+        });
+    };
 
     const { data: connections, isLoading, error } = useQuery({
         queryKey: ['connections'],
         queryFn: getConnections,
     });
+
+    // Fetch full details for editing
+    const { data: editingConnectionData, isError: isEditError } = useQuery({
+        queryKey: ['connection', editId],
+        queryFn: () => getConnection(Number(editId)),
+        enabled: !!editId
+    });
+
+    React.useEffect(() => {
+        if (isEditError) {
+            toast.error("Failed to Load", {
+                description: "Could not retrieve connection details for editing."
+            });
+            closeDialog();
+        }
+    }, [isEditError, closeDialog]);
 
     const deleteMutation = useMutation({
         mutationFn: (id: number) => deleteConnection(id),
@@ -60,21 +97,31 @@ export const ConnectionsPage: React.FC = () => {
     });
 
     const handleCreate = () => {
-        setEditingConnection(null);
-        setIsDialogOpen(true);
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('action', 'create');
+            next.delete('edit');
+            return next;
+        });
     };
 
-    const handleEdit = async (connection: any) => {
-        try {
-            const fullConnection = await getConnection(connection.id);
-            setEditingConnection(fullConnection);
-            setIsDialogOpen(true);
-        } catch (e) {
-            toast.error("Failed to Load", {
-                description: "Could not retrieve connection details for editing."
-            });
-        }
+    const handleEdit = (connection: any) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('edit', String(connection.id));
+            next.delete('action');
+            return next;
+        });
     };
+
+    const closeDialog = React.useCallback(() => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('action');
+            next.delete('edit');
+            return next;
+        });
+    }, [setSearchParams]);
 
     const handleDelete = (connection: any) => {
         setConnectionToDelete(connection);
@@ -187,9 +234,9 @@ export const ConnectionsPage: React.FC = () => {
             </div>
 
             <CreateConnectionDialog
-                open={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
-                initialData={editingConnection}
+                open={isCreateOpen || !!editId}
+                onOpenChange={(open) => !open && closeDialog()}
+                initialData={editingConnectionData}
             />
 
             <DeleteConnectionDialog

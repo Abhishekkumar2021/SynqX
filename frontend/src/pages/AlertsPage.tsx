@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAlertHistory, acknowledgeAlert } from '@/lib/api';
 import { PageMeta } from '@/components/common/PageMeta';
@@ -25,15 +25,32 @@ import { motion } from 'framer-motion';
 import { useZenMode } from '@/hooks/useZenMode';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { AlertListItem } from '@/components/features/alerts/AlertListItem';
+import { useSearchParams } from 'react-router-dom';
 
 export const AlertsPage: React.FC = () => {
     const { isZenMode } = useZenMode();
     const { isEditor } = useWorkspace();
     const queryClient = useQueryClient();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [page, setPage] = useState(0);
-    const [limit, setLimit] = useState(20);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Derived State
+    const searchQuery = searchParams.get('q') || '';
+    const statusFilter = searchParams.get('status') || 'all';
+    const page = parseInt(searchParams.get('page') || '0');
+    const limit = parseInt(searchParams.get('limit') || '20');
+
+    const updateParams = (updates: Record<string, string | null | number>) => {
+        setSearchParams(prev => {
+            Object.entries(updates).forEach(([key, value]) => {
+                if (value === null || value === undefined || value === '') {
+                    prev.delete(key);
+                } else {
+                    prev.set(key, value.toString());
+                }
+            });
+            return prev;
+        });
+    };
 
     const { data, isLoading } = useQuery({
         queryKey: ['alerts-history', page, limit],
@@ -115,7 +132,7 @@ export const AlertsPage: React.FC = () => {
                         <Input 
                             placeholder="Search alerts..." 
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => updateParams({ q: e.target.value })}
                             className="pl-11 h-11 rounded-xl bg-background/50 border-border/50 focus:bg-background focus:border-primary/30 focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
                         />
                     </div>
@@ -123,7 +140,7 @@ export const AlertsPage: React.FC = () => {
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <div className="flex items-center gap-2 bg-background/50 border border-border/40 rounded-xl px-3 py-1.5 h-11 shadow-sm">
                             <Filter className="h-4 w-4 text-muted-foreground" />
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <Select value={statusFilter} onValueChange={(val) => updateParams({ status: val })}>
                                 <SelectTrigger className="h-8 border-none bg-transparent focus:ring-0 text-xs font-medium w-[140px]">
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
@@ -176,7 +193,7 @@ export const AlertsPage: React.FC = () => {
                         </p>
                         <Select 
                             value={limit.toString()}
-                            onValueChange={(val) => { setLimit(Number(val)); setPage(0); }}
+                            onValueChange={(val) => updateParams({ limit: Number(val), page: 0 })}
                         >
                             <SelectTrigger className="h-8 w-[140px] rounded-lg border-border/40 bg-background text-xs font-semibold">
                                 <SelectValue />
@@ -195,7 +212,7 @@ export const AlertsPage: React.FC = () => {
                             variant="ghost" 
                             size="sm"
                             disabled={page === 0}
-                            onClick={() => setPage(p => Math.max(0, p - 1))}
+                            onClick={() => updateParams({ page: Math.max(0, page - 1) })}
                             className="rounded-xl h-8 px-3 text-xs font-bold hover:bg-background shadow-none"
                         >
                             Previous
@@ -205,7 +222,7 @@ export const AlertsPage: React.FC = () => {
                             variant="ghost" 
                             size="sm"
                             disabled={page >= totalPages - 1}
-                            onClick={() => setPage(p => p + 1)}
+                            onClick={() => updateParams({ page: page + 1 })}
                             className="rounded-xl h-8 px-3 text-xs font-bold hover:bg-background shadow-none"
                         >
                             Next <ArrowRight className="ml-2 h-3 w-3" />

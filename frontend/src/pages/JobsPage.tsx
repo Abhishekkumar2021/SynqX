@@ -1,6 +1,6 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+ 
+import React, { useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getJobs, getPipelines, type Job } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -35,23 +35,31 @@ export const JobsPage: React.FC = () => {
 
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [selectedJobId, setSelectedJobId] = useState<number | null>(id ? parseInt(id) : null);
-    const [filter, setFilter] = useState('');
-    const [pipelineIdFilter, setPipelineIdFilter] = useState<number | null>(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    
+    // Derived State
+    const selectedJobId = id ? parseInt(id) : null;
+    const filter = searchParams.get('q') || '';
+    const pipelineIdFilter = searchParams.get('pipeline') ? parseInt(searchParams.get('pipeline')!) : null;
 
-    // Sync state with URL parameter
-    useEffect(() => {
-        if (id) {
-            const parsedId = parseInt(id);
-            if (parsedId !== selectedJobId) {
-                setSelectedJobId(parsedId);
-            }
-        }
-    }, [id, selectedJobId]);
+    const setFilter = (val: string) => {
+        setSearchParams(prev => {
+            if (val) prev.set('q', val);
+            else prev.delete('q');
+            return prev;
+        });
+    };
+
+    const setPipelineIdFilter = (val: number | null) => {
+        setSearchParams(prev => {
+            if (val) prev.set('pipeline', val.toString());
+            else prev.delete('pipeline');
+            return prev;
+        });
+    };
 
     const handleJobSelect = (jobId: number) => {
-        setSelectedJobId(jobId);
-        navigate(`/jobs/${jobId}`);
+        navigate({ pathname: `/jobs/${jobId}`, search: searchParams.toString() });
     };
 
     const { data: jobs, isLoading, refetch, isRefetching } = useQuery({

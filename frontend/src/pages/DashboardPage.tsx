@@ -43,6 +43,7 @@ import { subDays } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 
 const formatBytes = (bytes: number, decimals = 2) => {
     if (!+bytes) return '0 Bytes'
@@ -58,15 +59,62 @@ export const DashboardPage: React.FC = () => {
     useDashboardTelemetry();
     const { isZenMode } = useZenMode();
     const { user } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
-    const [timeRange, setTimeRange] = useState('24h');
-    const [throughputView, setThroughputView] = useState<'jobs' | 'rows' | 'bytes'>('jobs');
-    const [activityTab, setActivityTab] = useState('runs');
-    const [customRange, setCustomRange] = useState<DateRange | undefined>({
-        from: subDays(new Date(), 7),
-        to: new Date(),
-    });
+
+    // URL Synced State
+    const timeRange = searchParams.get('range') || '24h';
+    const throughputView = (searchParams.get('throughput') as 'jobs' | 'rows' | 'bytes') || 'jobs';
+    const activityTab = searchParams.get('tab') || 'runs';
+    
+    const customRange: DateRange | undefined = React.useMemo(() => {
+        const from = searchParams.get('from');
+        const to = searchParams.get('to');
+        if (timeRange === 'custom') {
+            return {
+                from: from ? new Date(from) : subDays(new Date(), 7),
+                to: to ? new Date(to) : new Date()
+            };
+        }
+        return undefined;
+    }, [searchParams, timeRange]);
+
+    const setTimeRange = (val: string) => {
+        setSearchParams(prev => {
+            prev.set('range', val);
+            if (val !== 'custom') {
+                prev.delete('from');
+                prev.delete('to');
+            }
+            return prev;
+        });
+    };
+
+    const setThroughputView = (val: string) => {
+        setSearchParams(prev => {
+            prev.set('throughput', val);
+            return prev;
+        });
+    };
+
+    const setActivityTab = (val: string) => {
+        setSearchParams(prev => {
+            prev.set('tab', val);
+            return prev;
+        });
+    };
+
+    const setCustomRange = (range: DateRange | undefined) => {
+        setSearchParams(prev => {
+            if (range?.from) prev.set('from', range.from.toISOString());
+            else prev.delete('from');
+            
+            if (range?.to) prev.set('to', range.to.toISOString());
+            else prev.delete('to');
+            return prev;
+        });
+    };
 
     const { data: stats, isLoading } = useQuery({ 
         queryKey: ['dashboard', timeRange, customRange?.from?.toISOString(), customRange?.to?.toISOString()], 

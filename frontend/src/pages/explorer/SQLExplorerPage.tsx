@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getConnection } from '@/lib/api/connections';
 import { getHistory, clearHistory } from '@/lib/api/explorer';
@@ -23,7 +23,17 @@ export const SQLExplorerPage: React.FC = () => {
     const { isZenMode } = useZenMode();
     const { isAdmin } = useWorkspace();
     const queryClient = useQueryClient();
-    const [showHistory, setShowHistory] = useState(false);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // URL Synced State
+    const showHistory = searchParams.get('history') === 'true';
+    const setShowHistory = (show: boolean) => {
+        setSearchParams(prev => {
+            if (show) prev.set('history', 'true');
+            else prev.delete('history');
+            return prev;
+        });
+    };
 
     // 1. Connection Details
     const { data: connection } = useQuery({
