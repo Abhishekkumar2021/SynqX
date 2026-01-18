@@ -27,7 +27,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       `}</style>
       <Sonner
         theme={theme as ToasterProps["theme"]}
-        className="toaster group z-10000000000"
+        className="toaster group z-[100]"
         expand={true}
         gap={12}
         toastOptions={{

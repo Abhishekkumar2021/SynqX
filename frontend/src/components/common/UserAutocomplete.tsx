@@ -37,7 +37,8 @@ export function UserAutocomplete({
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users-search', debouncedQuery],
     queryFn: () => searchUsers(debouncedQuery),
-    enabled: debouncedQuery.length >= 3 && isOpen,
+            enabled: Boolean(debouncedQuery.length >= 3 && isOpen),
+    
   })
 
   // Keyboard navigation

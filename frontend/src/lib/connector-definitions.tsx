@@ -157,12 +157,16 @@ export const CONNECTOR_META: Record<string, ConnectorMetadata> = {
     },
 };
 
+export const CONNECTOR_GROUPS = ['Database', 'Warehouse', 'File', 'API', 'Domain', 'Generic'];
+
 export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
     osdu: {
         fields: [
             { name: "osdu_url", label: "OSDU Instance URL", type: "text", required: true, placeholder: "https://osdu.example.com" },
             { name: "data_partition_id", label: "Data Partition ID", type: "text", required: true, placeholder: "opendes" },
             { name: "auth_token", label: "Bearer Token", type: "password", required: true },
+            { name: "default_acl", label: "Default ACL (JSON)", type: "textarea", language: "json", placeholder: '{"viewers": ["data.default.viewers@opendes.osdu.com"], "owners": ["data.default.owners@opendes.osdu.com"]}' },
+            { name: "default_legal", label: "Default Legal Tags (JSON)", type: "textarea", language: "json", placeholder: '{"legaltags": ["opendes-default-legal"], "otherRelevantDataCountries": ["US"]}' },
         ]
     },
     prosource: {
@@ -261,7 +265,7 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
         fields: [
             { name: "project_id", label: "Project ID", type: "text", required: true },
             { name: "dataset_id", label: "Dataset ID", type: "text", required: true },
-            { name: "credentials_json", label: "Service Account JSON", type: "textarea", placeholder: "{ ... }" },
+            { name: "credentials_json", label: "Service Account JSON", type: "textarea", language: "json", placeholder: "{ ... }" },
             { name: "credentials_path", label: "Key File Path", type: "text" },
         ]
     },
@@ -327,7 +331,7 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
         fields: [
             { name: "bucket", label: "Bucket Name", type: "text", required: true },
             { name: "project_id", label: "GCP Project ID", type: "text" },
-            { name: "credentials_json", label: "Service Account JSON", type: "textarea", placeholder: "{ ... }" },
+            { name: "credentials_json", label: "Service Account JSON", type: "textarea", language: "json", placeholder: "{ ... }" },
             { name: "credentials_path", label: "Key File Path", type: "text" },
             { name: "recursive", label: "Recursive Search", type: "select", options: [{label: "Yes", value: true}, {label: "No", value: false}], defaultValue: true },
             { name: "max_depth", label: "Max Depth (None for unlimited)", type: "number", dependency: { field: "recursive", value: true } },
@@ -384,7 +388,7 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
         fields: [
             { name: "url", label: "GraphQL Endpoint URL", type: "text", required: true, placeholder: "https://api.example.com/graphql" },
             { name: "auth_token", label: "Bearer Token", type: "password" },
-            { name: "headers", label: "Custom Headers (JSON)", type: "textarea", placeholder: '{"X-Header": "value"}' },
+            { name: "headers", label: "Custom Headers (JSON)", type: "textarea", language: "json", placeholder: '{"X-Header": "value"}' },
         ]
     },
     google_sheets: {
@@ -397,7 +401,7 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
                     { label: "API Key (Public Sheets Only)", value: "api_key" }
                 ]
             },
-            { name: "service_account_json", label: "Service Account Credentials (JSON)", type: "textarea", required: true, dependency: { field: "auth_type", value: "service_account" }, placeholder: "{ ... }" },
+            { name: "service_account_json", label: "Service Account Credentials (JSON)", type: "textarea", required: true, language: "json", dependency: { field: "auth_type", value: "service_account" }, placeholder: "{ ... }" },
             { name: "api_key", label: "Google API Key", type: "password", required: true, dependency: { field: "auth_type", value: "api_key" } }
         ]
     },
@@ -476,8 +480,8 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
             { name: "page_size_param", label: "Page Size Parameter Name", type: "text", defaultValue: "page_size", dependency: { field: "pagination_type", value: "page_number" } },
 
             // Headers & Parameters
-            { name: "headers", label: "Custom Headers (JSON)", type: "textarea", placeholder: '{"X-Custom-Header": "value"}' },
-            { name: "default_params", label: "Default Query Params (JSON)", type: "textarea", placeholder: '{"version": "v2"}' },
+            { name: "headers", label: "Custom Headers (JSON)", type: "textarea", language: "json", placeholder: '{"X-Custom-Header": "value"}' },
+            { name: "default_params", label: "Default Query Params (JSON)", type: "textarea", language: "json", placeholder: '{"version": "v2"}' },
 
             // Performance & Reliability
             { name: "timeout", label: "Timeout (seconds)", type: "number", defaultValue: 30.0 },
@@ -495,15 +499,15 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
     custom_script: {
         fields: [
             { name: "base_path", label: "Base Script Path (Optional)", type: "text", placeholder: "/opt/scripts" },
-            { name: "env_vars", label: "Global Env Vars (JSON)", type: "textarea", placeholder: "{\"API_KEY\": \"...\"}" }
+            { name: "env_vars", label: "Global Env Vars (JSON)", type: "textarea", language: "json", placeholder: "{\"API_KEY\": \"...\"}" }
         ]
     },
     singer_tap: {
         fields: [
             { name: "tap_name", label: "Tap Name", type: "text", required: true, placeholder: "e.g. tap-adwords" },
-            { name: "config", label: "Tap Config (JSON)", type: "textarea", required: true, placeholder: "{ \"api_key\": \"...\" }" },
-            { name: "catalog", label: "Catalog/Properties (Optional JSON)", type: "textarea" },
-            { name: "state", label: "Initial State (Optional JSON)", type: "textarea" },
+            { name: "config", label: "Tap Config (JSON)", type: "textarea", language: "json", required: true, placeholder: "{ \"api_key\": \"...\" }" },
+            { name: "catalog", label: "Catalog/Properties (Optional JSON)", type: "textarea", language: "json" },
+            { name: "state", label: "Initial State (Optional JSON)", type: "textarea", language: "json" },
         ]
     },
     dbt: {
@@ -514,3 +518,15 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
         ]
     }
 };
+
+export const CONNECTOR_TYPE_INFO: Record<string, any> = Object.entries(CONNECTOR_META).reduce((acc, [key, meta]) => {
+    acc[key] = {
+        label: meta.name,
+        group: meta.category,
+        icon: meta.icon.type,
+        color: meta.color,
+        popular: meta.popular,
+        fields: CONNECTOR_CONFIG_SCHEMAS[key]?.fields || []
+    };
+    return acc;
+}, {} as Record<string, any>);

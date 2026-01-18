@@ -862,7 +862,6 @@ export function ApiReference() {
                                                     language="json"
                                                     editable
                                                     onChange={(value) => setRequestBody(value)}
-                                                    placeholder='{ "key": "value" }'
                                                     className="min-h-[120px]"
                                                     wrap={true}
                                                     usePortal={true}

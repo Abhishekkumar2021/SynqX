@@ -186,18 +186,11 @@ export const ConnectionsPage: React.FC = () => {
                 />
             </div>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-5xl h-175 flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
-                    <VisuallyHidden.Root>
-                        <DialogTitle>Connection Configuration</DialogTitle>
-                        <DialogDescription>Create or edit a data source connection.</DialogDescription>
-                    </VisuallyHidden.Root>
-                    <CreateConnectionDialog
-                        initialData={editingConnection}
-                        onClose={() => setIsDialogOpen(false)}
-                    />
-                </DialogContent>
-            </Dialog>
+            <CreateConnectionDialog
+                open={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                initialData={editingConnection}
+            />
 
             <DeleteConnectionDialog
                 open={isDeleteAlertOpen}

@@ -632,10 +632,26 @@ export const RegisterAgentDialog = ({ open, onOpenChange, agents }: any) => {
         onSuccess: (data) => {
             setGeneratedCreds(data);
             queryClient.invalidateQueries({ queryKey: ['agents'] });
+            toast.success("Identity Generated", {
+                description: `Agent "${newAgentName}" is now ready for deployment.`,
+                icon: <ShieldCheck className="h-4 w-4 text-emerald-500" />
+            });
         },
-        onError: () => {
-            toast.error("Registration Failed", {
-                description: "Make sure the agent name is unique."
+        onError: (err: any) => {
+            const detail = err.response?.data?.detail;
+            let title = "Registration Failed";
+            let description = "Make sure the agent name is unique.";
+
+            if (typeof detail === 'string' && detail.includes("already exists")) {
+                title = "Conflict Detected";
+                description = detail;
+            } else if (detail?.message) {
+                description = detail.message;
+            }
+
+            toast.error(title, {
+                description,
+                icon: <ShieldAlert className="h-4 w-4 text-destructive" />
             });
         }
     });

@@ -16,6 +16,9 @@ import {
     Sparkles,
     Shield,
     Zap,
+    Lock,
+    Layers,
+    Globe,
     FileCode,
     Workflow
 } from 'lucide-react';
@@ -569,7 +572,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
     const [activeTab, setActiveTab] = useState('settings');
     const [schemaMode, setSchemaMode] = useState<'visual' | 'manual'>('visual');
     const { isEditor, isAdmin } = useWorkspace();
-    const { theme } = useTheme();
+    useTheme();
 
     // Watchers
     const nodeType = (watch('operator_type') || '').toLowerCase();
@@ -662,7 +665,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                 is_dynamic: !!node.data.is_dynamic,
                 mapping_expr: node.data.mapping_expr || '',
                 sub_pipeline_id: node.data.sub_pipeline_id ? String(node.data.sub_pipeline_id) : '',
-                worker_tag: node.data.worker_tag || ''
+                worker_tag: node.data.worker_tag || '',
+                osdu_kind: config.osdu_kind || '',
+                auto_create_schema: config.auto_create_schema === true,
+                osdu_inference_strategy: config.osdu_inference_strategy || 'data_driven',
+                osdu_acl: config.acl ? JSON.stringify(config.acl, null, 2) : '',
+                osdu_legal: config.legal ? JSON.stringify(config.legal, null, 2) : ''
             };
 
             const def = getOperatorDefinition(currentOpClass);
@@ -759,7 +767,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                         server_id: data.cdc_server_id
                     } : undefined,
                     incremental: data.operator_type === 'source' ? (data.incremental || data.sync_mode === 'cdc') : undefined,
-                    watermark_column: data.operator_type === 'source' ? data.watermark_column : undefined
+                    watermark_column: data.operator_type === 'source' ? data.watermark_column : undefined,
+                    osdu_kind: data.osdu_kind || undefined,
+                    auto_create_schema: data.auto_create_schema,
+                    osdu_inference_strategy: data.osdu_inference_strategy,
+                    acl: data.osdu_acl ? JSON.parse(data.osdu_acl) : undefined,
+                    legal: data.osdu_legal ? JSON.parse(data.osdu_legal) : undefined
                 },
                 sync_mode: data.operator_type === 'source' ? data.sync_mode : undefined,
                 cdc_config: data.operator_type === 'source' && data.sync_mode === 'cdc' ? {
@@ -811,7 +824,15 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                     </div>
                     {schemaMode === 'visual' ? <RuleBuilder watch={watch} setValue={setValue} /> : (
                         <div className="space-y-2">
-                            <Textarea {...register('schema_json_manual')} placeholder={field.placeholder} readOnly={!isEditor} className="font-mono text-[10px] min-h-40 bg-[#0a0a0a]/80 text-emerald-500 border-white/5 rounded-lg p-3" />
+                            <CodeBlock
+                                code={watch('schema_json_manual') || ''}
+                                language="json"
+                                editable={isEditor}
+                                onChange={(val) => setValue('schema_json_manual', val)}
+                                maxHeight="256px"
+                                rounded
+                                className="border-border/40 bg-background/50 text-[10px]"
+                            />
                             <p className="text-[9px] text-muted-foreground">Manual JSON override. Use with caution.</p>
                         </div>
                     )}
@@ -944,7 +965,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
                 <div className="px-6 pt-4 shrink-0">
-                    <TabsList className="w-full grid grid-cols-5 h-10 p-1 bg-muted/30 rounded-xl">
+                    <TabsList className="w-full grid grid-cols-4 h-10 p-1 bg-muted/30 rounded-xl">
                         <TabsTrigger value="settings" className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0">
                             <Sliders size={11} /> Config
                         </TabsTrigger>
@@ -957,31 +978,50 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                         <TabsTrigger value="lineage" className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0">
                             <Share2 size={11} /> Lineage
                         </TabsTrigger>
-                        {node.data.diffStatus && node.data.diffStatus !== 'none' ? (
-                            <TabsTrigger value="diff" className="gap-1.5 bg-amber-500/10 text-amber-500 text-[9px] font-bold uppercase tracking-tighter transition-all px-0"><GitCompare size={11} /> Diff</TabsTrigger>
-                        ) : <TabsTrigger value="advanced" className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0"><Code size={11} /> Expert</TabsTrigger>}
                     </TabsList>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
                     <ScrollArea className="flex-1">
-                        <div className="p-6 space-y-6">
-                            <TabsContent value="settings" className="m-0 space-y-6 focus-visible:outline-none">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Node Identity</Label>
-                                    <Input {...register('label', { required: true })} placeholder="Descriptive name..." readOnly={!isEditor} className="h-10 rounded-lg bg-background/50 border-border/40 focus:ring-primary/20" />
+                        <div className="p-6 space-y-8 pb-24">
+                            <TabsContent value="settings" className="m-0 space-y-8 focus-visible:outline-none">
+                                {/* Section: Basic Identity */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 px-1">
+                                        <div className="h-1 w-4 rounded-full bg-primary/40" />
+                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Identity & Purpose</Label>
+                                    </div>
+                                    <div className="p-5 rounded-[2rem] border border-border/40 bg-muted/5 space-y-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">Display Label</Label>
+                                            <Input {...register('label', { required: true })} placeholder="Descriptive name..." readOnly={!isEditor} className="h-10 rounded-2xl bg-background/50 border-border/40 focus:ring-primary/20" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">Logic Description</Label>
+                                            <Textarea 
+                                                {...register('description')} 
+                                                placeholder="What does this node achieve?" 
+                                                readOnly={!isEditor}
+                                                className="min-h-[80px] rounded-2xl bg-background/50 border-border/40 resize-none text-xs leading-relaxed"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    {(nodeType === 'source' || nodeType === 'sink') && (
-                                        <div className="space-y-4 p-4 rounded-xl border border-border/40 bg-muted/10">
-                                            <div className="flex items-center gap-2 mb-1"><Database className="h-3 w-3 text-muted-foreground" /><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">IO Mapping</span></div>
+                                {/* Section: IO Mapping */}
+                                {(nodeType === 'source' || nodeType === 'sink') && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 px-1">
+                                            <div className="h-1 w-4 rounded-full bg-blue-500/40" />
+                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">IO Mapping</Label>
+                                        </div>
+                                        <div className="p-5 rounded-[2rem] border border-blue-500/20 bg-blue-500/[0.02] space-y-5">
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-bold">Connection</Label>
                                                 <Controller control={control} name="connection_id" render={({ field }) => (
                                                     <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
-                                                        <SelectTrigger className="h-9 rounded-lg bg-background/50"><SelectValue placeholder="Select connection" /></SelectTrigger>
-                                                        <SelectContent>{connections?.map((c: any) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
+                                                        <SelectTrigger className="h-10 rounded-xl bg-background/50 border-blue-500/10"><SelectValue placeholder="Select connection" /></SelectTrigger>
+                                                        <SelectContent className="rounded-xl">{connections?.map((c: any) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
                                                     </Select>
                                                 )} />
                                             </div>
@@ -989,22 +1029,23 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                 <Label className="text-[10px] font-bold">Target Asset</Label>
                                                 <Controller control={control} name="asset_id" render={({ field }) => (
                                                     <Select onValueChange={field.onChange} value={field.value} disabled={!selectedConnectionId || !isEditor || isLoadingAssets}>
-                                                        <SelectTrigger className="h-9 rounded-lg bg-background/50"><SelectValue placeholder={isLoadingAssets ? "Loading assets..." : !selectedConnectionId ? "Connect first" : filteredAssets.length === 0 ? "No assets found" : "Select asset"} /></SelectTrigger>
-                                                        <SelectContent>
+                                                        <SelectTrigger className="h-10 rounded-xl bg-background/50 border-blue-500/10"><SelectValue placeholder={isLoadingAssets ? "Loading assets..." : !selectedConnectionId ? "Connect first" : filteredAssets.length === 0 ? "No assets found" : "Select asset"} /></SelectTrigger>
+                                                        <SelectContent className="rounded-xl">
                                                             {filteredAssets?.map((a: any) => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
                                                             {filteredAssets.length === 0 && !isLoadingAssets && <div className="p-4 text-center text-[10px] text-muted-foreground ">No assets found.</div>}
                                                         </SelectContent>
                                                     </Select>
                                                 )} />
                                             </div>
+
                                             {nodeType === 'source' && (
-                                                <div className="space-y-4 pt-2">
+                                                <div className="space-y-4 pt-2 border-t border-blue-500/10 mt-2">
                                                     <div className="space-y-2">
                                                         <Label className="text-[10px] font-bold flex items-center">Extraction Mode <HelpIcon content="Determines how data is read from the source." /></Label>
                                                         <Controller control={control} name="sync_mode" render={({ field }) => (
                                                             <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
-                                                                <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20"><SelectValue placeholder="Select mode" /></SelectTrigger>
-                                                                <SelectContent>
+                                                                <SelectTrigger className="h-10 rounded-xl bg-background/50 border-primary/20"><SelectValue placeholder="Select mode" /></SelectTrigger>
+                                                                <SelectContent className="rounded-xl">
                                                                     <SelectItem value="full_load" className="text-xs font-bold">Full Load (Overwrite)</SelectItem>
                                                                     <SelectItem value="incremental" className="text-xs font-bold">Incremental (Watermark)</SelectItem>
                                                                     <SelectItem value="cdc" className="text-xs font-bold">Real-time CDC (Log Tailing)</SelectItem>
@@ -1020,116 +1061,231 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                                 {...register('watermark_column')} 
                                                                 placeholder="e.g. updated_at" 
                                                                 readOnly={!isEditor} 
-                                                                className="h-8 text-[10px] font-mono bg-background/50" 
+                                                                className="h-9 text-[10px] font-mono bg-background/50 rounded-lg" 
                                                             />
                                                         </div>
                                                     )}
 
                                                     {watch('sync_mode') === 'cdc' && (
-                                                        <div className="space-y-4 p-4 rounded-xl bg-primary/5 border border-primary/10 animate-in zoom-in-95 duration-300">
+                                                        <div className="space-y-4 p-4 rounded-2xl bg-primary/5 border border-primary/10 animate-in zoom-in-95 duration-300">
                                                             <div className="flex items-center gap-2">
                                                                 <Zap className="h-3 w-3 text-primary animate-pulse" />
                                                                 <span className="text-[9px] font-bold uppercase tracking-widest text-primary">Zero-Infra Streaming</span>
                                                             </div>
                                                             <div className="space-y-3">
-                                                                {/* Dynamic fields based on connector type */}
                                                                 {connections?.find((c: any) => String(c.id) === selectedConnectionId)?.connector_type === 'mysql' ? (
                                                                     <div className="space-y-1.5">
                                                                         <Label className="text-[9px] font-bold text-muted-foreground uppercase">Replica Server ID</Label>
-                                                                        <Input type="number" {...register('cdc_server_id', { valueAsNumber: true })} className="h-8 text-[10px] font-mono" />
-                                                                        <p className="text-[8px] text-muted-foreground opacity-60">Must be unique across your MySQL cluster.</p>
+                                                                        <Input type="number" {...register('cdc_server_id', { valueAsNumber: true })} className="h-8 text-[10px] font-mono rounded-lg" />
                                                                     </div>
                                                                 ) : (
                                                                     <>
                                                                         <div className="space-y-1.5">
                                                                             <Label className="text-[9px] font-bold text-muted-foreground uppercase">Replication Slot</Label>
-                                                                            <Input {...register('cdc_slot_name')} placeholder="synqx_slot_1" className="h-8 text-[10px] font-mono" />
+                                                                            <Input {...register('cdc_slot_name')} placeholder="synqx_slot_1" className="h-8 text-[10px] font-mono rounded-lg" />
                                                                         </div>
                                                                         <div className="space-y-1.5">
                                                                             <Label className="text-[9px] font-bold text-muted-foreground uppercase">Publication Name</Label>
-                                                                            <Input {...register('cdc_publication_name')} placeholder="synqx_pub" className="h-8 text-[10px] font-mono" />
+                                                                            <Input {...register('cdc_publication_name')} placeholder="synqx_pub" className="h-8 text-[10px] font-mono rounded-lg" />
                                                                         </div>
                                                                     </>
                                                                 )}
                                                             </div>
-                                                            <p className="text-[8px] text-muted-foreground italic">Note: Ensure your database user has sufficient replication privileges.</p>
                                                         </div>
                                                     )}
                                                 </div>
                                             )}
+
                                             {nodeType === 'sink' && (
-                                                <div className="space-y-4 pt-2">
-                                                    <div className="space-y-2">
-                                                        <Label className="text-[10px] font-bold flex items-center">Write Strategy <HelpIcon content="Determines how data is committed to the target asset." /></Label>
-                                                        <Controller control={control} name="write_strategy" render={({ field }) => (
-                                                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
-                                                                <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20"><SelectValue placeholder="Select strategy" /></SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="append" className="text-xs font-bold">Append</SelectItem>
-                                                                    <SelectItem value="overwrite" className="text-xs font-bold">Overwrite</SelectItem>
-                                                                    <SelectItem value="upsert" className="text-xs font-bold">Upsert</SelectItem>
-                                                                    <SelectItem value="scd2" className="text-xs font-bold">SCD Type 2</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        )} />
-                                                    </div>
-                                                    
-                                                    <div className="space-y-2">
-                                                        <Label className="text-[10px] font-bold flex items-center">Evolution Policy <HelpIcon content="Defines behavior when incoming data schema differs from target." /></Label>
-                                                        <Controller control={control} name="schema_evolution_policy" render={({ field }) => (
-                                                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
-                                                                <SelectTrigger className="h-9 rounded-lg bg-background/50 border-primary/20"><SelectValue placeholder="Select policy" /></SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="strict" className="text-xs font-bold">Strict (Fail on mismatch)</SelectItem>
-                                                                    <SelectItem value="evolve" className="text-xs font-bold">Evolve (Auto-Alter Table)</SelectItem>
-                                                                    <SelectItem value="ignore" className="text-xs font-bold">Ignore (Drop new columns)</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-                                                        )} />
+                                                <div className="space-y-4 pt-2 border-t border-blue-500/10 mt-2">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[10px] font-bold flex items-center">Write Strategy <HelpIcon content="Determines how data is committed to the target asset." /></Label>
+                                                            <Controller control={control} name="write_strategy" render={({ field }) => (
+                                                                <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                                                                    <SelectTrigger className="h-9 rounded-xl bg-background/50 border-blue-500/10"><SelectValue /></SelectTrigger>
+                                                                    <SelectContent className="rounded-xl">
+                                                                        <SelectItem value="append">Append</SelectItem>
+                                                                        <SelectItem value="overwrite">Overwrite</SelectItem>
+                                                                        <SelectItem value="upsert">Upsert</SelectItem>
+                                                                        <SelectItem value="scd2">SCD Type 2</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )} />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label className="text-[10px] font-bold flex items-center">Evolution Policy <HelpIcon content="Defines behavior when incoming data schema differs from target." /></Label>
+                                                            <Controller control={control} name="schema_evolution_policy" render={({ field }) => (
+                                                                <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                                                                    <SelectTrigger className="h-9 rounded-xl bg-background/50 border-blue-500/10"><SelectValue /></SelectTrigger>
+                                                                    <SelectContent className="rounded-xl">
+                                                                        <SelectItem value="strict">Strict</SelectItem>
+                                                                        <SelectItem value="evolve">Evolve</SelectItem>
+                                                                        <SelectItem value="ignore">Ignore</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )} />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
-                                    )}
-                                    {opDef?.fields && <div className="space-y-4 p-4 rounded-xl border border-border/40 bg-primary/5">{opDef.fields.map(renderField)}</div>}
+                                    </div>
+                                )}
+
+                                {/* Section: Domain Governance (OSDU Specific) */}
+                                {nodeType === 'sink' && connections?.find((c: any) => String(c.id) === selectedConnectionId)?.connector_type === 'osdu' && (
+                                    <div className="space-y-4 animate-in slide-in-from-top-4 duration-500">
+                                        <div className="flex items-center gap-2 px-1">
+                                            <div className="h-1 w-4 rounded-full bg-blue-600" />
+                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">Domain Governance (OSDU)</Label>
+                                        </div>
+                                        <div className="p-6 rounded-[2.5rem] border border-blue-500/20 bg-blue-500/[0.03] space-y-6 relative overflow-hidden">
+                                            <div className="absolute -right-12 -top-12 h-40 w-40 bg-blue-500/5 blur-3xl rounded-full" />
+                                            
+                                            <div className="space-y-4 relative z-10">
+                                                <div className="space-y-2">
+                                                    <Label className="text-[10px] font-bold flex items-center gap-2">Target OSDU Kind <HelpIcon content="The fully qualified OSDU kind name." /></Label>
+                                                    <Input {...register('osdu_kind')} placeholder="authority:source:entity:1.0.0" className="h-10 text-xs font-mono bg-background/50 border-blue-500/10 rounded-xl" />
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="p-4 rounded-2xl bg-background/40 border border-blue-500/10 flex flex-col gap-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <Label className="text-[10px] font-bold">Auto-Provision</Label>
+                                                            <Controller control={control} name="auto_create_schema" render={({ field }) => (
+                                                                <Checkbox checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-blue-600" />
+                                                            )} />
+                                                        </div>
+                                                        {watch('auto_create_schema') && (
+                                                            <Controller control={control} name="osdu_inference_strategy" render={({ field }) => (
+                                                                <Select onValueChange={field.onChange} value={field.value || 'data_driven'}>
+                                                                    <SelectTrigger className="h-8 text-[10px] bg-background/60 border-blue-500/10"><SelectValue /></SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="data_driven" className="text-[10px]">Data-driven</SelectItem>
+                                                                        <SelectItem value="canonical" className="text-[10px]">Contract-driven</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )} />
+                                                        )}
+                                                    </div>
+                                                    <div className="p-4 rounded-2xl bg-blue-600/5 border border-blue-600/10 flex flex-col items-center justify-center text-center gap-1.5">
+                                                        <Shield size={16} className="text-blue-600 opacity-60" />
+                                                        <span className="text-[9px] font-black uppercase text-blue-600 tracking-tighter">Governance Active</span>
+                                                        <span className="text-[8px] text-muted-foreground font-medium">Policy-based ingestion</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-4 pt-2">
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-2 px-1">
+                                                            <Lock size={10} className="text-blue-600" />
+                                                            <Label className="text-[9px] font-bold uppercase tracking-widest text-foreground/70">Access Control List (ACL)</Label>
+                                                        </div>
+                                                        <CodeBlock
+                                                            code={watch('osdu_acl') || '{\n  "viewers": [],\n  "owners": []\n}'}
+                                                            language="json"
+                                                            editable={isEditor}
+                                                            onChange={(val) => setValue('osdu_acl', val)}
+                                                            maxHeight="120px"
+                                                            rounded
+                                                            className="border-blue-500/10 bg-black/40 text-blue-400"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-2 px-1">
+                                                            <Globe size={10} className="text-blue-600" />
+                                                            <Label className="text-[9px] font-bold uppercase tracking-widest text-foreground/70">Legal Metadata</Label>
+                                                        </div>
+                                                        <CodeBlock
+                                                            code={watch('osdu_legal') || '{\n  "legaltags": [],\n  "otherRelevantDataCountries": ["US"]\n}'}
+                                                            language="json"
+                                                            editable={isEditor}
+                                                            onChange={(val) => setValue('osdu_legal', val)}
+                                                            maxHeight="120px"
+                                                            rounded
+                                                            className="border-blue-500/10 bg-black/40 text-blue-400"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Section: Operator specific fields */}
+                                {opDef?.fields && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 px-1">
+                                            <div className="h-1 w-4 rounded-full bg-primary/40" />
+                                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Functional Parameters</Label>
+                                        </div>
+                                        <div className="p-6 rounded-[2rem] border border-border/40 bg-muted/5 space-y-5">
+                                            {opDef.fields.map(renderField)}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Section: Reliability */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 px-1">
+                                        <div className="h-1 w-4 rounded-full bg-amber-500/40" />
+                                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Fault Recovery</Label>
+                                    </div>
+                                    <div className="p-6 rounded-[2rem] border border-amber-500/20 bg-amber-500/[0.02] space-y-5">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold">Retry Logic</Label>
+                                                <Controller control={control} name="retry_strategy" render={({ field }) => (
+                                                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                                                        <SelectTrigger className="h-9 rounded-xl bg-background/50 border-amber-500/10"><SelectValue /></SelectTrigger>
+                                                        <SelectContent className="rounded-xl">
+                                                            <SelectItem value="none">Disabled</SelectItem>
+                                                            <SelectItem value="fixed">Fixed</SelectItem>
+                                                            <SelectItem value="linear_backoff">Linear</SelectItem>
+                                                            <SelectItem value="exponential_backoff">Exponential</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )} />
+                                            </div>
+                                            {watch('retry_strategy') !== 'none' && <div className="space-y-2"><Label className="text-[10px] font-bold">Max Retries</Label><Input type="number" {...register('max_retries', { valueAsNumber: true })} readOnly={!isEditor} className="h-9 bg-background/50 rounded-xl" /></div>}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold">Retry Delay (s)</Label>
+                                                <Input type="number" {...register('retry_delay_seconds', { valueAsNumber: true })} readOnly={!isEditor} className="h-9 bg-background/50 rounded-xl" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold">Timeout (s)</Label>
+                                                <Input type="number" {...register('timeout_seconds', { valueAsNumber: true })} placeholder="3600" readOnly={!isEditor} className="h-9 bg-background/50 rounded-xl" />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <Separator className="opacity-50" />
-                                <div className="space-y-4">
-                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reliability</Label>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-bold">Retry Logic</Label>
-                                            <Controller control={control} name="retry_strategy" render={({ field }) => (
-                                                <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
-                                                    <SelectTrigger className="h-9 rounded-lg bg-background/50"><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="none">Disabled</SelectItem>
-                                                        <SelectItem value="fixed">Fixed</SelectItem>
-                                                        <SelectItem value="linear_backoff">Linear</SelectItem>
-                                                        <SelectItem value="exponential_backoff">Exponential</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            )} />
+                                {/* Section: Expert Access */}
+                                {!(node.data.diffStatus && node.data.diffStatus !== 'none') && (
+                                    <div className="space-y-4 pt-4">
+                                        <div className="flex items-center justify-between px-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-1 w-4 rounded-full bg-muted-foreground/40" />
+                                                <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Expert Mode</Label>
+                                            </div>
+                                            <Badge variant="outline" className="text-[8px] opacity-40 uppercase tracking-tighter">Raw JSON</Badge>
                                         </div>
-                                        {watch('retry_strategy') !== 'none' && <div className="space-y-2"><Label className="text-[10px] font-bold">Max Retries</Label><Input type="number" {...register('max_retries', { valueAsNumber: true })} readOnly={!isEditor} className="h-9 bg-background/50" /></div>}
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-bold">Retry Delay (s)</Label>
-                                            <Input type="number" {...register('retry_delay_seconds', { valueAsNumber: true })} readOnly={!isEditor} className="h-9 bg-background/50" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="text-[10px] font-bold">Timeout (s)</Label>
-                                            <Input type="number" {...register('timeout_seconds', { valueAsNumber: true })} placeholder="3600" readOnly={!isEditor} className="h-9 bg-background/50" />
+                                        <div className="p-4 rounded-[2rem] border border-border/20 bg-muted/10">
+                                            <CodeBlock
+                                                code={watch('config') || '{}'}
+                                                language="json"
+                                                editable={isEditor}
+                                                onChange={(val) => setValue('config', val)}
+                                                maxHeight="200px"
+                                                rounded
+                                                className="bg-[#050505] border-white/5"
+                                            />
                                         </div>
                                     </div>
-                                </div>
-                                <Separator className="opacity-50" />
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Documentation</Label>
-                                    <Textarea {...register('description')} placeholder="Notes..." readOnly={!isEditor} className="min-h-20 rounded-lg bg-background/50 border-border/40 text-xs resize-none" />
-                                </div>
+                                )}
                             </TabsContent>
 
                             <TabsContent value="contract" className="m-0 focus-visible:outline-none">
@@ -1186,10 +1342,14 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                                 </div>
                                                 <div className="relative group">
                                                     <div className="absolute inset-0 bg-primary/5 blur-xl rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                                                    <Textarea 
-                                                        {...register('data_contract_json')} 
-                                                        placeholder='{ "columns": [{ "name": "id", "type": "int" }] }' 
-                                                        className="font-mono text-[11px] min-h-87.5 bg-[#0a0a0a] text-primary/90 border-white/5 rounded-2xl p-6 shadow-2xl relative z-10 focus:ring-primary/20 transition-all"
+                                                    <CodeBlock
+                                                        code={watch('data_contract_json') || ''}
+                                                        language="json"
+                                                        editable={isEditor}
+                                                        onChange={(val) => setValue('data_contract_json', val)}
+                                                        maxHeight="350px"
+                                                        rounded
+                                                        className="border-white/5 bg-[#0a0a0a] text-primary/90 shadow-2xl relative z-10"
                                                     />
                                                 </div>
                                             </div>
@@ -1251,6 +1411,55 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({ node, onClose, o
                                         </div>
 
                                         <GuardrailBuilder watch={watch} setValue={setValue} />
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="security" className="m-0 focus-visible:outline-none">
+                                <div className="p-6 space-y-8 pb-32">
+                                    <div className="space-y-6">
+                                        <div className="relative group overflow-hidden p-6 rounded-[2rem] bg-blue-500/5 border border-blue-500/10 transition-all duration-500 hover:bg-blue-500/10">
+                                            <div className="absolute -right-10 -top-10 h-32 w-32 bg-blue-500/10 blur-3xl rounded-full" />
+                                            <div className="relative z-10 flex items-start gap-4">
+                                                <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner border border-blue-500/20">
+                                                    <Lock size={24} />
+                                                </div>
+                                                <div className="space-y-1.5 flex-1">
+                                                    <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">OSDU Security Context</h4>
+                                                    <p className="text-[10px] text-muted-foreground/70 leading-relaxed font-medium">
+                                                        Define the entitlements and regional governance for newly provisioned records. These settings are applied during the ingestion phase.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">Access Control List (ACL)</Label>
+                                                <CodeBlock
+                                                    code={watch('osdu_acl') || '{\n  "viewers": [],\n  "owners": []\n}'}
+                                                    language="json"
+                                                    editable={isEditor}
+                                                    onChange={(val) => setValue('osdu_acl', val)}
+                                                    maxHeight="200px"
+                                                    rounded
+                                                    className="border-white/5 bg-[#0a0a0a] text-blue-400 shadow-2xl"
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">Legal Metadata</Label>
+                                                <CodeBlock
+                                                    code={watch('osdu_legal') || '{\n  "legaltags": [],\n  "otherRelevantDataCountries": ["US"]\n}'}
+                                                    language="json"
+                                                    editable={isEditor}
+                                                    onChange={(val) => setValue('osdu_legal', val)}
+                                                    maxHeight="200px"
+                                                    rounded
+                                                    className="border-white/5 bg-[#0a0a0a] text-blue-400 shadow-2xl"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </TabsContent>

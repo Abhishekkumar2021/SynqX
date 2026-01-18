@@ -60,7 +60,8 @@ export const discoverAssets = async (id: number, includeMetadata: boolean = fals
 
 export const getConnectionAssets = async (id: number) => {
   const { data } = await api.get<AssetListResponse>(
-    `/connections/${id}/assets`
+    `/connections/${id}/assets`,
+    { params: { limit: 1000 } }
   );
   return data.assets;
 };

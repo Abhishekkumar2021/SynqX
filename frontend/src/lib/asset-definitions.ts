@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Table, Eye, Layers, FileText, Key, Globe, 
-    Code, Terminal, FileCode, Workflow
+    Code, Terminal, FileCode, Workflow, Database
 } from 'lucide-react';
 import { AssetType } from './enums';
 
@@ -14,6 +14,14 @@ export interface AssetMetadata {
 }
 
 export const ASSET_META: Record<AssetType, AssetMetadata> = {
+    [AssetType.OSDU_KIND]: {
+        id: AssetType.OSDU_KIND, name: 'OSDU Kind', description: 'OSDU Data Kind.',
+        icon: Layers, category: 'API'
+    },
+    [AssetType.DOMAIN_ENTITY]: {
+        id: AssetType.DOMAIN_ENTITY, name: 'Domain Entity', description: 'Logical Domain Entity.',
+        icon: Database, category: 'Relational'
+    },
     [AssetType.TABLE]: {
         id: AssetType.TABLE, name: 'Table', description: 'Standard database table.',
         icon: Table, category: 'Relational'

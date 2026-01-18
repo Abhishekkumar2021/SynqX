@@ -1,6 +1,6 @@
 import React from "react";
 import { Cpu, Server, Zap } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+
 import type { SystemHealth } from "@/lib/api";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";

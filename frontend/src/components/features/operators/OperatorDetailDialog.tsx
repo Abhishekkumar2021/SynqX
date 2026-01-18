@@ -6,7 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription
 } from '@/components/ui/dialog';
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeBlock } from '@/components/ui/docs/CodeBlock';
 import { cn } from '@/lib/utils';
@@ -24,6 +28,10 @@ export const OperatorDetailDialog: React.FC<OperatorDetailDialogProps> = ({ sele
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden rounded-2xl border-border/60 bg-background/95 shadow-2xl backdrop-blur-3xl">
+                <VisuallyHidden.Root>
+                    <DialogTitle>Operator Details: {selectedOp.name}</DialogTitle>
+                    <DialogDescription>View parameters and definition for the {selectedOp.name} operator.</DialogDescription>
+                </VisuallyHidden.Root>
                 <div className="flex flex-col h-[70vh]">
                     {/* --- Header --- */}
                     <div className="px-8 py-8 border-b border-border/40 bg-muted/5 relative overflow-hidden">

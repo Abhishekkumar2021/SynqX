@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/incompatible-library */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
     Dialog,
@@ -13,7 +13,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
+import { CodeBlock } from '@/components/ui/docs/CodeBlock';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+    Settings2, FileText, CalendarClock, Zap, Box, ShieldAlert, Server, Clock, Terminal, Loader2
+} from 'lucide-react';
+import {
+    Tabs,
+    TabsList,
+    TabsTrigger,
+    TabsContent
+} from "@/components/ui/tabs";
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
     Select,
     SelectContent,
@@ -21,22 +35,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Slider } from '@/components/ui/slider';
+import { Slider } from "@/components/ui/slider";
+
+import { getAgents } from '@/lib/api/agents';
+import { getPipelines, updatePipeline } from '@/lib/api/pipelines';
+import type { Pipeline } from '@/lib/api/types';
+import { PipelineStatus } from '@/lib/enums';
 import { CronBuilder } from '@/components/common/CronBuilder';
-import { type Pipeline, updatePipeline, getAgents, getPipelines } from '@/lib/api';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { toast } from 'sonner';
-import {
-    Loader2, Settings2, FileText,
-    ShieldAlert, Zap,
-    CalendarClock, Clock,
-    Server, Terminal, Box
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface PipelineSettingsDialogProps {
     pipeline: Pipeline | null;
@@ -222,10 +227,22 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ml-1">Detailed Description</Label>
-                                                <Textarea
-                                                    {...register('description')}
-                                                    className="min-h-32 rounded-xl bg-background border-border/40 focus:border-primary/40 transition-all text-sm p-4 resize-none leading-relaxed shadow-sm"
-                                                    placeholder="Explain the purpose of this pipeline..."
+                                                <Controller
+                                                    control={control}
+                                                    name="description"
+                                                    render={({ field }) => (
+                                                        <div className="relative group min-h-[120px]">
+                                                            <CodeBlock
+                                                                code={field.value || ''}
+                                                                language="text"
+                                                                onChange={field.onChange}
+                                                                editable
+                                                                rounded
+                                                                maxHeight="200px"
+                                                                className="text-sm"
+                                                            />
+                                                        </div>
+                                                    )}
                                                 />
                                             </div>
                                         </div>
@@ -498,4 +515,5 @@ export const PipelineSettingsDialog: React.FC<PipelineSettingsDialogProps> = ({ 
         </Dialog>
     );
 };
+
 

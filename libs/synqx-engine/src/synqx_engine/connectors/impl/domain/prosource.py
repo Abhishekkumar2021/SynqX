@@ -72,9 +72,19 @@ class ProSourceConnector(OracleConnector):
                 ]
                 
                 for ent in entities:
+                    # Execute a count query for each table to get row counts
+                    row_count = 0
+                    try:
+                        count_res = self.execute_query(f"SELECT COUNT(*) as row_count FROM {ent['table']}")
+                        if count_res and 'row_count' in count_res[0]:
+                            row_count = count_res[0]['row_count']
+                    except Exception as count_e:
+                        logger.warning(f"Could not fetch row count for {ent['table']}: {count_e}")
+
                     domain_assets.append({
                         "name": ent["name"],
                         "type": "domain_entity",
+                        "rows": row_count,
                         "schema": self.config.get("db_schema") or "SEABED",
                         "metadata": {
                             "module": ent["module"],

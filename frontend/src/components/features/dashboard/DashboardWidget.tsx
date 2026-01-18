@@ -1,6 +1,6 @@
 import React from 'react';
 import { MaximizablePanel } from '@/components/ui/maximizable-panel';
-import { cn } from '@/lib/utils';
+
 
 interface DashboardWidgetProps {
     title: string;

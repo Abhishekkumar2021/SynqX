@@ -8,10 +8,10 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Rocket, Info, CheckCircle2 } from "lucide-react";
+import { CodeBlock } from "@/components/ui/docs/CodeBlock";
 
 interface DeployCommitDialogProps {
     open: boolean;
@@ -63,14 +63,18 @@ export const DeployCommitDialog: React.FC<DeployCommitDialogProps> = ({
                                 <Label htmlFor="notes" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Release Notes</Label>
                                 <span className="text-[10px] text-muted-foreground/60 font-medium ">Highly Recommended</span>
                             </div>
-                            <Textarea
-                                id="notes"
-                                placeholder="Describe what changed in this version... (e.g. Optimized join logic, fixed filter predicates)"
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                className="min-h-30 bg-muted/20 border-border/40 rounded-2xl p-4 text-sm focus-visible:ring-primary/20 leading-relaxed resize-none"
-                                autoFocus
-                            />
+                            <div className="relative group min-h-[120px]">
+                                <CodeBlock
+                                    code={notes}
+                                    onChange={setNotes}
+                                    language="text"
+                                    editable
+                                    rounded
+                                    maxHeight="200px"
+                                    className="text-sm"
+                                    placeholder="Describe what changed in this version... (e.g. Optimized join logic, fixed filter predicates)"
+                                />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 gap-3">

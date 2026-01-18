@@ -5,7 +5,10 @@ import {
     Dialog,
     DialogContent,
     DialogHeader,
+    DialogTitle,
+    DialogDescription
 } from "@/components/ui/dialog";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
     Tooltip,
     TooltipContent,
@@ -119,6 +122,10 @@ export const MaximizablePanel: React.FC<MaximizablePanelProps> = ({
 
             <Dialog open={isMaximized} onOpenChange={setIsMaximized}>
                 <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 gap-0 border-white/10 rounded-[2rem] bg-background/95 backdrop-blur-3xl overflow-hidden flex flex-col focus-visible:outline-none shadow-2xl [&>button]:hidden">
+                    <VisuallyHidden.Root>
+                        <DialogTitle>{typeof title === 'string' ? title : "Maximized View"}</DialogTitle>
+                        <DialogDescription>Full screen panel view</DialogDescription>
+                    </VisuallyHidden.Root>
                     <DialogHeader className="p-0 space-y-0 text-left">
                         {HeaderContent(true)}
                     </DialogHeader>

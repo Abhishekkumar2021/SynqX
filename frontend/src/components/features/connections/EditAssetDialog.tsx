@@ -22,6 +22,7 @@ import { updateAsset, type Asset, type AssetUpdate } from '@/lib/api';
 import { toast } from 'sonner';
 import { Loader2, Code, TrendingUp, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CodeBlock } from '@/components/ui/docs/CodeBlock';
 
 interface EditAssetDialogProps {
     connectionId: number;
@@ -170,10 +171,22 @@ export const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ connectionId, 
                         {/* Description */}
                         <div className="space-y-2">
                             <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Description</Label>
-                            <Textarea 
-                                {...register('description')}
-                                placeholder="Describe the purpose of this asset..."
-                                className="bg-background/50 border-border/40 min-h-20 text-sm"
+                            <Controller
+                                control={control}
+                                name="description"
+                                render={({ field }) => (
+                                    <div className="relative group min-h-[80px]">
+                                        <CodeBlock
+                                            code={field.value || ''}
+                                            language="text"
+                                            onChange={field.onChange}
+                                            editable
+                                            rounded
+                                            maxHeight="150px"
+                                            className="text-sm"
+                                        />
+                                    </div>
+                                )}
                             />
                         </div>
 
@@ -252,9 +265,22 @@ export const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ connectionId, 
                                 <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
                                     <Code className="h-3 w-3" /> Definition
                                 </Label>
-                                <Textarea 
-                                    {...register('query')}
-                                    className="font-mono text-xs min-h-30 bg-background/50 border-border/40"
+                                <Controller
+                                    control={control}
+                                    name="query"
+                                    render={({ field }) => (
+                                        <div className="relative group min-h-[200px]">
+                                            <CodeBlock
+                                                code={field.value || ''}
+                                                language={asset.asset_type === 'sql_query' ? 'sql' : asset.asset_type === 'nosql_query' ? 'json' : 'python'}
+                                                onChange={field.onChange}
+                                                editable
+                                                rounded
+                                                maxHeight="400px"
+                                                className="text-xs"
+                                            />
+                                        </div>
+                                    )}
                                 />
                             </div>
                         )}

@@ -14,7 +14,7 @@ interface CodeBlockProps {
   editable?: boolean;
   onChange?: (value: string) => void;
   className?: string;
-  placeholder?: string;
+
   title?: string;
   maxHeight?: string;
   rounded?: boolean;
@@ -28,7 +28,7 @@ export const CodeBlock = ({
   editable = false,
   onChange,
   className,
-  placeholder,
+
   title,
   maxHeight = '400px',
   rounded = false,
@@ -125,26 +125,25 @@ export const CodeBlock = ({
   const maximizedContent = (
     <AnimatePresence>
       {isMaximized && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[10000] flex items-center justify-center"
-        >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-background/40 backdrop-blur-2xl"
-            onClick={() => setIsMaximized(false)}
-          />
-
-          <motion.div
-            layoutId={`code-block-${title}`}
-            className="relative w-full h-full bg-background flex flex-col z-[10001]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Simplified Minimal Header */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center"
+                  >
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 bg-background/40 backdrop-blur-2xl"
+                      onClick={() => setIsMaximized(false)}
+                    />
+        
+                    <motion.div
+                      layoutId={`code-block-${title}`}
+                      className="relative w-full h-full bg-background flex flex-col z-50"
+                      onClick={(e) => e.stopPropagation()}
+                    >            {/* Simplified Minimal Header */}
             <div className="flex items-center justify-between px-6 py-3 border-b border-border/40 bg-muted/5 backdrop-blur-md">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">

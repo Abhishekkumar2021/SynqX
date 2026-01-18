@@ -6,7 +6,6 @@ import {
     getHistory, 
     clearHistory, 
     discoverAssets,
-    getConnectionAssets,
 } from '@/lib/api';
 import { PageMeta } from '@/components/common/PageMeta';
 import {
@@ -100,7 +99,7 @@ export const ExplorerPage: React.FC = () => {
         queryKey: ['execution-history'],
         queryFn: () => getHistory(100),
         refetchOnWindowFocus: false,
-        enabled: explorerType === 'sql'
+        enabled: Boolean(explorerType === 'sql')
     });
 
     const history: HistoryItem[] = useMemo(() => {

@@ -7,12 +7,12 @@ import { Settings2, Globe, Info, CheckCircle2, RefreshCw, Copy, Laptop } from 'l
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
+import { CodeBlock } from '@/components/ui/docs/CodeBlock';
 
 interface WorkspaceSettingsFormProps {
     activeWorkspace: any;
@@ -233,13 +233,18 @@ export const WorkspaceSettingsForm: React.FC<WorkspaceSettingsFormProps> = ({
                         <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
                             Mission Statement & Description
                         </Label>
-                        <Textarea 
-                            value={wsDesc} 
-                            onChange={e => setWsDesc(e.target.value)} 
-                            className="min-h-28 bg-muted/20 border-border/40 rounded-2xl p-6 text-sm leading-relaxed focus-visible:bg-background/80 transition-all resize-none font-medium shadow-sm focus-visible:ring-primary/20 text-foreground"
-                            placeholder="Document the primary goals and data integrations for this workspace..."
-                            readOnly={!isAdmin}
-                        />
+                        <div className="relative group min-h-[120px]">
+                            <CodeBlock
+                                code={wsDesc}
+                                onChange={isAdmin ? setWsDesc : undefined}
+                                language="text"
+                                editable={isAdmin}
+                                rounded
+                                maxHeight="200px"
+                                className="text-sm"
+                                placeholder="Document the primary goals and data integrations for this workspace..."
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

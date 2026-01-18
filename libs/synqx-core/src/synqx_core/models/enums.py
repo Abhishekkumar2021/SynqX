@@ -60,6 +60,8 @@ class AssetType(str, enum.Enum):
     PYTHON_SCRIPT = "python"
     SHELL_SCRIPT = "shell"
     JAVASCRIPT_SCRIPT = "javascript"
+    OSDU_KIND = "osdu_kind"
+    DOMAIN_ENTITY = "domain_entity"
 
 class PipelineStatus(str, enum.Enum):
     DRAFT = "draft"

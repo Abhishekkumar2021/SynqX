@@ -72,7 +72,7 @@ class Asset(Base, AuditMixin, SoftDeleteMixin):
         ForeignKey("connections.id", ondelete="CASCADE"), nullable=False, index=True
     )
 
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(500), nullable=False)
     asset_type: Mapped[AssetType] = mapped_column(
         SQLEnum(AssetType, values_callable=lambda obj: [e.value for e in obj]), 
         nullable=False

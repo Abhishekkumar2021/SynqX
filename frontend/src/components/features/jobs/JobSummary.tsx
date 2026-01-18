@@ -4,49 +4,19 @@ import React from 'react';
 import {
     CheckCircle2, Clock, Database, Zap,
     Activity, Terminal, AlertCircle,
-    RefreshCw, Cpu, HardDrive, History, XCircle,
+    RefreshCw, Cpu, HardDrive, XCircle,
     ArrowDownToLine, ArrowUpFromLine, ShieldAlert,
-    Server, Box, TrendingUp, BarChart3
+    Server, Box, TrendingUp
 } from 'lucide-react';
 import { cn, formatNumber, formatDurationMs, formatBytes } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
 import { StepRunInspector } from './StepRunInspector';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 
 interface JobSummaryProps {
     job: any;
     run: any;
 }
-
-const WatermarkBadge = ({ pipelineId, assetId }: { pipelineId: number, assetId?: number }) => {
-    const { data: wm, isLoading } = useQuery({
-        queryKey: ['watermark', pipelineId, assetId],
-        queryFn: async () => {
-            try {
-                const { data } = await api.get(`/pipelines/${pipelineId}/watermarks/${assetId}`);
-                return data;
-            } catch (e) { return null; }
-        },
-        enabled: !!assetId && !!pipelineId,
-        staleTime: 10000,
-    });
-
-    if (isLoading || !wm || !wm.last_value) return null;
-
-    const key = Object.keys(wm.last_value)[0];
-    const val = wm.last_value[key];
-
-    return (
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10 transition-all hover:bg-primary/10 group/wm shrink-0">
-            <History className="h-3 w-3 text-primary/60 group-hover/wm:text-primary transition-colors shrink-0" />
-            <span className="text-[9px] font-bold text-primary/70 truncate max-w-[180px] leading-none uppercase tracking-tight group-hover/wm:text-primary">
-                {key}: <span className="text-primary font-bold ">{String(val)}</span>
-            </span>
-        </div>
-    );
-};
 
 const PerformanceAnalytics = ({ steps }: { steps: any[] }) => {
     const data = steps.map((s, i) => ({

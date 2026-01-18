@@ -1,13 +1,11 @@
 import React, { useMemo } from 'react';
 import { 
     Database, Search, Layers, HardDrive, 
-    Globe, Code, Terminal, Cloud, Hash,
-    ChevronRight, Workflow, Link2, 
+    Globe, Code, Cloud, Link2, 
     Server, Cpu
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { type Connection } from '@/lib/api/types';
@@ -107,7 +105,7 @@ export const ExplorerSidebar: React.FC<ExplorerSidebarProps> = ({
                                         {category}
                                     </h4>
                                     <div className="space-y-1">
-                                        {items.map(c => (
+                                        {items.map((c: Connection) => (
                                             <ConnectionItem 
                                                 key={c.id} 
                                                 connection={c} 

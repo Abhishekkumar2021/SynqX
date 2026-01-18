@@ -312,6 +312,7 @@ export interface PipelineNode {
   mapping_expr?: string;
   sub_pipeline_id?: number;
   worker_tag?: string;
+  guardrails?: any;
 }
 
 export interface PipelineEdge {
@@ -477,6 +478,7 @@ export interface AssetBulkCreateResponse {
   failed_creates: number;
   total_requested: number;
   failures: any[];
+  created_ids: number[];
 }
 
 export interface SchemaDiscoveryResponse {

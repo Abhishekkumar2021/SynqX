@@ -18,7 +18,7 @@ class ConnectionUsageStatsRead(BaseModel):
 
 
 class ConnectionBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
+    name: str = Field(..., min_length=1, max_length=500)
     connector_type: ConnectorType
     description: Optional[str] = Field(None, max_length=5000)
     tags: Optional[Dict[str, Any]] = Field(default_factory=dict)
@@ -56,7 +56,7 @@ class ConnectionCreate(ConnectionBase):
 
 
 class ConnectionUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    name: Optional[str] = Field(None, min_length=1, max_length=500)
     description: Optional[str] = Field(None, max_length=5000)
     config: Optional[Dict[str, Any]] = None
     tags: Optional[Dict[str, Any]] = None
@@ -130,7 +130,7 @@ class AssetSchemaVersionRead(AssetSchemaVersionBase):
 
 
 class AssetBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
+    name: str = Field(..., min_length=1, max_length=500)
     asset_type: AssetType
     fully_qualified_name: Optional[str] = Field(None, max_length=500)
     is_source: bool = True
@@ -163,7 +163,7 @@ class AssetCreate(AssetBase):
 
 
 class AssetUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    name: Optional[str] = Field(None, min_length=1, max_length=500)
     asset_type: Optional[AssetType] = None
     fully_qualified_name: Optional[str] = Field(None, max_length=500)
     is_source: Optional[bool] = None
@@ -194,9 +194,11 @@ class AssetBulkCreate(BaseModel):
 
 class AssetBulkCreateResponse(BaseModel):
     successful_creates: int
+    updated_count: int = 0
     failed_creates: int
     total_requested: int
     failures: List[Dict[str, Any]] = Field(default_factory=list)
+    created_ids: List[int] = Field(default_factory=list)
 
 
 class AssetRead(AssetBase):

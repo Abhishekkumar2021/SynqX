@@ -110,7 +110,7 @@ const formatDuration = (ms: number | null) => {
  */
 const MaximizePortal = ({ children, onClose, title, subtitle }: { children: React.ReactNode, onClose: () => void, title: string, subtitle: string }) => {
     return createPortal(
-        <div className="fixed inset-0 z-[100] flex flex-col bg-background animate-in fade-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-50 flex flex-col bg-background animate-in fade-in zoom-in-95 duration-300">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border/40 bg-muted/20 backdrop-blur-xl">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">

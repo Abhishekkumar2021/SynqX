@@ -98,7 +98,7 @@ export const SettingsPage: React.FC = () => {
     const { data: alerts, isLoading: loadingAlerts } = useQuery({
         queryKey: ['alerts'],
         queryFn: getAlertConfigs,
-        enabled: activeTab === 'notifications'
+        enabled: Boolean(activeTab === 'notifications')
     });
 
     // Alert Toggle Mutation

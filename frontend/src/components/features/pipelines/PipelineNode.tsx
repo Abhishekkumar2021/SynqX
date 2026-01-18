@@ -10,7 +10,6 @@ import {
     Terminal, ZoomIn, MoreVertical, Copy, Trash
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { cn, formatNumber } from '@/lib/utils';
 import { type AppNode } from '@/types/pipeline';
 import {
@@ -44,7 +43,6 @@ const PipelineNode = ({ data, selected }: NodeProps<AppNode>) => {
     const isRunning = status === 'running';
     const isError = ['failed', 'error'].includes(status);
     const isSuccess = ['success', 'completed'].includes(status);
-    const isWarning = status === 'warning';
 
     const diffStatus = nodeData.diffStatus || 'none';
     const isAdded = diffStatus === 'added';

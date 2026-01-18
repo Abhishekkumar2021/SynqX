@@ -202,7 +202,8 @@ class ConnectionService:
                         method = getattr(connector, method_name)
                         params = config.get("params", {})
                         res = method(**params)
-                        return {"metadata": sanitize_for_json(res)}
+                        logger.info(f"Metadata method {method_name} result count: {len(res) if isinstance(res, list) else 'N/A'}")
+                        return sanitize_for_json(res)
 
                 return {}
             except Exception as e:
@@ -690,7 +691,7 @@ class ConnectionService:
     def bulk_create_assets(
         self,
         connection_id: int,
-        assets_to_create: List[Any], # Using Any to avoid circular import with schemas, will be AssetBulkCreateItem
+        assets_to_create: List[Any],
         user_id: Optional[int] = None,
         workspace_id: Optional[int] = None,
     ) -> Dict[str, Any]:
@@ -699,57 +700,127 @@ class ConnectionService:
             raise AppError(f"Connection {connection_id} not found")
 
         success_count = 0
+        updated_count = 0
         fail_count = 0
         failures = []
+        created_ids = []
         
-        # Get existing asset names for this connection to prevent duplicates efficiently
-        existing_assets = {
-            r[0] for r in self.db_session.query(Asset.name).filter(
-                Asset.connection_id == connection_id
+        # Get existing assets map for this connection
+        existing_assets_map = {
+            a.name: a for a in self.db_session.query(Asset).filter(
+                Asset.connection_id == connection_id,
+                Asset.deleted_at.is_(None)
             ).all()
         }
 
         for asset_data in assets_to_create:
-            name = asset_data.name
-            if name in existing_assets:
-                fail_count += 1
-                failures.append({"name": name, "reason": "Asset with this name already exists."})
-                continue
+            # Handle both dict and Pydantic model
+            is_dict = isinstance(asset_data, dict)
+            name = asset_data.get("name") if is_dict else getattr(asset_data, "name", None)
             
-            try:
-                # Create a complete Asset model from the Pydantic item
-                asset = Asset(
-                    connection_id=connection_id,
-                    **asset_data.model_dump(),
-                    workspace_id=workspace_id or connection.workspace_id,
-                    created_by=str(user_id) if user_id else None
-                )
-                self.db_session.add(asset)
-                # Add to set to prevent duplicate additions in the same bulk run
-                existing_assets.add(name)
-                success_count += 1
-            except Exception as e:
-                # This part will now only catch unexpected errors during object creation
+            if not name:
                 fail_count += 1
-                failures.append({"name": name, "reason": f"An unexpected error occurred: {str(e)}"})
+                failures.append({"name": "Unknown", "reason": "Asset name is missing in request data"})
+                continue
 
-        if success_count > 0:
+            current_is_update = False
+            try:
+                with self.db_session.begin_nested():
+                    if name in existing_assets_map:
+                        # UPDATE EXISTING ASSET
+                        asset = existing_assets_map[name]
+                        data = asset_data if is_dict else asset_data.model_dump(exclude_unset=True)
+                        
+                        for key, value in data.items():
+                            if value is not None and hasattr(asset, key) and key != "id":
+                                setattr(asset, key, value)
+                        
+                        asset.updated_at = datetime.now(timezone.utc)
+                        if user_id:
+                            asset.updated_by = str(user_id)
+                        current_is_update = True
+                    else:
+                        # CREATE NEW ASSET
+                        data = asset_data if is_dict else asset_data.model_dump()
+                        asset = Asset(
+                            connection_id=connection_id,
+                            **data,
+                            workspace_id=workspace_id or connection.workspace_id,
+                            created_by=str(user_id) if user_id else None
+                        )
+                        self.db_session.add(asset)
+                        current_is_update = False
+                    
+                    self.db_session.flush()
+
+                    # --- PROSOURCE / OSDU SPECIAL HANDLING ---
+                    if connection.connector_type == ConnectorType.PROSOURCE and asset.schema_metadata:
+                        # ... (existing prosource logic) ...
+                        raw_schema = asset.schema_metadata
+                        if isinstance(raw_schema, dict) and (not current_is_update or not asset.current_schema_version):
+                            columns = []
+                            properties = raw_schema.get("properties", {}) or raw_schema
+                            for col_name, col_def in properties.items():
+                                if not isinstance(col_def, dict): col_def = {"type": "string"}
+                                columns.append({
+                                    "name": col_name,
+                                    "type": col_def.get("type", "string"),
+                                    "native_type": col_def.get("format") or col_def.get("type", "string"),
+                                    "description": col_def.get("description"),
+                                    "nullable": True
+                                })
+                            osdu_schema = {"asset": asset.name, "columns": columns, "row_count_estimate": 0, "schema_metadata": raw_schema}
+                            
+                            import json, hashlib
+                            from synqx_core.models.connections import AssetSchemaVersion
+                            schema_json = json.dumps(osdu_schema, sort_keys=True)
+                            schema_hash = hashlib.sha256(schema_json.encode()).hexdigest()
+                            initial_version = AssetSchemaVersion(
+                                asset_id=asset.id, version=1, json_schema=osdu_schema,
+                                schema_hash=schema_hash, is_breaking_change=False,
+                                discovered_at=datetime.now(timezone.utc),
+                            )
+                            self.db_session.add(initial_version)
+                            asset.current_schema_version = 1
+                            asset.schema_metadata = osdu_schema 
+
+                    # Increment counts AFTER successful flush and potential metadata generation
+                    if current_is_update:
+                        updated_count += 1
+                    else:
+                        success_count += 1
+                    
+                    if asset.id not in created_ids:
+                        created_ids.append(asset.id)
+                    existing_assets_map[name] = asset
+
+            except Exception as e:
+                fail_count += 1
+                error_msg = str(e)
+                if "unique constraint" in error_msg.lower():
+                    error_msg = f"Asset '{name}' already exists or name conflict detected."
+                failures.append({"name": name, "reason": error_msg})
+                logger.warning(f"Bulk asset registration failed for '{name}': {error_msg}")
+
+        if (success_count + updated_count) > 0:
             try:
                 self.db_session.commit()
-            except IntegrityError as e:
-                # This could happen in a race condition if another process created an asset
-                # after our initial check. The robust solution would be to retry, but for now,
-                # we'll just fail the batch. A more advanced implementation would use SAVEPOINTs.
+            except Exception as e:
                 self.db_session.rollback()
-                logger.error(f"Bulk asset creation failed on commit: {e}", exc_info=True)
-                raise AppError("Failed to commit assets due to a conflict. Please try again.")
+                logger.error(f"Bulk registration final commit failed: {e}", exc_info=True)
+                raise AppError("Failed to commit registered assets. Possible concurrent modification.")
+        else:
+            self.db_session.rollback()
         
         return {
             "successful_creates": success_count,
+            "updated_count": updated_count,
             "failed_creates": fail_count,
             "total_requested": len(assets_to_create),
             "failures": failures,
+            "created_ids": created_ids
         }
+
 
     def delete_asset(self, asset_id: int, hard_delete: bool = False, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> bool:
         asset = self.get_asset(asset_id, user_id=user_id, workspace_id=workspace_id)
@@ -931,7 +1002,12 @@ class ConnectionService:
 
             self.db_session.add(schema_version)
             asset.current_schema_version = next_version
+            
+            # Persist enhanced metadata to the asset record
             asset.schema_metadata = schema
+            if "row_count_estimate" in schema:
+                asset.row_count_estimate = schema["row_count_estimate"]
+            
             self.db_session.commit()
 
             return SchemaDiscoveryResponse(

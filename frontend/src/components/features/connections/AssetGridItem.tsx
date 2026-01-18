@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Table, Layers, FileText, FileCode, Activity,
     MoreHorizontal, Table as TableIcon, Eye, RefreshCw, Terminal,
-    Shield, HardDrive, FileJson, Check, Copy, Minimize2, Maximize2, Zap
+    Shield, HardDrive, FileJson, Check, Copy, Minimize2, Maximize2, Zap, Database
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,7 +21,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-    Dialog, DialogContent, DialogHeader, DialogTitle} from '@/components/ui/dialog';
+    Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatNumber } from '@/lib/utils';
@@ -48,6 +48,8 @@ interface AssetGridItemProps {
 const getAssetIcon = (type: string) => {
     const t = type.toLowerCase();
     if (t.includes('table') || t.includes('view')) return <Table className="h-5 w-5" />;
+    if (t.includes('osdu_kind') || t.includes('kind')) return <Layers className="h-5 w-5" />;
+    if (t.includes('domain_entity') || t.includes('entity')) return <Database className="h-5 w-5" />;
     if (t.includes('collection')) return <Layers className="h-5 w-5" />;
     if (t.includes('file')) return <FileText className="h-5 w-5" />;
     if (t.includes('script') || t.includes('python') || t.includes('javascript')) return <FileCode className="h-5 w-5" />;
@@ -90,14 +92,14 @@ export const AssetGridItem: React.FC<AssetGridItemProps> = ({
     const { data: schemaVersions, isLoading: loadingSchema } = useQuery({
         queryKey: ['schema', asset.id],
         queryFn: () => getAssetSchemaVersions(connectionId, asset.id),
-        enabled: isSchemaDialogOpen,
+        enabled: Boolean(isSchemaDialogOpen),
     });
 
     // Fetch Sample Data
     const { data: sampleData, isLoading: loadingSample } = useQuery({
         queryKey: ['sample', asset.id],
         queryFn: () => getAssetSampleData(connectionId, asset.id, 50),
-        enabled: isSampleDialogOpen,
+        enabled: Boolean(isSampleDialogOpen),
     });
 
     // Default to latest version when loaded
@@ -319,19 +321,22 @@ export const AssetGridItem: React.FC<AssetGridItemProps> = ({
                             </ScrollArea>
                         </div>
                         <div className="flex-1 flex flex-col min-w-0 bg-card">
-                            <DialogHeader className="px-6 py-4 border-b border-border/50 shrink-0 flex flex-row items-center justify-between space-y-0">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary ring-1 ring-primary/20">
-                                        <FileJson className="h-5 w-5" />
+                            <DialogHeader className="px-6 py-4 border-b border-border/50 shrink-0">
+                                <div className="flex flex-row items-center justify-between w-full space-y-0">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary ring-1 ring-primary/20">
+                                            <FileJson className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <DialogTitle className="text-base font-semibold text-foreground">{asset.name}</DialogTitle>
+                                            <DialogDescription className="hidden">Schema History for {asset.name}</DialogDescription>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <DialogTitle className="text-base font-semibold text-foreground">{asset.name}</DialogTitle>
-                                    </div>
+                                    <Button variant="outline" size="sm" onClick={handleCopyJson} className="h-8 gap-2 mr-8">
+                                        {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                        {copied ? "Copied" : "Copy JSON"}
+                                    </Button>
                                 </div>
-                                <Button variant="outline" size="sm" onClick={handleCopyJson} className="h-8 gap-2 mr-8">
-                                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                                    {copied ? "Copied" : "Copy JSON"}
-                                </Button>
                             </DialogHeader>
                             <div className="flex-1 overflow-auto p-0 bg-[#09090b]">
                                 {selectedSchema ? (
@@ -355,16 +360,21 @@ export const AssetGridItem: React.FC<AssetGridItemProps> = ({
                     "flex flex-col p-0 gap-0 overflow-hidden border-border/60 bg-background/95 backdrop-blur-3xl shadow-2xl transition-all duration-300",
                     isMaximized ? "max-w-[100vw] h-screen sm:rounded-none" : "max-w-7xl h-[85vh] sm:rounded-[2rem]"
                 )}>
-                    <DialogHeader className="px-8 py-6 border-b border-border/40 bg-muted/20 shrink-0 flex flex-row items-center justify-between space-y-0">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 ring-1 ring-emerald-500/20 shadow-sm">
-                                <TableIcon className="h-6 w-6" />
+                    <DialogHeader className="px-8 py-6 border-b border-border/40 bg-muted/20 shrink-0">
+                        <div className="flex flex-row items-center justify-between w-full space-y-0">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 ring-1 ring-emerald-500/20 shadow-sm">
+                                    <TableIcon className="h-6 w-6" />
+                                </div>
+                                <div className="space-y-1">
+                                    <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Data Explorer: {asset.name}</DialogTitle>
+                                    <DialogDescription className="text-xs font-medium text-muted-foreground">Exploration & Export Suite for {asset.name}</DialogDescription>
+                                </div>
                             </div>
-                            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Data Explorer: {asset.name}</DialogTitle>
+                            <Button variant="outline" size="icon" className="h-9 w-9 mr-8" onClick={() => setIsMaximized(!isMaximized)}>
+                                {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                            </Button>
                         </div>
-                        <Button variant="outline" size="icon" className="h-9 w-9 mr-8" onClick={() => setIsMaximized(!isMaximized)}>
-                            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                        </Button>
                     </DialogHeader>
                     <div className="flex-1 min-h-0 relative">
                         <ResultsGrid 

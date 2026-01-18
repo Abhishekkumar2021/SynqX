@@ -45,8 +45,11 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
     Dialog,
-    DialogContent
+    DialogContent,
+    DialogTitle,
+    DialogDescription
 } from "@/components/ui/dialog";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
     Tooltip,
     TooltipContent,
@@ -59,8 +62,6 @@ import { useMemo, useState } from 'react';
 import { useZenMode } from '@/hooks/useZenMode';
 import { motion } from 'framer-motion';
 import { AssetsTabContent } from '@/components/features/connections/AssetsTabContent';
-import { OSDUBrowser } from '@/components/features/connections/domain/osdu/OSDUBrowser';
-import { ProSourceBrowser } from '@/components/features/connections/domain/prosource/ProSourceBrowser';
 import { ConnectionConfigStats } from '@/components/features/connections/ConnectionConfigStats';
 import { EnvironmentInfo } from '@/components/features/connections/EnvironmentInfo';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -467,35 +468,16 @@ export const ConnectionDetailsPage: React.FC = () => {
                     isZenMode ? "h-[calc(100vh-10rem)]" : "h-[calc(100vh-16rem)]"
                 )}>
                     <TabsContent value="assets" className="h-full mt-0 focus-visible:outline-none">
-                        {String(connection.connector_type).toLowerCase() === 'osdu' ? (
-                            <OSDUBrowser
-                                connectionId={connectionId}
-                                connectionName={connection.name}
-                                assets={discoveredAssets}
-                                isLoading={loadingAssets || discoverMutation.isPending}
-                                onDiscover={() => discoverMutation.mutate()}
-                                mode="management"
-                            />
-                        ) : String(connection.connector_type).toLowerCase() === 'prosource' ? (
-                            <ProSourceBrowser
-                                connectionId={connectionId}
-                                connectionName={connection.name}
-                                assets={discoveredAssets}
-                                isLoading={loadingAssets || discoverMutation.isPending}
-                                onDiscover={() => discoverMutation.mutate()}
-                                mode="management"
-                            />
-                        ) : (
-                            <AssetsTabContent
-                                connectionId={connectionId}
-                                connectorType={connection.connector_type}
-                                assets={assets}
-                                discoveredAssets={discoveredAssets}
-                                isLoading={loadingAssets || discoverMutation.isPending}
-                                onDiscover={() => discoverMutation.mutate()}
-                                setDiscoveredAssets={setDiscoveredAssets}
-                            />
-                        )}
+                        <AssetsTabContent
+                            connectionId={connectionId}
+                            connectionName={connection.name}
+                            connectorType={connection.connector_type}
+                            assets={assets}
+                            discoveredAssets={discoveredAssets}
+                            isLoading={loadingAssets || discoverMutation.isPending}
+                            onDiscover={() => discoverMutation.mutate()}
+                            setDiscoveredAssets={setDiscoveredAssets}
+                        />
                     </TabsContent>
 
                     <TabsContent value="configuration" className="h-full mt-0 focus-visible:outline-none">
@@ -506,22 +488,18 @@ export const ConnectionDetailsPage: React.FC = () => {
                     </TabsContent>
 
                     {hasEnvironment && (
-                        <TabsContent value="environment" className="h-full mt-0 focus-visible:outline-none">
-                            <EnvironmentInfo connectionId={connectionId} />
-                        </TabsContent>
-                    )}
-                </div>
-                            </Tabs>
-                
-                            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                                <DialogContent className="max-w-5xl h-175 flex flex-col p-0 gap-0 overflow-hidden rounded-3xl border-border/60 glass-panel shadow-2xl backdrop-blur-3xl">
-                                    <CreateConnectionDialog
-                                        initialData={connection}
-                                        onClose={() => setIsEditDialogOpen(false)}
-                                    />
-                                </DialogContent>
-                            </Dialog>
-                        </motion.div>
-                    );
-                };
-                
+                                                    <TabsContent value="environment" className="h-full mt-0 focus-visible:outline-none">
+                                                    <EnvironmentInfo connectionId={connectionId} />
+                                                </TabsContent>
+                                            )}
+                                        </div>
+                                                    </Tabs>
+                                        
+                                                    <CreateConnectionDialog
+                                                        open={isEditDialogOpen}
+                                                        onOpenChange={setIsEditDialogOpen}
+                                                        initialData={connection}
+                                                    />
+                                                </motion.div>
+                                            );
+                                        };                

@@ -38,7 +38,10 @@ export const ConnectorType = {
     STRIPE: "stripe",
     // Generic
     CUSTOM_SCRIPT: "custom_script",
-    SINGER_TAP: "singer_tap"
+    SINGER_TAP: "singer_tap",
+    // Domain Specific
+    OSDU: "osdu",
+    PROSOURCE: "prosource"
 } as const;
 export type ConnectorType = typeof ConnectorType[keyof typeof ConnectorType];
 
@@ -54,7 +57,10 @@ export const AssetType = {
     NOSQL_QUERY: "nosql_query",
     PYTHON_SCRIPT: "python",
     SHELL_SCRIPT: "shell",
-    JAVASCRIPT_SCRIPT: "javascript"
+    JAVASCRIPT_SCRIPT: "javascript",
+    // Domain Specific
+    OSDU_KIND: "osdu_kind",
+    DOMAIN_ENTITY: "domain_entity"
 } as const;
 export type AssetType = typeof AssetType[keyof typeof AssetType];
 

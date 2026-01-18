@@ -44,7 +44,7 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
     onRefetchHistory,
 }) => {
     const { theme } = useTheme();
-    const { isEditor } = useWorkspace();
+    useWorkspace();
     const monaco = useMonaco();
     const editorRef = useRef<any>(null);
 

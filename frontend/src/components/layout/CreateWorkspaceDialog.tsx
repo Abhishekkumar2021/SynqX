@@ -14,12 +14,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { createWorkspace } from '@/lib/api';
 import { toast } from 'sonner';
 import { Building2, Rocket, Globe, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Controller } from 'react-hook-form';
+import { CodeBlock } from '@/components/ui/docs/CodeBlock';
 
 interface CreateWorkspaceDialogProps {
     open: boolean;
@@ -29,7 +30,7 @@ interface CreateWorkspaceDialogProps {
 export const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({ open, onOpenChange }) => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
-    const { register, handleSubmit, watch, reset } = useForm({
+    const { register, handleSubmit, watch, reset, control } = useForm({
         defaultValues: {
             name: '',
             description: ''
@@ -124,11 +125,23 @@ export const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({ op
                                 <Label htmlFor="ws-desc" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 px-1">
                                     Workspace Purpose
                                 </Label>
-                                <Textarea 
-                                    id="ws-desc" 
-                                    {...register('description')} 
-                                    placeholder="What will you build here? (Optional)" 
-                                    className="min-h-25 bg-muted/20 border-border/40 rounded-2xl p-5 text-sm focus-visible:ring-primary/20 focus-visible:bg-background transition-all resize-none leading-relaxed"
+                                <Controller
+                                    control={control}
+                                    name="description"
+                                    render={({ field }) => (
+                                        <div className="relative group min-h-[100px]">
+                                            <CodeBlock
+                                                code={field.value || ''}
+                                                onChange={field.onChange}
+                                                language="text"
+                                                editable
+                                                rounded
+                                                maxHeight="150px"
+                                                className="text-sm"
+                                                placeholder="What will you build here? (Optional)"
+                                            />
+                                        </div>
+                                    )}
                                 />
                             </div>
                         </div>
