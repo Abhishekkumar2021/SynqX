@@ -192,7 +192,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/25 selection:text-primary relative overflow-x-hidden font-sans;
+    @apply bg-background text-foreground antialiased selection:bg-indigo-600 selection:text-white relative overflow-x-hidden font-sans;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
   }
 

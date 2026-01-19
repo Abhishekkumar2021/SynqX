@@ -3,6 +3,7 @@ import requests
 import os
 import io
 import sys
+import re
 import logging
 import platform
 import socket

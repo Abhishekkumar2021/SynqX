@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str = "info@synqx.dev"
     EMAILS_FROM_NAME: str = "SynqX Alerts"
 
+    # AI & Intelligence
+    GOOGLE_API_KEY: str = ""
+    GOOGLE_AI_MODEL: str = "gemini-3-flash-preview"
+    GOOGLE_AI_TEMPERATURE: float = 0.1
+    GOOGLE_AI_TOP_P: float = 0.95
+    GOOGLE_AI_TOP_K: int = 40
+    GOOGLE_AI_MAX_OUTPUT_TOKENS: int = 1024
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

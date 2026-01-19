@@ -1,0 +1,52 @@
+from typing import Any, Dict, Optional
+import requests
+from synqx_core.errors import ConnectionFailedError
+from synqx_core.logging import get_logger
+
+logger = get_logger(__name__)
+
+class OSDUBaseClient:
+    """
+    Base client for OSDU services handling authentication, 
+    partitioning, and common request patterns.
+    """
+    def __init__(self, base_url: str, data_partition_id: str, auth_token: str):
+        self.base_url = base_url.rstrip("/")
+        self.data_partition_id = data_partition_id
+        self.auth_token = auth_token
+        self.headers = {
+            "data-partition-id": data_partition_id,
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json"
+        }
+
+    def _get(self, path: str, params: Optional[Dict[str, Any]] = None, timeout: int = 30) -> requests.Response:
+        url = f"{self.base_url}/{path.lstrip('/')}"
+        resp = requests.get(url, headers=self.headers, params=params, timeout=timeout)
+        self._handle_errors(resp)
+        return resp
+
+    def _post(self, path: str, json: Optional[Dict[str, Any]] = None, timeout: int = 30) -> requests.Response:
+        url = f"{self.base_url}/{path.lstrip('/')}"
+        resp = requests.post(url, headers=self.headers, json=json, timeout=timeout)
+        self._handle_errors(resp)
+        return resp
+
+    def _put(self, path: str, json: Optional[Dict[str, Any]] = None, timeout: int = 30) -> requests.Response:
+        url = f"{self.base_url}/{path.lstrip('/')}"
+        resp = requests.put(url, headers=self.headers, json=json, timeout=timeout)
+        self._handle_errors(resp)
+        return resp
+
+    def _delete(self, path: str, timeout: int = 30) -> requests.Response:
+        url = f"{self.base_url}/{path.lstrip('/')}"
+        resp = requests.delete(url, headers=self.headers, timeout=timeout)
+        self._handle_errors(resp)
+        return resp
+
+    def _handle_errors(self, resp: requests.Response):
+        if resp.status_code == 401:
+            raise ConnectionFailedError("OSDU Session Expired or Token Invalid (401)")
+        if resp.status_code == 403:
+            raise ConnectionFailedError(f"Access Denied to OSDU Partition '{self.data_partition_id}' (403)")
+        resp.raise_for_status()

@@ -892,12 +892,21 @@ def get_connection_metadata(
     connection_id: int,
     method: str = Body(..., embed=True),
     params: Dict[str, Any] = Body(default={}, embed=True),
+    limit: Optional[int] = Query(None, description="Limit for pagination"),
+    offset: Optional[int] = Query(None, description="Offset for pagination"),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
     _: models.WorkspaceMember = Depends(deps.require_viewer),
 ):
     try:
         service = ConnectionService(db)
+        
+        # Inject pagination into params if provided via query
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+
         result = service._trigger_ephemeral_job(
             connection_id=connection_id,
             agent_group=None, # Default to internal if not specified, service will handle it

@@ -60,6 +60,33 @@ export const ConnectionsPage: React.FC = () => {
         });
     };
 
+    const handleCreate = () => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('action', 'create');
+            next.delete('edit');
+            return next;
+        });
+    };
+
+    const handleEdit = (connection: any) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('edit', String(connection.id));
+            next.delete('action');
+            return next;
+        });
+    };
+
+    const closeDialog = React.useCallback(() => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('action');
+            next.delete('edit');
+            return next;
+        });
+    }, [setSearchParams]);
+
     const { data: connections, isLoading, error } = useQuery({
         queryKey: ['connections'],
         queryFn: getConnections,
@@ -96,32 +123,6 @@ export const ConnectionsPage: React.FC = () => {
         }
     });
 
-    const handleCreate = () => {
-        setSearchParams(prev => {
-            const next = new URLSearchParams(prev);
-            next.set('action', 'create');
-            next.delete('edit');
-            return next;
-        });
-    };
-
-    const handleEdit = (connection: any) => {
-        setSearchParams(prev => {
-            const next = new URLSearchParams(prev);
-            next.set('edit', String(connection.id));
-            next.delete('action');
-            return next;
-        });
-    };
-
-    const closeDialog = React.useCallback(() => {
-        setSearchParams(prev => {
-            const next = new URLSearchParams(prev);
-            next.delete('action');
-            next.delete('edit');
-            return next;
-        });
-    }, [setSearchParams]);
 
     const handleDelete = (connection: any) => {
         setConnectionToDelete(connection);

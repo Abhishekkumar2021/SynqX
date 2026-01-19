@@ -3,6 +3,7 @@ export * from "./types";
 export * from "./auth";
 export * from "./api_keys";
 export * from "./workspaces";
+export * from "./ai";
 export * from "./agents";
 export * from "./connections";
 export * from "./pipelines";

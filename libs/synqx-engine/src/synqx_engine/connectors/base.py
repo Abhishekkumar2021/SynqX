@@ -189,7 +189,7 @@ class BaseConnector(ABC):
     def list_files(self, path: str = "") -> List[Dict[str, Any]]:
         raise NotImplementedError(f"Live file listing not supported for {self.__class__.__name__}")
 
-    def download_file(self, path: str) -> bytes:
+    def download_file(self, path: str = "", **kwargs) -> bytes:
         raise NotImplementedError(f"File download not supported for {self.__class__.__name__}")
 
     def upload_file(self, path: str, content: bytes) -> bool:

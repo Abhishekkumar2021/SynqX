@@ -761,7 +761,8 @@ class ConnectionService:
                             columns = []
                             properties = raw_schema.get("properties", {}) or raw_schema
                             for col_name, col_def in properties.items():
-                                if not isinstance(col_def, dict): col_def = {"type": "string"}
+                                if not isinstance(col_def, dict):
+                                    col_def = {"type": "string"}
                                 columns.append({
                                     "name": col_name,
                                     "type": col_def.get("type", "string"),
@@ -771,7 +772,8 @@ class ConnectionService:
                                 })
                             osdu_schema = {"asset": asset.name, "columns": columns, "row_count_estimate": 0, "schema_metadata": raw_schema}
                             
-                            import json, hashlib
+                            import json
+                            import hashlib
                             from synqx_core.models.connections import AssetSchemaVersion
                             schema_json = json.dumps(osdu_schema, sort_keys=True)
                             schema_hash = hashlib.sha256(schema_json.encode()).hexdigest()
@@ -1126,7 +1128,14 @@ class ConnectionService:
             with connector.session():
                 try:
                     results = connector.execute_query(query=query, limit=limit, offset=offset, **(params or {}))
-                    total_count = connector.get_total_count(query, is_query=True, **(params or {}))
+                    
+                    # Handle dictionary return with metadata
+                    total_count = None
+                    if isinstance(results, dict) and "results" in results:
+                        total_count = results.get("total_count")
+                        results = results["results"]
+                    else:
+                        total_count = connector.get_total_count(query, is_query=True, **(params or {}))
                 except NotImplementedError:
                     results = connector.fetch_sample(asset=query, limit=limit, offset=offset, **(params or {}))
                     total_count = connector.get_total_count(query, is_query=False, **(params or {}))
