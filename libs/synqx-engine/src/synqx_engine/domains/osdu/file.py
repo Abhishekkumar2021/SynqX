@@ -1,44 +1,58 @@
-from typing import Any, Dict, List
+from typing import Any
+
 from .base import OSDUBaseClient
+
 
 class OSDUFileService(OSDUBaseClient):
     """
     File and Dataset services implementation.
     """
-    
+
     # --- File Service ---
-    def get_upload_url(self) -> Dict[str, Any]:
+    def get_upload_url(self) -> dict[str, Any]:
         """GET api/file/v2/files/uploadURL"""
         return self._get("api/file/v2/files/uploadURL").json()
 
-    def get_file_upload_url(self) -> Dict[str, Any]:
+    def get_file_upload_url(self) -> dict[str, Any]:
         """Alias for get_upload_url to match frontend naming."""
         return self.get_upload_url()
 
     def get_download_url(self, file_id: str, expiry_time: str = "2H") -> str:
         """GET api/file/v2/files/{id}/downloadURL"""
         params = {"expiryTime": expiry_time}
-        resp = self._get(f"api/file/v2/files/{file_id}/downloadURL", params=params).json()
+        resp = self._get(
+            f"api/file/v2/files/{file_id}/downloadURL", params=params
+        ).json()
         # Handle various OSDU response key casings
-        return resp.get("SignedUrl") or resp.get("SignedURL") or resp.get("signedUrl") or ""
+        return (
+            resp.get("SignedUrl")
+            or resp.get("SignedURL")
+            or resp.get("signedUrl")
+            or ""
+        )
 
     def get_file_download_url(self, file_id: str, **kwargs) -> str:
         """Alias for get_download_url to match frontend naming."""
         return self.get_download_url(file_id, **kwargs)
 
-    def get_file_metadata(self, file_id: str) -> Dict[str, Any]:
+    def get_file_metadata(self, file_id: str) -> dict[str, Any]:
         """GET api/file/v2/files/{id}/metadata"""
         return self._get(f"api/file/v2/files/{file_id}/metadata").json()
 
-    def register_file_metadata(self, metadata: Dict[str, Any]) -> str:
+    def register_file_metadata(self, metadata: dict[str, Any]) -> str:
         """POST api/file/v2/files/metadata"""
         return self._post("api/file/v2/files/metadata", json=metadata).json().get("id")
 
-    def register_file(self, metadata: Dict[str, Any], **kwargs) -> str:
+    def register_file(self, metadata: dict[str, Any], **kwargs) -> str:
         """Wrapper for register_file_metadata to match frontend naming."""
         return self.register_file_metadata(metadata)
 
-    def upload_file(self, file_content: bytes, filename: str, content_type: str = "application/octet-stream") -> str:
+    def upload_file(
+        self,
+        file_content: bytes,
+        filename: str,
+        content_type: str = "application/octet-stream",
+    ) -> str:
         """
         Server-side upload proxy to bypass browser CORS.
         1. Fetches upload URL
@@ -57,11 +71,9 @@ class OSDUFileService(OSDUBaseClient):
             raise ValueError("Could not obtain signed upload URL from OSDU")
 
         # 2. Perform Binary PUT from Server
-        import requests
-        headers = {
-            "x-ms-blob-type": "BlockBlob",
-            "Content-Type": content_type
-        }
+        import requests  # noqa: PLC0415
+
+        headers = {"x-ms-blob-type": "BlockBlob", "Content-Type": content_type}
         resp = requests.put(signed_url, data=file_content, headers=headers)
         resp.raise_for_status()
 
@@ -70,27 +82,32 @@ class OSDUFileService(OSDUBaseClient):
             "kind": "osdu:wks:dataset--File.Generic:1.0.0",
             "acl": {
                 "viewers": self.config.get("default_viewers", []),
-                "owners": self.config.get("default_owners", [])
+                "owners": self.config.get("default_owners", []),
             },
             "legal": {
                 "legaltags": self.config.get("default_legal_tags", []),
-                "otherRelevantDataCountries": ["US"]
+                "otherRelevantDataCountries": ["US"],
             },
             "data": {
                 "DatasetProperties": {
                     "FileSourceInfo": {
                         "FileSource": file_source,
                         "Name": filename,
-                        "FileSize": str(len(file_content))
+                        "FileSize": str(len(file_content)),
                     }
                 }
-            }
+            },
         }
-        
+
         # If partition defaults aren't found, try to infer or use placeholders
         # In a real scenario, these should be passed or configured
         if not metadata["acl"]["viewers"]:
-            metadata["acl"] = {"viewers": [f"data.default.viewers@{self.partition_id}.dataservices.com"], "owners": [f"data.default.owners@{self.partition_id}.dataservices.com"]}
+            metadata["acl"] = {
+                "viewers": [
+                    f"data.default.viewers@{self.partition_id}.dataservices.com"
+                ],
+                "owners": [f"data.default.owners@{self.partition_id}.dataservices.com"],
+            }
         if not metadata["legal"]["legaltags"]:
             metadata["legal"]["legaltags"] = [f"{self.partition_id}-default-legal"]
 
@@ -108,14 +125,15 @@ class OSDUFileService(OSDUBaseClient):
         signed_url = self.get_download_url(file_id)
         if not signed_url:
             raise ValueError(f"Could not resolve download URL for file {file_id}")
-        
-        import requests
+
+        import requests  # noqa: PLC0415
+
         resp = requests.get(signed_url)
         resp.raise_for_status()
         return resp.content
 
     # --- Dataset Service ---
-    def get_retrieval_instructions(self, dataset_ids: List[str]) -> Dict[str, Any]:
+    def get_retrieval_instructions(self, dataset_ids: list[str]) -> dict[str, Any]:
         """POST api/dataset/v1/retrievalInstructions"""
         payload = {"datasetRegistryIds": dataset_ids}
         return self._post("api/dataset/v1/retrievalInstructions", json=payload).json()
@@ -129,16 +147,23 @@ class OSDUFileService(OSDUBaseClient):
         delivery = resp.get("delivery", [])
         if not delivery:
             return ""
-        
+
         # Extract signed URL from retrieval properties
         props = delivery[0].get("retrievalProperties", {})
-        return props.get("signedUrl") or props.get("SignedUrl") or props.get("SignedURL") or ""
+        return (
+            props.get("signedUrl")
+            or props.get("SignedUrl")
+            or props.get("SignedURL")
+            or ""
+        )
 
-    def get_storage_instructions(self, kind: str) -> Dict[str, Any]:
+    def get_storage_instructions(self, kind: str) -> dict[str, Any]:
         """GET api/dataset/v1/storageInstructions"""
-        return self._get("api/dataset/v1/storageInstructions", params={"kind": kind}).json()
+        return self._get(
+            "api/dataset/v1/storageInstructions", params={"kind": kind}
+        ).json()
 
-    def register_dataset(self, datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def register_dataset(self, datasets: list[dict[str, Any]]) -> dict[str, Any]:
         """POST api/dataset/v1/registerDataset"""
         payload = {"datasetRegistries": datasets}
         return self._post("api/dataset/v1/registerDataset", json=payload).json()

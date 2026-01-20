@@ -1,7 +1,9 @@
-from synqx_engine.connectors.impl.sql.base import SQLConnector
-from synqx_core.errors import ConfigurationError
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from synqx_core.errors import ConfigurationError
+
+from synqx_engine.connectors.impl.sql.base import SQLConnector
+
 
 class DatabricksConfig(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", case_sensitive=False)
@@ -12,6 +14,7 @@ class DatabricksConfig(BaseSettings):
     catalog: str = Field("hive_metastore", description="Catalog Name")
     schema_name: str = Field("default", description="Schema/Database Name")
 
+
 class DatabricksConnector(SQLConnector):
     """
     Databricks Connector using SQLAlchemy (requires databricks-sqlalchemy).
@@ -21,7 +24,7 @@ class DatabricksConnector(SQLConnector):
         try:
             DatabricksConfig.model_validate(self.config)
         except Exception as e:
-            raise ConfigurationError(f"Invalid Databricks configuration: {e}")
+            raise ConfigurationError(f"Invalid Databricks configuration: {e}")  # noqa: B904
 
     def _sqlalchemy_url(self) -> str:
         conf = DatabricksConfig.model_validate(self.config)

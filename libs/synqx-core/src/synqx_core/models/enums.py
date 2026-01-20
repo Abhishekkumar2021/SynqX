@@ -1,7 +1,9 @@
 import enum
 
+
 class ConnectorType(str, enum.Enum):
     """Defines the protocol or system type to instantiate."""
+
     # Relational
     POSTGRESQL = "postgresql"
     MYSQL = "mysql"
@@ -47,6 +49,7 @@ class ConnectorType(str, enum.Enum):
     SINGER_TAP = "singer_tap"
     DBT = "dbt"
 
+
 class AssetType(str, enum.Enum):
     TABLE = "table"
     VIEW = "view"
@@ -63,12 +66,14 @@ class AssetType(str, enum.Enum):
     OSDU_KIND = "osdu_kind"
     DOMAIN_ENTITY = "domain_entity"
 
+
 class PipelineStatus(str, enum.Enum):
     DRAFT = "draft"
     ACTIVE = "active"
     PAUSED = "paused"
     ARCHIVED = "archived"
     BROKEN = "broken"
+
 
 class PipelineRunStatus(str, enum.Enum):
     PENDING = "pending"
@@ -79,6 +84,7 @@ class PipelineRunStatus(str, enum.Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
     SKIPPED = "skipped"
+
 
 class OperatorType(str, enum.Enum):
     EXTRACT = "extract"
@@ -93,6 +99,7 @@ class OperatorType(str, enum.Enum):
     UNION = "union"
     JOIN = "join"
 
+
 class OperatorRunStatus(str, enum.Enum):
     PENDING = "pending"
     RUNNING = "running"
@@ -100,6 +107,7 @@ class OperatorRunStatus(str, enum.Enum):
     WARNING = "warning"
     FAILED = "failed"
     SKIPPED = "skipped"
+
 
 class JobStatus(str, enum.Enum):
     PENDING = "pending"
@@ -110,6 +118,7 @@ class JobStatus(str, enum.Enum):
     RETRYING = "retrying"
     CANCELLED = "cancelled"
 
+
 class JobType(str, enum.Enum):
     PIPELINE = "pipeline"
     EXPLORER = "explorer"
@@ -118,17 +127,20 @@ class JobType(str, enum.Enum):
     SYSTEM = "system"
     FILE = "file"
 
+
 class RetryStrategy(str, enum.Enum):
     NONE = "none"
     FIXED = "fixed"
     EXPONENTIAL_BACKOFF = "exponential_backoff"
     LINEAR_BACKOFF = "linear_backoff"
 
+
 class WriteStrategy(str, enum.Enum):
     APPEND = "append"
     OVERWRITE = "overwrite"
     UPSERT = "upsert"
     SCD2 = "scd2"
+
 
 class SyncMode(str, enum.Enum):
     FULL_LOAD = "full_load"
@@ -137,15 +149,18 @@ class SyncMode(str, enum.Enum):
     LOG_TAILING = "log_tailing"
     XMIN = "xmin"
 
+
 class SchemaEvolutionPolicy(str, enum.Enum):
     STRICT = "strict"
     EVOLVE = "evolve"
     IGNORE = "ignore"
 
+
 class DataDirection(str, enum.Enum):
     SOURCE = "source"
     DESTINATION = "destination"
     INTERMEDIATE = "intermediate"
+
 
 class AlertLevel(str, enum.Enum):
     INFO = "info"
@@ -154,6 +169,7 @@ class AlertLevel(str, enum.Enum):
     ERROR = "error"
     CRITICAL = "critical"
 
+
 class AlertStatus(str, enum.Enum):
     PENDING = "pending"
     SENDING = "sending"
@@ -161,6 +177,7 @@ class AlertStatus(str, enum.Enum):
     FAILED = "failed"
     ACKNOWLEDGED = "acknowledged"
     SKIPPED = "skipped"
+
 
 class AlertType(str, enum.Enum):
     JOB_STARTED = "job_started"
@@ -174,6 +191,7 @@ class AlertType(str, enum.Enum):
     SLA_BREACH = "sla_breach"
     MANUAL = "manual"
 
+
 class AlertDeliveryMethod(str, enum.Enum):
     EMAIL = "email"
     SLACK = "slack"
@@ -181,6 +199,7 @@ class AlertDeliveryMethod(str, enum.Enum):
     WEBHOOK = "webhook"
     PAGERDUTY = "pagerduty"
     IN_APP = "in_app"
+
 
 class AgentStatus(str, enum.Enum):
     ONLINE = "online"

@@ -1,14 +1,22 @@
-import posixpath
 import io
+import posixpath
 import stat
-from typing import Any, Dict, Iterator, List, Optional, Union
+from collections.abc import Iterator
+from typing import Any
+
 import pandas as pd
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
-from synqx_engine.connectors.base import BaseConnector
-from synqx_core.utils.data import is_df_empty
-from synqx_core.errors import ConfigurationError, ConnectionFailedError, SchemaDiscoveryError, DataTransferError
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from synqx_core.errors import (
+    ConfigurationError,
+    ConnectionFailedError,
+    DataTransferError,
+    SchemaDiscoveryError,
+)
 from synqx_core.logging import get_logger
+from synqx_core.utils.data import is_df_empty
+
+from synqx_engine.connectors.base import BaseConnector
 
 try:
     import paramiko
@@ -17,67 +25,91 @@ except ImportError:
 
 logger = get_logger(__name__)
 
+
 class SFTPConfig(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", case_sensitive=False)
-    
+
     host: str = Field(..., description="SFTP Hostname or IP")
     port: int = Field(22, description="SFTP Port")
     username: str = Field(..., description="Username")
-    password: Optional[str] = Field(None, description="Password")
-    private_key: Optional[str] = Field(None, description="Private Key (PEM format)")
-    private_key_passphrase: Optional[str] = Field(None, description="Passphrase for Private Key")
+    password: str | None = Field(None, description="Password")
+    private_key: str | None = Field(None, description="Private Key (PEM format)")
+    private_key_passphrase: str | None = Field(
+        None, description="Passphrase for Private Key"
+    )
     base_path: str = Field("/", description="Base path to search for files")
     recursive: bool = Field(True, description="Recursively search for files")
-    max_depth: Optional[int] = Field(None, ge=0, description="Maximum depth for recursion")
-    exclude_patterns: Optional[str] = Field(None, description="Comma-separated list of folders/files to exclude")
+    max_depth: int | None = Field(
+        None, ge=0, description="Maximum depth for recursion"
+    )
+    exclude_patterns: str | None = Field(
+        None, description="Comma-separated list of folders/files to exclude"
+    )
+
 
 class SFTPConnector(BaseConnector):
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         if paramiko is None:
-            raise ConfigurationError("Paramiko client not installed. Run 'pip install paramiko'.")
-        
-        self._config_model: Optional[SFTPConfig] = None
-        self._transport: Optional[paramiko.Transport] = None
-        self._sftp: Optional[paramiko.SFTPClient] = None
+            raise ConfigurationError(
+                "Paramiko client not installed. Run 'pip install paramiko'."
+            )
+
+        self._config_model: SFTPConfig | None = None
+        self._transport: paramiko.Transport | None = None
+        self._sftp: paramiko.SFTPClient | None = None
         super().__init__(config)
 
     def validate_config(self) -> None:
         try:
             self._config_model = SFTPConfig.model_validate(self.config)
             if not self._config_model.password and not self._config_model.private_key:
-                raise ConfigurationError("Either password or private_key must be provided.")
+                raise ConfigurationError(
+                    "Either password or private_key must be provided."
+                )
         except Exception as e:
-            raise ConfigurationError(f"Invalid SFTP configuration: {e}")
+            raise ConfigurationError(f"Invalid SFTP configuration: {e}")  # noqa: B904
 
     def connect(self) -> None:
         if self._sftp:
             return
-        
+
         try:
-            self._transport = paramiko.Transport((self._config_model.host, self._config_model.port))
-            
+            self._transport = paramiko.Transport(
+                (self._config_model.host, self._config_model.port)
+            )
+
             pkey = None
             if self._config_model.private_key:
                 try:
-                    pkey = paramiko.RSAKey.from_private_key(io.StringIO(self._config_model.private_key), password=self._config_model.private_key_passphrase)
+                    pkey = paramiko.RSAKey.from_private_key(
+                        io.StringIO(self._config_model.private_key),
+                        password=self._config_model.private_key_passphrase,
+                    )
                 except Exception:
-                    # Try Ed25519 or others if RSA fails, typically paramiko auto-detects from file, but from string is specific
-                    # For simplicity, assuming RSA or generic key handling might require more robust logic
+                    # Try Ed25519 or others if RSA fails, typically paramiko auto-detects from file, but from string is specific  # noqa: E501
+                    # For simplicity, assuming RSA or generic key handling might require more robust logic  # noqa: E501
                     # Fallback to simple PKey loading
-                    pkey = paramiko.PKey.from_private_key(io.StringIO(self._config_model.private_key), password=self._config_model.private_key_passphrase)
+                    pkey = paramiko.PKey.from_private_key(
+                        io.StringIO(self._config_model.private_key),
+                        password=self._config_model.private_key_passphrase,
+                    )
 
-            self._transport.connect(username=self._config_model.username, password=self._config_model.password, pkey=pkey)
+            self._transport.connect(
+                username=self._config_model.username,
+                password=self._config_model.password,
+                pkey=pkey,
+            )
             self._sftp = paramiko.SFTPClient.from_transport(self._transport)
-            
+
             # Verify path access
             try:
                 self._sftp.listdir(self._config_model.base_path)
-            except IOError:
-                # Try creating it or fail? Often better to just verify connection success.
+            except OSError:
+                # Try creating it or fail? Often better to just verify connection success.  # noqa: E501
                 pass
-                
+
         except Exception as e:
-            raise ConnectionFailedError(f"Failed to connect to SFTP: {e}")
+            raise ConnectionFailedError(f"Failed to connect to SFTP: {e}")  # noqa: B904
 
     def disconnect(self) -> None:
         if self._sftp:
@@ -95,19 +127,36 @@ class SFTPConnector(BaseConnector):
             return False
 
     def discover_assets(
-        self, pattern: Optional[str] = None, include_metadata: bool = False, **kwargs
-    ) -> List[Dict[str, Any]]:
+        self, pattern: str | None = None, include_metadata: bool = False, **kwargs
+    ) -> list[dict[str, Any]]:
         self.connect()
         assets = []
         base = self._config_model.base_path
         is_recursive = self._config_model.recursive
         max_depth = self._config_model.max_depth
-        valid_extensions = {".csv", ".tsv", ".txt", ".xml", ".json", ".parquet", ".jsonl", ".avro", ".xls", ".xlsx"}
+        valid_extensions = {
+            ".csv",
+            ".tsv",
+            ".txt",
+            ".xml",
+            ".json",
+            ".parquet",
+            ".jsonl",
+            ".avro",
+            ".xls",
+            ".xlsx",
+        }
         max_assets = 10000
-        
-        ignored = {'.git', 'node_modules', '__pycache__', '.venv', 'venv'}
+
+        ignored = {".git", "node_modules", "__pycache__", ".venv", "venv"}
         if self._config_model.exclude_patterns:
-            ignored.update({p.strip() for p in self._config_model.exclude_patterns.split(',') if p.strip()})
+            ignored.update(
+                {
+                    p.strip()
+                    for p in self._config_model.exclude_patterns.split(",")
+                    if p.strip()
+                }
+            )
 
         # Recursive function to walk directories
         def walk_sftp(path, depth=0):
@@ -124,7 +173,7 @@ class SFTPConnector(BaseConnector):
                         break
 
                     remote_path = posixpath.join(path, entry.filename)
-                    
+
                     # Exclude check
                     if any(ig in remote_path for ig in ignored):
                         continue
@@ -135,38 +184,40 @@ class SFTPConnector(BaseConnector):
                     else:
                         if pattern and pattern not in entry.filename:
                             continue
-                        
+
                         ext = posixpath.splitext(entry.filename)[1].lower()
                         if ext in valid_extensions:
                             asset = {
                                 "name": entry.filename,
                                 "fully_qualified_name": remote_path,
                                 "type": "file",
-                                "format": ext.replace(".", "")
+                                "format": ext.replace(".", ""),
                             }
                             if include_metadata:
                                 asset["metadata"] = {
                                     "size": entry.st_size,
-                                    "modified_at": entry.st_mtime
+                                    "modified_at": entry.st_mtime,
                                 }
                             assets.append(asset)
-            except IOError:
+            except OSError:
                 pass
 
         walk_sftp(base)
         return assets
 
-    def infer_schema(self, asset: str, sample_size: int = 1000, **kwargs) -> Dict[str, Any]:
+    def infer_schema(
+        self, asset: str, sample_size: int = 1000, **kwargs
+    ) -> dict[str, Any]:
         self.connect()
         try:
             df_iter = self.read_batch(asset, limit=sample_size)
             df = next(df_iter)
-            
+
             columns = []
             for col, dtype in df.dtypes.items():
                 col_type = "string"
                 dtype_str = str(dtype).lower()
-                
+
                 if "int" in dtype_str:
                     col_type = "integer"
                 elif "float" in dtype_str or "double" in dtype_str:
@@ -176,49 +227,51 @@ class SFTPConnector(BaseConnector):
                 elif "datetime" in dtype_str:
                     col_type = "datetime"
                 elif "object" in dtype_str:
-                    first_val = df[col].dropna().iloc[0] if not is_df_empty(df[col].dropna()) else None
+                    first_val = (
+                        df[col].dropna().iloc[0]
+                        if not is_df_empty(df[col].dropna())
+                        else None
+                    )
                     if isinstance(first_val, (dict, list)):
                         col_type = "json"
-                
-                columns.append({
-                    "name": col,
-                    "type": col_type,
-                    "native_type": str(dtype)
-                })
+
+                columns.append(
+                    {"name": col, "type": col_type, "native_type": str(dtype)}
+                )
 
             return {
                 "asset": asset,
                 "columns": columns,
-                "format": asset.split('.')[-1].lower() if '.' in asset else 'unknown',
-                "row_count_estimate": len(df)
+                "format": asset.split(".")[-1].lower() if "." in asset else "unknown",
+                "row_count_estimate": len(df),
             }
         except Exception as e:
             logger.error(f"Schema inference failed for SFTP file {asset}: {e}")
-            raise SchemaDiscoveryError(f"SFTP schema inference failed for {asset}: {e}")
+            raise SchemaDiscoveryError(f"SFTP schema inference failed for {asset}: {e}")  # noqa: B904
 
-    def read_batch(
+    def read_batch(  # noqa: PLR0912, PLR0915
         self,
         asset: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
         **kwargs,
     ) -> Iterator[pd.DataFrame]:
         self.connect()
-        
+
         # We must keep the file open while reading, or download it temp
-        # For simplicity and standard compliance with pandas, we'll read into memory/BytesIO
-        # Note: Large files over SFTP should ideally be downloaded to local temp first for speed
-        
-        with self._sftp.file(asset, mode='rb') as f:
+        # For simplicity and standard compliance with pandas, we'll read into memory/BytesIO  # noqa: E501
+        # Note: Large files over SFTP should ideally be downloaded to local temp first for speed  # noqa: E501
+
+        with self._sftp.file(asset, mode="rb") as f:
             # Check size, if huge maybe warn or use temp file
             # For this impl, assume it fits in memory or we read chunks
-            
-            # Since pandas requires a seekable stream usually, and paramiko file acts like one mostly
+
+            # Since pandas requires a seekable stream usually, and paramiko file acts like one mostly  # noqa: E501
             # but sometimes slow.
-            
+
             ext = posixpath.splitext(asset)[1].lower()
             chunksize = kwargs.get("chunksize", 10000)
-            
+
             if ext == ".csv":
                 reader = pd.read_csv(f, chunksize=chunksize)
                 rows = 0
@@ -228,14 +281,14 @@ class SFTPConnector(BaseConnector):
                         if remaining <= 0:
                             break
                         if len(df) > remaining:
-                            df = df.iloc[:int(remaining)]
+                            df = df.iloc[: int(remaining)]  # noqa: PLW2901
                     yield df
                     rows += len(df)
                     if limit is not None and rows >= limit:
                         break
-            
+
             elif ext == ".tsv":
-                reader = pd.read_csv(f, sep='\t', chunksize=chunksize)
+                reader = pd.read_csv(f, sep="\t", chunksize=chunksize)
                 rows = 0
                 for df in reader:
                     if limit is not None:
@@ -243,14 +296,16 @@ class SFTPConnector(BaseConnector):
                         if remaining <= 0:
                             break
                         if len(df) > remaining:
-                            df = df.iloc[:int(remaining)]
+                            df = df.iloc[: int(remaining)]  # noqa: PLW2901
                     yield df
                     rows += len(df)
                     if limit is not None and rows >= limit:
                         break
 
             elif ext == ".txt":
-                reader = pd.read_csv(f, sep='\n', header=None, names=['line'], chunksize=chunksize)
+                reader = pd.read_csv(
+                    f, sep="\n", header=None, names=["line"], chunksize=chunksize
+                )
                 rows = 0
                 for df in reader:
                     if limit is not None:
@@ -258,7 +313,7 @@ class SFTPConnector(BaseConnector):
                         if remaining <= 0:
                             break
                         if len(df) > remaining:
-                            df = df.iloc[:int(remaining)]
+                            df = df.iloc[: int(remaining)]  # noqa: PLW2901
                     yield df
                     rows += len(df)
                     if limit is not None and rows >= limit:
@@ -275,10 +330,10 @@ class SFTPConnector(BaseConnector):
                     df = pd.read_parquet(bio)
                 elif ext == ".json":
                     df = pd.read_json(bio)
-                
+
                 df = self.slice_dataframe(df, offset, limit)
                 yield df
-            
+
             elif ext == ".jsonl":
                 reader = pd.read_json(f, lines=True, chunksize=chunksize)
                 rows = 0
@@ -288,7 +343,7 @@ class SFTPConnector(BaseConnector):
                         if remaining <= 0:
                             break
                         if len(df) > remaining:
-                            df = df.iloc[:int(remaining)]
+                            df = df.iloc[: int(remaining)]  # noqa: PLW2901
                     yield df
                     rows += len(df)
                     if limit and rows >= limit:
@@ -296,21 +351,21 @@ class SFTPConnector(BaseConnector):
 
     def write_batch(
         self,
-        data: Union[pd.DataFrame, Iterator[pd.DataFrame]],
+        data: pd.DataFrame | Iterator[pd.DataFrame],
         asset: str,
         mode: str = "append",
         **kwargs,
     ) -> int:
         self.connect()
-        
+
         if isinstance(data, pd.DataFrame):
             df = data
         else:
             df = pd.concat(list(data))
-            
+
         ext = posixpath.splitext(asset)[1].lower()
         bio = io.BytesIO()
-        
+
         if ext == ".csv":
             df.to_csv(bio, index=False)
         elif ext == ".parquet":
@@ -319,50 +374,52 @@ class SFTPConnector(BaseConnector):
             df.to_json(bio, orient="records")
         elif ext == ".jsonl":
             df.to_json(bio, orient="records", lines=True)
-        
+
         bio.seek(0)
-        
+
         # mode support in SFTP? Paramiko open(mode='w'/'a')
-        # But writing binary data (parquet/zip) in 'a' mode is risky without ensuring header compatibility
+        # But writing binary data (parquet/zip) in 'a' mode is risky without ensuring header compatibility  # noqa: E501
         # We default to overwrite ('w') for structured files unless it's CSV
-        
-        file_mode = 'w'
-        if mode == 'append' and ext in ['.csv', '.jsonl']:
+
+        file_mode = "w"
+        if mode == "append" and ext in [".csv", ".jsonl"]:
             # We can try to append
-            file_mode = 'a'
+            file_mode = "a"
             # Note: headers in CSV might be an issue if appending
-        
+
         with self._sftp.file(asset, mode=file_mode) as f:
             f.write(bio.getvalue())
-            
+
         return len(df)
 
-    def execute_query(self, query: str, **kwargs) -> List[Dict[str, Any]]:
+    def execute_query(self, query: str, **kwargs) -> list[dict[str, Any]]:
         raise NotImplementedError("SFTP connector does not support direct queries.")
 
     # --- Live File Management Implementation ---
 
-    def list_files(self, path: str = "") -> List[Dict[str, Any]]:
+    def list_files(self, path: str = "") -> list[dict[str, Any]]:
         self.connect()
         # Normalize incoming path from frontend (replace \ with /)
-        clean_path = path.replace('\\', '/')
+        clean_path = path.replace("\\", "/")
         target_path = clean_path if clean_path else self._config_model.base_path
         results = []
         try:
             for entry in self._sftp.listdir_attr(target_path):
                 # Ensure the path in results uses forward slashes
                 res_path = posixpath.join(target_path, entry.filename)
-                results.append({
-                    "name": entry.filename,
-                    "path": res_path.replace('\\', '/'),
-                    "type": "directory" if stat.S_ISDIR(entry.st_mode) else "file",
-                    "size": entry.st_size,
-                    "modified_at": entry.st_mtime
-                })
+                results.append(
+                    {
+                        "name": entry.filename,
+                        "path": res_path.replace("\\", "/"),
+                        "type": "directory" if stat.S_ISDIR(entry.st_mode) else "file",
+                        "size": entry.st_size,
+                        "modified_at": entry.st_mtime,
+                    }
+                )
             return results
-        except IOError as e:
+        except OSError as e:
             logger.error(f"SFTP list_files failed for {target_path}: {e}")
-            raise DataTransferError(f"Failed to list SFTP files: {e}")
+            raise DataTransferError(f"Failed to list SFTP files: {e}")  # noqa: B904
 
     def download_file(self, path: str) -> bytes:
         self.connect()
@@ -372,7 +429,7 @@ class SFTPConnector(BaseConnector):
             return bio.getvalue()
         except Exception as e:
             logger.error(f"SFTP download failed for {path}: {e}")
-            raise DataTransferError(f"Failed to download SFTP file: {e}")
+            raise DataTransferError(f"Failed to download SFTP file: {e}")  # noqa: B904
 
     def upload_file(self, path: str, content: bytes) -> bool:
         self.connect()
@@ -382,7 +439,7 @@ class SFTPConnector(BaseConnector):
             return True
         except Exception as e:
             logger.error(f"SFTP upload failed to {path}: {e}")
-            raise DataTransferError(f"Failed to upload SFTP file: {e}")
+            raise DataTransferError(f"Failed to upload SFTP file: {e}")  # noqa: B904
 
     def delete_file(self, path: str) -> bool:
         self.connect()
@@ -396,7 +453,7 @@ class SFTPConnector(BaseConnector):
             return True
         except Exception as e:
             logger.error(f"SFTP delete failed for {path}: {e}")
-            raise DataTransferError(f"Failed to delete SFTP item: {e}")
+            raise DataTransferError(f"Failed to delete SFTP item: {e}")  # noqa: B904
 
     def create_directory(self, path: str) -> bool:
         self.connect()
@@ -405,28 +462,31 @@ class SFTPConnector(BaseConnector):
             return True
         except Exception as e:
             logger.error(f"SFTP mkdir failed for {path}: {e}")
-            raise DataTransferError(f"Failed to create SFTP directory: {e}")
+            raise DataTransferError(f"Failed to create SFTP directory: {e}")  # noqa: B904
 
     def zip_directory(self, path: str) -> bytes:
         self.connect()
-        import zipfile
-        
+        import zipfile  # noqa: PLC0415
+
         output_bio = io.BytesIO()
         try:
             with zipfile.ZipFile(output_bio, "w", zipfile.ZIP_DEFLATED) as zf:
+
                 def _recursive_zip(remote_path, zip_path_prefix=""):
                     for entry in self._sftp.listdir_attr(remote_path):
                         full_remote_path = posixpath.join(remote_path, entry.filename)
-                        current_zip_path = posixpath.join(zip_path_prefix, entry.filename)
-                        
+                        current_zip_path = posixpath.join(
+                            zip_path_prefix, entry.filename
+                        )
+
                         if stat.S_ISDIR(entry.st_mode):
                             _recursive_zip(full_remote_path, current_zip_path)
                         else:
-                            with self._sftp.file(full_remote_path, 'rb') as f:
+                            with self._sftp.file(full_remote_path, "rb") as f:
                                 zf.writestr(current_zip_path, f.read())
-                
+
                 _recursive_zip(path)
             return output_bio.getvalue()
         except Exception as e:
             logger.error(f"SFTP zip_directory failed for {path}: {e}")
-            raise DataTransferError(f"Failed to zip SFTP directory: {e}")
+            raise DataTransferError(f"Failed to zip SFTP directory: {e}")  # noqa: B904

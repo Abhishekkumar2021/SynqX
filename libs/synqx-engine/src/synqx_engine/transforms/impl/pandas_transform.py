@@ -1,7 +1,10 @@
-from typing import Iterator
+from collections.abc import Iterator
+
 import pandas as pd
-from synqx_engine.transforms.base import BaseTransform
 from synqx_core.errors import ConfigurationError
+
+from synqx_engine.transforms.base import BaseTransform
+
 
 class PandasTransform(BaseTransform):
     """
@@ -24,20 +27,22 @@ class PandasTransform(BaseTransform):
                 # Only drop columns that exist
                 existing_cols = [c for c in drop_cols if c in df.columns]
                 if existing_cols:
-                    df = df.drop(columns=existing_cols)
-            
+                    df = df.drop(columns=existing_cols)  # noqa: PLW2901
+
             # 2. Rename Columns
             rename_map = self.config.get("rename_columns")
             if rename_map:
-                df = df.rename(columns=rename_map)
+                df = df.rename(columns=rename_map)  # noqa: PLW2901
 
             # 3. Filter
             filter_query = self.config.get("filter_query")
             if filter_query:
                 try:
-                    df = df.query(filter_query)
+                    df = df.query(filter_query)  # noqa: PLW2901
                 except Exception as e:
                     # Log warning or raise error? For now, re-raise to fail the step
-                    raise ConfigurationError(f"Invalid filter query '{filter_query}': {e}") from e
-            
+                    raise ConfigurationError(
+                        f"Invalid filter query '{filter_query}': {e}"
+                    ) from e
+
             yield df

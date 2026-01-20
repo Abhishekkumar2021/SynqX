@@ -1,38 +1,38 @@
-import React, { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { oidcCallback } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import React, { useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { oidcCallback } from '@/lib/api'
+import { useAuth } from '@/hooks/useAuth'
+import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
 
 export const CallbackPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const { login } = useAuth();
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const { login } = useAuth()
 
   useEffect(() => {
     const handleCallback = async () => {
-      const code = searchParams.get('code');
+      const code = searchParams.get('code')
       if (!code) {
-        toast.error('Authentication failed', { description: 'No code returned from provider' });
-        navigate('/login');
-        return;
+        toast.error('Authentication failed', { description: 'No code returned from provider' })
+        navigate('/login')
+        return
       }
 
       try {
-        const data = await oidcCallback(code);
-        login(data.access_token);
-        toast.success('Welcome back, Commander.');
-        navigate('/dashboard');
+        const data = await oidcCallback(code)
+        login(data.access_token)
+        toast.success('Welcome back, Commander.')
+        navigate('/dashboard')
       } catch (error) {
-        console.error('OIDC Callback Error:', error);
-        toast.error('Authentication failed', { description: 'Could not exchange code for token' });
-        navigate('/login');
+        console.error('OIDC Callback Error:', error)
+        toast.error('Authentication failed', { description: 'Could not exchange code for token' })
+        navigate('/login')
       }
-    };
+    }
 
-    handleCallback();
-  }, [searchParams, login, navigate]);
+    handleCallback()
+  }, [searchParams, login, navigate])
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
@@ -43,5 +43,5 @@ export const CallbackPage: React.FC = () => {
         </p>
       </div>
     </div>
-  );
-};
+  )
+}

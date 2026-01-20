@@ -1,14 +1,14 @@
 from synqx_engine.connectors.factory import ConnectorFactory
-from synqx_engine.connectors.impl.sql.postgres import PostgresConnector
-from synqx_engine.connectors.impl.sql.mysql import MySQLConnector
-from synqx_engine.connectors.impl.sql.sqlite import SQLiteConnector
-from synqx_engine.connectors.impl.sql.mssql import MSSQLConnector
-from synqx_engine.connectors.impl.sql.oracle import OracleConnector
-from synqx_engine.connectors.impl.sql.snowflake import SnowflakeConnector
-from synqx_engine.connectors.impl.sql.redshift import RedshiftConnector
 from synqx_engine.connectors.impl.sql.bigquery import BigQueryConnector
-from synqx_engine.connectors.impl.sql.mariadb import MariaDBConnector
 from synqx_engine.connectors.impl.sql.duckdb import DuckDBConnector
+from synqx_engine.connectors.impl.sql.mariadb import MariaDBConnector
+from synqx_engine.connectors.impl.sql.mssql import MSSQLConnector
+from synqx_engine.connectors.impl.sql.mysql import MySQLConnector
+from synqx_engine.connectors.impl.sql.oracle import OracleConnector
+from synqx_engine.connectors.impl.sql.postgres import PostgresConnector
+from synqx_engine.connectors.impl.sql.redshift import RedshiftConnector
+from synqx_engine.connectors.impl.sql.snowflake import SnowflakeConnector
+from synqx_engine.connectors.impl.sql.sqlite import SQLiteConnector
 
 ConnectorFactory.register_connector("postgres", PostgresConnector)
 ConnectorFactory.register_connector("postgresql", PostgresConnector)

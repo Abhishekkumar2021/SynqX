@@ -1,25 +1,25 @@
 from sqlalchemy.orm import Session
-from typing import Optional
-
 from synqx_core.models.audit import AuditLog
 from synqx_core.models.enums import AlertLevel
+
 from app.services.alert_service import AlertService
+
 
 class AuditService:
     @staticmethod
-    def log_event(
+    def log_event(  # noqa: PLR0913
         db: Session,
         *,
         user_id: int,
-        workspace_id: Optional[int] = None,
+        workspace_id: int | None = None,
         event_type: str,
         status: str = "success",
-        target_type: Optional[str] = None,
-        target_id: Optional[int] = None,
-        details: Optional[dict] = None,
+        target_type: str | None = None,
+        target_id: int | None = None,
+        details: dict | None = None,
         notify: bool = False,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
     ):
         """
         Logs a generic audit event and optionally creates a system-wide notification.
@@ -33,7 +33,7 @@ class AuditService:
             target_id=target_id,
             details=details,
             ip_address=ip_address,
-            user_agent=user_agent
+            user_agent=user_agent,
         )
         db.add(log_entry)
         db.commit()

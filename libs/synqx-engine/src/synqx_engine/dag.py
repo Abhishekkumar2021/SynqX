@@ -1,5 +1,5 @@
 from collections import defaultdict, deque
-from typing import Dict, List, Set, Tuple, Optional
+
 from synqx_core.errors import AppError
 
 
@@ -7,14 +7,14 @@ class DagCycleError(AppError):
     pass
 
 
-class DAG:
+class DAG:  # noqa: PLW1641
     def __init__(self):
-        self._graph: Dict[str, Set[str]] = defaultdict(set)
-        self._reverse_graph: Dict[str, Set[str]] = defaultdict(set)
-        self._nodes: Set[str] = set()
-        self._edge_metadata: Dict[Tuple[str, str], Dict] = {}
-        self._topological_order: Optional[List[str]] = None
-        self._layers: Optional[List[Set[str]]] = None
+        self._graph: dict[str, set[str]] = defaultdict(set)
+        self._reverse_graph: dict[str, set[str]] = defaultdict(set)
+        self._nodes: set[str] = set()
+        self._edge_metadata: dict[tuple[str, str], dict] = {}
+        self._topological_order: list[str] | None = None
+        self._layers: list[set[str]] | None = None
 
     def add_node(self, node_id: str) -> None:
         """Add a node to the DAG."""
@@ -63,33 +63,33 @@ class DAG:
         self._edge_metadata.pop((from_node, to_node), None)
         self._invalidate_cache()
 
-    def get_incoming_edge_metadata(self, node_id: str) -> List[Dict]:
+    def get_incoming_edge_metadata(self, node_id: str) -> list[dict]:
         """Return metadata for all edges pointing to node_id."""
         incoming = []
         # get_upstream_nodes returns the 'from' nodes for edges pointing TO node_id
         for upstream in self.get_upstream_nodes(node_id):
             meta = self._edge_metadata.get((upstream, node_id), {}).copy()
-            meta['from_node'] = upstream
+            meta["from_node"] = upstream
             incoming.append(meta)
         return incoming
 
-    def get_nodes(self) -> Set[str]:
+    def get_nodes(self) -> set[str]:
         """Return all nodes in the DAG."""
         return self._nodes.copy()
 
-    def get_edges(self) -> List[Tuple[str, str]]:
+    def get_edges(self) -> list[tuple[str, str]]:
         """Return all edges in the DAG."""
         return [(u, v) for u in self._graph for v in self._graph[u]]
 
-    def get_downstream_nodes(self, node_id: str) -> Set[str]:
+    def get_downstream_nodes(self, node_id: str) -> set[str]:
         """Return direct children of a node."""
         return self._graph.get(node_id, set()).copy()
 
-    def get_upstream_nodes(self, node_id: str) -> Set[str]:
+    def get_upstream_nodes(self, node_id: str) -> set[str]:
         """Return direct parents of a node."""
         return self._reverse_graph.get(node_id, set()).copy()
 
-    def get_all_downstream_nodes(self, node_id: str) -> Set[str]:
+    def get_all_downstream_nodes(self, node_id: str) -> set[str]:
         """Return all descendants of a node (transitive closure)."""
         visited = set()
         queue = deque([node_id])
@@ -103,7 +103,7 @@ class DAG:
 
         return visited
 
-    def get_all_upstream_nodes(self, node_id: str) -> Set[str]:
+    def get_all_upstream_nodes(self, node_id: str) -> set[str]:
         """Return all ancestors of a node (transitive closure)."""
         visited = set()
         queue = deque([node_id])
@@ -117,15 +117,15 @@ class DAG:
 
         return visited
 
-    def get_root_nodes(self) -> Set[str]:
+    def get_root_nodes(self) -> set[str]:
         """Return nodes with no incoming edges."""
         return {node for node in self._nodes if not self._reverse_graph[node]}
 
-    def get_leaf_nodes(self) -> Set[str]:
+    def get_leaf_nodes(self) -> set[str]:
         """Return nodes with no outgoing edges."""
         return {node for node in self._nodes if not self._graph[node]}
 
-    def _in_degrees(self) -> Dict[str, int]:
+    def _in_degrees(self) -> dict[str, int]:
         """Calculate in-degree for each node."""
         return {node: len(self._reverse_graph[node]) for node in self._nodes}
 
@@ -134,7 +134,7 @@ class DAG:
         self._topological_order = None
         self._layers = None
 
-    def topological_sort(self) -> List[str]:
+    def topological_sort(self) -> list[str]:
         """
         Return nodes in topological order using Kahn's algorithm.
         Raises DagCycleError if a cycle is detected.
@@ -162,12 +162,12 @@ class DAG:
         self._topological_order = result
         return result.copy()
 
-    def _find_cycle(self) -> List[str]:
+    def _find_cycle(self) -> list[str]:
         """Find and return a cycle in the graph (for debugging)."""
         visited = set()
         rec_stack = set()
 
-        def dfs(node: str, current_path: List[str]) -> Optional[List[str]]:
+        def dfs(node: str, current_path: list[str]) -> list[str] | None:
             visited.add(node)
             rec_stack.add(node)
             current_path.append(node)
@@ -181,7 +181,7 @@ class DAG:
                     # Found a cycle
                     try:
                         cycle_start = current_path.index(neighbor)
-                        return current_path[cycle_start:] + [neighbor]
+                        return current_path[cycle_start:] + [neighbor]  # noqa: RUF005
                     except ValueError:
                         pass
 
@@ -204,7 +204,7 @@ class DAG:
         except DagCycleError:
             return True
 
-    def get_execution_layers(self) -> List[Set[str]]:
+    def get_execution_layers(self) -> list[set[str]]:
         """
         Return nodes grouped by execution layers.
         Nodes in the same layer can be executed in parallel.
@@ -252,7 +252,7 @@ class DAG:
 
         return depths[node_id]
 
-    def subgraph(self, nodes: Set[str]) -> "DAG":
+    def subgraph(self, nodes: set[str]) -> "DAG":
         """Create a subgraph containing only the specified nodes."""
         subdag = DAG()
         for node in nodes:

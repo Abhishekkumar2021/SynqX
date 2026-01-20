@@ -2,28 +2,29 @@
 SynqX Admin CLI
 A feature-rich command-line interface to manage the SynqX application.
 """
-import sys
-import os
+
 import getpass
-from typing import Optional
+import os
+import sys
 from contextlib import contextmanager
 
 import typer
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich import box
-from sqlalchemy.orm import Session
+from rich.table import Table
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 # Add the parent directory to sys.path to import app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.db.session import SessionLocal
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, WorkspaceRole
+
 from app.core import security
+from app.db.session import SessionLocal
 
 # --- Typer App Setup ---
 app = typer.Typer(
@@ -42,36 +43,48 @@ app.add_typer(system_app)
 # --- Rich Console ---
 console = Console()
 
+
 # --- Database Context ---
 @contextmanager
 def get_db_session():
     """Context manager for database sessions."""
-    db: Optional[Session] = None
+    db: Session | None = None
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=console,
-        transient=True
+        transient=True,
     ) as progress:
         task = progress.add_task("[cyan]Connecting to database...", total=None)
         try:
             db = SessionLocal()
-            progress.update(task, completed=True, description="[green][OK] Connected to database")
+            progress.update(
+                task, completed=True, description="[green][OK] Connected to database"
+            )
             yield db
         except Exception as e:
-            progress.update(task, description=f"[red][ERROR] Database connection failed: {e}")
+            progress.update(
+                task, description=f"[red][ERROR] Database connection failed: {e}"
+            )
             raise
         finally:
             if db:
                 db.close()
 
+
 # --- User Commands ---
+
 
 @users_app.command("create", help="Create a new admin user.")
 def create_user(
     email: str = typer.Option(..., "--email", "-e", prompt=True),
     full_name: str = typer.Option(..., "--name", "-n", prompt=True),
-    is_superuser: bool = typer.Option(True, "--superuser/--no-superuser", prompt=True, help="Grant superuser privileges."),
+    is_superuser: bool = typer.Option(
+        True,
+        "--superuser/--no-superuser",
+        prompt=True,
+        help="Grant superuser privileges.",
+    ),
 ):
     """Creates a new user and a personal workspace for them."""
     with get_db_session() as db:
@@ -79,7 +92,9 @@ def create_user(
 
         # Check if user exists
         if db.query(User).filter(User.email == email).first():
-            console.print(f"[red][ERROR] Error: User with email [bold]{email}[/bold] already exists.[/red]")
+            console.print(
+                f"[red][ERROR] Error: User with email [bold]{email}[/bold] already exists.[/red]"  # noqa: E501
+            )
             raise typer.Exit(code=1)
 
         # Secure password input
@@ -93,35 +108,54 @@ def create_user(
             raise typer.Exit(code=1)
 
         with Progress(
-            SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
         ) as progress:
             task = progress.add_task("[cyan]Processing...", total=None)
             try:
                 # Create user
                 hashed_password = security.get_password_hash(password)
-                user = User(email=email, hashed_password=hashed_password, full_name=full_name, is_superuser=is_superuser)
+                user = User(
+                    email=email,
+                    hashed_password=hashed_password,
+                    full_name=full_name,
+                    is_superuser=is_superuser,
+                )
                 db.add(user)
                 db.flush()
 
                 # Create workspace
                 progress.update(task, description="[cyan]Creating workspace...")
-                workspace = Workspace(name=f"{full_name}'s Workspace", slug=f"personal-{user.id}", description="Default Personal Workspace")
+                workspace = Workspace(
+                    name=f"{full_name}'s Workspace",
+                    slug=f"personal-{user.id}",
+                    description="Default Personal Workspace",
+                )
                 db.add(workspace)
                 db.flush()
 
                 # Add workspace member
                 progress.update(task, description="[cyan]Assigning role...")
-                member = WorkspaceMember(workspace_id=workspace.id, user_id=user.id, role=WorkspaceRole.ADMIN)
+                member = WorkspaceMember(
+                    workspace_id=workspace.id, user_id=user.id, role=WorkspaceRole.ADMIN
+                )
                 db.add(member)
 
                 # Set active workspace
                 user.active_workspace_id = workspace.id
                 db.commit()
 
-                progress.update(task, description="[green][SUCCESS] User created successfully!")
-                
+                progress.update(
+                    task, description="[green][SUCCESS] User created successfully!"
+                )
+
                 # Show summary
-                summary = Table(title="[bold]User Creation Summary[/bold]", box=box.ROUNDED, show_header=False)
+                summary = Table(
+                    title="[bold]User Creation Summary[/bold]",
+                    box=box.ROUNDED,
+                    show_header=False,
+                )
                 summary.add_column(style="cyan")
                 summary.add_column(style="white")
                 summary.add_row("Email", email)
@@ -134,7 +168,8 @@ def create_user(
                 db.rollback()
                 progress.update(task, description=f"[red][ERROR] Error: {e}")
                 console.print(f"\n[red]Failed to create user: {e}[/red]")
-                raise typer.Exit(code=1)
+                raise typer.Exit(code=1)  # noqa: B904
+
 
 @users_app.command("list", help="List all users in the system.")
 def list_users():
@@ -145,7 +180,9 @@ def list_users():
             console.print("[yellow]No users found.[/yellow]")
             return
 
-        table = Table(title="[bold]All System Users[/bold]", box=box.HEAVY_EDGE, show_lines=True)
+        table = Table(
+            title="[bold]All System Users[/bold]", box=box.HEAVY_EDGE, show_lines=True
+        )
         table.add_column("ID", style="cyan")
         table.add_column("Email", style="green")
         table.add_column("Full Name")
@@ -158,11 +195,12 @@ def list_users():
                 user.email,
                 user.full_name or "N/A",
                 "ADMIN" if user.is_superuser else "",
-                "YES" if user.is_active else "NO"
+                "YES" if user.is_active else "NO",
             )
-        
+
         console.print(table)
         console.print(f"\n[dim]Total users: {len(users)}[/dim]")
+
 
 @users_app.command("view", help="View details for a specific user.")
 def view_user(email: str = typer.Argument(..., help="Email of the user to view.")):
@@ -181,18 +219,35 @@ def view_user(email: str = typer.Argument(..., help="Email of the user to view."
         info.add_row("Full Name:", user.full_name or "N/A")
         info.add_row("Superuser:", "Yes (Admin)" if user.is_superuser else "No")
         info.add_row("Active:", "Yes" if user.is_active else "No")
-        info.add_row("Active Workspace ID:", str(user.active_workspace_id) if user.active_workspace_id else "N/A")
-        
-        console.print(Panel(info, title=f"[bold]User: {user.full_name}[/bold]", border_style="green", padding=1))
-        
-        memberships = db.query(WorkspaceMember).filter(WorkspaceMember.user_id == user.id).all()
+        info.add_row(
+            "Active Workspace ID:",
+            str(user.active_workspace_id) if user.active_workspace_id else "N/A",
+        )
+
+        console.print(
+            Panel(
+                info,
+                title=f"[bold]User: {user.full_name}[/bold]",
+                border_style="green",
+                padding=1,
+            )
+        )
+
+        memberships = (
+            db.query(WorkspaceMember).filter(WorkspaceMember.user_id == user.id).all()
+        )
         if memberships:
-            ws_table = Table(title="[bold]Workspace Memberships[/bold]", box=box.MINIMAL, show_header=True)
+            ws_table = Table(
+                title="[bold]Workspace Memberships[/bold]",
+                box=box.MINIMAL,
+                show_header=True,
+            )
             ws_table.add_column("Workspace", style="cyan")
             ws_table.add_column("Role", style="yellow")
             for member in memberships:
                 ws_table.add_row(member.workspace.name, member.role.value)
             console.print(ws_table)
+
 
 @users_app.command("update", help="Update a user's details.")
 def update_user(email: str = typer.Argument(..., help="Email of the user to update.")):
@@ -202,12 +257,18 @@ def update_user(email: str = typer.Argument(..., help="Email of the user to upda
         if not user:
             console.print(f"[red][ERROR] User with email {email} not found.[/red]")
             raise typer.Exit(code=1)
-        
-        console.print(f"\n[dim]Current details for [bold]{user.email}[/bold]: Name: {user.full_name}, Superuser: {user.is_superuser}\n")
-        
-        new_name = typer.prompt("New full name (press Enter to skip)", default=user.full_name, show_default=False)
+
+        console.print(
+            f"\n[dim]Current details for [bold]{user.email}[/bold]: Name: {user.full_name}, Superuser: {user.is_superuser}\n"  # noqa: E501
+        )
+
+        new_name = typer.prompt(
+            "New full name (press Enter to skip)",
+            default=user.full_name,
+            show_default=False,
+        )
         toggle_superuser = typer.confirm("Toggle superuser status?", default=False)
-        
+
         try:
             if new_name != user.full_name:
                 user.full_name = new_name
@@ -218,10 +279,16 @@ def update_user(email: str = typer.Argument(..., help="Email of the user to upda
         except Exception as e:
             db.rollback()
             console.print(f"\n[red][ERROR] Error updating user: {e}[/red]")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1)  # noqa: B904
+
 
 @users_app.command("delete", help="Delete a user permanently.")
-def delete_user(email: str = typer.Argument(..., help="Email of the user to delete."), force: bool = typer.Option(False, "--force", "-f", help="Force deletion without confirmation.")):
+def delete_user(
+    email: str = typer.Argument(..., help="Email of the user to delete."),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Force deletion without confirmation."
+    ),
+):
     """Permanently deletes a user from the database."""
     with get_db_session() as db:
         user = db.query(User).filter(User.email == email).first()
@@ -230,7 +297,9 @@ def delete_user(email: str = typer.Argument(..., help="Email of the user to dele
             raise typer.Exit(code=1)
 
         if not force:
-            console.print(f"\n[bold yellow][WARN] Warning:[/bold yellow] This will permanently delete user [bold]{user.full_name}[/bold] ({user.email}).")
+            console.print(
+                f"\n[bold yellow][WARN] Warning:[/bold yellow] This will permanently delete user [bold]{user.full_name}[/bold] ({user.email})."  # noqa: E501
+            )
             if not typer.confirm("Are you sure you want to proceed?"):
                 console.print("[yellow]Deletion cancelled.[/yellow]")
                 raise typer.Abort()
@@ -241,9 +310,11 @@ def delete_user(email: str = typer.Argument(..., help="Email of the user to dele
         except Exception as e:
             db.rollback()
             console.print(f"\n[red][ERROR] Error deleting user: {e}[/red]")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1)  # noqa: B904
+
 
 # --- Workspace Commands ---
+
 
 @workspaces_app.command("list", help="List all workspaces.")
 def list_workspaces():
@@ -254,7 +325,9 @@ def list_workspaces():
             console.print("[yellow]No workspaces found.[/yellow]")
             return
 
-        table = Table(title="[bold]All Workspaces[/bold]", box=box.HEAVY_EDGE, show_lines=True)
+        table = Table(
+            title="[bold]All Workspaces[/bold]", box=box.HEAVY_EDGE, show_lines=True
+        )
         table.add_column("ID", style="cyan")
         table.add_column("Name", style="green")
         table.add_column("Slug", style="white")
@@ -262,20 +335,30 @@ def list_workspaces():
         table.add_column("Members", justify="center")
 
         for ws in workspaces:
-            member_count = db.query(func.count(WorkspaceMember.workspace_id)).filter(WorkspaceMember.workspace_id == ws.id).scalar()
-            table.add_row(str(ws.id), ws.name, ws.slug, ws.description or "N/A", str(member_count))
-        
+            member_count = (
+                db.query(func.count(WorkspaceMember.workspace_id))
+                .filter(WorkspaceMember.workspace_id == ws.id)
+                .scalar()
+            )
+            table.add_row(
+                str(ws.id), ws.name, ws.slug, ws.description or "N/A", str(member_count)
+            )
+
         console.print(table)
         console.print(f"\n[dim]Total workspaces: {len(workspaces)}[/dim]")
 
+
 # --- System Commands ---
+
 
 @system_app.command("stats", help="Display system-wide statistics.")
 def show_statistics():
     """Displays an overview of database statistics."""
     with get_db_session() as db:
         user_count = db.query(func.count(User.id)).scalar()
-        superuser_count = db.query(func.count(User.id)).filter(User.is_superuser).scalar()
+        superuser_count = (
+            db.query(func.count(User.id)).filter(User.is_superuser).scalar()
+        )
         workspace_count = db.query(func.count(Workspace.id)).scalar()
 
         stats = Table.grid(padding=(0, 4))
@@ -284,8 +367,15 @@ def show_statistics():
         stats.add_row("Total Users:", str(user_count))
         stats.add_row("Superusers:", str(superuser_count))
         stats.add_row("Total Workspaces:", str(workspace_count))
-        
-        console.print(Panel(stats, title="[bold]System Overview[/bold]", border_style="blue", padding=1))
+
+        console.print(
+            Panel(
+                stats,
+                title="[bold]System Overview[/bold]",
+                border_style="blue",
+                padding=1,
+            )
+        )
 
 
 if __name__ == "__main__":

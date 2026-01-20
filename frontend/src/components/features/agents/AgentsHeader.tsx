@@ -1,35 +1,35 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Server, Plus } from 'lucide-react';
+import React from 'react'
+import { Button } from '@/components/ui/button'
+import { Server, Plus } from 'lucide-react'
 
 interface AgentsHeaderProps {
-    onCreate?: () => void;
+  onCreate?: () => void
 }
 
 export const AgentsHeader: React.FC<AgentsHeaderProps> = ({ onCreate }) => {
-    return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-0 px-1">
-            <div className="space-y-1.5">
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tighter text-foreground flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-2xl ring-1 ring-border/50 backdrop-blur-md shadow-sm">
-                        <Server className="h-6 w-6 text-primary" />
-                    </div>
-                    Execution Agents
-                </h2>
-                <p className="text-sm md:text-base text-muted-foreground font-medium pl-1">
-                    Manage your distributed execution environment and monitor agent health.
-                </p>
-            </div>
+  return (
+    <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-0 px-1">
+      <div className="space-y-1.5">
+        <h2 className="text-3xl md:text-4xl font-bold tracking-tighter text-foreground flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-2xl ring-1 ring-border/50 backdrop-blur-md shadow-sm">
+            <Server className="h-6 w-6 text-primary" />
+          </div>
+          Execution Agents
+        </h2>
+        <p className="text-sm md:text-base text-muted-foreground font-medium pl-1">
+          Manage your distributed execution environment and monitor agent health.
+        </p>
+      </div>
 
-            {onCreate && (
-                <Button
-                    size="sm"
-                    onClick={onCreate}
-                    className="w-full md:w-auto rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-semibold"
-                >
-                    <Plus className="mr-2 h-5 w-5" /> Register Agent
-                </Button>
-            )}
-        </div>
-    );
-};
+      {onCreate && (
+        <Button
+          size="sm"
+          onClick={onCreate}
+          className="w-full md:w-auto rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:scale-105 active:scale-95 font-semibold"
+        >
+          <Plus className="mr-2 h-5 w-5" /> Register Agent
+        </Button>
+      )}
+    </div>
+  )
+}

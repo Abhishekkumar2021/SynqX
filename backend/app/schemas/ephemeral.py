@@ -1,41 +1,46 @@
-from typing import Optional, Dict, Any
 from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel, Field
 from synqx_core.models.enums import JobStatus, JobType
 from synqx_core.schemas.common import TimestampSchema
 
+
 class EphemeralJobBase(BaseModel):
     job_type: JobType
-    connection_id: Optional[int] = None
-    payload: Dict[str, Any] = Field(default_factory=dict)
-    agent_group: Optional[str] = None
+    connection_id: int | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+    agent_group: str | None = None
+
 
 class EphemeralJobCreate(EphemeralJobBase):
     pass
 
+
 class EphemeralJobUpdate(BaseModel):
-    status: Optional[JobStatus] = None
-    result_summary: Optional[Dict[str, Any]] = None
-    result_sample: Optional[Dict[str, Any]] = None
-    result_sample_arrow: Optional[str] = None # Base64 encoded Arrow IPC data
-    error_message: Optional[str] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    execution_time_ms: Optional[int] = None
-    worker_id: Optional[str] = None
+    status: JobStatus | None = None
+    result_summary: dict[str, Any] | None = None
+    result_sample: dict[str, Any] | None = None
+    result_sample_arrow: str | None = None  # Base64 encoded Arrow IPC data
+    error_message: str | None = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    execution_time_ms: int | None = None
+    worker_id: str | None = None
+
 
 class EphemeralJobResponse(EphemeralJobBase, TimestampSchema):
     id: int
     workspace_id: int
-    user_id: Optional[int]
+    user_id: int | None
     status: JobStatus
-    worker_id: Optional[str]
-    result_summary: Optional[Dict[str, Any]]
-    result_sample: Optional[Dict[str, Any]]
-    error_message: Optional[str]
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    execution_time_ms: Optional[int]
+    worker_id: str | None
+    result_summary: dict[str, Any] | None
+    result_sample: dict[str, Any] | None
+    error_message: str | None
+    started_at: datetime | None
+    completed_at: datetime | None
+    execution_time_ms: int | None
 
     class Config:
         from_attributes = True

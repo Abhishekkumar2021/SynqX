@@ -21,13 +21,14 @@ You must provide credentials either via a JSON string or a file path.
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `project_id` | string | Yes | GCP Project ID. |
-| `dataset_id` | string | Yes | BigQuery Dataset ID. |
-| `credentials_json` | string | No | JSON content of service account key. |
-| `credentials_path` | string | No | Path to service account key file. |
+| Parameter          | Type   | Required | Description                          |
+| :----------------- | :----- | :------- | :----------------------------------- |
+| `project_id`       | string | Yes      | GCP Project ID.                      |
+| `dataset_id`       | string | Yes      | BigQuery Dataset ID.                 |
+| `credentials_json` | string | No       | JSON content of service account key. |
+| `credentials_path` | string | No       | Path to service account key file.    |
 
 ## Usage
+
 - **Reading**: Executes SQL queries.
 - **Writing**: Uses `load_table_from_dataframe` for efficient batch loading.

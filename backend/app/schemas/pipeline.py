@@ -1,39 +1,45 @@
-from typing import List, Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+from typing import Any
+
 from croniter import croniter
-from synqx_core.models.enums import PipelineStatus, OperatorType, RetryStrategy, SyncMode
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from synqx_core.models.enums import (
+    OperatorType,
+    PipelineStatus,
+    RetryStrategy,
+    SyncMode,
+)
 
 
 class PipelineNodeBase(BaseModel):
     node_id: str = Field(..., min_length=1, max_length=255)
     name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=2000)
+    description: str | None = Field(None, max_length=2000)
     operator_type: OperatorType
     operator_class: str = Field(..., min_length=1, max_length=255)
-    config: Dict[str, Any] = Field(default_factory=dict)
+    config: dict[str, Any] = Field(default_factory=dict)
     order_index: int = Field(..., ge=0)
-    source_asset_id: Optional[int] = Field(None, gt=0)
-    destination_asset_id: Optional[int] = Field(None, gt=0)
-    connection_id: Optional[int] = None
-    guardrails: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
-    sub_pipeline_id: Optional[int] = None
-    
+    source_asset_id: int | None = Field(None, gt=0)
+    destination_asset_id: int | None = Field(None, gt=0)
+    connection_id: int | None = None
+    guardrails: list[dict[str, Any]] | None = Field(default_factory=list)
+    sub_pipeline_id: int | None = None
+
     # Real-time Capabilities
     sync_mode: SyncMode = Field(default=SyncMode.FULL_LOAD)
-    cdc_config: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    cdc_config: dict[str, Any] | None = Field(default_factory=dict)
 
     max_retries: int = Field(default=3, ge=0, le=10)
     retry_strategy: RetryStrategy = Field(default=RetryStrategy.FIXED)
     retry_delay_seconds: int = Field(default=60, ge=0, le=3600)
-    timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
+    timeout_seconds: int | None = Field(None, gt=0, le=86400)
 
     @field_validator("node_id")
     @classmethod
     def validate_node_id(cls, v: str) -> str:
         if not v.replace("_", "").replace("-", "").isalnum():
             raise ValueError(
-                "node_id must contain only alphanumeric characters, hyphens, and underscores"
+                "node_id must contain only alphanumeric characters, hyphens, and underscores"  # noqa: E501
             )
         return v
 
@@ -43,14 +49,14 @@ class PipelineNodeCreate(PipelineNodeBase):
 
 
 class PipelineNodeUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=2000)
-    config: Optional[Dict[str, Any]] = None
-    sync_mode: Optional[SyncMode] = None
-    cdc_config: Optional[Dict[str, Any]] = None
-    max_retries: Optional[int] = Field(None, ge=0, le=10)
-    timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
-    sub_pipeline_id: Optional[int] = None
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=2000)
+    config: dict[str, Any] | None = None
+    sync_mode: SyncMode | None = None
+    cdc_config: dict[str, Any] | None = None
+    max_retries: int | None = Field(None, ge=0, le=10)
+    timeout_seconds: int | None = Field(None, gt=0, le=86400)
+    sub_pipeline_id: int | None = None
 
 
 class PipelineNodeRead(PipelineNodeBase):
@@ -93,16 +99,16 @@ class PipelineEdgeRead(PipelineEdgeBase):
     @field_validator("from_node_id", "to_node_id", mode="before")
     @classmethod
     def convert_node_id_to_str(cls, v: Any, info: Any) -> str:
-        # If we have the integer ID but need the string node_id, we need to access the relationship.
+        # If we have the integer ID but need the string node_id, we need to access the relationship.  # noqa: E501
         # When loaded from ORM, 'v' is the integer foreign key.
-        # But we can't easily access the sibling relationship attribute (e.g. from_node) from here 
+        # But we can't easily access the sibling relationship attribute (e.g. from_node) from here  # noqa: E501
         # because 'v' is just the value.
-        # However, Pydantic's 'from_attributes' (ORM mode) usually maps attributes by name.
+        # However, Pydantic's 'from_attributes' (ORM mode) usually maps attributes by name.  # noqa: E501
         # Since the model has 'from_node_id' (int) and 'from_node' (object),
         # we can't map 'from_node_id' directly to the string if the source is an int.
-        
+
         # Strategy: We assume the object being validated is the ORM PipelineEdge object.
-        # We can use a model_validator (root validator) to extract the string IDs from the relationships.
+        # We can use a model_validator (root validator) to extract the string IDs from the relationships.  # noqa: E501
         return str(v)
 
     @model_validator(mode="before")
@@ -110,12 +116,12 @@ class PipelineEdgeRead(PipelineEdgeBase):
     def extract_node_ids(cls, data: Any) -> Any:
         # This handles the ORM object case
         if hasattr(data, "from_node") and data.from_node:
-            # We construct a dict or modify if it's a dict, but 'data' is the ORM object.
+            # We construct a dict or modify if it's a dict, but 'data' is the ORM object.  # noqa: E501
             # We can return a dict with the values we want.
             # But converting the whole ORM object to dict is expensive/complex here.
             # Easier way: The Pydantic model fields are 'from_node_id' and 'to_node_id'.
-            # We want these to be populated with 'from_node.node_id' and 'to_node.node_id'.
-            
+            # We want these to be populated with 'from_node.node_id' and 'to_node.node_id'.  # noqa: E501
+
             # We can create a proxy or dict.
             return {
                 "id": data.id,
@@ -124,20 +130,20 @@ class PipelineEdgeRead(PipelineEdgeBase):
                 "to_node_id": data.to_node.node_id,
                 "edge_type": data.edge_type,
                 "created_at": data.created_at,
-                "updated_at": data.updated_at
+                "updated_at": data.updated_at,
             }
         return data
 
 
 class PipelineVersionBase(BaseModel):
-    config_snapshot: Dict[str, Any] = Field(default_factory=dict)
-    change_summary: Optional[Dict[str, Any]] = None
-    version_notes: Optional[str] = Field(None, max_length=5000)
+    config_snapshot: dict[str, Any] = Field(default_factory=dict)
+    change_summary: dict[str, Any] | None = None
+    version_notes: str | None = Field(None, max_length=5000)
 
 
 class PipelineVersionCreate(PipelineVersionBase):
-    nodes: List[PipelineNodeCreate] = Field(default_factory=list, min_length=1)
-    edges: List[PipelineEdgeCreate] = Field(default_factory=list)
+    nodes: list[PipelineNodeCreate] = Field(default_factory=list, min_length=1)
+    edges: list[PipelineEdgeCreate] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_nodes_and_edges(self):
@@ -167,11 +173,11 @@ class PipelineVersionRead(PipelineVersionBase):
     pipeline_id: int
     version: int
     is_published: bool
-    published_at: Optional[datetime]
+    published_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    nodes: List[PipelineNodeRead] = Field(default_factory=list)
-    edges: List[PipelineEdgeRead] = Field(default_factory=list)
+    nodes: list[PipelineNodeRead] = Field(default_factory=list)
+    edges: list[PipelineEdgeRead] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -180,8 +186,8 @@ class PipelineVersionSummary(BaseModel):
     id: int
     version: int
     is_published: bool
-    published_at: Optional[datetime]
-    version_notes: Optional[str] = None
+    published_at: datetime | None
+    version_notes: str | None = None
     node_count: int
     edge_count: int
     created_at: datetime
@@ -191,17 +197,17 @@ class PipelineVersionSummary(BaseModel):
 
 class PipelineBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=5000)
-    schedule_cron: Optional[str] = Field(None, max_length=100)
+    description: str | None = Field(None, max_length=5000)
+    schedule_cron: str | None = Field(None, max_length=100)
     schedule_enabled: bool = Field(default=False)
     schedule_timezone: str = Field(default="UTC", max_length=50)
     max_parallel_runs: int = Field(default=1, ge=1, le=100)
     max_retries: int = Field(default=3, ge=0, le=10)
     retry_strategy: RetryStrategy = Field(default=RetryStrategy.FIXED)
     retry_delay_seconds: int = Field(default=60, ge=0, le=3600)
-    execution_timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
-    agent_group: Optional[str] = Field(None, max_length=100)
-    tags: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    execution_timeout_seconds: int | None = Field(None, gt=0, le=86400)
+    agent_group: str | None = Field(None, max_length=100)
+    tags: dict[str, Any] | None = Field(default_factory=dict)
     priority: int = Field(default=5, ge=1, le=10)
 
     @field_validator("tags", mode="before")
@@ -215,12 +221,12 @@ class PipelineBase(BaseModel):
 
     @field_validator("schedule_cron")
     @classmethod
-    def validate_cron(cls, v: Optional[str]) -> Optional[str]:
+    def validate_cron(cls, v: str | None) -> str | None:
         if v is not None:
             try:
                 croniter(v)
             except Exception as e:
-                raise ValueError(f"Invalid cron expression: {str(e)}")
+                raise ValueError(f"Invalid cron expression: {e!s}")  # noqa: B904
         return v
 
     @field_validator("name")
@@ -242,34 +248,34 @@ class PipelineCreate(PipelineBase):
 
 
 class PipelineUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=5000)
-    schedule_cron: Optional[str] = Field(None, max_length=100)
-    schedule_enabled: Optional[bool] = None
-    schedule_timezone: Optional[str] = Field(None, max_length=50)
-    status: Optional[PipelineStatus] = None
-    max_parallel_runs: Optional[int] = Field(None, ge=1, le=100)
-    max_retries: Optional[int] = Field(None, ge=0, le=10)
-    retry_strategy: Optional[RetryStrategy] = None
-    retry_delay_seconds: Optional[int] = Field(None, ge=0, le=3600)
-    execution_timeout_seconds: Optional[int] = Field(None, gt=0, le=86400)
-    agent_group: Optional[str] = None
-    tags: Optional[Dict[str, Any]] = None
-    priority: Optional[int] = Field(None, ge=1, le=10)
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = Field(None, max_length=5000)
+    schedule_cron: str | None = Field(None, max_length=100)
+    schedule_enabled: bool | None = None
+    schedule_timezone: str | None = Field(None, max_length=50)
+    status: PipelineStatus | None = None
+    max_parallel_runs: int | None = Field(None, ge=1, le=100)
+    max_retries: int | None = Field(None, ge=0, le=10)
+    retry_strategy: RetryStrategy | None = None
+    retry_delay_seconds: int | None = Field(None, ge=0, le=3600)
+    execution_timeout_seconds: int | None = Field(None, gt=0, le=86400)
+    agent_group: str | None = None
+    tags: dict[str, Any] | None = None
+    priority: int | None = Field(None, ge=1, le=10)
 
     @field_validator("schedule_cron")
     @classmethod
-    def validate_cron(cls, v: Optional[str]) -> Optional[str]:
+    def validate_cron(cls, v: str | None) -> str | None:
         if v is not None:
             try:
                 croniter(v)
             except Exception as e:
-                raise ValueError(f"Invalid cron expression: {str(e)}")
+                raise ValueError(f"Invalid cron expression: {e!s}")  # noqa: B904
         return v
 
     @field_validator("name")
     @classmethod
-    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+    def validate_name(cls, v: str | None) -> str | None:
         if v is not None and not v.strip():
             raise ValueError("Pipeline name cannot be empty or only whitespace")
         return v.strip() if v else v
@@ -279,31 +285,31 @@ class PipelineRead(PipelineBase):
     id: int
     status: PipelineStatus
     is_remote_group: bool
-    current_version: Optional[int]
-    published_version_id: Optional[int]
+    current_version: int | None
+    published_version_id: int | None
     created_at: datetime
     updated_at: datetime
-    deleted_at: Optional[datetime] = None
+    deleted_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class PipelineDetailRead(PipelineRead):
-    published_version: Optional[PipelineVersionRead] = None
-    latest_version: Optional[PipelineVersionRead] = None
-    versions: List[PipelineVersionSummary] = Field(default_factory=list)
+    published_version: PipelineVersionRead | None = None
+    latest_version: PipelineVersionRead | None = None
+    versions: list[PipelineVersionSummary] = Field(default_factory=list)
 
 
 class PipelineListResponse(BaseModel):
-    pipelines: List[PipelineRead]
+    pipelines: list[PipelineRead]
     total: int
     limit: int
     offset: int
 
 
 class PipelineTriggerRequest(BaseModel):
-    version_id: Optional[int] = None
-    run_params: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    version_id: int | None = None
+    run_params: dict[str, Any] | None = Field(default_factory=dict)
     async_execution: bool = Field(default=True)
 
 
@@ -311,13 +317,13 @@ class PipelineTriggerResponse(BaseModel):
     status: str
     message: str
     job_id: int
-    task_id: Optional[str] = None
+    task_id: str | None = None
     pipeline_id: int
     version_id: int
 
 
 class PipelinePublishRequest(BaseModel):
-    version_notes: Optional[str] = Field(None, max_length=5000)
+    version_notes: str | None = Field(None, max_length=5000)
 
 
 class PipelinePublishResponse(BaseModel):
@@ -335,8 +341,8 @@ class PipelineValidationError(BaseModel):
 
 class PipelineValidationResponse(BaseModel):
     valid: bool
-    errors: List[PipelineValidationError] = Field(default_factory=list)
-    warnings: List[str] = Field(default_factory=list)
+    errors: list[PipelineValidationError] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class PipelineStatsResponse(BaseModel):
@@ -346,16 +352,18 @@ class PipelineStatsResponse(BaseModel):
     failed_runs: int
     total_quarantined: int = 0
     total_records_processed: int = 0
-    average_duration_seconds: Optional[float]
-    last_run_at: Optional[datetime]
-    next_scheduled_run: Optional[datetime]
+    average_duration_seconds: float | None
+    last_run_at: datetime | None
+    next_scheduled_run: datetime | None
+
 
 class NodeDiff(BaseModel):
     node_id: str
-    changes: Dict[str, Any]
+    changes: dict[str, Any]
+
 
 class PipelineDiffResponse(BaseModel):
     base_version: int
     target_version: int
-    nodes: Dict[str, Any]
-    edges: Dict[str, Any]
+    nodes: dict[str, Any]
+    edges: dict[str, Any]

@@ -1,25 +1,26 @@
-from typing import List, Optional, Tuple
-from datetime import datetime, timezone
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
+from datetime import UTC, datetime
 
+from sqlalchemy import desc, func
+from sqlalchemy.orm import Session
+from synqx_core.models.enums import JobStatus, PipelineRunStatus
 from synqx_core.models.execution import Job, PipelineRun, StepRun
 from synqx_core.models.monitoring import JobLog, StepLog
-from synqx_core.models.enums import JobStatus, PipelineRunStatus
+
 from app.core.errors import AppError
 from app.core.logging import get_logger
-from app.worker.tasks import execute_pipeline_task
 from app.utils.agent import is_remote_group
+from app.worker.tasks import execute_pipeline_task
 
 logger = get_logger(__name__)
 
 
 class JobService:
-
     def __init__(self, db_session: Session):
         self.db_session = db_session
 
-    def get_job(self, job_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Optional[Job]:
+    def get_job(
+        self, job_id: int, user_id: int | None = None, workspace_id: int | None = None
+    ) -> Job | None:
         """Get job by ID, scoped to a user or workspace."""
         query = self.db_session.query(Job).filter(Job.id == job_id)
         if workspace_id:
@@ -28,15 +29,15 @@ class JobService:
             query = query.filter(Job.user_id == user_id)
         return query.first()
 
-    def list_jobs(
+    def list_jobs(  # noqa: PLR0913
         self,
         user_id: int,
-        workspace_id: Optional[int] = None,
-        pipeline_id: Optional[int] = None,
-        status: Optional[JobStatus] = None,
+        workspace_id: int | None = None,
+        pipeline_id: int | None = None,
+        status: JobStatus | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> Tuple[List[Job], int]:
+    ) -> tuple[list[Job], int]:
         """List jobs scoped by user or workspace with optional filtering."""
         if workspace_id:
             query = self.db_session.query(Job).filter(Job.workspace_id == workspace_id)
@@ -53,7 +54,14 @@ class JobService:
         jobs = query.order_by(desc(Job.created_at)).limit(limit).offset(offset).all()
 
         return jobs, total
-    def cancel_job(self, job_id: int, user_id: int, workspace_id: Optional[int] = None, reason: Optional[str] = None) -> Job:
+
+    def cancel_job(
+        self,
+        job_id: int,
+        user_id: int,
+        workspace_id: int | None = None,
+        reason: str | None = None,
+    ) -> Job:
         """Cancel a running or pending job for a specific user."""
         job = self.get_job(job_id, user_id=user_id, workspace_id=workspace_id)
 
@@ -65,14 +73,15 @@ class JobService:
 
         try:
             if job.celery_task_id:
-                from celery.result import AsyncResult
-                from app.core.celery_app import celery_app
+                from celery.result import AsyncResult  # noqa: PLC0415
+
+                from app.core.celery_app import celery_app  # noqa: PLC0415
 
                 task = AsyncResult(job.celery_task_id, app=celery_app)
                 task.revoke(terminate=True)
 
             job.status = JobStatus.CANCELLED
-            job.completed_at = datetime.now(timezone.utc)
+            job.completed_at = datetime.now(UTC)
             if job.started_at:
                 duration_ms = int(
                     (job.completed_at - job.started_at).total_seconds() * 1000
@@ -80,21 +89,32 @@ class JobService:
                 job.execution_time_ms = duration_ms
 
             # Update associated PipelineRun and StepRuns
-            pipeline_run = self.db_session.query(PipelineRun).filter(PipelineRun.job_id == job_id).first()
+            pipeline_run = (
+                self.db_session.query(PipelineRun)
+                .filter(PipelineRun.job_id == job_id)
+                .first()
+            )
             if pipeline_run:
                 pipeline_run.status = PipelineRunStatus.CANCELLED
-                pipeline_run.completed_at = datetime.now(timezone.utc)
-                pipeline_run.error_message = f"Cancelled: {reason}" if reason else "Cancelled by user"
-                
+                pipeline_run.completed_at = datetime.now(UTC)
+                pipeline_run.error_message = (
+                    f"Cancelled: {reason}" if reason else "Cancelled by user"
+                )
+
                 # Also cancel active step runs
-                from synqx_core.models.enums import OperatorRunStatus
-                active_steps = self.db_session.query(StepRun).filter(
-                    StepRun.pipeline_run_id == pipeline_run.id,
-                    StepRun.status == OperatorRunStatus.RUNNING
-                ).all()
+                from synqx_core.models.enums import OperatorRunStatus  # noqa: PLC0415
+
+                active_steps = (
+                    self.db_session.query(StepRun)
+                    .filter(
+                        StepRun.pipeline_run_id == pipeline_run.id,
+                        StepRun.status == OperatorRunStatus.RUNNING,
+                    )
+                    .all()
+                )
                 for step in active_steps:
                     step.status = OperatorRunStatus.FAILED
-                    step.completed_at = datetime.now(timezone.utc)
+                    step.completed_at = datetime.now(UTC)
                     step.error_message = "Cancelled due to job cancellation"
 
             if reason:
@@ -103,7 +123,8 @@ class JobService:
             self.db_session.commit()
 
             logger.info(
-                f"Job {job_id} cancelled", extra={"job_id": job_id, "reason": reason, "user_id": user_id}
+                f"Job {job_id} cancelled",
+                extra={"job_id": job_id, "reason": reason, "user_id": user_id},
             )
 
             return job
@@ -111,9 +132,15 @@ class JobService:
         except Exception as e:
             self.db_session.rollback()
             logger.error(f"Failed to cancel job {job_id}: {e}")
-            raise AppError(f"Failed to cancel job: {e}")
+            raise AppError(f"Failed to cancel job: {e}")  # noqa: B904
 
-    def retry_job(self, job_id: int, user_id: int, workspace_id: Optional[int] = None, force: bool = False) -> Job:
+    def retry_job(
+        self,
+        job_id: int,
+        user_id: int,
+        workspace_id: int | None = None,
+        force: bool = False,
+    ) -> Job:
         """Retry a failed job for a specific user."""
         job = self.get_job(job_id, user_id=user_id, workspace_id=workspace_id)
 
@@ -122,12 +149,12 @@ class JobService:
 
         if job.status not in [JobStatus.FAILED, JobStatus.CANCELLED]:
             raise AppError(
-                f"Can only retry failed or cancelled jobs. Current status: {job.status.value}"
+                f"Can only retry failed or cancelled jobs. Current status: {job.status.value}"  # noqa: E501
             )
 
         if not force and job.retry_count >= job.max_retries:
             raise AppError(
-                f"Job has reached max retries ({job.max_retries}). Use force=true to override."
+                f"Job has reached max retries ({job.max_retries}). Use force=true to override."  # noqa: E501
             )
 
         try:
@@ -153,10 +180,10 @@ class JobService:
                 new_job.status = JobStatus.QUEUED
                 new_job.queue_name = job.pipeline.agent_group
                 self.db_session.commit()
-                
+
                 logger.info(
-                    f"Job {job_id} retried and queued for remote agent group '{job.pipeline.agent_group}'",
-                    extra={"job_id": job_id, "new_job_id": new_job.id}
+                    f"Job {job_id} retried and queued for remote agent group '{job.pipeline.agent_group}'",  # noqa: E501
+                    extra={"job_id": job_id, "new_job_id": new_job.id},
                 )
             else:
                 task = execute_pipeline_task.delay(new_job.id)
@@ -165,7 +192,11 @@ class JobService:
 
                 logger.info(
                     f"Job {job_id} retried as job {new_job.id}",
-                    extra={"original_job_id": job_id, "new_job_id": new_job.id, "user_id": user_id},
+                    extra={
+                        "original_job_id": job_id,
+                        "new_job_id": new_job.id,
+                        "user_id": user_id,
+                    },
                 )
 
             return new_job
@@ -173,29 +204,38 @@ class JobService:
         except Exception as e:
             self.db_session.rollback()
             logger.error(f"Failed to retry job {job_id}: {e}")
-            raise AppError(f"Failed to retry job: {str(e)}")
+            raise AppError(f"Failed to retry job: {e!s}")  # noqa: B904
 
-        except Exception as e:
+        except Exception as e:  # noqa: B025
             self.db_session.rollback()
             logger.error(f"Failed to retry job {job_id}: {e}")
-            raise AppError(f"Failed to retry job: {e}")
+            raise AppError(f"Failed to retry job: {e}")  # noqa: B904
 
-    def get_job_logs(self, job_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None, level: Optional[str] = None, all_attempts: bool = False) -> List[dict]:
-        """Get logs for a specific job. If all_attempts is True, returns logs for all retries via correlation_id."""
+    def get_job_logs(
+        self,
+        job_id: int,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+        level: str | None = None,
+        all_attempts: bool = False,
+    ) -> list[dict]:
+        """Get logs for a specific job. If all_attempts is True, returns logs for all retries via correlation_id."""  # noqa: E501
         # Fetch the job
         job = self.get_job(job_id, user_id=user_id, workspace_id=workspace_id)
         if not job:
             return []
-            
+
         correlation_id = job.correlation_id
 
         # 1. Fetch Job Logs
         job_logs_query = self.db_session.query(JobLog)
         if all_attempts:
-            job_logs_query = job_logs_query.join(Job, JobLog.job_id == Job.id).filter(Job.correlation_id == correlation_id)
+            job_logs_query = job_logs_query.join(Job, JobLog.job_id == Job.id).filter(
+                Job.correlation_id == correlation_id
+            )
         else:
             job_logs_query = job_logs_query.filter(JobLog.job_id == job_id)
-            
+
         if level:
             job_logs_query = job_logs_query.filter(JobLog.level == level)
         job_logs = job_logs_query.all()
@@ -206,55 +246,62 @@ class JobService:
             .join(StepRun, StepLog.step_run_id == StepRun.id)
             .join(PipelineRun, StepRun.pipeline_run_id == PipelineRun.id)
         )
-        
+
         if all_attempts:
-            step_logs_query = step_logs_query.join(Job, PipelineRun.job_id == Job.id).filter(Job.correlation_id == correlation_id)
+            step_logs_query = step_logs_query.join(
+                Job, PipelineRun.job_id == Job.id
+            ).filter(Job.correlation_id == correlation_id)
         else:
             step_logs_query = step_logs_query.filter(PipelineRun.job_id == job_id)
-            
+
         if level:
             step_logs_query = step_logs_query.filter(StepLog.level == level)
         step_logs = step_logs_query.all()
 
         # 3. Combine and Format
         unified_logs = []
-        
+
         for log in job_logs:
-            unified_logs.append({
-                "id": log.id,
-                "level": log.level,
-                "message": log.message,
-                "metadata_payload": log.metadata_payload,
-                "timestamp": log.timestamp,
-                "source": log.source,
-                "job_id": log.job_id,
-                "type": "job_log"
-            })
-            
+            unified_logs.append(
+                {
+                    "id": log.id,
+                    "level": log.level,
+                    "message": log.message,
+                    "metadata_payload": log.metadata_payload,
+                    "timestamp": log.timestamp,
+                    "source": log.source,
+                    "job_id": log.job_id,
+                    "type": "job_log",
+                }
+            )
+
         for log in step_logs:
-            unified_logs.append({
-                "id": log.id,
-                "level": log.level,
-                "message": log.message,
-                "metadata_payload": log.metadata_payload,
-                "timestamp": log.timestamp,
-                "source": log.source,
-                "step_run_id": log.step_run_id,
-                "type": "step_log"
-            })
+            unified_logs.append(
+                {
+                    "id": log.id,
+                    "level": log.level,
+                    "message": log.message,
+                    "metadata_payload": log.metadata_payload,
+                    "timestamp": log.timestamp,
+                    "source": log.source,
+                    "step_run_id": log.step_run_id,
+                    "type": "step_log",
+                }
+            )
 
         # 4. Sort by timestamp to preserve chronological order
         unified_logs.sort(key=lambda x: x["timestamp"])
-        
+
         return unified_logs
 
 
 class PipelineRunService:
-
     def __init__(self, db_session: Session):
         self.db_session = db_session
 
-    def get_run(self, run_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Optional[PipelineRun]:
+    def get_run(
+        self, run_id: int, user_id: int | None = None, workspace_id: int | None = None
+    ) -> PipelineRun | None:
         """Get pipeline run by ID, scoped to a user or workspace."""
         query = self.db_session.query(PipelineRun).filter(PipelineRun.id == run_id)
         if workspace_id:
@@ -263,20 +310,24 @@ class PipelineRunService:
             query = query.filter(PipelineRun.user_id == user_id)
         return query.first()
 
-    def list_runs(
+    def list_runs(  # noqa: PLR0913
         self,
         user_id: int,
-        workspace_id: Optional[int] = None,
-        pipeline_id: Optional[int] = None,
-        status: Optional[PipelineRunStatus] = None,
+        workspace_id: int | None = None,
+        pipeline_id: int | None = None,
+        status: PipelineRunStatus | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> Tuple[List[PipelineRun], int]:
+    ) -> tuple[list[PipelineRun], int]:
         """List runs scoped by user or workspace with optional filtering."""
         if workspace_id:
-            query = self.db_session.query(PipelineRun).filter(PipelineRun.workspace_id == workspace_id)
+            query = self.db_session.query(PipelineRun).filter(
+                PipelineRun.workspace_id == workspace_id
+            )
         else:
-            query = self.db_session.query(PipelineRun).filter(PipelineRun.user_id == user_id)
+            query = self.db_session.query(PipelineRun).filter(
+                PipelineRun.user_id == user_id
+            )
 
         if pipeline_id:
             query = query.filter(PipelineRun.pipeline_id == pipeline_id)
@@ -294,9 +345,12 @@ class PipelineRunService:
 
         return runs, total
 
-    def get_run_steps(self, run_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> List[StepRun]:
+    def get_run_steps(
+        self, run_id: int, user_id: int | None = None, workspace_id: int | None = None
+    ) -> list[StepRun]:
         """Get all step runs for a pipeline run, optionally scoped to user."""
-        from sqlalchemy.orm import joinedload
+        from sqlalchemy.orm import joinedload  # noqa: PLC0415
+
         run = self.get_run(run_id, user_id=user_id, workspace_id=workspace_id)
 
         if not run:
@@ -311,16 +365,19 @@ class PipelineRunService:
         )
 
     def get_step_logs(
-        self, step_run_id: int, user_id: int, workspace_id: Optional[int] = None, level: Optional[str] = None
-    ) -> List[StepLog]:
+        self,
+        step_run_id: int,
+        user_id: int,
+        workspace_id: int | None = None,
+        level: str | None = None,
+    ) -> list[StepLog]:
         """Get logs for a specific step run, scoped to user or workspace."""
         # Check ownership via join
-        query = self.db_session.query(StepLog).join(
-            StepRun, StepLog.step_run_id == StepRun.id
-        ).join(
-            PipelineRun, StepRun.pipeline_run_id == PipelineRun.id
-        ).filter(
-            StepLog.step_run_id == step_run_id
+        query = (
+            self.db_session.query(StepLog)
+            .join(StepRun, StepLog.step_run_id == StepRun.id)
+            .join(PipelineRun, StepRun.pipeline_run_id == PipelineRun.id)
+            .filter(StepLog.step_run_id == step_run_id)
         )
 
         if workspace_id:
@@ -333,24 +390,31 @@ class PipelineRunService:
 
         return query.order_by(StepLog.timestamp).all()
 
-    def get_run_metrics(self, pipeline_id: int, user_id: int, workspace_id: Optional[int] = None) -> dict:
+    def get_run_metrics(
+        self, pipeline_id: int, user_id: int, workspace_id: int | None = None
+    ) -> dict:
         """Get aggregated metrics for a pipeline's runs, scoped to user or workspace."""
         # Ensure pipeline belongs to user/workspace
-        from synqx_core.models.pipelines import Pipeline
+        from synqx_core.models.pipelines import Pipeline  # noqa: PLC0415
+
         query = self.db_session.query(Pipeline).filter(Pipeline.id == pipeline_id)
         if workspace_id:
             query = query.filter(Pipeline.workspace_id == workspace_id)
         else:
             query = query.filter(Pipeline.user_id == user_id)
-            
+
         pipeline_exists = query.first()
-        
+
         if not pipeline_exists:
             raise AppError("Pipeline not found")
 
-        base_run_query = self.db_session.query(PipelineRun).filter(PipelineRun.pipeline_id == pipeline_id)
+        base_run_query = self.db_session.query(PipelineRun).filter(
+            PipelineRun.pipeline_id == pipeline_id
+        )
         if workspace_id:
-            base_run_query = base_run_query.filter(PipelineRun.workspace_id == workspace_id)
+            base_run_query = base_run_query.filter(
+                PipelineRun.workspace_id == workspace_id
+            )
         else:
             base_run_query = base_run_query.filter(PipelineRun.user_id == user_id)
 
@@ -400,7 +464,11 @@ class PipelineRunService:
 
         total_quarantined = (
             self.db_session.query(func.sum(StepRun.records_error))
-            .filter(StepRun.pipeline_run_id.in_(base_run_query.with_entities(PipelineRun.id)))
+            .filter(
+                StepRun.pipeline_run_id.in_(
+                    base_run_query.with_entities(PipelineRun.id)
+                )
+            )
             .scalar()
             or 0
         )
@@ -414,5 +482,5 @@ class PipelineRunService:
             ),
             "average_duration_seconds": float(avg_duration) if avg_duration else None,
             "total_records_processed": total_records,
-            "total_quarantined": int(total_quarantined)
+            "total_quarantined": int(total_quarantined),
         }

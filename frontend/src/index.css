@@ -1,10 +1,11 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 4px);
@@ -114,9 +115,7 @@
 
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.3 0 0);
-  --sidebar-primary: oklch(
-    0.55 0.25 240
-  );
+  --sidebar-primary: oklch(0.55 0.25 240);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.94 0 0);
   --sidebar-accent-foreground: oklch(0.12 0.01 260);
@@ -126,7 +125,7 @@
 
 .dark {
   /* --- REVISED SOFTER DARK MODE --- */
-  
+
   --background: oklch(0.18 0 0);
   --foreground: oklch(0.95 0 0); /* Slightly less bright white */
 
@@ -193,7 +192,7 @@
   }
   body {
     @apply bg-background text-foreground antialiased selection:bg-indigo-600 selection:text-white relative overflow-x-hidden font-sans;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    font-feature-settings: 'ss01', 'ss02', 'cv01', 'cv02';
   }
 
   html {
@@ -240,7 +239,7 @@
   );
   backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid oklch(from var(--color-border) l c h / 0.8);
-  box-shadow: 
+  box-shadow:
     0 20px 40px -12px rgb(0 0 0 / 0.08),
     inset 0 1px 1px oklch(1 0 0 / 0.05);
   border-radius: 2rem;
@@ -253,7 +252,7 @@
     oklch(from var(--color-primary) l c h / 0.05),
     transparent 60%
   );
-  box-shadow: 
+  box-shadow:
     0 30px 60px -12px rgb(0 0 0 / 0.45),
     inset 0 1px 0 oklch(1 0 0 / 0.03);
   border: 1px solid oklch(from var(--color-border) l c h / 0.4);
@@ -268,17 +267,17 @@
     transform: translateY(-4px);
     background-color: oklch(from var(--color-card) l c h / 0.98);
     border-color: oklch(from var(--color-primary) l c h / 0.3);
-    box-shadow: 
-        0 30px 60px -15px rgb(0 0 0 / 0.15),
-        0 0 20px -5px oklch(from var(--color-primary) l c h / 0.1);
+    box-shadow:
+      0 30px 60px -15px rgb(0 0 0 / 0.15),
+      0 0 20px -5px oklch(from var(--color-primary) l c h / 0.1);
   }
 }
 
 .dark .metric-card:hover {
-    background-color: oklch(0.24 0 0 / 0.98);
-    box-shadow: 
-        0 40px 80px -12px rgb(0 0 0 / 0.6),
-        0 0 30px -10px oklch(from var(--color-primary) l c h / 0.2);
+  background-color: oklch(0.24 0 0 / 0.98);
+  box-shadow:
+    0 40px 80px -12px rgb(0 0 0 / 0.6),
+    0 0 30px -10px oklch(from var(--color-primary) l c h / 0.2);
 }
 
 @utility subtitle {
@@ -354,7 +353,7 @@
   background-image: linear-gradient(
     135deg,
     var(--color-primary),
-    oklch(from var(--color-primary) calc(l * 1.3) calc(c * 0.8) h)
+    oklch(from var(--color-primary) calc(l* 1.3) calc(c* 0.8) h)
   );
   background-size: 150% auto;
   animation: var(--animate-gradient-x);
@@ -362,7 +361,7 @@
 
 @utility status-success {
   background-color: oklch(from var(--color-success) l c h / 0.15);
-  color: oklch(from var(--color-success) calc(l * 0.7) c h);
+  color: oklch(from var(--color-success) calc(l* 0.7) c h);
   border: 1px solid oklch(from var(--color-success) l c h / 0.2);
 }
 
@@ -372,7 +371,7 @@
 
 @utility status-warning {
   background-color: oklch(from var(--color-warning) l c h / 0.15);
-  color: oklch(from var(--color-warning) calc(l * 0.7) c h);
+  color: oklch(from var(--color-warning) calc(l* 0.7) c h);
   border: 1px solid oklch(from var(--color-warning) l c h / 0.2);
 }
 
@@ -382,7 +381,7 @@
 
 @utility status-error {
   background-color: oklch(from var(--color-destructive) l c h / 0.15);
-  color: oklch(from var(--color-destructive) calc(l * 0.7) c h);
+  color: oklch(from var(--color-destructive) calc(l* 0.7) c h);
   border: 1px solid oklch(from var(--color-destructive) l c h / 0.2);
 }
 
@@ -392,7 +391,7 @@
 
 @utility status-info {
   background-color: oklch(from var(--color-info) l c h / 0.15);
-  color: oklch(from var(--color-info) calc(l * 0.7) c h);
+  color: oklch(from var(--color-info) calc(l* 0.7) c h);
   border: 1px solid oklch(from var(--color-info) l c h / 0.2);
 }
 
@@ -425,11 +424,8 @@
 
 @utility bg-grid-subtle {
   background-size: 40px 40px;
-  background-image: linear-gradient(
-      to right,
-      var(--color-border) 1px,
-      transparent 1px
-    ),
+  background-image:
+    linear-gradient(to right, var(--color-border) 1px, transparent 1px),
     linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
   mask-image: radial-gradient(ellipse at center, black 40%, transparent 100%);
 }
@@ -443,7 +439,8 @@
 @utility focus-custom {
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-background),
+    box-shadow:
+      0 0 0 2px var(--color-background),
       0 0 0 4px var(--color-primary);
   }
 }

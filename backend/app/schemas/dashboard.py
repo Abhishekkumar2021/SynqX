@@ -1,9 +1,9 @@
-from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
 
+from pydantic import BaseModel, ConfigDict
 from synqx_core.schemas.audit import AuditLogRead
 from synqx_core.schemas.ephemeral import EphemeralJobResponse
+
 
 class ThroughputDataPoint(BaseModel):
     timestamp: datetime
@@ -14,19 +14,22 @@ class ThroughputDataPoint(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class PipelineDistribution(BaseModel):
     status: str
     count: int
+
 
 class RecentActivity(BaseModel):
     id: int
     pipeline_id: int
     pipeline_name: str
     status: str
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    duration_seconds: Optional[float]
-    user_avatar: Optional[str] = None # Placeholder for frontend compatibility
+    started_at: datetime | None
+    completed_at: datetime | None
+    duration_seconds: float | None
+    user_avatar: str | None = None  # Placeholder for frontend compatibility
+
 
 class SystemHealth(BaseModel):
     cpu_percent: float
@@ -35,53 +38,61 @@ class SystemHealth(BaseModel):
     active_cdc_streams: int = 0
     active_cdc_streams: int = 0
 
+
 class FailingPipeline(BaseModel):
     id: int
     name: str
     failure_count: int
+
 
 class SlowestPipeline(BaseModel):
     id: int
     name: str
     avg_duration: float
 
+
 class DashboardAlert(BaseModel):
     id: int
     message: str
     level: str
     created_at: datetime
-    pipeline_id: Optional[int] = None
+    pipeline_id: int | None = None
+
 
 class ConnectorHealth(BaseModel):
     status: str
     count: int
 
+
 class QualityTrendDataPoint(BaseModel):
     timestamp: datetime
     valid_rows: int
     failed_rows: int
-    compliance_score: float # 0-100
+    compliance_score: float  # 0-100
+
 
 class QualityViolation(BaseModel):
-    rule_type: str # e.g. "not_null", "unique"
+    rule_type: str  # e.g. "not_null", "unique"
     column_name: str
     count: int
+
 
 class AgentGroupStats(BaseModel):
     name: str
     count: int
-    status: str # 'active', 'idle', 'offline'
+    status: str  # 'active', 'idle', 'offline'
+
 
 class DashboardStats(BaseModel):
     total_pipelines: int
     active_pipelines: int
     total_connections: int
-    connector_health: List[ConnectorHealth] = []
-    
+    connector_health: list[ConnectorHealth] = []
+
     # Agent Stats
     total_agents: int = 0
     active_agents: int = 0
-    agent_groups: List[AgentGroupStats] = []
+    agent_groups: list[AgentGroupStats] = []
 
     # Period stats
     total_jobs: int
@@ -92,26 +103,26 @@ class DashboardStats(BaseModel):
     active_issues: int = 0
     resolution_rate: float = 0.0
     total_bytes: int = 0
-    
+
     # Inventory Stats
     total_users: int = 0
     total_assets: int = 0
-    
-    throughput: List[ThroughputDataPoint]
-    pipeline_distribution: List[PipelineDistribution]
-    recent_activity: List[RecentActivity]
+
+    throughput: list[ThroughputDataPoint]
+    pipeline_distribution: list[PipelineDistribution]
+    recent_activity: list[RecentActivity]
 
     # New Metrics
-    system_health: Optional[SystemHealth] = None
-    top_failing_pipelines: List[FailingPipeline] = []
-    slowest_pipelines: List[SlowestPipeline] = []
-    
+    system_health: SystemHealth | None = None
+    top_failing_pipelines: list[FailingPipeline] = []
+    slowest_pipelines: list[SlowestPipeline] = []
+
     # Data Quality
-    quality_trend: List[QualityTrendDataPoint] = []
-    top_violations: List[QualityViolation] = []
-    
-    recent_alerts: List[DashboardAlert] = []
-    recent_audit_logs: List[AuditLogRead] = []
-    recent_ephemeral_jobs: List[EphemeralJobResponse] = []
+    quality_trend: list[QualityTrendDataPoint] = []
+    top_violations: list[QualityViolation] = []
+
+    recent_alerts: list[DashboardAlert] = []
+    recent_audit_logs: list[AuditLogRead] = []
+    recent_ephemeral_jobs: list[EphemeralJobResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

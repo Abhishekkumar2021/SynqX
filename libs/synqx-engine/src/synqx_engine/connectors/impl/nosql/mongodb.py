@@ -1,40 +1,47 @@
-from typing import Any, Dict, List, Optional, Iterator, Union
+from collections.abc import Iterator
+from typing import Any
+
 import pandas as pd
-from pymongo import MongoClient, UpdateOne
-from synqx_engine.connectors.base import BaseConnector
-from synqx_core.utils.data import is_df_empty
-from synqx_core.utils.resilience import retry
-from synqx_core.errors import (
-    ConfigurationError, 
-    ConnectionFailedError, 
-    DataTransferError, 
-    SchemaDiscoveryError
-)
-from synqx_core.logging import get_logger
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pymongo import MongoClient, UpdateOne
+from synqx_core.errors import (
+    ConfigurationError,
+    ConnectionFailedError,
+    DataTransferError,
+    SchemaDiscoveryError,
+)
+from synqx_core.logging import get_logger
+from synqx_core.utils.data import is_df_empty
+from synqx_core.utils.resilience import retry
+
+from synqx_engine.connectors.base import BaseConnector
 
 logger = get_logger(__name__)
 
+
 class MongoConfig(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", case_sensitive=False)
-    
-    connection_string: Optional[str] = Field(None, description="MongoDB Connection String (URI)")
-    host: Optional[str] = Field("localhost", description="Host")
+
+    connection_string: str | None = Field(
+        None, description="MongoDB Connection String (URI)"
+    )
+    host: str | None = Field("localhost", description="Host")
     port: int = Field(27017, description="Port")
-    username: Optional[str] = Field(None, description="Username")
-    password: Optional[str] = Field(None, description="Password")
+    username: str | None = Field(None, description="Username")
+    password: str | None = Field(None, description="Password")
     database: str = Field(..., description="Database Name")
     auth_source: str = Field("admin", description="Authentication Database")
+
 
 class MongoDBConnector(BaseConnector):
     """
     Robust Connector for MongoDB.
     """
 
-    def __init__(self, config: Dict[str, Any]):
-        self._config_model: Optional[MongoConfig] = None
-        self._client: Optional[MongoClient] = None
+    def __init__(self, config: dict[str, Any]):
+        self._config_model: MongoConfig | None = None
+        self._client: MongoClient | None = None
         self._db = None
         super().__init__(config)
 
@@ -42,9 +49,11 @@ class MongoDBConnector(BaseConnector):
         try:
             self._config_model = MongoConfig.model_validate(self.config)
             if not self._config_model.connection_string and not self._config_model.host:
-                 raise ValueError("Either 'connection_string' or 'host' must be provided.")
+                raise ValueError(
+                    "Either 'connection_string' or 'host' must be provided."
+                )
         except Exception as e:
-            raise ConfigurationError(f"Invalid MongoDB configuration: {e}")
+            raise ConfigurationError(f"Invalid MongoDB configuration: {e}")  # noqa: B904
 
     @retry(exceptions=(Exception,), max_attempts=3)
     def connect(self) -> None:
@@ -53,7 +62,9 @@ class MongoDBConnector(BaseConnector):
 
         try:
             if self._config_model.connection_string:
-                self._client = MongoClient(self._config_model.connection_string, serverSelectionTimeoutMS=5000)
+                self._client = MongoClient(
+                    self._config_model.connection_string, serverSelectionTimeoutMS=5000
+                )
             else:
                 params = {
                     "host": self._config_model.host,
@@ -61,19 +72,19 @@ class MongoDBConnector(BaseConnector):
                     "username": self._config_model.username,
                     "password": self._config_model.password,
                     "authSource": self._config_model.auth_source,
-                    "serverSelectionTimeoutMS": 5000
+                    "serverSelectionTimeoutMS": 5000,
                 }
                 # Remove None values
                 params = {k: v for k, v in params.items() if v is not None}
                 self._client = MongoClient(**params)
-            
+
             # Verify connection
-            self._client.admin.command('ping')
+            self._client.admin.command("ping")
             self._db = self._client[self._config_model.database]
             logger.info("mongodb_connected", database=self._config_model.database)
-            
+
         except Exception as e:
-            raise ConnectionFailedError(f"Failed to connect to MongoDB: {e}")
+            raise ConnectionFailedError(f"Failed to connect to MongoDB: {e}")  # noqa: B904
 
     def disconnect(self) -> None:
         if self._client:
@@ -89,8 +100,8 @@ class MongoDBConnector(BaseConnector):
             return False
 
     def discover_assets(
-        self, pattern: Optional[str] = None, include_metadata: bool = False, **kwargs
-    ) -> List[Dict[str, Any]]:
+        self, pattern: str | None = None, include_metadata: bool = False, **kwargs
+    ) -> list[dict[str, Any]]:
         self.connect()
         try:
             collections = self._db.list_collection_names()
@@ -100,10 +111,10 @@ class MongoDBConnector(BaseConnector):
             if not include_metadata:
                 return [
                     {
-                        "name": c, 
+                        "name": c,
                         "fully_qualified_name": f"{self._config_model.database}.{c}",
-                        "type": "collection"
-                    } 
+                        "type": "collection",
+                    }
                     for c in collections
                 ]
 
@@ -112,60 +123,73 @@ class MongoDBConnector(BaseConnector):
                 fqn = f"{self._config_model.database}.{col_name}"
                 try:
                     stats = self._db.command("collstats", col_name)
-                    enriched.append({
-                        "name": col_name,
-                        "fully_qualified_name": fqn,
-                        "type": "collection",
-                        "row_count": stats.get('count', 0),
-                        "size_bytes": stats.get('size', 0),
-                    })
+                    enriched.append(
+                        {
+                            "name": col_name,
+                            "fully_qualified_name": fqn,
+                            "type": "collection",
+                            "row_count": stats.get("count", 0),
+                            "size_bytes": stats.get("size", 0),
+                        }
+                    )
                 except Exception:
-                    enriched.append({
-                        "name": col_name, 
-                        "fully_qualified_name": fqn,
-                        "type": "collection"
-                    })
+                    enriched.append(
+                        {
+                            "name": col_name,
+                            "fully_qualified_name": fqn,
+                            "type": "collection",
+                        }
+                    )
             return enriched
         except Exception as e:
-            raise DataTransferError(f"Failed to discover MongoDB collections: {e}")
+            raise DataTransferError(f"Failed to discover MongoDB collections: {e}")  # noqa: B904
 
-    def infer_schema(self, asset: str, sample_size: int = 1000, **kwargs) -> Dict[str, Any]:
+    def infer_schema(
+        self, asset: str, sample_size: int = 1000, **kwargs
+    ) -> dict[str, Any]:
         self.connect()
         try:
             collection = self._db[asset]
             cursor = collection.find().limit(sample_size)
             records = list(cursor)
-            
+
             if not records:
-                 return {"asset": asset, "columns": [], "status": "empty"}
+                return {"asset": asset, "columns": [], "status": "empty"}
 
             # Simple inference using first 100 records for type diversity
             df = pd.DataFrame(records)
-            if '_id' in df.columns:
-                df['_id'] = df['_id'].astype(str)
-                
-            columns = [{"name": col, "type": str(dtype)} for col, dtype in df.dtypes.items()]
+            if "_id" in df.columns:
+                df["_id"] = df["_id"].astype(str)
+
+            columns = [
+                {"name": col, "type": str(dtype)} for col, dtype in df.dtypes.items()
+            ]
             return {"asset": asset, "columns": columns, "inferred_from": len(records)}
         except Exception as e:
-            raise SchemaDiscoveryError(f"MongoDB schema inference failed: {e}")
+            raise SchemaDiscoveryError(f"MongoDB schema inference failed: {e}")  # noqa: B904
 
     @retry(exceptions=(Exception,), max_attempts=3)
-    def read_batch(
-        self, asset: str, limit: Optional[int] = None, offset: Optional[int] = None, **kwargs
+    def read_batch(  # noqa: PLR0912
+        self,
+        asset: str,
+        limit: int | None = None,
+        offset: int | None = None,
+        **kwargs,
     ) -> Iterator[pd.DataFrame]:
         self.connect()
-        
+
         custom_query = kwargs.get("query")
         incremental_filter = kwargs.get("incremental_filter")
-        
+
         if custom_query:
-            import json
+            import json  # noqa: PLC0415
+
             try:
                 q_obj = json.loads(custom_query)
                 collection_name = q_obj.get("collection")
                 if not collection_name:
-                     raise ValueError("MongoDB query JSON must specify 'collection'.")
-                
+                    raise ValueError("MongoDB query JSON must specify 'collection'.")
+
                 # Merge incremental filter into existing filter
                 query_filter = q_obj.get("filter", {})
                 if incremental_filter and isinstance(incremental_filter, dict):
@@ -174,18 +198,18 @@ class MongoDBConnector(BaseConnector):
 
                 collection = self._db[collection_name]
                 cursor = collection.find(query_filter, q_obj.get("projection"))
-                
+
                 if offset:
                     cursor = cursor.skip(offset)
                 elif q_obj.get("offset"):
                     cursor = cursor.skip(q_obj.get("offset"))
-                
+
                 if limit:
                     cursor = cursor.limit(limit)
                 elif q_obj.get("limit"):
                     cursor = cursor.limit(q_obj.get("limit"))
             except Exception as e:
-                raise DataTransferError(f"Invalid MongoDB query: {e}")
+                raise DataTransferError(f"Invalid MongoDB query: {e}")  # noqa: B904
         else:
             collection = self._db[asset]
             # Merge incremental filter into kwargs filter
@@ -203,8 +227,8 @@ class MongoDBConnector(BaseConnector):
         chunksize = kwargs.get("chunksize", kwargs.get("batch_size", 5000))
         batch = []
         for doc in cursor:
-            if '_id' in doc:
-                doc['_id'] = str(doc['_id'])
+            if "_id" in doc:
+                doc["_id"] = str(doc["_id"])
             batch.append(doc)
             if len(batch) >= chunksize:
                 yield pd.DataFrame(batch)
@@ -216,91 +240,106 @@ class MongoDBConnector(BaseConnector):
     def execute_query(
         self,
         query: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
         **kwargs,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         self.connect()
-        import json
+        import json  # noqa: PLC0415
+
         try:
-            # For MongoDB, we expect a JSON string that might contain 'collection', 'filter', 'projection', etc.
+            # For MongoDB, we expect a JSON string that might contain 'collection', 'filter', 'projection', etc.  # noqa: E501
             # Example: { "collection": "users", "filter": { "age": { "$gt": 20 } } }
             q_obj = json.loads(query)
             collection_name = q_obj.get("collection")
             if not collection_name:
                 raise ValueError("MongoDB query JSON must specify 'collection'.")
-            
+
             collection = self._db[collection_name]
             cursor = collection.find(q_obj.get("filter", {}), q_obj.get("projection"))
-            
+
             if offset:
                 cursor = cursor.skip(offset)
             elif q_obj.get("offset"):
                 cursor = cursor.skip(q_obj.get("offset"))
-            
+
             if limit:
                 cursor = cursor.limit(limit)
             elif q_obj.get("limit"):
                 cursor = cursor.limit(q_obj.get("limit"))
-            
+
             results = []
             for doc in cursor:
-                if '_id' in doc:
-                    doc['_id'] = str(doc['_id'])
+                if "_id" in doc:
+                    doc["_id"] = str(doc["_id"])
                 results.append(doc)
             return results
         except Exception as e:
-            raise DataTransferError(f"MongoDB query failed: {e}")
+            raise DataTransferError(f"MongoDB query failed: {e}")  # noqa: B904
 
     @retry(exceptions=(Exception,), max_attempts=3)
-    def write_batch(
-        self, data: Union[pd.DataFrame, Iterator[pd.DataFrame]], asset: str, mode: str = "append", **kwargs
+    def write_batch(  # noqa: PLR0912
+        self,
+        data: pd.DataFrame | Iterator[pd.DataFrame],
+        asset: str,
+        mode: str = "append",
+        **kwargs,
     ) -> int:
         self.connect()
         collection = self._db[asset]
-        
+
         # Normalize mode
         clean_mode = mode.lower()
         if clean_mode == "replace":
             clean_mode = "overwrite"
 
         if clean_mode == "overwrite":
-             collection.drop()
-             
+            collection.drop()
+
         if isinstance(data, pd.DataFrame):
             data_iter = [data]
         else:
             data_iter = data
-            
+
         total = 0
         try:
             for df in data_iter:
                 if is_df_empty(df):
                     continue
                 records = df.to_dict(orient="records")
-                
+
                 if clean_mode == "upsert":
                     # Get primary key for upsert logic
-                    pk = kwargs.get("primary_key") or self.config.get("primary_key") or "_id"
-                    
+                    pk = (
+                        kwargs.get("primary_key")
+                        or self.config.get("primary_key")
+                        or "_id"
+                    )
+
                     bulk_ops = []
                     for record in records:
                         if pk in record:
                             bulk_ops.append(
-                                UpdateOne({pk: record[pk]}, {"$set": record}, upsert=True)
+                                UpdateOne(
+                                    {pk: record[pk]}, {"$set": record}, upsert=True
+                                )
                             )
                         else:
-                            # Fallback to insert if PK missing in record (less ideal for bulk)
+                            # Fallback to insert if PK missing in record (less ideal for bulk)  # noqa: E501
                             collection.insert_one(record)
                             total += 1
-                    
+
                     if bulk_ops:
                         result = collection.bulk_write(bulk_ops, ordered=False)
-                        total += (result.upserted_count + result.modified_count + result.matched_count)
+                        total += (
+                            result.upserted_count
+                            + result.modified_count
+                            + result.matched_count
+                        )
                 else:
                     # Default append
                     result = collection.insert_many(records)
                     total += len(result.inserted_ids)
             return total
         except Exception as e:
-            raise DataTransferError(f"MongoDB write failed: {e}")
+            raise DataTransferError(f"MongoDB write failed: {e}")  # noqa: B904

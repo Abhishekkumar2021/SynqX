@@ -1,21 +1,21 @@
 import time
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-from typing import Dict, Any
+from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 from sqlalchemy import text
 
+from app.api.v1.api import api_router
 from app.core.config import settings
+from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.core.logging import get_logger, setup_logging
 from app.db.session import engine
-from app.core.logging import setup_logging, get_logger
 from app.middlewares.correlation import CorrelationMiddleware
 from app.models import Base
-from app.api.v1.api import api_router
-from app.core.errors import AppError, NotFoundError, ForbiddenError
 
 setup_logging()
 logger = get_logger("main")
@@ -75,7 +75,7 @@ async def validation_handler(request: Request, exc: RequestValidationError):
     for error in errors:
         # Remove 'ctx' which may contain non-serializable objects (like Exceptions)
         error.pop("ctx", None)
-        
+
         # Ensure 'url' is serializable if present
         if "url" in error:
             error["url"] = str(error["url"])
@@ -85,7 +85,7 @@ async def validation_handler(request: Request, exc: RequestValidationError):
                 error["input"] = error["input"].decode("utf-8")
             except Exception:
                 error["input"] = str(error["input"])
-    
+
     logger.warning("validation_error", errors=errors, path=request.url.path)
     return JSONResponse(status_code=422, content={"detail": errors})
 
@@ -118,9 +118,9 @@ async def root():
 
 
 @app.get("/health", tags=["System"])
-async def health() -> Dict[str, Any]:
+async def health() -> dict[str, Any]:
     result = {"status": "healthy", "database": "unknown", "broker": "unknown"}
-    
+
     # 1. Database Check
     try:
         with engine.connect() as conn:
@@ -130,10 +130,11 @@ async def health() -> Dict[str, Any]:
         result["status"] = "degraded"
         result["database"] = f"down: {exc}"
         logger.error("health_db_failed", error=str(exc))
-        
+
     # 2. Celery/Broker Check
     try:
-        from app.core.celery_app import celery_app
+        from app.core.celery_app import celery_app  # noqa: PLC0415
+
         with celery_app.connection_for_read() as conn:
             conn.connect()
         result["broker"] = "up"
@@ -141,7 +142,7 @@ async def health() -> Dict[str, Any]:
         result["status"] = "degraded"
         result["broker"] = f"down: {exc}"
         logger.error("health_broker_failed", error=str(exc))
-        
+
     return result
 
 

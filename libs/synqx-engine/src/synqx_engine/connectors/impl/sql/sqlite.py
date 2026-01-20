@@ -1,21 +1,23 @@
-from typing import Any, Dict, List, Optional, Iterator, Union
 import os
+from collections.abc import Iterator
+from datetime import datetime
+from typing import Any
+
 import pandas as pd
-from sqlalchemy import create_engine, text, inspect
-from sqlalchemy.engine import Connection, Engine
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from datetime import datetime
-
-from synqx_engine.connectors.base import BaseConnector
-from synqx_core.utils.data import is_df_empty
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import Connection, Engine
 from synqx_core.errors import (
     ConfigurationError,
     ConnectionFailedError,
-    SchemaDiscoveryError,
     DataTransferError,
+    SchemaDiscoveryError,
 )
 from synqx_core.logging import get_logger
+from synqx_core.utils.data import is_df_empty
+
+from synqx_engine.connectors.base import BaseConnector
 
 logger = get_logger(__name__)
 
@@ -26,11 +28,10 @@ class SQLiteConfig(BaseSettings):
 
 
 class SQLiteConnector(BaseConnector):
-
-    def __init__(self, config: Dict[str, Any]):
-        self._config_model: Optional[SQLiteConfig] = None
-        self._engine: Optional[Engine] = None
-        self._connection: Optional[Connection] = None
+    def __init__(self, config: dict[str, Any]):
+        self._config_model: SQLiteConfig | None = None
+        self._engine: Engine | None = None
+        self._connection: Connection | None = None
         super().__init__(config)
 
     def validate_config(self) -> None:
@@ -40,7 +41,7 @@ class SQLiteConnector(BaseConnector):
             if db_dir and not os.path.exists(db_dir):
                 os.makedirs(db_dir, exist_ok=True)
         except Exception as e:
-            raise ConfigurationError(f"Invalid SQLite configuration: {e}")
+            raise ConfigurationError(f"Invalid SQLite configuration: {e}")  # noqa: B904
 
     def _url(self) -> str:
         return f"sqlite:///{self._config_model.database_path}"
@@ -52,7 +53,7 @@ class SQLiteConnector(BaseConnector):
             self._engine = create_engine(self._url())
             self._connection = self._engine.connect()
         except Exception as e:
-            raise ConnectionFailedError(f"SQLite connection failed: {e}")
+            raise ConnectionFailedError(f"SQLite connection failed: {e}")  # noqa: B904
 
     def disconnect(self) -> None:
         if self._connection:
@@ -75,9 +76,8 @@ class SQLiteConnector(BaseConnector):
             return False
 
     def discover_assets(
-        self, pattern: Optional[str] = None, include_metadata: bool = False, **kwargs
-    ) -> List[Dict[str, Any]]:
-
+        self, pattern: str | None = None, include_metadata: bool = False, **kwargs
+    ) -> list[dict[str, Any]]:
         self.connect()
         inspector = inspect(self._engine)
         tables = inspector.get_table_names()
@@ -106,7 +106,7 @@ class SQLiteConnector(BaseConnector):
 
         return results
 
-    def _get_row_count(self, table: str) -> Optional[int]:
+    def _get_row_count(self, table: str) -> int | None:
         try:
             q = text(f'SELECT COUNT(*) FROM "{table}"')
             result = self._connection.execute(q).scalar()
@@ -116,8 +116,7 @@ class SQLiteConnector(BaseConnector):
 
     def infer_schema(
         self, asset: str, sample_size: int = 1000, mode: str = "auto", **kwargs
-    ) -> Dict[str, Any]:
-
+    ) -> dict[str, Any]:
         self.connect()
 
         if mode == "metadata":
@@ -130,7 +129,7 @@ class SQLiteConnector(BaseConnector):
         except Exception:
             return self._schema_sample(asset, sample_size)
 
-    def _schema_metadata(self, asset: str) -> Dict[str, Any]:
+    def _schema_metadata(self, asset: str) -> dict[str, Any]:
         inspector = inspect(self._engine)
         try:
             cols = inspector.get_columns(asset)
@@ -148,9 +147,9 @@ class SQLiteConnector(BaseConnector):
                 ],
             }
         except Exception as e:
-            raise SchemaDiscoveryError(f"Metadata schema failed: {e}")
+            raise SchemaDiscoveryError(f"Metadata schema failed: {e}")  # noqa: B904
 
-    def _schema_sample(self, asset: str, sample_size: int) -> Dict[str, Any]:
+    def _schema_sample(self, asset: str, sample_size: int) -> dict[str, Any]:
         try:
             df = next(self.read_batch(asset, limit=sample_size))
             return {
@@ -161,16 +160,15 @@ class SQLiteConnector(BaseConnector):
                 ],
             }
         except Exception as e:
-            raise SchemaDiscoveryError(f"Sample-based schema failed: {e}")
+            raise SchemaDiscoveryError(f"Sample-based schema failed: {e}")  # noqa: B904
 
     def read_batch(
         self,
         asset: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
         **kwargs,
     ) -> Iterator[pd.DataFrame]:
-
         self.connect()
 
         query = f'SELECT * FROM "{asset}"'
@@ -180,7 +178,9 @@ class SQLiteConnector(BaseConnector):
             query += f" OFFSET {int(offset)}"
 
         chunksize_val = kwargs.get("chunksize") or kwargs.get("batch_size")
-        chunksize = int(chunksize_val) if chunksize_val and int(chunksize_val) > 0 else 10000
+        chunksize = (
+            int(chunksize_val) if chunksize_val and int(chunksize_val) > 0 else 10000
+        )
 
         # CLEANUP: Remove internal keys
         self._clean_internal_kwargs(kwargs)
@@ -189,19 +189,18 @@ class SQLiteConnector(BaseConnector):
             it = pd.read_sql_query(
                 text(query), con=self._connection, chunksize=chunksize, **kwargs
             )
-            for chunk in it:
+            for chunk in it:  # noqa: UP028
                 yield chunk
         except Exception as e:
-            raise DataTransferError(f"Failed to read from '{asset}': {e}")
+            raise DataTransferError(f"Failed to read from '{asset}': {e}")  # noqa: B904
 
     def write_batch(
         self,
-        data: Union[pd.DataFrame, Iterator[pd.DataFrame]],
+        data: pd.DataFrame | Iterator[pd.DataFrame],
         asset: str,
         mode: str = "append",
         **kwargs,
     ) -> int:
-
         self.connect()
 
         if isinstance(data, pd.DataFrame):
@@ -228,28 +227,28 @@ class SQLiteConnector(BaseConnector):
                 total += len(df)
             return total
         except Exception as e:
-            raise DataTransferError(f"Failed to write to '{asset}': {e}")
+            raise DataTransferError(f"Failed to write to '{asset}': {e}")  # noqa: B904
 
     def execute_query(
         self,
         query: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
         **kwargs,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         self.connect()
         try:
-            clean_query = query.strip().rstrip(';')
+            clean_query = query.strip().rstrip(";")
             final_query = clean_query
             if limit and "limit" not in clean_query.lower():
                 final_query += f" LIMIT {int(limit)}"
             if offset and "offset" not in clean_query.lower():
                 final_query += f" OFFSET {int(offset)}"
-            
+
             # CLEANUP: Remove internal keys
             self._clean_internal_kwargs(kwargs)
 
             df = pd.read_sql_query(text(final_query), con=self._connection, **kwargs)
             return df.where(pd.notnull(df), None).to_dict(orient="records")
         except Exception as e:
-            raise DataTransferError(f"SQLite query execution failed: {e}")
+            raise DataTransferError(f"SQLite query execution failed: {e}")  # noqa: B904

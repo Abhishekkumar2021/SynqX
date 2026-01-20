@@ -21,13 +21,13 @@ The **S3 Connector** allows SynqX to read from and write to Amazon S3 buckets. I
 
 ### Parameters
 
-| Parameter | Type | Required | Description | Default |
-| :--- | :--- | :--- | :--- | :--- |
-| `bucket` | string | Yes | The target S3 bucket name. | - |
-| `region_name` | string | No | AWS Region. | us-east-1 |
-| `aws_access_key_id` | string | No | AWS Access Key ID (if not using IAM roles). | - |
-| `aws_secret_access_key` | string | No | AWS Secret Access Key. | - |
-| `endpoint_url` | string | No | Custom endpoint URL (required for MinIO). | - |
+| Parameter               | Type   | Required | Description                                 | Default   |
+| :---------------------- | :----- | :------- | :------------------------------------------ | :-------- |
+| `bucket`                | string | Yes      | The target S3 bucket name.                  | -         |
+| `region_name`           | string | No       | AWS Region.                                 | us-east-1 |
+| `aws_access_key_id`     | string | No       | AWS Access Key ID (if not using IAM roles). | -         |
+| `aws_secret_access_key` | string | No       | AWS Secret Access Key.                      | -         |
+| `endpoint_url`          | string | No       | Custom endpoint URL (required for MinIO).   | -         |
 
 ## Usage
 
@@ -46,6 +46,6 @@ The **S3 Connector** allows SynqX to read from and write to Amazon S3 buckets. I
 ### Writing Data (Destination)
 
 - **Modes**:
-    - `append`: Appends data to existing file (reads into memory first) or creates new file.
-    - `replace`: Overwrites the existing file.
+  - `append`: Appends data to existing file (reads into memory first) or creates new file.
+  - `replace`: Overwrites the existing file.
 - **Note**: Modifying existing files in object storage involves rewriting the entire object. Use `append` with caution on large files.

@@ -1,7 +1,10 @@
-from typing import Iterator
+from collections.abc import Iterator
+
 import polars as pl
-from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.errors import TransformationError
+
+from synqx_engine.transforms.polars_base import PolarsTransform
+
 
 class CodeTransform(PolarsTransform):
     """
@@ -11,28 +14,31 @@ class CodeTransform(PolarsTransform):
 
     def validate_config(self) -> None:
         if "code" not in self.config:
-            from synqx_core.errors import ConfigurationError
+            from synqx_core.errors import ConfigurationError  # noqa: PLC0415
+
             raise ConfigurationError("CodeTransform requires 'code' in config.")
 
     def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         code = self.config["code"]
-        
+
         # 1. Prepare local scope
         local_scope = {"pl": pl}
         try:
             exec(code, {}, local_scope)
             transform_fn = local_scope.get("transform")
             if not transform_fn:
-                raise TransformationError("Polars code must define a 'transform(lf)' function.")
+                raise TransformationError(
+                    "Polars code must define a 'transform(lf)' function."
+                )
         except Exception as e:
-            raise TransformationError(f"Failed to compile transform code: {e}")
+            raise TransformationError(f"Failed to compile transform code: {e}")  # noqa: B904
 
         # 2. Execute on stream
         for df in data:
             if df.is_empty():
                 yield df
                 continue
-                
+
             try:
                 # Convert to LazyFrame for optimization
                 lf = df.lazy()
@@ -40,13 +46,14 @@ class CodeTransform(PolarsTransform):
                 result_lf = transform_fn(lf)
                 # Collect back to DataFrame
                 result_df = result_lf.collect()
-                
+
                 # Telemetry Update
                 if self.on_chunk:
-                    import pandas as pd
+                    import pandas as pd  # noqa: PLC0415
+
                     # Signal progress to the UI
                     self.on_chunk(pd.DataFrame(), direction="intermediate")
-                
+
                 yield result_df
             except Exception as e:
-                raise TransformationError(f"Code execution failed: {e}")
+                raise TransformationError(f"Code execution failed: {e}")  # noqa: B904

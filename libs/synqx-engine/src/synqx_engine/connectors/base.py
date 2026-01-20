@@ -1,9 +1,11 @@
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, List, Iterator, Union, Generator
-from contextlib import contextmanager
-import pandas as pd
 import time
-from datetime import datetime, timezone
+from abc import ABC, abstractmethod
+from collections.abc import Generator, Iterator
+from contextlib import contextmanager
+from datetime import UTC, datetime
+from typing import Any
+
+import pandas as pd
 from synqx_core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -16,13 +18,13 @@ class BaseConnector(ABC):
     and data transfer (IO).
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.validate_config()
 
-    def normalize_asset_identifier(self, asset: str) -> tuple[str, Optional[str]]:
+    def normalize_asset_identifier(self, asset: str) -> tuple[str, str | None]:
         """
-        Standardizes asset identifier handling. 
+        Standardizes asset identifier handling.
         Returns (asset_name, schema_name).
         """
         config_schema = self.config.get("db_schema") or self.config.get("schema")
@@ -47,7 +49,7 @@ class BaseConnector(ABC):
     def test_connection(self) -> bool:
         pass
 
-    def check_health(self) -> Dict[str, Any]:
+    def check_health(self) -> dict[str, Any]:
         """
         Performs a deep diagnostic check of the connection.
         Default implementation just calls test_connection.
@@ -59,17 +61,17 @@ class BaseConnector(ABC):
             return {
                 "status": "healthy" if alive else "unhealthy",
                 "latency_ms": round(latency, 2),
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
     @contextmanager
-    def session(self) -> Generator["BaseConnector", None, None]:
+    def session(self) -> Generator["BaseConnector"]:
         self.connect()
         try:
             yield self
@@ -78,8 +80,8 @@ class BaseConnector(ABC):
 
     @abstractmethod
     def discover_assets(
-        self, pattern: Optional[str] = None, include_metadata: bool = False, **kwargs
-    ) -> List[Dict[str, Any]]:
+        self, pattern: str | None = None, include_metadata: bool = False, **kwargs
+    ) -> list[dict[str, Any]]:
         pass
 
     @abstractmethod
@@ -89,23 +91,20 @@ class BaseConnector(ABC):
         sample_size: int = 1000,
         mode: str = "auto",
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         pass
-    
+
     @abstractmethod
     def read_batch(
         self,
         asset: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
         **kwargs,
     ) -> Iterator[pd.DataFrame]:
         pass
 
-    def read_cdc(
-        self,
-        **kwargs
-    ) -> Iterator[pd.DataFrame]:
+    def read_cdc(self, **kwargs) -> Iterator[pd.DataFrame]:
         """
         Optional method for connectors that support native CDC / Log Tailing.
         """
@@ -114,7 +113,7 @@ class BaseConnector(ABC):
     @abstractmethod
     def write_batch(
         self,
-        data: Union[pd.DataFrame, Iterator[pd.DataFrame]],
+        data: pd.DataFrame | Iterator[pd.DataFrame],
         asset: str,
         mode: str = "append",
         **kwargs,
@@ -124,12 +123,12 @@ class BaseConnector(ABC):
     def supports_staging(self) -> bool:
         """
         Returns True if this connector supports native 'Stage & Load' (e.g. S3 -> Snowflake).
-        """
+        """  # noqa: E501
         return False
 
     def write_staged(
         self,
-        data: Union[pd.DataFrame, Iterator[pd.DataFrame]],
+        data: pd.DataFrame | Iterator[pd.DataFrame],
         asset: str,
         stage_connector: "BaseConnector",
         mode: str = "append",
@@ -140,31 +139,33 @@ class BaseConnector(ABC):
         1. Write data to staging area as Parquet/CSV.
         2. Trigger native LOAD/COPY command from warehouse.
         """
-        raise NotImplementedError(f"Staged write not supported for {self.__class__.__name__}")
+        raise NotImplementedError(
+            f"Staged write not supported for {self.__class__.__name__}"
+        )
 
     def fetch_sample(
         self, asset: str, limit: int = 100, **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Fetch a sample of rows from the asset for preview purposes.
         """
         try:
             chunks = []
             rows_collected = 0
-            
+
             for df in self.read_batch(asset, limit=limit, **kwargs):
                 chunks.append(df)
                 rows_collected += len(df)
                 if rows_collected >= limit:
                     break
-            
+
             if not chunks:
                 return []
-                
+
             full_df = pd.concat(chunks, ignore_index=True)
             if len(full_df) > limit:
                 full_df = full_df.iloc[:limit]
-                
+
             return full_df.where(pd.notnull(full_df), None).to_dict(orient="records")
         except Exception as e:
             logger.error(f"Error fetching sample for {asset}: {e}")
@@ -174,42 +175,56 @@ class BaseConnector(ABC):
     def execute_query(
         self,
         query: str,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
         **kwargs,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         pass
 
-    def get_total_count(self, query_or_asset: str, is_query: bool = False, **kwargs) -> Optional[int]:
+    def get_total_count(
+        self, query_or_asset: str, is_query: bool = False, **kwargs
+    ) -> int | None:
         """
         Get the total number of rows for a query or asset.
         """
         return None
 
-    def list_files(self, path: str = "") -> List[Dict[str, Any]]:
-        raise NotImplementedError(f"Live file listing not supported for {self.__class__.__name__}")
+    def list_files(self, path: str = "") -> list[dict[str, Any]]:
+        raise NotImplementedError(
+            f"Live file listing not supported for {self.__class__.__name__}"
+        )
 
     def download_file(self, path: str = "", **kwargs) -> bytes:
-        raise NotImplementedError(f"File download not supported for {self.__class__.__name__}")
+        raise NotImplementedError(
+            f"File download not supported for {self.__class__.__name__}"
+        )
 
     def upload_file(self, path: str, content: bytes) -> bool:
-        raise NotImplementedError(f"File upload not supported for {self.__class__.__name__}")
+        raise NotImplementedError(
+            f"File upload not supported for {self.__class__.__name__}"
+        )
 
     def delete_file(self, path: str) -> bool:
-        raise NotImplementedError(f"File deletion not supported for {self.__class__.__name__}")
+        raise NotImplementedError(
+            f"File deletion not supported for {self.__class__.__name__}"
+        )
 
     def create_directory(self, path: str) -> bool:
-        raise NotImplementedError(f"Directory creation not supported for {self.__class__.__name__}")
+        raise NotImplementedError(
+            f"Directory creation not supported for {self.__class__.__name__}"
+        )
 
     def zip_directory(self, path: str) -> bytes:
-        raise NotImplementedError(f"Directory zipping not supported for {self.__class__.__name__}")
+        raise NotImplementedError(
+            f"Directory zipping not supported for {self.__class__.__name__}"
+        )
 
     @staticmethod
-    def slice_dataframe(df: pd.DataFrame, offset: Optional[int], limit: Optional[int]):
+    def slice_dataframe(df: pd.DataFrame, offset: int | None, limit: int | None):
         if offset is not None:
-            df = df.iloc[int(offset):]
+            df = df.iloc[int(offset) :]
         if limit is not None:
-            df = df.iloc[:int(limit)]
+            df = df.iloc[: int(limit)]
         return df
 
     @staticmethod
@@ -220,16 +235,27 @@ class BaseConnector(ABC):
     def supports_pushdown(self) -> bool:
         return False
 
-    def _clean_internal_kwargs(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
+    def _clean_internal_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         """
-        Removes internal SynqX metadata from kwargs to prevent passing them 
+        Removes internal SynqX metadata from kwargs to prevent passing them
         to underlying libraries (like pandas or sqlalchemy) that don't support them.
         """
         internal_keys = [
-            "ui", "connection_id", "batch_size", "incremental", 
-            "incremental_filter", "watermark_column", "WATERMARK_COLUMN", 
-            "table", "write_mode", "write_strategy", "target_table",
-            "schema_evolution_policy", "chunksize", "sync_mode", "cdc_config"
+            "ui",
+            "connection_id",
+            "batch_size",
+            "incremental",
+            "incremental_filter",
+            "watermark_column",
+            "WATERMARK_COLUMN",
+            "table",
+            "write_mode",
+            "write_strategy",
+            "target_table",
+            "schema_evolution_policy",
+            "chunksize",
+            "sync_mode",
+            "cdc_config",
         ]
         for key in internal_keys:
             kwargs.pop(key, None)

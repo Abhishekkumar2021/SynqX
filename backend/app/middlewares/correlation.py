@@ -1,5 +1,6 @@
 import uuid
-from starlette.types import ASGIApp, Scope, Receive, Send
+
+from starlette.types import ASGIApp, Receive, Scope, Send
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
 
@@ -16,7 +17,7 @@ class CorrelationMiddleware:
         # Extract correlation ID from headers
         headers = dict(scope.get("headers", []))
         correlation_id = str(uuid.uuid4())
-        
+
         header_name_bytes = self.header_name.lower().encode("latin-1")
         for name, value in headers.items():
             if name == header_name_bytes:
@@ -29,7 +30,10 @@ class CorrelationMiddleware:
             if message["type"] == "http.response.start":
                 response_headers = list(message.get("headers", []))
                 response_headers.append(
-                    (self.header_name.encode("latin-1"), correlation_id.encode("latin-1"))
+                    (
+                        self.header_name.encode("latin-1"),
+                        correlation_id.encode("latin-1"),
+                    )
                 )
                 message["headers"] = response_headers
             await send(message)

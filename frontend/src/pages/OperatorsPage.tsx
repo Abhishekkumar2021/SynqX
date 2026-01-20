@@ -1,52 +1,58 @@
-import { OperatorLibrary } from '@/components/features/operators/OperatorLibrary';
-import { Blocks } from 'lucide-react';
-import { PageMeta } from '@/components/common/PageMeta';
-import { useZenMode } from '@/hooks/useZenMode';
-import { cn } from '@/lib/utils';
-import { OPERATORS } from '@/types/operator';
-import { Badge } from '@/components/ui/badge';
+import { OperatorLibrary } from '@/components/features/operators/OperatorLibrary'
+import { Blocks } from 'lucide-react'
+import { PageMeta } from '@/components/common/PageMeta'
+import { useZenMode } from '@/hooks/useZenMode'
+import { cn } from '@/lib/utils'
+import { OPERATORS } from '@/types/operator'
+import { Badge } from '@/components/ui/badge'
 
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'
 
 export const OperatorsPage = () => {
-    const { isZenMode } = useZenMode();
+  const { isZenMode } = useZenMode()
 
-    return (
-        <motion.div 
-            className={cn(
-                "flex flex-col gap-6 md:gap-8 p-4 md:p-0",
-                isZenMode ? "h-[calc(100vh-3rem)]" : "h-[calc(100vh-8rem)]"
-            )}
-        >
-            <PageMeta title="Operator Library" description="Definitive collection of processing nodes for your data pipelines." />
+  return (
+    <motion.div
+      className={cn(
+        'flex flex-col gap-6 md:gap-8 p-4 md:p-0',
+        isZenMode ? 'h-[calc(100vh-3rem)]' : 'h-[calc(100vh-8rem)]'
+      )}
+    >
+      <PageMeta
+        title="Operator Library"
+        description="Definitive collection of processing nodes for your data pipelines."
+      />
 
-            {/* --- Page Header --- */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-0 px-1">
-                <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-[0.2em] opacity-80 mb-1">
-                        <Blocks className="h-3 w-3" />
-                        <span>Core Infrastructure</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-3xl md:text-4xl font-bold tracking-tighter text-foreground">
-                            Operators
-                        </h2>
-                        <Badge variant="outline" className="mt-1 h-6 rounded-lg border-primary/20 bg-primary/5 text-primary text-[10px] font-bold px-2 uppercase tracking-tight">
-                            {OPERATORS.length} Total
-                        </Badge>
-                    </div>
-                    <p className="text-sm md:text-base text-muted-foreground font-medium">
-                        The definitive collection of processing nodes for your data pipelines.
-                    </p>
-                </div>
-            </div>
+      {/* --- Page Header --- */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between shrink-0 gap-4 md:gap-0 px-1">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-[0.2em] opacity-80 mb-1">
+            <Blocks className="h-3 w-3" />
+            <span>Core Infrastructure</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tighter text-foreground">
+              Operators
+            </h2>
+            <Badge
+              variant="outline"
+              className="mt-1 h-6 rounded-lg border-primary/20 bg-primary/5 text-primary text-[10px] font-bold px-2 uppercase tracking-tight"
+            >
+              {OPERATORS.length} Total
+            </Badge>
+          </div>
+          <p className="text-sm md:text-base text-muted-foreground font-medium">
+            The definitive collection of processing nodes for your data pipelines.
+          </p>
+        </div>
+      </div>
 
-            {/* Library Content */}
-            <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
-                <OperatorLibrary />
-            </div>
-        </motion.div>
-    );
-};
+      {/* Library Content */}
+      <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
+        <OperatorLibrary />
+      </div>
+    </motion.div>
+  )
+}
 
-export default OperatorsPage;
+export default OperatorsPage

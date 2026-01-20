@@ -1,9 +1,12 @@
+from synqx_core.errors import ConfigurationError
+
 from synqx_engine.connectors.impl.sql.base import SQLConnector
 from synqx_engine.connectors.impl.sql.postgres import PostgresConfig
-from synqx_core.errors import ConfigurationError
+
 
 class RedshiftConfig(PostgresConfig):
     port: int = 5439
+
 
 class RedshiftConnector(SQLConnector):
     """
@@ -14,7 +17,7 @@ class RedshiftConnector(SQLConnector):
         try:
             RedshiftConfig.model_validate(self.config)
         except Exception as e:
-            raise ConfigurationError(f"Invalid Redshift configuration: {e}")
+            raise ConfigurationError(f"Invalid Redshift configuration: {e}")  # noqa: B904
 
     def _sqlalchemy_url(self) -> str:
         conf = RedshiftConfig.model_validate(self.config)

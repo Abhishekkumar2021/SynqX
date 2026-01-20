@@ -1,17 +1,17 @@
 import uuid
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Tuple
-from croniter import croniter
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
+from datetime import UTC, datetime, timedelta
 
-from synqx_core.models.pipelines import Pipeline
-from synqx_core.models.monitoring import SchedulerEvent
-from synqx_core.models.execution import Job
+from croniter import croniter
+from sqlalchemy import and_, desc
+from sqlalchemy.orm import Session
 from synqx_core.models.enums import JobStatus
-from app.worker.tasks import execute_pipeline_task
+from synqx_core.models.execution import Job
+from synqx_core.models.monitoring import SchedulerEvent
+from synqx_core.models.pipelines import Pipeline
+
 from app.core.logging import get_logger
 from app.utils.agent import is_remote_group
+from app.worker.tasks import execute_pipeline_task
 
 logger = get_logger(__name__)
 
@@ -33,9 +33,9 @@ class Scheduler:
     """
     Responsible for checking pipeline schedules and triggering execution.
     Handles missed runs, prevents duplicate triggers, and manages timezone-aware scheduling.
-    """
+    """  # noqa: E501
 
-    def __init__(self, db_session: Session, config: Optional[SchedulerConfig] = None):
+    def __init__(self, db_session: Session, config: SchedulerConfig | None = None):
         self.db_session = db_session
         self.config = config or SchedulerConfig()
 
@@ -72,10 +72,10 @@ class Scheduler:
                 )
 
         logger.info(
-            f"Scheduler check complete: {triggered_count} triggered, {error_count} errors"
+            f"Scheduler check complete: {triggered_count} triggered, {error_count} errors"  # noqa: E501
         )
 
-    def _fetch_scheduled_pipelines(self) -> List[Pipeline]:
+    def _fetch_scheduled_pipelines(self) -> list[Pipeline]:
         """
         Fetch all pipelines that have scheduling enabled.
         Optimized query with proper filtering.
@@ -110,19 +110,22 @@ class Scheduler:
             )
             return False
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         last_trigger_time = self._get_last_scheduled_trigger_time(pipeline.id)
-        
+
         # Determine the starting point for schedule calculation
         start_search_time = last_trigger_time or self._get_pipeline_start_time(pipeline)
-        
-        # If the last trigger was very long ago (outside catchup window), 
-        # jump forward to the start of the catchup window to avoid getting stuck in the past.
+
+        # If the last trigger was very long ago (outside catchup window),
+        # jump forward to the start of the catchup window to avoid getting stuck in the past.  # noqa: E501
         catchup_limit = now - timedelta(seconds=self.config.CATCHUP_WINDOW_SECONDS)
         if start_search_time < catchup_limit:
             logger.info(
-                f"Pipeline {pipeline.id} last run was too long ago. Jumping forward to catchup window.",
-                extra={"pipeline_id": pipeline.id, "last_run": start_search_time.isoformat()}
+                f"Pipeline {pipeline.id} last run was too long ago. Jumping forward to catchup window.",  # noqa: E501
+                extra={
+                    "pipeline_id": pipeline.id,
+                    "last_run": start_search_time.isoformat(),
+                },
             )
             start_search_time = catchup_limit
 
@@ -130,7 +133,7 @@ class Scheduler:
         active_jobs_count = self._get_active_jobs_count(pipeline.id)
         if active_jobs_count >= (pipeline.max_parallel_runs or 1):
             logger.debug(
-                f"Pipeline {pipeline.id} has reached max parallel runs ({pipeline.max_parallel_runs}). Skipping trigger.",
+                f"Pipeline {pipeline.id} has reached max parallel runs ({pipeline.max_parallel_runs}). Skipping trigger.",  # noqa: E501
                 extra={"pipeline_id": pipeline.id, "active_jobs": active_jobs_count},
             )
             return False
@@ -144,7 +147,7 @@ class Scheduler:
 
         if not due_runs:
             logger.debug(
-                f"Pipeline {pipeline.id} not due. Next run: {self._get_next_run_time(pipeline.schedule_cron, now)}",
+                f"Pipeline {pipeline.id} not due. Next run: {self._get_next_run_time(pipeline.schedule_cron, now)}",  # noqa: E501
                 extra={"pipeline_id": pipeline.id},
             )
             return False
@@ -182,13 +185,13 @@ class Scheduler:
 
     def _calculate_due_runs(
         self, cron_expression: str, start_time: datetime, now: datetime
-    ) -> List[datetime]:
+    ) -> list[datetime]:
         """
         Calculate all due runs between start_time and now.
         Returns list of scheduled times that should be executed.
         """
         if start_time.tzinfo is None:
-            start_time = start_time.replace(tzinfo=timezone.utc)
+            start_time = start_time.replace(tzinfo=UTC)
 
         try:
             cron = croniter(cron_expression, start_time)
@@ -221,7 +224,7 @@ class Scheduler:
             )
             return []
 
-    def _select_runs_to_trigger(self, due_runs: List[datetime]) -> List[datetime]:
+    def _select_runs_to_trigger(self, due_runs: list[datetime]) -> list[datetime]:
         """
         Select which due runs to actually trigger based on configuration.
         """
@@ -237,17 +240,17 @@ class Scheduler:
 
     def _get_next_run_time(
         self, cron_expression: str, from_time: datetime
-    ) -> Optional[datetime]:
+    ) -> datetime | None:
         """Calculate the next run time for logging purposes."""
         try:
             if from_time.tzinfo is None:
-                from_time = from_time.replace(tzinfo=timezone.utc)
+                from_time = from_time.replace(tzinfo=UTC)
             cron = croniter(cron_expression, from_time)
             return cron.get_next(datetime)
         except Exception:
             return None
 
-    def _get_last_scheduled_trigger_time(self, pipeline_id: int) -> Optional[datetime]:
+    def _get_last_scheduled_trigger_time(self, pipeline_id: int) -> datetime | None:
         """
         Retrieves the timestamp of the last scheduled trigger event.
         Uses the event timestamp to prevent double-triggering.
@@ -267,7 +270,7 @@ class Scheduler:
         if last_event and last_event.timestamp:
             # Ensure timezone awareness
             if last_event.timestamp.tzinfo is None:
-                return last_event.timestamp.replace(tzinfo=timezone.utc)
+                return last_event.timestamp.replace(tzinfo=UTC)
             return last_event.timestamp
 
         return None
@@ -277,11 +280,11 @@ class Scheduler:
         Get the effective start time for schedule calculations.
         Uses pipeline creation time or current time as fallback.
         """
-        start_time = pipeline.created_at or datetime.now(timezone.utc)
+        start_time = pipeline.created_at or datetime.now(UTC)
 
         # Ensure timezone awareness
         if start_time.tzinfo is None:
-            start_time = start_time.replace(tzinfo=timezone.utc)
+            start_time = start_time.replace(tzinfo=UTC)
 
         return start_time
 
@@ -291,9 +294,11 @@ class Scheduler:
         Used to enforce concurrency limits.
         Ignores 'stale' jobs that have been stuck for too long.
         """
-        now = datetime.now(timezone.utc)
-        stale_threshold = now - timedelta(hours=2) # Consider jobs stuck for > 2h as stale
-        
+        now = datetime.now(UTC)
+        stale_threshold = now - timedelta(
+            hours=2
+        )  # Consider jobs stuck for > 2h as stale
+
         return (
             self.db_session.query(Job)
             .filter(
@@ -301,7 +306,7 @@ class Scheduler:
                     Job.pipeline_id == pipeline_id,
                     Job.status.in_([JobStatus.PENDING, JobStatus.RUNNING]),
                     # Only count jobs that are not stale
-                    Job.created_at > stale_threshold
+                    Job.created_at > stale_threshold,
                 )
             )
             .count()
@@ -314,7 +319,7 @@ class Scheduler:
         Triggers the pipeline run and records the scheduler event.
         Uses a transaction to ensure atomicity.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Validate minimum interval since last trigger
         last_trigger = self._get_last_scheduled_trigger_time(pipeline.id)
@@ -323,7 +328,7 @@ class Scheduler:
             if seconds_since_last < self.config.MIN_RUN_INTERVAL_SECONDS:
                 logger.warning(
                     f"Skipping trigger for pipeline {pipeline.id}: "
-                    f"too soon since last run ({seconds_since_last}s < {self.config.MIN_RUN_INTERVAL_SECONDS}s)",
+                    f"too soon since last run ({seconds_since_last}s < {self.config.MIN_RUN_INTERVAL_SECONDS}s)",  # noqa: E501
                     extra={"pipeline_id": pipeline.id},
                 )
                 return
@@ -354,11 +359,17 @@ class Scheduler:
 
             # Check for Remote Agent Routing
             if is_remote_group(pipeline.agent_group):
-                from app.services.agent_service import AgentService
-                if not AgentService.is_group_active(self.db_session, pipeline.workspace_id, pipeline.agent_group):
+                from app.services.agent_service import AgentService  # noqa: PLC0415
+
+                if not AgentService.is_group_active(
+                    self.db_session, pipeline.workspace_id, pipeline.agent_group
+                ):
                     logger.error(
-                        f"Skipping scheduled run for pipeline {pipeline.id}: No active agents in group '{pipeline.agent_group}'",
-                        extra={"pipeline_id": pipeline.id, "agent_group": pipeline.agent_group}
+                        f"Skipping scheduled run for pipeline {pipeline.id}: No active agents in group '{pipeline.agent_group}'",  # noqa: E501
+                        extra={
+                            "pipeline_id": pipeline.id,
+                            "agent_group": pipeline.agent_group,
+                        },
                     )
                     # Log a specific event for the user to see in history
                     error_event = SchedulerEvent(
@@ -367,7 +378,7 @@ class Scheduler:
                         event_type="ERROR",
                         timestamp=now,
                         cron_expression=pipeline.schedule_cron,
-                        reason=f"Failed to trigger: No active agents in group '{pipeline.agent_group}'",
+                        reason=f"Failed to trigger: No active agents in group '{pipeline.agent_group}'",  # noqa: E501
                     )
                     self.db_session.add(error_event)
                     self.db_session.commit()
@@ -377,13 +388,13 @@ class Scheduler:
                 job.status = JobStatus.QUEUED
                 job.queue_name = pipeline.agent_group
                 self.db_session.commit()
-                
+
                 logger.info(
-                    f"Automated run for Pipeline #{pipeline.id} queued for remote agent group '{pipeline.agent_group}'.",
+                    f"Automated run for Pipeline #{pipeline.id} queued for remote agent group '{pipeline.agent_group}'.",  # noqa: E501
                     extra={
                         "pipeline_id": pipeline.id,
                         "job_id": job.id,
-                        "agent_group": pipeline.agent_group
+                        "agent_group": pipeline.agent_group,
                     },
                 )
                 return
@@ -399,7 +410,7 @@ class Scheduler:
             self.db_session.commit()
 
             logger.info(
-                f"Successfully triggered automated execution for Pipeline #{pipeline.id} (Job #{job.id}).",
+                f"Successfully triggered automated execution for Pipeline #{pipeline.id} (Job #{job.id}).",  # noqa: E501
                 extra={
                     "pipeline_id": pipeline.id,
                     "job_id": job.id,
@@ -417,7 +428,7 @@ class Scheduler:
             self.db_session.rollback()
             raise
 
-    def get_pipeline_next_run(self, pipeline_id: int) -> Optional[datetime]:
+    def get_pipeline_next_run(self, pipeline_id: int) -> datetime | None:
         """
         Public method to get the next scheduled run time for a pipeline.
         Useful for UI display.
@@ -429,19 +440,17 @@ class Scheduler:
         if not pipeline or not pipeline.schedule_cron or not pipeline.schedule_enabled:
             return None
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return self._get_next_run_time(pipeline.schedule_cron, now)
 
-    def validate_cron_expression(
-        self, cron_expression: str
-    ) -> Tuple[bool, Optional[str]]:
+    def validate_cron_expression(self, cron_expression: str) -> tuple[bool, str | None]:
         """
         Validate a cron expression.
         Returns (is_valid, error_message).
         """
         try:
             # Test with current time
-            cron = croniter(cron_expression, datetime.now(timezone.utc))
+            cron = croniter(cron_expression, datetime.now(UTC))
             # Try to get next run to ensure it's valid
             cron.get_next(datetime)
             return True, None

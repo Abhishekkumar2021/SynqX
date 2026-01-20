@@ -1,6 +1,6 @@
 ---
-title: "Security & User Scoping"
-description: "How SynqX protects your credentials and data."
+title: 'Security & User Scoping'
+description: 'How SynqX protects your credentials and data.'
 ---
 
 # Security Architecture
@@ -12,11 +12,13 @@ SynqX is designed with a "Secure by Default" philosophy, ensuring that your conn
 SynqX uses **JWT (JSON Web Tokens)** for secure, stateless API access.
 
 ### The Authentication Flow
+
 1.  **Identity Verification**: Users authenticate via the `/auth/login` endpoint using their email and hashed password.
 2.  **Token Issuance**: The server issues a high-entropy JWT signed with a `SECRET_KEY` using the `HS256` algorithm.
 3.  **Stateless Access**: All subsequent requests must include the `Authorization: Bearer <token>` header. Tokens are valid for 8 days by default but can be revoked instantly.
 
 ### Password Hashing
+
 SynqX never stores plain-text passwords. All credentials use **bcrypt** with a high work factor, making them resilient to brute-force attacks.
 
 ---
@@ -26,9 +28,10 @@ SynqX never stores plain-text passwords. All credentials use **bcrypt** with a h
 SynqX handles sensitive information (DB passwords, API keys) using a specialized **Vault Service**.
 
 ### Zero-Trust Storage
--   **Encryption Algorithm**: Uses **AES-256 GCM** (authenticated encryption). This ensures not only that the credentials are private but also that they haven't been tampered with.
--   **Separation of Concerns**: The control plane (API) encrypts credentials before they reach the database. The database only ever sees ciphertext.
--   **Ephemeral Decryption**: Workers only decrypt credentials in-memory during the execution of a job. The clear-text secrets never touch the disk on worker nodes.
+
+- **Encryption Algorithm**: Uses **AES-256 GCM** (authenticated encryption). This ensures not only that the credentials are private but also that they haven't been tampered with.
+- **Separation of Concerns**: The control plane (API) encrypts credentials before they reach the database. The database only ever sees ciphertext.
+- **Ephemeral Decryption**: Workers only decrypt credentials in-memory during the execution of a job. The clear-text secrets never touch the disk on worker nodes.
 
 ---
 
@@ -37,18 +40,20 @@ SynqX handles sensitive information (DB passwords, API keys) using a specialized
 SynqX uses a powerful multi-tenancy model centered around **Workspaces** to provide strict data isolation and granular access control.
 
 ### The Multi-Tenancy Model
--   **Workspaces**: The top-level container for all resources. Every pipeline, connection, asset, and alert belongs to a single workspace.
--   **Strict Scoping**: All API requests are automatically scoped to the user's currently active workspace. It is impossible for a user in "Workspace A" to see or interact with data in "Workspace B" unless they are explicitly a member of both.
--   **User Membership**: Users are invited to workspaces and assigned a specific role, which dictates their permissions within that scope.
+
+- **Workspaces**: The top-level container for all resources. Every pipeline, connection, asset, and alert belongs to a single workspace.
+- **Strict Scoping**: All API requests are automatically scoped to the user's currently active workspace. It is impossible for a user in "Workspace A" to see or interact with data in "Workspace B" unless they are explicitly a member of both.
+- **User Membership**: Users are invited to workspaces and assigned a specific role, which dictates their permissions within that scope.
 
 ### Role-Based Access Control (RBAC)
+
 SynqX defines three distinct roles to enforce the principle of least privilege:
 
-| Role | Permissions | Description |
-| :--- | :--- | :--- |
-| **Viewer** | `Read-Only` | Can view all pipelines, connections, assets, and execution history within the workspace. Cannot make any changes. |
-| **Editor** | `Read & Write` | Has all Viewer permissions, plus the ability to create, update, and trigger pipelines, connections, and assets. |
-| **Admin** | `Full Control` | Has all Editor permissions, plus the ability to manage workspace settings, invite or remove members, and delete resources. |
+| Role       | Permissions    | Description                                                                                                                |
+| :--------- | :------------- | :------------------------------------------------------------------------------------------------------------------------- |
+| **Viewer** | `Read-Only`    | Can view all pipelines, connections, assets, and execution history within the workspace. Cannot make any changes.          |
+| **Editor** | `Read & Write` | Has all Viewer permissions, plus the ability to create, update, and trigger pipelines, connections, and assets.            |
+| **Admin**  | `Full Control` | Has all Editor permissions, plus the ability to manage workspace settings, invite or remove members, and delete resources. |
 
 **Enforcement**: These roles are checked by the API gateway for every incoming request, ensuring that no user can perform an action they are not authorized for.
 
@@ -57,13 +62,17 @@ SynqX defines three distinct roles to enforce the principle of least privilege:
 ## 4. Operational Security
 
 ### API Key Management
+
 For external programmatic access, users can generate **Scoped API Keys**.
--   **Workspace Scoping**: Each API key is tied to a specific user *and* a specific workspace, inheriting the user's role within that workspace.
--   **Prefixing**: Keys are prefixed (e.g., `sk_...`) for easy identification by security scanners.
--   **Least Privilege**: Future versions will allow keys to be restricted to even more granular scopes (e.g., `read:pipelines`, `trigger:runs`).
+
+- **Workspace Scoping**: Each API key is tied to a specific user _and_ a specific workspace, inheriting the user's role within that workspace.
+- **Prefixing**: Keys are prefixed (e.g., `sk_...`) for easy identification by security scanners.
+- **Least Privilege**: Future versions will allow keys to be restricted to even more granular scopes (e.g., `read:pipelines`, `trigger:runs`).
 
 ### Audit Logging
+
 The `AuditMixin` tracks exactly who performed what action and when. This provides a clear trail for security audits and troubleshooting.
--   `created_at`: Creation timestamp.
--   `updated_at`: Last update timestamp.
--   `created_by`: The email of the user who created the record.
+
+- `created_at`: Creation timestamp.
+- `updated_at`: Last update timestamp.
+- `created_by`: The email of the user who created the record.

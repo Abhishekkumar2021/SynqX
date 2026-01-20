@@ -23,16 +23,17 @@ The **Snowflake Connector** enables high-performance data loading and extraction
 
 ### Parameters
 
-| Parameter | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| `user` | string | Yes | Username. |
-| `password` | string | Yes | Password. |
-| `account` | string | Yes | Snowflake Account Identifier. |
-| `warehouse` | string | Yes | Compute Warehouse. |
-| `database` | string | Yes | Target Database. |
-| `schema` | string | No | Target Schema (default: PUBLIC). |
-| `role` | string | No | Role to assume. |
+| Parameter   | Type   | Required | Description                      |
+| :---------- | :----- | :------- | :------------------------------- |
+| `user`      | string | Yes      | Username.                        |
+| `password`  | string | Yes      | Password.                        |
+| `account`   | string | Yes      | Snowflake Account Identifier.    |
+| `warehouse` | string | Yes      | Compute Warehouse.               |
+| `database`  | string | Yes      | Target Database.                 |
+| `schema`    | string | No       | Target Schema (default: PUBLIC). |
+| `role`      | string | No       | Role to assume.                  |
 
 ## Usage
+
 - Supports full SQL reading and writing.
 - Uses `pandas` connector under the hood.

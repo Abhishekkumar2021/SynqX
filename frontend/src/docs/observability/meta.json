@@ -1,7 +1,3 @@
 {
-  "pages": [
-    "index",
-    "notifications",
-    "realtime-logs"
-  ]
+  "pages": ["index", "notifications", "realtime-logs"]
 }

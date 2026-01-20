@@ -1,6 +1,6 @@
 ---
-title: "Pipelines"
-description: "Logical orchestration, DAG management, and versioning control."
+title: 'Pipelines'
+description: 'Logical orchestration, DAG management, and versioning control.'
 ---
 
 # Pipelines & DAG Orchestration
@@ -12,15 +12,19 @@ SynqX manages data workflows as **Directed Acyclic Graphs (DAGs)**. This ensures
 The SynqX Console features a premium visual editor for designing complex workflows.
 
 ### Node Configuration
+
 Each node represents a functional step. Settings are validated against the backend operator schema in real-time.
--   **Identity**: Unique labels and descriptions for documentation.
--   **IO Mapping**: Direct binding to Connections and Assets.
--   **Logic**: Operator-specific parameters (SQL, Regex, Mappings).
+
+- **Identity**: Unique labels and descriptions for documentation.
+- **IO Mapping**: Direct binding to Connections and Assets.
+- **Logic**: Operator-specific parameters (SQL, Regex, Mappings).
 
 ### Parallelism & Layers
+
 The engine automatically calculates the execution plan by grouping nodes into **Topological Layers**:
--   Nodes within the same layer have no dependencies on each other and are executed in parallel.
--   This optimizes wall-clock time for high-volume pipelines.
+
+- Nodes within the same layer have no dependencies on each other and are executed in parallel.
+- This optimizes wall-clock time for high-volume pipelines.
 
 ---
 
@@ -29,6 +33,7 @@ The engine automatically calculates the execution plan by grouping nodes into **
 SynqX implements a strict "Snapshotted" versioning system to guarantee execution stability.
 
 ### The Lifecycle of a Pipeline
+
 1.  **Draft State**: Active experimentation in the UI.
 2.  **Validation**: Structural analysis to prevent circular dependencies or orphaned nodes.
 3.  **Publication**: A permanent, immutable JSON snapshot of the entire DAG is recorded as a new version.
@@ -39,12 +44,16 @@ SynqX implements a strict "Snapshotted" versioning system to guarantee execution
 ## 3. Reliability Controls
 
 ### Concurrency Management
+
 Control resource contention using `max_parallel_runs`. This setting determines if overlapping schedules should run concurrently or wait for previous jobs to complete.
 
 ### Node-Level Resiliency
+
 Configure individual nodes with specific failure handling policies:
--   **Retry Strategy**: Fixed delay or Linear backoff.
--   **Execution TTL**: Maximum duration before a task is forcefully terminated to prevent resource leaks.
+
+- **Retry Strategy**: Fixed delay or Linear backoff.
+- **Execution TTL**: Maximum duration before a task is forcefully terminated to prevent resource leaks.
 
 ### Dependency Resolution
+
 SynqX ensures that data is only passed to downstream nodes once upstream ancestors have successfully reached a `COMPLETED` state.

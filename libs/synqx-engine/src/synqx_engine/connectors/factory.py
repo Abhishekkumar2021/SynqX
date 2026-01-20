@@ -1,42 +1,52 @@
-from typing import Dict, Any, Type
-from synqx_engine.connectors.base import BaseConnector
+from typing import Any
+
 from synqx_core.errors import ConfigurationError
+
+from synqx_engine.connectors.base import BaseConnector
+
 
 class ConnectorFactory:
     """
     A factory class for creating connector instances dynamically.
     Connectors must inherit from BaseConnector.
     """
-    _registry: Dict[str, Type[BaseConnector]] = {}
+
+    _registry: dict[str, type[BaseConnector]] = {}  # noqa: RUF012
 
     @classmethod
-    def register_connector(cls, connector_type: str, connector_class: Type[BaseConnector]) -> None:
+    def register_connector(
+        cls, connector_type: str, connector_class: type[BaseConnector]
+    ) -> None:
         """
         Registers a new connector class with the factory.
 
         Args:
             connector_type: A unique string identifier for the connector (e.g., "postgres", "s3").
             connector_class: The class of the connector to register. Must inherit from BaseConnector.
-        """
+        """  # noqa: E501
         if not issubclass(connector_class, BaseConnector):
             raise TypeError("Connector class must inherit from BaseConnector.")
         cls._registry[connector_type.lower()] = connector_class
 
     @classmethod
-    def get_connector(cls, connector_type: str, config: Dict[str, Any]) -> BaseConnector:
+    def get_connector(
+        cls, connector_type: str, config: dict[str, Any]
+    ) -> BaseConnector:
         # Check if already registered
         if connector_type.lower() not in cls._registry:
             try:
                 # Force import of the implementation package to trigger registration
                 # of any connectors that haven't been loaded yet.
-                import synqx_engine.connectors.impl # noqa: F401
+                import synqx_engine.connectors.impl  # noqa: F401, PLC0415
             except ImportError:
                 pass
 
         connector_class = cls._registry.get(connector_type.lower())
         if not connector_class:
-            raise ConfigurationError(f"Connector type '{connector_type}' not registered. Available: {list(cls._registry.keys())}")
-        
+            raise ConfigurationError(
+                f"Connector type '{connector_type}' not registered. Available: {list(cls._registry.keys())}"  # noqa: E501
+            )
+
         try:
             return connector_class(config)
         except ConfigurationError as e:

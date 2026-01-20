@@ -1,19 +1,33 @@
 from __future__ import annotations
-from datetime import datetime, timezone
-from typing import Optional, TYPE_CHECKING
-from sqlalchemy import (
-    Integer, String, Boolean, DateTime, Text, ForeignKey, 
-    UniqueConstraint, Index, JSON, Enum as SQLEnum, CheckConstraint
-)
-from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from synqx_core.models.base import Base, AuditMixin, SoftDeleteMixin, OwnerMixin
-from synqx_core.models.enums import ConnectorType, AssetType
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from synqx_core.models.base import AuditMixin, Base, OwnerMixin, SoftDeleteMixin
+from synqx_core.models.enums import AssetType, ConnectorType
 
 if TYPE_CHECKING:
-    from synqx_core.models.execution import Watermark
     from synqx_core.models.environment import Environment
+    from synqx_core.models.execution import Watermark
     from synqx_core.models.workspace import Workspace
+
 
 class Connection(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     __tablename__ = "connections"
@@ -25,43 +39,57 @@ class Connection(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     )
 
     config_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
-    config_schema: Mapped[Optional[dict]] = mapped_column(JSON)
+    config_schema: Mapped[dict | None] = mapped_column(JSON)
 
-    health_status: Mapped[str] = mapped_column(String(50), default="unknown", nullable=False)
-    last_test_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    last_schema_discovery_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    health_status: Mapped[str] = mapped_column(
+        String(50), default="unknown", nullable=False
+    )
+    last_test_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_schema_discovery_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    error_message: Mapped[str | None] = mapped_column(Text)
 
-    max_concurrent_connections: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
-    connection_timeout_seconds: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+    max_concurrent_connections: Mapped[int] = mapped_column(
+        Integer, default=5, nullable=False
+    )
+    connection_timeout_seconds: Mapped[int] = mapped_column(
+        Integer, default=30, nullable=False
+    )
 
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    tags: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
+    description: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[dict | None] = mapped_column(JSON, default=dict)
 
     # Enterprise Ops: Staging support
-    staging_connection_id: Mapped[Optional[int]] = mapped_column(
+    staging_connection_id: Mapped[int | None] = mapped_column(
         ForeignKey("connections.id", ondelete="SET NULL"), nullable=True
     )
 
     # Workspace scoping
-    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
-    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    workspace_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True
+    )
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Relationships
-    workspace: Mapped[Optional["Workspace"]] = relationship("Workspace", back_populates="connections")
-    staging_connection: Mapped[Optional["Connection"]] = relationship(
+    workspace: Mapped[Workspace | None] = relationship(
+        "Workspace", back_populates="connections"
+    )
+    staging_connection: Mapped[Connection | None] = relationship(
         "Connection", remote_side=[id], post_update=True
     )
-    assets: Mapped[list["Asset"]] = relationship(
+    assets: Mapped[list[Asset]] = relationship(
         back_populates="connection", cascade="all, delete-orphan", lazy="selectin"
     )
-    
-    environments: Mapped[list["Environment"]] = relationship(
+
+    environments: Mapped[list[Environment]] = relationship(
         back_populates="connection", cascade="all, delete-orphan", lazy="selectin"
     )
 
     def __repr__(self):
-        return f"<Connection(id={self.id}, name='{self.name}', type={self.connector_type})>"
+        return f"<Connection(id={self.id}, name='{self.name}', type={self.connector_type})>"  # noqa: E501
 
 
 class Asset(Base, AuditMixin, SoftDeleteMixin):
@@ -74,41 +102,47 @@ class Asset(Base, AuditMixin, SoftDeleteMixin):
 
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     asset_type: Mapped[AssetType] = mapped_column(
-        SQLEnum(AssetType, values_callable=lambda obj: [e.value for e in obj]), 
-        nullable=False
+        SQLEnum(AssetType, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
     )
-    fully_qualified_name: Mapped[Optional[str]] = mapped_column(String(500))
+    fully_qualified_name: Mapped[str | None] = mapped_column(String(500))
 
     is_source: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_destination: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_incremental_capable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_incremental_capable: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
-    config: Mapped[Optional[dict]] = mapped_column(JSON) # Add this line for asset-specific configuration
-    schema_metadata: Mapped[Optional[dict]] = mapped_column(JSON)
-    current_schema_version: Mapped[Optional[int]] = mapped_column(Integer)
+    config: Mapped[dict | None] = mapped_column(
+        JSON
+    )  # Add this line for asset-specific configuration
+    schema_metadata: Mapped[dict | None] = mapped_column(JSON)
+    current_schema_version: Mapped[int | None] = mapped_column(Integer)
 
-    description: Mapped[Optional[str]] = mapped_column(Text)
-    tags: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
-    row_count_estimate: Mapped[Optional[int]] = mapped_column(Integer)
-    size_bytes_estimate: Mapped[Optional[int]] = mapped_column(Integer)
+    description: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[dict | None] = mapped_column(JSON, default=dict)
+    row_count_estimate: Mapped[int | None] = mapped_column(Integer)
+    size_bytes_estimate: Mapped[int | None] = mapped_column(Integer)
 
-    connection: Mapped["Connection"] = relationship(back_populates="assets")
-    schema_versions: Mapped[list["AssetSchemaVersion"]] = relationship(
+    connection: Mapped[Connection] = relationship(back_populates="assets")
+    schema_versions: Mapped[list[AssetSchemaVersion]] = relationship(
         back_populates="asset",
         cascade="all, delete-orphan",
         order_by="AssetSchemaVersion.version.desc()",
     )
-    
-    # Using string reference for Watermark to avoid circular import with execution module
+
+    # Using string reference for Watermark to avoid circular import with execution module  # noqa: E501
     # Watermark is now imported in TYPE_CHECKING above
-    watermarks: Mapped[list["Watermark"]] = relationship(
+    watermarks: Mapped[list[Watermark]] = relationship(
         "Watermark", back_populates="asset", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
         UniqueConstraint("connection_id", "name", name="uq_asset_name_per_connection"),
         Index("idx_asset_source_dest", "is_source", "is_destination"),
-        CheckConstraint("is_source = TRUE OR is_destination = TRUE", name="ck_asset_direction"),
+        CheckConstraint(
+            "is_source = TRUE OR is_destination = TRUE", name="ck_asset_direction"
+        ),
     )
 
     def __repr__(self):
@@ -127,15 +161,17 @@ class AssetSchemaVersion(Base, AuditMixin):
     json_schema: Mapped[dict] = mapped_column(JSON, nullable=False)
     discovered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         nullable=False,
     )
 
-    schema_hash: Mapped[Optional[str]] = mapped_column(String(64))
-    change_summary: Mapped[Optional[dict]] = mapped_column(JSON)
-    is_breaking_change: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    schema_hash: Mapped[str | None] = mapped_column(String(64))
+    change_summary: Mapped[dict | None] = mapped_column(JSON)
+    is_breaking_change: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
-    asset: Mapped["Asset"] = relationship(back_populates="schema_versions")
+    asset: Mapped[Asset] = relationship(back_populates="schema_versions")
 
     __table_args__ = (
         UniqueConstraint("asset_id", "version", name="uq_asset_schema_version"),

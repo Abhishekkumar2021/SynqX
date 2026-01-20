@@ -1,8 +1,8 @@
 from synqx_engine.connectors.factory import ConnectorFactory
-from synqx_engine.connectors.impl.api.rest import RestApiConnector
-from synqx_engine.connectors.impl.api.graphql import GraphQLConnector
-from synqx_engine.connectors.impl.api.google_sheets import GoogleSheetsConnector
 from synqx_engine.connectors.impl.api.airtable import AirtableConnector
+from synqx_engine.connectors.impl.api.google_sheets import GoogleSheetsConnector
+from synqx_engine.connectors.impl.api.graphql import GraphQLConnector
+from synqx_engine.connectors.impl.api.rest import RestApiConnector
 from synqx_engine.connectors.impl.api.salesforce import SalesforceConnector
 
 ConnectorFactory.register_connector("rest_api", RestApiConnector)

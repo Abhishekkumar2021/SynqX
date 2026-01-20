@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import * as React from "react"
-import { Check, Search, X } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+ 
+import * as React from 'react'
+import { Check, Search, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 interface PackageAutocompleteProps {
   value: string
@@ -32,11 +32,11 @@ export function PackageAutocomplete({
   onChange,
   onSelect,
   options,
-  placeholder = "Select package...",
+  placeholder = 'Select package...',
   disabled = false,
   className,
   leftIcon: LeftIcon = Search,
-  emptyMessage = "No results found",
+  emptyMessage = 'No results found',
   showClearButton = true,
   maxHeight = 240,
   filterFn,
@@ -45,7 +45,7 @@ export function PackageAutocomplete({
   onFocus,
   autoFocus = false,
   loading = false,
-  loadingMessage = "Loading...",
+  loadingMessage = 'Loading...',
 }: PackageAutocompleteProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [activeIndex, setActiveIndex] = React.useState(-1)
@@ -56,8 +56,7 @@ export function PackageAutocomplete({
 
   // Default filter function
   const defaultFilterFn = React.useCallback(
-    (option: string, query: string) =>
-      option.toLowerCase().includes(query.toLowerCase()),
+    (option: string, query: string) => option.toLowerCase().includes(query.toLowerCase()),
     []
   )
 
@@ -105,7 +104,7 @@ export function PackageAutocomplete({
     if (disabled || loading) return
 
     if (!isOpen) {
-      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
         e.preventDefault()
         setIsOpen(true)
       }
@@ -113,7 +112,7 @@ export function PackageAutocomplete({
     }
 
     switch (e.key) {
-      case "ArrowDown":
+      case 'ArrowDown':
         e.preventDefault()
         setActiveIndex((prev) => {
           const nextIndex = prev + 1
@@ -121,7 +120,7 @@ export function PackageAutocomplete({
         })
         break
 
-      case "ArrowUp":
+      case 'ArrowUp':
         e.preventDefault()
         setActiveIndex((prev) => {
           const nextIndex = prev - 1
@@ -129,7 +128,7 @@ export function PackageAutocomplete({
         })
         break
 
-      case "Enter":
+      case 'Enter':
         e.preventDefault()
         if (activeIndex >= 0 && activeIndex < filteredOptions.length) {
           handleSelect(filteredOptions[activeIndex])
@@ -139,13 +138,13 @@ export function PackageAutocomplete({
         }
         break
 
-      case "Escape":
+      case 'Escape':
         e.preventDefault()
         setIsOpen(false)
         inputRef.current?.blur()
         break
 
-      case "Tab":
+      case 'Tab':
         setIsOpen(false)
         break
 
@@ -171,7 +170,7 @@ export function PackageAutocomplete({
   const handleClear = React.useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
-      onChange("")
+      onChange('')
       setIsOpen(false)
       setActiveIndex(-1)
       inputRef.current?.focus()
@@ -182,19 +181,16 @@ export function PackageAutocomplete({
   // Click outside handler
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false)
         setActiveIndex(-1)
       }
     }
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside)
       return () => {
-        document.removeEventListener("mousedown", handleClickOutside)
+        document.removeEventListener('mousedown', handleClickOutside)
       }
     }
   }, [isOpen])
@@ -229,13 +225,10 @@ export function PackageAutocomplete({
   const shouldShowDropdown = isOpen && !disabled && (loading || filteredOptions.length > 0)
 
   return (
-    <div 
-      className={cn("relative w-full max-w-60 group", className)} 
-      ref={containerRef}
-    >
+    <div className={cn('relative w-full max-w-60 group', className)} ref={containerRef}>
       <div className="relative">
         <LeftIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/50 group-focus-within:text-primary transition-colors z-10 pointer-events-none" />
-        
+
         <Input
           ref={inputRef}
           value={value}
@@ -255,14 +248,14 @@ export function PackageAutocomplete({
           aria-autocomplete="list"
           aria-activedescendant={activeIndex >= 0 ? `option-${activeIndex}` : undefined}
           className={cn(
-            "w-full h-8 pl-8 text-[11px] rounded-xl transition-all duration-200",
-            "bg-background/50 backdrop-blur-sm border border-input/50",
-            "text-foreground placeholder:text-muted-foreground/50",
-            "shadow-sm shadow-black/5 hover:shadow-md",
-            "hover:bg-accent/5 hover:border-accent/50",
-            "focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-primary/50",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            showClearButton && value && "pr-7"
+            'w-full h-8 pl-8 text-[11px] rounded-xl transition-all duration-200',
+            'bg-background/50 backdrop-blur-sm border border-input/50',
+            'text-foreground placeholder:text-muted-foreground/50',
+            'shadow-sm shadow-black/5 hover:shadow-md',
+            'hover:bg-accent/5 hover:border-accent/50',
+            'focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-primary/50',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            showClearButton && value && 'pr-7'
           )}
         />
 
@@ -287,28 +280,28 @@ export function PackageAutocomplete({
           </motion.div>
         )}
       </div>
-      
+
       <AnimatePresence>
         {shouldShowDropdown && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -8 }}
-            transition={{ 
-              duration: 0.2, 
-              ease: [0.4, 0, 0.2, 1] // Custom easing for smoother feel
+            transition={{
+              duration: 0.2,
+              ease: [0.4, 0, 0.2, 1], // Custom easing for smoother feel
             }}
             className={cn(
-              "absolute z-50 w-full mt-1.5 overflow-hidden rounded-xl border border-border/50",
-              "bg-popover/95 backdrop-blur-3xl text-popover-foreground shadow-2xl shadow-black/20",
-              "flex flex-col"
+              'absolute z-50 w-full mt-1.5 overflow-hidden rounded-xl border border-border/50',
+              'bg-popover/95 backdrop-blur-3xl text-popover-foreground shadow-2xl shadow-black/20',
+              'flex flex-col'
             )}
             role="listbox"
             id="autocomplete-listbox"
           >
-            <div 
+            <div
               ref={scrollAreaRef}
-              style={{ maxHeight: `${maxHeight}px` }} 
+              style={{ maxHeight: `${maxHeight}px` }}
               className="overflow-y-auto custom-scroll p-1"
             >
               <AnimatePresence mode="wait">
@@ -322,9 +315,9 @@ export function PackageAutocomplete({
                     className="flex items-center justify-center py-6 text-[11px] text-muted-foreground"
                   >
                     <div className="flex items-center gap-2">
-                      <motion.div 
+                      <motion.div
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                         className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent"
                       />
                       <span>{loadingMessage}</span>
@@ -367,27 +360,27 @@ export function PackageAutocomplete({
                           role="option"
                           aria-selected={isSelected}
                           initial={{ opacity: 0, x: -10 }}
-                          animate={{ 
-                            opacity: 1, 
+                          animate={{
+                            opacity: 1,
                             x: 0,
-                            scale: isActive ? 1.02 : 1
+                            scale: isActive ? 1.02 : 1,
                           }}
-                          transition={{ 
+                          transition={{
                             duration: 0.15,
                             delay: index * 0.02, // Stagger effect
-                            scale: { duration: 0.1 }
+                            scale: { duration: 0.1 },
                           }}
-                          whileHover={{ 
+                          whileHover={{
                             scale: 1.02,
-                            transition: { duration: 0.1 }
+                            transition: { duration: 0.1 },
                           }}
                           whileTap={{ scale: 0.98 }}
                           className={cn(
-                            "relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 px-2.5 text-[11px] outline-none transition-colors",
-                            "hover:bg-muted/50 focus:bg-accent focus:text-accent-foreground",
-                            isSelected && "bg-primary/10 text-primary font-semibold",
-                            isActive && !isSelected && "bg-accent/50",
-                            !isSelected && !isActive && "text-foreground/70"
+                            'relative flex w-full cursor-pointer select-none items-center rounded-lg py-1.5 px-2.5 text-[11px] outline-none transition-colors',
+                            'hover:bg-muted/50 focus:bg-accent focus:text-accent-foreground',
+                            isSelected && 'bg-primary/10 text-primary font-semibold',
+                            isActive && !isSelected && 'bg-accent/50',
+                            !isSelected && !isActive && 'text-foreground/70'
                           )}
                           onClick={() => handleSelect(option)}
                           onMouseEnter={() => setActiveIndex(index)}
@@ -402,10 +395,10 @@ export function PackageAutocomplete({
                             <motion.div
                               initial={{ scale: 0, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
-                              transition={{ 
-                                type: "spring", 
-                                stiffness: 500, 
-                                damping: 30 
+                              transition={{
+                                type: 'spring',
+                                stiffness: 500,
+                                damping: 30,
                               }}
                             >
                               <Check className="h-3 w-3 ml-2 text-primary opacity-100 shrink-0" />

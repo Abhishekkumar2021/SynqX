@@ -1,7 +1,10 @@
-from typing import Iterator
+from collections.abc import Iterator
+
 import polars as pl
-from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.errors import TransformationError
+
+from synqx_engine.transforms.polars_base import PolarsTransform
+
 
 class DeduplicateTransform(PolarsTransform):
     """
@@ -17,20 +20,23 @@ class DeduplicateTransform(PolarsTransform):
     def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         subset = self.config.get("columns") or self.config.get("subset")
         keep = self.config.get("keep", "first")
-        
+
         try:
             lazy_frames = [df.lazy() for df in data]
             if not lazy_frames:
                 return
-                
+
             lf = pl.concat(lazy_frames)
-            result_df = lf.unique(subset=subset, keep=keep, maintain_order=True).collect()
-            
+            result_df = lf.unique(
+                subset=subset, keep=keep, maintain_order=True
+            ).collect()
+
             if self.on_chunk:
-                import pandas as pd
+                import pandas as pd  # noqa: PLC0415
+
                 self.on_chunk(pd.DataFrame(), direction="intermediate")
-                
+
             yield result_df
-            
+
         except Exception as e:
             raise TransformationError(f"Deduplication failed: {e}") from e

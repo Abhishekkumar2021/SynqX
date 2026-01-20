@@ -1,9 +1,12 @@
+from synqx_core.errors import ConfigurationError
+
 from synqx_engine.connectors.impl.sql.base import SQLConnector
 from synqx_engine.connectors.impl.sql.postgres import PostgresConfig
-from synqx_core.errors import ConfigurationError
+
 
 class OracleConfig(PostgresConfig):
     port: int = 1521
+
 
 class OracleConnector(SQLConnector):
     """
@@ -14,7 +17,7 @@ class OracleConnector(SQLConnector):
         try:
             OracleConfig.model_validate(self.config)
         except Exception as e:
-            raise ConfigurationError(f"Invalid Oracle configuration: {e}")
+            raise ConfigurationError(f"Invalid Oracle configuration: {e}")  # noqa: B904
 
     def _sqlalchemy_url(self) -> str:
         conf = OracleConfig.model_validate(self.config)

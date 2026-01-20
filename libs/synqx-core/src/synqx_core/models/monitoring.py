@@ -1,23 +1,39 @@
 from __future__ import annotations
-from datetime import datetime, timezone
-from typing import Optional, TYPE_CHECKING
-from sqlalchemy import (
-    Integer, String, Boolean, DateTime, Text, ForeignKey, 
-    Index, JSON, Enum as SQLEnum
-)
-from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from synqx_core.models.base import Base, AuditMixin, SoftDeleteMixin, OwnerMixin
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy import (
+    Enum as SQLEnum,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from synqx_core.models.base import AuditMixin, Base, OwnerMixin, SoftDeleteMixin
 from synqx_core.models.enums import (
-    AlertType, AlertDeliveryMethod, AlertLevel, AlertStatus
+    AlertDeliveryMethod,
+    AlertLevel,
+    AlertStatus,
+    AlertType,
 )
 
 if TYPE_CHECKING:
-    from synqx_core.models.pipelines import Pipeline
     from synqx_core.models.execution import Job
+    from synqx_core.models.pipelines import Pipeline
+
 
 class SchedulerEvent(Base, AuditMixin):
     """Track scheduler activities and triggers"""
+
     __tablename__ = "scheduler_events"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -26,15 +42,20 @@ class SchedulerEvent(Base, AuditMixin):
     )
 
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    cron_expression: Mapped[Optional[str]] = mapped_column(String(100))
+    cron_expression: Mapped[str | None] = mapped_column(String(100))
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+        index=True,
     )
 
-    reason: Mapped[Optional[str]] = mapped_column(Text)
-    scheduler_metadata: Mapped[Optional[dict]] = mapped_column(JSON)
+    reason: Mapped[str | None] = mapped_column(Text)
+    scheduler_metadata: Mapped[dict | None] = mapped_column(JSON)
 
-    pipeline: Mapped["Pipeline"] = relationship("Pipeline", back_populates="scheduler_events")
+    pipeline: Mapped[Pipeline] = relationship(
+        "Pipeline", back_populates="scheduler_events"
+    )
 
     __table_args__ = (
         Index("idx_scheduler_event_type_time", "event_type", "timestamp"),
@@ -42,11 +63,12 @@ class SchedulerEvent(Base, AuditMixin):
     )
 
     def __repr__(self):
-        return f"<SchedulerEvent(pipeline_id={self.pipeline_id}, type='{self.event_type}')>"
+        return f"<SchedulerEvent(pipeline_id={self.pipeline_id}, type='{self.event_type}')>"  # noqa: E501
 
 
 class JobLog(Base, AuditMixin):
     """Job-level execution logs"""
+
     __tablename__ = "job_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -56,11 +78,14 @@ class JobLog(Base, AuditMixin):
 
     level: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    metadata_payload: Mapped[Optional[dict]] = mapped_column(JSON)
+    metadata_payload: Mapped[dict | None] = mapped_column(JSON)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+        index=True,
     )
-    source: Mapped[Optional[str]] = mapped_column(String(255))
+    source: Mapped[str | None] = mapped_column(String(255))
 
     # Relationship defined in Job using string to avoid circular dependency
     # job relationship is implicit via backref or can be added if needed explicitly
@@ -73,6 +98,7 @@ class JobLog(Base, AuditMixin):
 
 class StepLog(Base, AuditMixin):
     """Step-level execution logs"""
+
     __tablename__ = "step_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -82,13 +108,18 @@ class StepLog(Base, AuditMixin):
 
     level: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    metadata_payload: Mapped[Optional[dict]] = mapped_column(JSON)
+    metadata_payload: Mapped[dict | None] = mapped_column(JSON)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+        index=True,
     )
-    source: Mapped[Optional[str]] = mapped_column(String(255))
+    source: Mapped[str | None] = mapped_column(String(255))
 
-    __table_args__ = (Index("idx_step_log_level_time", "step_run_id", "level", "timestamp"),)
+    __table_args__ = (
+        Index("idx_step_log_level_time", "step_run_id", "level", "timestamp"),
+    )
 
     def __repr__(self):
         return f"<StepLog(step_run_id={self.step_run_id}, level='{self.level}')>"
@@ -96,71 +127,101 @@ class StepLog(Base, AuditMixin):
 
 class AlertConfig(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
     """Alert configuration and rules"""
+
     __tablename__ = "alert_configs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    description: Mapped[Optional[str]] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
 
     alert_type: Mapped[AlertType] = mapped_column(SQLEnum(AlertType), nullable=False)
-    delivery_method: Mapped[AlertDeliveryMethod] = mapped_column(SQLEnum(AlertDeliveryMethod), nullable=False)
+    delivery_method: Mapped[AlertDeliveryMethod] = mapped_column(
+        SQLEnum(AlertDeliveryMethod), nullable=False
+    )
     recipient: Mapped[str] = mapped_column(String(255), nullable=False)
 
     threshold_value: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    threshold_window_minutes: Mapped[Optional[int]] = mapped_column(Integer)
+    threshold_window_minutes: Mapped[int | None] = mapped_column(Integer)
 
-    pipeline_filter: Mapped[Optional[list]] = mapped_column(JSON)
-    severity_filter: Mapped[Optional[list]] = mapped_column(JSON)
+    pipeline_filter: Mapped[list | None] = mapped_column(JSON)
+    severity_filter: Mapped[list | None] = mapped_column(JSON)
 
-    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, index=True
+    )
     cooldown_minutes: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
-    last_triggered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-
-    # Workspace scoping
-    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
-    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-
-    alerts: Mapped[list["Alert"]] = relationship("Alert", back_populates="config")
-
-    __table_args__ = (
-        Index("idx_alert_config_enabled", "enabled", "alert_type"),
+    last_triggered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
     )
 
+    # Workspace scoping
+    workspace_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True
+    )
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    alerts: Mapped[list[Alert]] = relationship("Alert", back_populates="config")
+
+    __table_args__ = (Index("idx_alert_config_enabled", "enabled", "alert_type"),)
+
     def __repr__(self):
-        return f"<AlertConfig(id={self.id}, name='{self.name}', type={self.alert_type})>"
+        return (
+            f"<AlertConfig(id={self.id}, name='{self.name}', type={self.alert_type})>"
+        )
 
 
 class Alert(Base, AuditMixin, OwnerMixin):
     """Individual alert instances"""
+
     __tablename__ = "alerts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    alert_config_id: Mapped[Optional[int]] = mapped_column(ForeignKey("alert_configs.id", ondelete="SET NULL"), index=True)
-    pipeline_id: Mapped[Optional[int]] = mapped_column(ForeignKey("pipelines.id", ondelete="SET NULL"), index=True)
-    job_id: Mapped[Optional[int]] = mapped_column(ForeignKey("jobs.id", ondelete="SET NULL"), index=True)
+    alert_config_id: Mapped[int | None] = mapped_column(
+        ForeignKey("alert_configs.id", ondelete="SET NULL"), index=True
+    )
+    pipeline_id: Mapped[int | None] = mapped_column(
+        ForeignKey("pipelines.id", ondelete="SET NULL"), index=True
+    )
+    job_id: Mapped[int | None] = mapped_column(
+        ForeignKey("jobs.id", ondelete="SET NULL"), index=True
+    )
 
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    level: Mapped[AlertLevel] = mapped_column(SQLEnum(AlertLevel), default=AlertLevel.INFO, nullable=False, index=True)
+    level: Mapped[AlertLevel] = mapped_column(
+        SQLEnum(AlertLevel), default=AlertLevel.INFO, nullable=False, index=True
+    )
 
-    status: Mapped[AlertStatus] = mapped_column(SQLEnum(AlertStatus), default=AlertStatus.PENDING, nullable=False, index=True)
-    delivery_method: Mapped[AlertDeliveryMethod] = mapped_column(SQLEnum(AlertDeliveryMethod), nullable=False)
+    status: Mapped[AlertStatus] = mapped_column(
+        SQLEnum(AlertStatus), default=AlertStatus.PENDING, nullable=False, index=True
+    )
+    delivery_method: Mapped[AlertDeliveryMethod] = mapped_column(
+        SQLEnum(AlertDeliveryMethod), nullable=False
+    )
     recipient: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    acknowledged_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    acknowledged_by: Mapped[Optional[str]] = mapped_column(String(255))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    acknowledged_by: Mapped[str | None] = mapped_column(String(255))
 
-    delivery_error: Mapped[Optional[str]] = mapped_column(Text)
+    delivery_error: Mapped[str | None] = mapped_column(Text)
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Workspace scoping
-    workspace_id: Mapped[Optional[int]] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
-    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    workspace_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True
+    )
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
-    config: Mapped[Optional["AlertConfig"]] = relationship("AlertConfig", back_populates="alerts")
-    pipeline: Mapped[Optional["Pipeline"]] = relationship("Pipeline")
-    job: Mapped[Optional["Job"]] = relationship("Job")
+    config: Mapped[AlertConfig | None] = relationship(
+        "AlertConfig", back_populates="alerts"
+    )
+    pipeline: Mapped[Pipeline | None] = relationship("Pipeline")
+    job: Mapped[Job | None] = relationship("Job")
 
     __table_args__ = (
         Index("idx_alert_status_created", "status", "created_at"),

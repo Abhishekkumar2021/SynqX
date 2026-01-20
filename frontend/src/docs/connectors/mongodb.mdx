@@ -35,15 +35,15 @@ You can configure the connection using a standard connection string (URI) or ind
 
 ### Parameters
 
-| Parameter | Type | Required | Description | Default |
-| :--- | :--- | :--- | :--- | :--- |
-| `connection_string` | string | No | Full MongoDB URI. | - |
-| `host` | string | No | Server hostname. | localhost |
-| `port` | number | No | Server port. | 27017 |
-| `username` | string | No | Authentication username. | - |
-| `password` | string | No | Authentication password. | - |
-| `database` | string | Yes | Target database name. | - |
-| `auth_source` | string | No | Database to authenticate against. | admin |
+| Parameter           | Type   | Required | Description                       | Default   |
+| :------------------ | :----- | :------- | :-------------------------------- | :-------- |
+| `connection_string` | string | No       | Full MongoDB URI.                 | -         |
+| `host`              | string | No       | Server hostname.                  | localhost |
+| `port`              | number | No       | Server port.                      | 27017     |
+| `username`          | string | No       | Authentication username.          | -         |
+| `password`          | string | No       | Authentication password.          | -         |
+| `database`          | string | Yes      | Target database name.             | -         |
+| `auth_source`       | string | No       | Database to authenticate against. | admin     |
 
 ## Usage
 
@@ -56,5 +56,5 @@ You can configure the connection using a standard connection string (URI) or ind
 ### Writing Data (Destination)
 
 - **Modes**:
-    - `append`: Inserts documents into the collection.
-    - `replace`: Drops the collection before inserting.
+  - `append`: Inserts documents into the collection.
+  - `replace`: Drops the collection before inserting.

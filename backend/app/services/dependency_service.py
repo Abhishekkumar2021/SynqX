@@ -1,43 +1,53 @@
-import os
-import subprocess
 import json
 import logging
-from typing import Dict, Optional
-from datetime import datetime, timezone
+import os
+import subprocess
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
-from synqx_core.models.environment import Environment
 from synqx_core.models.connections import Connection
+from synqx_core.models.environment import Environment
+
 from app.core.errors import AppError
 from app.utils.agent import is_remote_group
 
 logger = logging.getLogger(__name__)
+
 
 class DependencyService:
     """
     Manages isolated execution environments for connections, persisting state in the DB.
     Automatically routes to remote agents if assigned.
     """
-    
+
     BASE_ENV_PATH = "data/environments"
 
-    def __init__(self, db: Session, connection_id: int, user_id: Optional[int] = None):
+    def __init__(self, db: Session, connection_id: int, user_id: int | None = None):
         self.db = db
         self.connection_id = connection_id
         self.user_id = user_id
-        
+
         # Resolve routing
-        self.connection = self.db.query(Connection).filter(Connection.id == connection_id).first()
+        self.connection = (
+            self.db.query(Connection).filter(Connection.id == connection_id).first()
+        )
         if not self.connection:
             raise AppError("Connection not found", status_code=404)
-            
-        self.agent_group = self.connection.workspace.default_agent_group if self.connection.workspace else "internal"
+
+        self.agent_group = (
+            self.connection.workspace.default_agent_group
+            if self.connection.workspace
+            else "internal"
+        )
         self.is_remote = is_remote_group(self.agent_group)
 
         # Verify ownership if user_id is provided
         if user_id:
             self._ensure_ownership()
-            
-        self.base_env_path = os.path.abspath(os.path.join(self.BASE_ENV_PATH, str(connection_id)))
+
+        self.base_env_path = os.path.abspath(
+            os.path.join(self.BASE_ENV_PATH, str(connection_id))
+        )
         if not self.is_remote:
             self._ensure_base_path()
 
@@ -45,44 +55,57 @@ class DependencyService:
         """Check if the user owns the connection or is workspace admin."""
         # Simple check for now
         if self.connection.user_id != self.user_id:
-             # Check workspace member role
-             from synqx_core.models.workspace import WorkspaceMember, WorkspaceRole
-             member = self.db.query(WorkspaceMember).filter(
-                 WorkspaceMember.workspace_id == self.connection.workspace_id,
-                 WorkspaceMember.user_id == self.user_id
-             ).first()
-             if not member or member.role not in [WorkspaceRole.ADMIN, WorkspaceRole.EDITOR]:
-                 raise AppError("Access denied", status_code=403)
+            # Check workspace member role
+            from synqx_core.models.workspace import WorkspaceMember, WorkspaceRole  # noqa: PLC0415
 
-    def _trigger_remote_task(self, payload: Dict):
-        from app.services.ephemeral_service import EphemeralJobService
-        from synqx_core.schemas.ephemeral import EphemeralJobCreate
-        from synqx_core.models.enums import JobType, JobStatus
-        import time
+            member = (
+                self.db.query(WorkspaceMember)
+                .filter(
+                    WorkspaceMember.workspace_id == self.connection.workspace_id,
+                    WorkspaceMember.user_id == self.user_id,
+                )
+                .first()
+            )
+            if not member or member.role not in [
+                WorkspaceRole.ADMIN,
+                WorkspaceRole.EDITOR,
+            ]:
+                raise AppError("Access denied", status_code=403)
+
+    def _trigger_remote_task(self, payload: dict):
+        import time  # noqa: PLC0415
+
+        from synqx_core.models.enums import JobStatus, JobType  # noqa: PLC0415
+        from synqx_core.schemas.ephemeral import EphemeralJobCreate  # noqa: PLC0415
+
+        from app.services.ephemeral_service import EphemeralJobService  # noqa: PLC0415
 
         job_in = EphemeralJobCreate(
             job_type=JobType.SYSTEM,
             connection_id=self.connection_id,
             payload=payload,
-            agent_group=self.agent_group
+            agent_group=self.agent_group,
         )
-        job = EphemeralJobService.create_job(self.db, self.connection.workspace_id, self.user_id or 0, job_in)
-        
+        job = EphemeralJobService.create_job(
+            self.db, self.connection.workspace_id, self.user_id or 0, job_in
+        )
+
         # Sync wait
         start = time.time()
-        while time.time() - start < 60:
+        while time.time() - start < 60:  # noqa: PLR2004
             self.db.expire_all()
-            from synqx_core.models.ephemeral import EphemeralJob
+            from synqx_core.models.ephemeral import EphemeralJob  # noqa: PLC0415
+
             updated = self.db.query(EphemeralJob).get(job.id)
             if updated.status in [JobStatus.SUCCESS, JobStatus.FAILED]:
                 break
             time.sleep(1)
-            
+
         if updated.status == JobStatus.FAILED:
             raise AppError(f"Remote dependency task failed: {updated.error_message}")
         if updated.status != JobStatus.SUCCESS:
             raise AppError("Remote task timed out")
-            
+
         return updated.result_summary
 
     def _ensure_base_path(self):
@@ -95,21 +118,27 @@ class DependencyService:
             os.makedirs(path, exist_ok=True)
         return path
 
-    def get_environment(self, language: str) -> Optional[Environment]:
-        return self.db.query(Environment).filter(
-            Environment.connection_id == self.connection_id,
-            Environment.language == language
-        ).first()
+    def get_environment(self, language: str) -> Environment | None:
+        return (
+            self.db.query(Environment)
+            .filter(
+                Environment.connection_id == self.connection_id,
+                Environment.language == language,
+            )
+            .first()
+        )
 
     def initialize_environment(self, language: str) -> Environment:
         env = self.get_environment(language)
-        
+
         if not env:
             env = Environment(
                 connection_id=self.connection_id,
                 language=language,
-                path=self._get_lang_path(language) if not self.is_remote else f"agent://{language}",
-                status="initializing"
+                path=self._get_lang_path(language)
+                if not self.is_remote
+                else f"agent://{language}",
+                status="initializing",
             )
             self.db.add(env)
             self.db.commit()
@@ -117,16 +146,18 @@ class DependencyService:
 
         if self.is_remote:
             try:
-                res = self._trigger_remote_task({"action": "initialize", "language": language})
+                res = self._trigger_remote_task(
+                    {"action": "initialize", "language": language}
+                )
                 env.status = "ready"
                 env.version = res.get("version", "Remote")
-                env.updated_at = datetime.now(timezone.utc)
+                env.updated_at = datetime.now(UTC)
                 self.db.commit()
                 return env
             except Exception as e:
                 env.status = "error"
                 self.db.commit()
-                raise AppError(str(e))
+                raise AppError(str(e))  # noqa: B904
 
         try:
             path = self._get_lang_path(language)
@@ -136,8 +167,10 @@ class DependencyService:
                 if not os.path.exists(venv_path):
                     subprocess.check_call(["python3", "-m", "venv", venv_path])
                 python_exe = os.path.join(venv_path, "bin", "python")
-                version = subprocess.check_output([python_exe, "--version"], text=True).strip()
-            
+                version = subprocess.check_output(
+                    [python_exe, "--version"], text=True
+                ).strip()
+
             elif language == "node":
                 package_json = os.path.join(path, "package.json")
                 if not os.path.exists(package_json):
@@ -146,29 +179,37 @@ class DependencyService:
 
             env.status = "ready"
             env.version = version
-            env.updated_at = datetime.now(timezone.utc)
-            
+            env.updated_at = datetime.now(UTC)
+
             # Initial package list
             env.packages = self.list_packages(language)
-            
+
             self.db.commit()
             return env
 
         except Exception as e:
             env.status = "error"
-            logger.error(f"Isolated runtime initialization failed for {language} (Connection #{self.connection_id}): {e}")
+            logger.error(
+                f"Isolated runtime initialization failed for {language} (Connection #{self.connection_id}): {e}"  # noqa: E501
+            )
             self.db.commit()
-            raise AppError(f"Failed to initialize isolated {language.capitalize()} runtime: {str(e)}")
+            raise AppError(  # noqa: B904
+                f"Failed to initialize isolated {language.capitalize()} runtime: {e!s}"
+            )
 
     def install_package(self, language: str, package_name: str) -> str:
         env = self.get_environment(language)
         if not env or env.status != "ready":
-            raise AppError(f"{language.capitalize()} environment is not operational. Please initialize the runtime before installing packages.")
+            raise AppError(
+                f"{language.capitalize()} environment is not operational. Please initialize the runtime before installing packages."  # noqa: E501
+            )
 
         if self.is_remote:
-            res = self._trigger_remote_task({"action": "install", "language": language, "package": package_name})
-            # Remote agents don't easily return full list yet, we'll mark for refresh or keep current
-            env.updated_at = datetime.now(timezone.utc)
+            res = self._trigger_remote_task(
+                {"action": "install", "language": language, "package": package_name}
+            )
+            # Remote agents don't easily return full list yet, we'll mark for refresh or keep current  # noqa: E501
+            env.updated_at = datetime.now(UTC)
             self.db.commit()
             return res.get("output", "Success")
 
@@ -176,40 +217,62 @@ class DependencyService:
             output = ""
             if language == "python":
                 pip_exe = os.path.join(env.path, "venv", "bin", "pip")
-                output = subprocess.check_output([pip_exe, "install", package_name], stderr=subprocess.STDOUT, text=True)
+                output = subprocess.check_output(
+                    [pip_exe, "install", package_name],
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
             elif language == "node":
-                output = subprocess.check_output(["npm", "install", package_name, "--save"], cwd=env.path, stderr=subprocess.STDOUT, text=True)
+                output = subprocess.check_output(
+                    ["npm", "install", package_name, "--save"],
+                    cwd=env.path,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
 
             # Update cached package list
             env.packages = self.list_packages(language)
-            env.updated_at = datetime.now(timezone.utc)
+            env.updated_at = datetime.now(UTC)
             self.db.commit()
             return output
         except subprocess.CalledProcessError as e:
-            raise AppError(f"Package installation failed for '{package_name}': {e.output}")
+            raise AppError(  # noqa: B904
+                f"Package installation failed for '{package_name}': {e.output}"
+            )
 
     def uninstall_package(self, language: str, package_name: str) -> str:
         env = self.get_environment(language)
         if not env or env.status != "ready":
-            raise AppError(f"{language.capitalize()} environment is not operational. Please initialize the runtime before managing packages.")
+            raise AppError(
+                f"{language.capitalize()} environment is not operational. Please initialize the runtime before managing packages."  # noqa: E501
+            )
 
         try:
             output = ""
             if language == "python":
                 pip_exe = os.path.join(env.path, "venv", "bin", "pip")
-                output = subprocess.check_output([pip_exe, "uninstall", "-y", package_name], stderr=subprocess.STDOUT, text=True)
+                output = subprocess.check_output(
+                    [pip_exe, "uninstall", "-y", package_name],
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
             elif language == "node":
-                output = subprocess.check_output(["npm", "uninstall", package_name, "--save"], cwd=env.path, stderr=subprocess.STDOUT, text=True)
+                output = subprocess.check_output(
+                    ["npm", "uninstall", package_name, "--save"],
+                    cwd=env.path,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
 
             # Update cached package list
             env.packages = self.list_packages(language)
-            env.updated_at = datetime.now(timezone.utc)
+            env.updated_at = datetime.now(UTC)
             self.db.commit()
             return output
         except subprocess.CalledProcessError as e:
-            raise AppError(f"Package removal failed for '{package_name}': {e.output}")
+            raise AppError(f"Package removal failed for '{package_name}': {e.output}")  # noqa: B904
 
-    def list_packages(self, language: str) -> Dict[str, str]:
+    def list_packages(self, language: str) -> dict[str, str]:
         env = self.get_environment(language)
         if not env or env.status != "ready":
             return {}
@@ -217,25 +280,29 @@ class DependencyService:
         try:
             if language == "python":
                 pip_exe = os.path.join(env.path, "venv", "bin", "pip")
-                out = subprocess.check_output([pip_exe, "list", "--format=json"], text=True)
-                return {pkg['name']: pkg['version'] for pkg in json.loads(out)}
+                out = subprocess.check_output(
+                    [pip_exe, "list", "--format=json"], text=True
+                )
+                return {pkg["name"]: pkg["version"] for pkg in json.loads(out)}
             elif language == "node":
-                out = subprocess.check_output(["npm", "list", "--depth=0", "--json"], cwd=env.path, text=True)
+                out = subprocess.check_output(
+                    ["npm", "list", "--depth=0", "--json"], cwd=env.path, text=True
+                )
                 deps = json.loads(out).get("dependencies", {})
                 return {k: v.get("version", "unknown") for k, v in deps.items()}
             return env.packages or {}
         except Exception:
             return env.packages or {}
 
-    def get_execution_context(self, language: str) -> Dict[str, str]:
+    def get_execution_context(self, language: str) -> dict[str, str]:
         env = self.get_environment(language)
         if not env or env.status != "ready":
             return {}
-            
+
         ctx = {"env_path": env.path}
         if language == "python":
             ctx["python_executable"] = os.path.join(env.path, "venv", "bin", "python")
         elif language == "node":
             ctx["node_cwd"] = env.path
-            
+
         return ctx

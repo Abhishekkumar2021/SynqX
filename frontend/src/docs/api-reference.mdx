@@ -1,6 +1,6 @@
 ---
-title: "API Reference"
-description: "Technical specification for the SynqX Backend API."
+title: 'API Reference'
+description: 'Technical specification for the SynqX Backend API.'
 ---
 
 # API Reference
@@ -29,6 +29,7 @@ curl -X POST "http://localhost:8000/api/v1/auth/login" \
      -H "Content-Type: application/x-www-form-urlencoded" \
      -d "username=admin@synqx.dev&password=password"
 ```
+
 </Step>
 
 <Step>
@@ -38,6 +39,7 @@ Include the received token in the `Authorization` header for subsequent requests
 ```bash
 Authorization: Bearer <your_access_token>
 ```
+
 </Step>
 </Steps>
 

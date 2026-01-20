@@ -22,14 +22,14 @@ The **PostgreSQL Connector** enables SynqX to interact with PostgreSQL databases
 
 ### Parameters
 
-| Parameter | Type | Required | Description | Default |
-| :--- | :--- | :--- | :--- | :--- |
-| `username` | string | Yes | Database user. | - |
-| `password` | string | Yes | Database password. | - |
-| `host` | string | Yes | Server hostname or IP. | - |
-| `port` | number | No | Server port. | 5432 |
-| `database` | string | Yes | Database name. | - |
-| `db_schema` | string | No | Target schema. | public |
+| Parameter   | Type   | Required | Description            | Default |
+| :---------- | :----- | :------- | :--------------------- | :------ |
+| `username`  | string | Yes      | Database user.         | -       |
+| `password`  | string | Yes      | Database password.     | -       |
+| `host`      | string | Yes      | Server hostname or IP. | -       |
+| `port`      | number | No       | Server port.           | 5432    |
+| `database`  | string | Yes      | Database name.         | -       |
+| `db_schema` | string | No       | Target schema.         | public  |
 
 ## Usage
 
@@ -47,7 +47,7 @@ The **PostgreSQL Connector** enables SynqX to interact with PostgreSQL databases
 ### Writing Data (Destination)
 
 - **Modes**:
-    - `append`: Inserts new rows into the table.
-    - `replace`: Drops the table if it exists and creates a new one.
-    - `fail`: Fails if the table already exists.
+  - `append`: Inserts new rows into the table.
+  - `replace`: Drops the table if it exists and creates a new one.
+  - `fail`: Fails if the table already exists.
 - **Performance**: Uses `pandas.to_sql` for data insertion.

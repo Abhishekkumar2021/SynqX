@@ -1,8 +1,8 @@
-import React from 'react';
-import * as TabsPrimitive from '@radix-ui/react-tabs';
-import { cn } from '@/lib/utils';
+import React from 'react'
+import * as TabsPrimitive from '@radix-ui/react-tabs'
+import { cn } from '@/lib/utils'
 
-const Tabs = TabsPrimitive.Root;
+const Tabs = TabsPrimitive.Root
 
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
@@ -12,17 +12,17 @@ const TabsList = React.forwardRef<
     ref={ref}
     className={cn(
       // Layout & Shape
-      "inline-flex h-10 items-center justify-center rounded-xl p-1 overflow-hidden",
+      'inline-flex h-10 items-center justify-center rounded-xl p-1 overflow-hidden',
 
       // Colors & Glass Effect
-      "bg-muted/30 text-muted-foreground border border-border/40 backdrop-blur-md",
-      
+      'bg-muted/30 text-muted-foreground border border-border/40 backdrop-blur-md',
+
       className
     )}
     {...props}
   />
-));
-TabsList.displayName = TabsPrimitive.List.displayName;
+))
+TabsList.displayName = TabsPrimitive.List.displayName
 
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
@@ -32,20 +32,20 @@ const TabsTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // Base Layout
-      "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-      
+      'inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 text-[11px] font-bold uppercase tracking-wider ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+
       // Active State
-      "data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/40 h-full",
+      'data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/40 h-full',
 
       // Hover/Inactive
-      "text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 active:scale-95",
+      'text-muted-foreground/60 hover:text-foreground hover:bg-muted/20 active:scale-95',
 
       className
     )}
     {...props}
   />
-));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+))
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
 
 const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
@@ -54,12 +54,12 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 animate-in fade-in-50 slide-in-from-bottom-2 duration-300",
+      'mt-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 animate-in fade-in-50 slide-in-from-bottom-2 duration-300',
       className
     )}
     {...props}
   />
-));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
+))
+TabsContent.displayName = TabsPrimitive.Content.displayName
 
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+export { Tabs, TabsList, TabsTrigger, TabsContent }

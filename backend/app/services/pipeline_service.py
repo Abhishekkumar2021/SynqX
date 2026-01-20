@@ -1,26 +1,40 @@
-from typing import List, Optional, Dict, Any, Tuple
 import uuid
-from datetime import datetime, timezone, timedelta
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy import and_
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from synqx_core.models.pipelines import Pipeline, PipelineVersion, PipelineNode, PipelineEdge
-from synqx_core.models.execution import Job
+from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
 from synqx_core.models.agent import Agent
-from synqx_core.models.enums import PipelineStatus, JobStatus, OperatorType, RetryStrategy, AgentStatus, WriteStrategy, SchemaEvolutionPolicy
+from synqx_core.models.enums import (
+    AgentStatus,
+    JobStatus,
+    OperatorType,
+    PipelineStatus,
+    RetryStrategy,
+    SchemaEvolutionPolicy,
+    WriteStrategy,
+)
+from synqx_core.models.execution import Job
+from synqx_core.models.pipelines import (
+    Pipeline,
+    PipelineEdge,
+    PipelineNode,
+    PipelineVersion,
+)
 from synqx_core.schemas.pipeline import (
     PipelineCreate,
-    PipelineVersionCreate,
-    PipelineNodeCreate,
     PipelineEdgeCreate,
+    PipelineNodeCreate,
     PipelineUpdate,
+    PipelineVersionCreate,
 )
-from app.engine.agent_engine import PipelineAgent as PipelineRunner
+
 from app.core.errors import AppError, ConfigurationError
 from app.core.logging import get_logger
-from app.worker.tasks import execute_pipeline_task
+from app.engine.agent_engine import PipelineAgent as PipelineRunner
 from app.utils.agent import is_remote_group
+from app.worker.tasks import execute_pipeline_task
 
 logger = get_logger(__name__)
 
@@ -36,13 +50,16 @@ class PipelineService:
         self.pipeline_runner = PipelineRunner()
 
     def create_pipeline(
-        self, pipeline_create: PipelineCreate, validate_dag: bool = True, user_id: Optional[int] = None, workspace_id: Optional[int] = None
+        self,
+        pipeline_create: PipelineCreate,
+        validate_dag: bool = True,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
     ) -> Pipeline:
         """
         Creates a new pipeline along with its initial version, nodes, and edges.
         """
         try:
-
             # Validate pipeline configuration before creation
             if validate_dag:
                 self._validate_pipeline_configuration(pipeline_create.initial_version)
@@ -104,7 +121,7 @@ class PipelineService:
                 extra={
                     "pipeline_id": db_pipeline.id,
                     "pipeline_name": db_pipeline.name,
-                    "user_id": user_id
+                    "user_id": user_id,
                 },
             )
 
@@ -133,12 +150,18 @@ class PipelineService:
             raise AppError(f"Failed to create pipeline: {e}") from e
 
     def create_pipeline_version(
-        self, pipeline_id: int, version_data: PipelineVersionCreate, user_id: Optional[int] = None, workspace_id: Optional[int] = None
+        self,
+        pipeline_id: int,
+        version_data: PipelineVersionCreate,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
     ) -> PipelineVersion:
         """
         Creates a new version for an existing pipeline.
         """
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
+        pipeline = self.get_pipeline(
+            pipeline_id, user_id=user_id, workspace_id=workspace_id
+        )
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
 
@@ -180,7 +203,7 @@ class PipelineService:
 
             self.db_session.commit()
             self.db_session.refresh(db_version)
-            
+
             logger.info(
                 f"Created version {next_version_num} for pipeline {pipeline_id}",
                 extra={"pipeline_id": pipeline_id, "version": next_version_num},
@@ -196,13 +219,19 @@ class PipelineService:
             logger.error(f"Failed to create pipeline version: {e}", exc_info=True)
             raise AppError(f"Failed to create pipeline version: {e}") from e
 
-    def update_pipeline(
-        self, pipeline_id: int, pipeline_update: PipelineUpdate, user_id: Optional[int] = None, workspace_id: Optional[int] = None
+    def update_pipeline(  # noqa: PLR0912
+        self,
+        pipeline_id: int,
+        pipeline_update: PipelineUpdate,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
     ) -> Pipeline:
         """
         Update pipeline metadata (not version/nodes/edges).
         """
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
+        pipeline = self.get_pipeline(
+            pipeline_id, user_id=user_id, workspace_id=workspace_id
+        )
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
 
@@ -228,20 +257,25 @@ class PipelineService:
         if pipeline_update.retry_delay_seconds is not None:
             pipeline.retry_delay_seconds = pipeline_update.retry_delay_seconds
         if pipeline_update.execution_timeout_seconds is not None:
-            pipeline.execution_timeout_seconds = pipeline_update.execution_timeout_seconds
+            pipeline.execution_timeout_seconds = (
+                pipeline_update.execution_timeout_seconds
+            )
         if pipeline_update.priority is not None:
             pipeline.priority = pipeline_update.priority
-        
+
         # agent_group can be explicitly set to None to revert to Internal worker
         if pipeline_update.agent_group is not None:
-             pipeline.agent_group = pipeline_update.agent_group
-        elif "agent_group" in pipeline_update.model_fields_set and pipeline_update.agent_group is None:
-             pipeline.agent_group = "internal"
-             
+            pipeline.agent_group = pipeline_update.agent_group
+        elif (
+            "agent_group" in pipeline_update.model_fields_set
+            and pipeline_update.agent_group is None
+        ):
+            pipeline.agent_group = "internal"
+
         if pipeline_update.tags is not None:
             pipeline.tags = pipeline_update.tags
 
-        pipeline.updated_at = datetime.now(timezone.utc)
+        pipeline.updated_at = datetime.now(UTC)
         if user_id:
             pipeline.updated_by = str(user_id)
 
@@ -254,12 +288,20 @@ class PipelineService:
             logger.error(f"Failed to update pipeline {pipeline_id}: {e}")
             raise AppError(f"Failed to update pipeline: {e}") from e
 
-    def publish_version(self, pipeline_id: int, version_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> PipelineVersion:
+    def publish_version(
+        self,
+        pipeline_id: int,
+        version_id: int,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> PipelineVersion:
         """
         Publish a specific pipeline version, making it the active version.
         Unpublishes any previously published version.
         """
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
+        pipeline = self.get_pipeline(
+            pipeline_id, user_id=user_id, workspace_id=workspace_id
+        )
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
 
@@ -290,7 +332,7 @@ class PipelineService:
 
             # Publish new version
             version.is_published = True
-            version.published_at = datetime.now(timezone.utc)
+            version.published_at = datetime.now(UTC)
             pipeline.published_version_id = version.id
             pipeline.status = PipelineStatus.ACTIVE
 
@@ -308,7 +350,12 @@ class PipelineService:
             logger.error(f"Failed to publish version: {e}")
             raise AppError(f"Failed to publish version: {e}") from e
 
-    def get_pipeline(self, pipeline_id: int, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> Optional[Pipeline]:
+    def get_pipeline(
+        self,
+        pipeline_id: int,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> Pipeline | None:
         """Retrieves a pipeline by its ID, scoped by user or workspace."""
         query = self.db_session.query(Pipeline).filter(
             and_(
@@ -324,32 +371,37 @@ class PipelineService:
 
     def list_pipelines(
         self,
-        status: Optional[PipelineStatus] = None,
+        status: PipelineStatus | None = None,
         limit: int = 100,
         offset: int = 0,
-        user_id: Optional[int] = None,
-        workspace_id: Optional[int] = None,
-    ) -> Tuple[List[Pipeline], int]:
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> tuple[list[Pipeline], int]:
         """List pipelines scoped by user or workspace."""
         query = self.db_session.query(Pipeline).filter(Pipeline.deleted_at.is_(None))
-        
+
         if workspace_id is not None:
             query = query.filter(Pipeline.workspace_id == workspace_id)
         elif user_id is not None:
             query = query.filter(Pipeline.user_id == user_id)
-            
+
         if status:
             query = query.filter(Pipeline.status == status)
-        
+
         total = query.count()
-        items = query.order_by(Pipeline.created_at.desc()).limit(limit).offset(offset).all()
-        
+        items = (
+            query.order_by(Pipeline.created_at.desc()).limit(limit).offset(offset).all()
+        )
+
         return items, total
 
-
     def get_pipeline_version(
-        self, pipeline_id: int, version_id: Optional[int] = None, user_id: Optional[int] = None, workspace_id: Optional[int] = None
-    ) -> Optional[PipelineVersion]:
+        self,
+        pipeline_id: int,
+        version_id: int | None = None,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> PipelineVersion | None:
         """
         Retrieves a specific pipeline version or the currently published one.
         """
@@ -375,50 +427,54 @@ class PipelineService:
 
         return query.first()
 
-    def trigger_pipeline_run(
+    def trigger_pipeline_run(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         pipeline_id: int,
-        version_id: Optional[int] = None,
+        version_id: int | None = None,
         async_execution: bool = True,
-        run_params: Optional[Dict[str, Any]] = None,
-        user_id: Optional[int] = None,
-        workspace_id: Optional[int] = None,
+        run_params: dict[str, Any] | None = None,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
         is_backfill: bool = False,
-        backfill_config: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        backfill_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Fixed trigger with proper field names."""
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
+        pipeline = self.get_pipeline(
+            pipeline_id, user_id=user_id, workspace_id=workspace_id
+        )
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
-        
+
         if pipeline.max_parallel_runs:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             stale_threshold = now - timedelta(hours=2)
-            
+
             active_jobs_count = (
                 self.db_session.query(Job)
                 .filter(
                     and_(
                         Job.pipeline_id == pipeline_id,
                         Job.status.in_([JobStatus.PENDING, JobStatus.RUNNING]),
-                        Job.created_at > stale_threshold
+                        Job.created_at > stale_threshold,
                     )
                 )
                 .count()
             )
-            
+
             if active_jobs_count >= pipeline.max_parallel_runs:
                 raise AppError(
-                    f"Pipeline has reached max parallel runs limit ({pipeline.max_parallel_runs}). "
+                    f"Pipeline has reached max parallel runs limit ({pipeline.max_parallel_runs}). "  # noqa: E501
                     f"Currently {active_jobs_count} jobs running."
                 )
-        
-        pipeline_version = self.get_pipeline_version(pipeline_id, version_id, user_id=user_id, workspace_id=workspace_id)
+
+        pipeline_version = self.get_pipeline_version(
+            pipeline_id, version_id, user_id=user_id, workspace_id=workspace_id
+        )
         if not pipeline_version:
             raise AppError(
-                f"Pipeline version not found for pipeline {pipeline_id}, version {version_id}"
+                f"Pipeline version not found for pipeline {pipeline_id}, version {version_id}"  # noqa: E501
             )
-        
+
         job = Job(
             pipeline_id=pipeline_id,
             pipeline_version_id=pipeline_version.id,
@@ -428,82 +484,99 @@ class PipelineService:
             status=JobStatus.PENDING,
             is_backfill=is_backfill,
             backfill_config=backfill_config or {},
-            created_by=str(user_id) if user_id else None
+            created_by=str(user_id) if user_id else None,
         )
         self.db_session.add(job)
         self.db_session.flush()
-        
+
         try:
             # Check for Remote Agent Routing & Global Load Balancing
             target_group = pipeline.agent_group
             if is_remote_group(target_group) or target_group == "auto":
-                from app.services.agent_service import AgentService
-                
+                from app.services.agent_service import AgentService  # noqa: PLC0415
+
                 selected_agent = None
                 if target_group == "auto":
-                    # Global Load Balancing: Find the best agent across all groups in workspace
-                    # Or we could have a specific 'global' group. 
+                    # Global Load Balancing: Find the best agent across all groups in workspace  # noqa: E501
+                    # Or we could have a specific 'global' group.
                     # For now, 'auto' means 'find least busy online agent in workspace'
-                    online_agents = self.db_session.query(Agent).filter(
-                        Agent.workspace_id == (workspace_id or pipeline.workspace_id),
-                        Agent.status == AgentStatus.ONLINE
-                    ).all()
-                    
+                    online_agents = (
+                        self.db_session.query(Agent)
+                        .filter(
+                            Agent.workspace_id
+                            == (workspace_id or pipeline.workspace_id),
+                            Agent.status == AgentStatus.ONLINE,
+                        )
+                        .all()
+                    )
+
                     if online_agents:
                         # Simple load balancer if no group specified
-                        selected_agent = AgentService.find_best_agent(self.db_session, workspace_id or pipeline.workspace_id, online_agents[0].tags.get('groups', ['default'])[0])
+                        selected_agent = AgentService.find_best_agent(
+                            self.db_session,
+                            workspace_id or pipeline.workspace_id,
+                            online_agents[0].tags.get("groups", ["default"])[0],
+                        )
                 else:
                     # Group-specific load balancing
-                    selected_agent = AgentService.find_best_agent(self.db_session, workspace_id or pipeline.workspace_id, target_group)
+                    selected_agent = AgentService.find_best_agent(
+                        self.db_session,
+                        workspace_id or pipeline.workspace_id,
+                        target_group,
+                    )
 
                 if not selected_agent:
                     if target_group == "auto":
-                        raise AppError("No active agents found in workspace for automatic dispatch.")
-                    raise AppError(f"No active agents found in group '{target_group}'. Please ensure your remote agent is running.")
+                        raise AppError(
+                            "No active agents found in workspace for automatic dispatch."  # noqa: E501
+                        )
+                    raise AppError(
+                        f"No active agents found in group '{target_group}'. Please ensure your remote agent is running."  # noqa: E501
+                    )
 
                 # Mark as queued for specific agent or group
                 job.status = JobStatus.QUEUED
                 job.queue_name = target_group
                 job.worker_id = selected_agent.client_id
                 self.db_session.commit()
-                
+
                 logger.info(
-                    f"Pipeline #{pipeline_id} run queued for agent '{selected_agent.name}' (Group: {target_group})",
+                    f"Pipeline #{pipeline_id} run queued for agent '{selected_agent.name}' (Group: {target_group})",  # noqa: E501
                     extra={
                         "pipeline_id": pipeline_id,
                         "job_id": job.id,
                         "agent_id": selected_agent.id,
-                        "agent_group": target_group
+                        "agent_group": target_group,
                     },
                 )
-                
+
                 return {
                     "status": "queued",
-                    "message": f"Job successfully dispatched to agent '{selected_agent.name}'.",
+                    "message": f"Job successfully dispatched to agent '{selected_agent.name}'.",  # noqa: E501
                     "job_id": job.id,
                     "pipeline_id": pipeline_id,
                     "version_id": pipeline_version.id,
                     "queue": target_group,
-                    "agent_name": selected_agent.name
+                    "agent_name": selected_agent.name,
                 }
 
             if async_execution:
                 task = execute_pipeline_task.delay(job.id)
                 job.celery_task_id = task.id
                 self.db_session.commit()
-                
+
                 logger.info(
-                    f"Pipeline #{pipeline_id} run enqueued for background processing (Job #{job.id})",
+                    f"Pipeline #{pipeline_id} run enqueued for background processing (Job #{job.id})",  # noqa: E501
                     extra={
                         "pipeline_id": pipeline_id,
                         "job_id": job.id,
                         "task_id": task.id,
                     },
                 )
-                
+
                 return {
                     "status": "enqueued",
-                    "message": "Pipeline run successfully enqueued for background execution.",
+                    "message": "Pipeline run successfully enqueued for background execution.",  # noqa: E501
                     "job_id": job.id,
                     "task_id": task.id,
                     "pipeline_id": pipeline_id,
@@ -511,28 +584,38 @@ class PipelineService:
                 }
             else:
                 job.status = JobStatus.RUNNING
-                job.started_at = datetime.now(timezone.utc)
+                job.started_at = datetime.now(UTC)
                 self.db_session.commit()
-                
+
                 self.pipeline_runner.run(
                     pipeline_version, db=self.db_session, job_id=job.id
                 )
-                
+
                 job.status = JobStatus.SUCCESS
-                job.completed_at = datetime.now(timezone.utc)
+                job.completed_at = datetime.now(UTC)
                 if job.started_at and job.completed_at:
                     # Ensure datetimes are timezone-aware before subtraction
-                    started_at_aware = job.started_at.replace(tzinfo=timezone.utc) if job.started_at.tzinfo is None else job.started_at
-                    completed_at_aware = job.completed_at.replace(tzinfo=timezone.utc) if job.completed_at.tzinfo is None else job.completed_at
-                    duration_ms = int((completed_at_aware - started_at_aware).total_seconds() * 1000)
+                    started_at_aware = (
+                        job.started_at.replace(tzinfo=UTC)
+                        if job.started_at.tzinfo is None
+                        else job.started_at
+                    )
+                    completed_at_aware = (
+                        job.completed_at.replace(tzinfo=UTC)
+                        if job.completed_at.tzinfo is None
+                        else job.completed_at
+                    )
+                    duration_ms = int(
+                        (completed_at_aware - started_at_aware).total_seconds() * 1000
+                    )
                     job.execution_time_ms = duration_ms
                 self.db_session.commit()
-                
+
                 logger.info(
-                    f"Pipeline #{pipeline_id} run completed synchronously in {job.execution_time_ms}ms (Job #{job.id})",
+                    f"Pipeline #{pipeline_id} run completed synchronously in {job.execution_time_ms}ms (Job #{job.id})",  # noqa: E501
                     extra={"pipeline_id": pipeline_id, "job_id": job.id},
                 )
-                
+
                 return {
                     "status": "success",
                     "message": "Pipeline run completed successfully",
@@ -540,35 +623,55 @@ class PipelineService:
                     "pipeline_id": pipeline_id,
                     "version_id": pipeline_version.id,
                 }
-        
+
         except Exception as e:
             logger.error(
                 "Failed to trigger pipeline run",
                 extra={"pipeline_id": pipeline_id, "job_id": job.id, "error": str(e)},
                 exc_info=True,
             )
-            
+
             self.db_session.rollback()
-            
+
             failed_job = self.db_session.query(Job).filter(Job.id == job.id).first()
-            if failed_job and failed_job.started_at and failed_job.completed_at: # Add check for completed_at too
+            if (
+                failed_job and failed_job.started_at and failed_job.completed_at
+            ):  # Add check for completed_at too
                 failed_job.status = JobStatus.FAILED
-                failed_job.completed_at = datetime.now(timezone.utc)
+                failed_job.completed_at = datetime.now(UTC)
                 failed_job.infra_error = str(e)
                 # Ensure datetimes are timezone-aware before subtraction
-                started_at_aware = failed_job.started_at.replace(tzinfo=timezone.utc) if failed_job.started_at.tzinfo is None else failed_job.started_at
-                completed_at_aware = failed_job.completed_at.replace(tzinfo=timezone.utc) if failed_job.completed_at.tzinfo is None else failed_job.completed_at
-                duration_ms = int((completed_at_aware - started_at_aware).total_seconds() * 1000)
+                started_at_aware = (
+                    failed_job.started_at.replace(tzinfo=UTC)
+                    if failed_job.started_at.tzinfo is None
+                    else failed_job.started_at
+                )
+                completed_at_aware = (
+                    failed_job.completed_at.replace(tzinfo=UTC)
+                    if failed_job.completed_at.tzinfo is None
+                    else failed_job.completed_at
+                )
+                duration_ms = int(
+                    (completed_at_aware - started_at_aware).total_seconds() * 1000
+                )
                 failed_job.execution_time_ms = duration_ms
                 self.db_session.commit()
-            
+
             raise AppError(f"Failed to trigger pipeline run: {e}") from e
-        
-    def delete_pipeline(self, pipeline_id: int, hard_delete: bool = False, user_id: Optional[int] = None, workspace_id: Optional[int] = None) -> bool:
+
+    def delete_pipeline(
+        self,
+        pipeline_id: int,
+        hard_delete: bool = False,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> bool:
         """
         Delete a pipeline (soft delete by default).
         """
-        pipeline = self.get_pipeline(pipeline_id, user_id=user_id, workspace_id=workspace_id)
+        pipeline = self.get_pipeline(
+            pipeline_id, user_id=user_id, workspace_id=workspace_id
+        )
         if not pipeline:
             raise AppError(f"Pipeline {pipeline_id} not found")
 
@@ -576,7 +679,7 @@ class PipelineService:
             if hard_delete:
                 self.db_session.delete(pipeline)
             else:
-                pipeline.deleted_at = datetime.now(timezone.utc)
+                pipeline.deleted_at = datetime.now(UTC)
                 pipeline.status = PipelineStatus.ARCHIVED
                 if user_id:
                     pipeline.deleted_by = str(user_id)
@@ -634,7 +737,7 @@ class PipelineService:
         # Validate multi-input operators and required assets
         for node_id, upstream_nodes in upstream_map.items():
             node = node_map[node_id]
-            
+
             # 1. Multi-input validation
             if len(upstream_nodes) > 1:
                 if node.operator_type not in [
@@ -644,14 +747,21 @@ class PipelineService:
                 ]:
                     raise ConfigurationError(
                         f"Node '{node_id}' has {len(upstream_nodes)} inputs but "
-                        f"operator type '{node.operator_type.value}' only supports single input"
+                        f"operator type '{node.operator_type.value}' only supports single input"  # noqa: E501
                     )
-            
+
             # 2. Required asset validation for Source/Sink
             if node.operator_type == OperatorType.EXTRACT and not node.source_asset_id:
-                raise ConfigurationError(f"Source node '{node_id}' must have a source asset defined.")
-            if node.operator_type == OperatorType.LOAD and not node.destination_asset_id:
-                raise ConfigurationError(f"Sink node '{node_id}' must have a destination asset defined.")
+                raise ConfigurationError(
+                    f"Source node '{node_id}' must have a source asset defined."
+                )
+            if (
+                node.operator_type == OperatorType.LOAD
+                and not node.destination_asset_id
+            ):
+                raise ConfigurationError(
+                    f"Sink node '{node_id}' must have a destination asset defined."
+                )
 
     def _create_pipeline_version(
         self,
@@ -668,13 +778,13 @@ class PipelineService:
             change_summary=version_data.change_summary,
             version_notes=version_data.version_notes,
             is_published=is_published,
-            published_at=datetime.now(timezone.utc) if is_published else None,
+            published_at=datetime.now(UTC) if is_published else None,
         )
 
     def _create_pipeline_nodes(
         self,
         pipeline_version_id: int,
-        nodes_data: List[PipelineNodeCreate],
+        nodes_data: list[PipelineNodeCreate],
     ) -> None:
         """Helper to create PipelineNode objects."""
         for node_data in nodes_data:
@@ -688,22 +798,28 @@ class PipelineService:
                 config=node_data.config or {},
                 sync_mode=node_data.sync_mode,
                 # Fix: Handle cdc_config correctly (ensure it's a dict)
-                cdc_config=node_data.cdc_config if isinstance(node_data.cdc_config, dict) else {},
+                cdc_config=node_data.cdc_config
+                if isinstance(node_data.cdc_config, dict)
+                else {},
                 order_index=node_data.order_index,
                 source_asset_id=node_data.source_asset_id,
                 destination_asset_id=node_data.destination_asset_id,
                 # New: Map missing fields from schema/request to model
-                write_strategy=getattr(node_data, 'write_strategy', WriteStrategy.APPEND),
-                schema_evolution_policy=getattr(node_data, 'schema_evolution_policy', SchemaEvolutionPolicy.STRICT),
-                guardrails=getattr(node_data, 'guardrails', []),
-                data_contract=getattr(node_data, 'data_contract', {}),
-                column_mapping=getattr(node_data, 'column_mapping', {}),
-                quarantine_asset_id=getattr(node_data, 'quarantine_asset_id', None),
+                write_strategy=getattr(
+                    node_data, "write_strategy", WriteStrategy.APPEND
+                ),
+                schema_evolution_policy=getattr(
+                    node_data, "schema_evolution_policy", SchemaEvolutionPolicy.STRICT
+                ),
+                guardrails=getattr(node_data, "guardrails", []),
+                data_contract=getattr(node_data, "data_contract", {}),
+                column_mapping=getattr(node_data, "column_mapping", {}),
+                quarantine_asset_id=getattr(node_data, "quarantine_asset_id", None),
                 # Advanced Orchestration
-                sub_pipeline_id=getattr(node_data, 'sub_pipeline_id', None),
-                is_dynamic=getattr(node_data, 'is_dynamic', False),
-                mapping_expr=getattr(node_data, 'mapping_expr', None),
-                worker_tag=getattr(node_data, 'worker_tag', None),
+                sub_pipeline_id=getattr(node_data, "sub_pipeline_id", None),
+                is_dynamic=getattr(node_data, "is_dynamic", False),
+                mapping_expr=getattr(node_data, "mapping_expr", None),
+                worker_tag=getattr(node_data, "worker_tag", None),
                 # Retry logic
                 max_retries=node_data.max_retries or 0,
                 retry_strategy=node_data.retry_strategy or RetryStrategy.FIXED,
@@ -715,7 +831,7 @@ class PipelineService:
     def _create_pipeline_edges(
         self,
         pipeline_version_id: int,
-        edges_data: List[PipelineEdgeCreate],
+        edges_data: list[PipelineEdgeCreate],
     ) -> None:
         """Helper to create PipelineEdge objects."""
         for edge_data in edges_data:
@@ -734,7 +850,7 @@ class PipelineService:
     def _get_node_db_id(self, pipeline_version_id: int, node_code_id: str) -> int:
         """
         Helper to get the database ID of a node given its pipeline_version_id and node_id.
-        """
+        """  # noqa: E501
         node = (
             self.db_session.query(PipelineNode)
             .filter(
@@ -748,13 +864,14 @@ class PipelineService:
 
         if not node:
             raise ConfigurationError(
-                f"Node with ID '{node_code_id}' not found for version {pipeline_version_id}. "
+                f"Node with ID '{node_code_id}' not found for version {pipeline_version_id}. "  # noqa: E501
                 "Ensure nodes are created before edges referencing them."
             )
         return node.id
 
-    def get_pipeline_next_run(self, pipeline_id: int) -> Optional[datetime]:
+    def get_pipeline_next_run(self, pipeline_id: int) -> datetime | None:
         """Get next scheduled run time for a pipeline."""
-        from app.engine.scheduler import Scheduler
+        from app.engine.scheduler import Scheduler  # noqa: PLC0415
+
         scheduler = Scheduler(self.db_session)
         return scheduler.get_pipeline_next_run(pipeline_id)

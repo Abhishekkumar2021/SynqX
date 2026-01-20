@@ -1,35 +1,45 @@
-from typing import Optional, List
 import json
-import yaml
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, File, UploadFile, Response
-from sqlalchemy.orm import Session
 
-from app import models
-from app.api import deps
+import yaml
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
+from sqlalchemy.orm import Session
+from synqx_core.models.enums import PipelineStatus
 from synqx_core.schemas.pipeline import (
+    PipelineBackfillRequest,
     PipelineCreate,
-    PipelineRead,
-    PipelineUpdate,
     PipelineDetailRead,
+    PipelineDiffResponse,
     PipelineListResponse,
+    PipelinePublishRequest,
+    PipelinePublishResponse,
+    PipelineRead,
+    PipelineStatsResponse,
+    PipelineTriggerRequest,
+    PipelineTriggerResponse,
+    PipelineUpdate,
+    PipelineValidationResponse,
     PipelineVersionCreate,
     PipelineVersionRead,
     PipelineVersionSummary,
-    PipelineTriggerRequest,
-    PipelineTriggerResponse,
-    PipelineBackfillRequest,
-    PipelinePublishRequest,
-    PipelinePublishResponse,
-    PipelineValidationResponse,
-    PipelineStatsResponse,
-    PipelineDiffResponse,
 )
-from app.services.pipeline_service import PipelineService
-from app.services.gitops_service import GitOpsService
-from app.services.audit_service import AuditService
+
+from app import models
+from app.api import deps
 from app.core.errors import AppError, ConfigurationError
 from app.core.logging import get_logger
-from synqx_core.models.enums import PipelineStatus
+from app.services.audit_service import AuditService
+from app.services.gitops_service import GitOpsService
+from app.services.pipeline_service import PipelineService
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -47,17 +57,17 @@ def create_pipeline(
     validate_dag: bool = Query(
         True, description="Validate DAG structure before creation"
     ),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_editor),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_editor),  # noqa: B008
 ):
     try:
         service = PipelineService(db)
         pipeline = service.create_pipeline(
-            pipeline_create, 
-            validate_dag=validate_dag, 
+            pipeline_create,
+            validate_dag=validate_dag,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
 
         AuditService.log_event(
@@ -67,14 +77,17 @@ def create_pipeline(
             event_type="pipeline.create",
             target_type="Pipeline",
             target_id=pipeline.id,
-            details={"name": pipeline.name}
+            details={"name": pipeline.name},
         )
 
         response = PipelineDetailRead.model_validate(pipeline)
 
         if pipeline.published_version_id:
             version_detail = service.get_pipeline_version(
-                pipeline.id, pipeline.published_version_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id
+                pipeline.id,
+                pipeline.published_version_id,
+                user_id=current_user.id,
+                workspace_id=current_user.active_workspace_id,
             )
             if version_detail:
                 response.published_version = PipelineVersionRead.model_validate(
@@ -85,19 +98,19 @@ def create_pipeline(
 
     except ConfigurationError as e:
         logger.error(f"Configuration error creating pipeline: {e}")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"error": "Configuration error", "message": str(e)},
         )
     except AppError as e:
         logger.error(f"Error creating pipeline: {e}")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Bad request", "message": str(e)},
         )
     except Exception as e:
         logger.error(f"Unexpected error creating pipeline: {e}", exc_info=True)
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -114,10 +127,10 @@ def create_pipeline(
     description="Create or update a pipeline from a YAML definition",
 )
 def import_pipeline(
-    file: UploadFile = File(...),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_editor),
+    file: UploadFile = File(...),  # noqa: B008
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_editor),  # noqa: B008
 ):
     try:
         content = file.file.read()
@@ -125,7 +138,7 @@ def import_pipeline(
         pipeline = GitOpsService.import_pipeline_from_dict(
             db, data, current_user.active_workspace_id, current_user.id
         )
-        
+
         AuditService.log_event(
             db,
             user_id=current_user.id,
@@ -133,13 +146,13 @@ def import_pipeline(
             event_type="pipeline.import",
             target_type="Pipeline",
             target_id=pipeline.id,
-            details={"name": pipeline.name}
+            details={"name": pipeline.name},
         )
-        
+
         return PipelineRead.model_validate(pipeline)
     except Exception as e:
         logger.error(f"Failed to import YAML: {e}")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Import failed", "message": str(e)},
         )
@@ -152,22 +165,22 @@ def import_pipeline(
     description="List all pipelines with optional filtering",
 )
 def list_pipelines(
-    status_filter: Optional[PipelineStatus] = Query(
+    status_filter: PipelineStatus | None = Query(  # noqa: B008
         None, description="Filter by pipeline status"
     ),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     try:
         service = PipelineService(db)
         pipelines, total = service.list_pipelines(
-            status=status_filter, 
-            limit=limit, 
-            offset=offset, 
+            status=status_filter,
+            limit=limit,
+            offset=offset,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
 
         return PipelineListResponse(
@@ -179,7 +192,7 @@ def list_pipelines(
 
     except Exception as e:
         logger.error(f"Error listing pipelines: {e}", exc_info=True)
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -196,11 +209,15 @@ def list_pipelines(
 )
 def get_pipeline(
     pipeline_id: int,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     service = PipelineService(db)
-    pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+    pipeline = service.get_pipeline(
+        pipeline_id,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+    )
 
     if not pipeline:
         raise HTTPException(
@@ -215,7 +232,10 @@ def get_pipeline(
 
     if pipeline.published_version_id:
         version_detail = service.get_pipeline_version(
-            pipeline.id, pipeline.published_version_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id
+            pipeline.id,
+            pipeline.published_version_id,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
         )
         if version_detail:
             response.published_version = PipelineVersionRead.model_validate(
@@ -227,7 +247,10 @@ def get_pipeline(
         # Relationship is ordered by version desc in the model
         latest_v = pipeline.versions[0]
         latest_detail = service.get_pipeline_version(
-            pipeline.id, latest_v.id, user_id=current_user.id, workspace_id=current_user.active_workspace_id
+            pipeline.id,
+            latest_v.id,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
         )
         if latest_detail:
             response.latest_version = PipelineVersionRead.model_validate(latest_detail)
@@ -256,28 +279,34 @@ def get_pipeline(
 )
 def export_pipeline(
     pipeline_id: int,
-    version_id: Optional[int] = Query(None, description="Specific version to export"),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    version_id: int | None = Query(None, description="Specific version to export"),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     service = PipelineService(db)
-    pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
-    
+    pipeline = service.get_pipeline(
+        pipeline_id,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+    )
+
     if not pipeline:
         raise HTTPException(status_code=404, detail="Pipeline not found")
-        
+
     try:
-        yaml_content = GitOpsService.export_pipeline_to_yaml(db, pipeline_id, version_id)
+        yaml_content = GitOpsService.export_pipeline_to_yaml(
+            db, pipeline_id, version_id
+        )
         filename = f"synqx_{pipeline.name.lower().replace(' ', '_')}.yaml"
-        
+
         return Response(
             content=yaml_content,
             media_type="application/x-yaml",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
         logger.error(f"Export failed: {e}")
-        raise HTTPException(status_code=500, detail="Export failed")
+        raise HTTPException(status_code=500, detail="Export failed")  # noqa: B904
 
 
 @router.patch(
@@ -289,17 +318,17 @@ def export_pipeline(
 def update_pipeline(
     pipeline_id: int,
     pipeline_update: PipelineUpdate,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_editor),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_editor),  # noqa: B008
 ):
     try:
         service = PipelineService(db)
         pipeline = service.update_pipeline(
-            pipeline_id, 
-            pipeline_update, 
+            pipeline_id,
+            pipeline_update,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
 
         AuditService.log_event(
@@ -309,7 +338,7 @@ def update_pipeline(
             event_type="pipeline.update",
             target_type="Pipeline",
             target_id=pipeline.id,
-            details={"updated_fields": pipeline_update.model_dump(exclude_unset=True)}
+            details={"updated_fields": pipeline_update.model_dump(exclude_unset=True)},
         )
 
         return PipelineRead.model_validate(pipeline)
@@ -317,11 +346,11 @@ def update_pipeline(
     except AppError as e:
         logger.error(f"Error updating pipeline {pipeline_id}: {e}")
         if "not found" in str(e).lower():
-            raise HTTPException(
+            raise HTTPException(  # noqa: B904
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"error": "Not found", "message": str(e)},
             )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Bad request", "message": str(e)},
         )
@@ -329,7 +358,7 @@ def update_pipeline(
         logger.error(
             f"Unexpected error updating pipeline {pipeline_id}: {e}", exc_info=True
         )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -342,26 +371,30 @@ def update_pipeline(
     "/{pipeline_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete Pipeline",
-    description="Soft delete a pipeline (marks as deleted, doesn't remove from database)",
+    description="Soft delete a pipeline (marks as deleted, doesn't remove from database)",  # noqa: E501
 )
 def delete_pipeline(
     pipeline_id: int,
     hard_delete: bool = Query(False, description="Permanently delete from database"),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_admin),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_admin),  # noqa: B008
 ) -> None:
     try:
         service = PipelineService(db)
         # Fetch name before deletion for audit trail
-        pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+        pipeline = service.get_pipeline(
+            pipeline_id,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+        )
         pipeline_name = pipeline.name if pipeline else "Unknown"
 
         service.delete_pipeline(
-            pipeline_id, 
-            hard_delete=hard_delete, 
+            pipeline_id,
+            hard_delete=hard_delete,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
 
         AuditService.log_event(
@@ -371,7 +404,7 @@ def delete_pipeline(
             event_type="pipeline.delete",
             target_type="Pipeline",
             target_id=pipeline_id,
-            details={"name": pipeline_name, "hard_delete": hard_delete}
+            details={"name": pipeline_name, "hard_delete": hard_delete},
         )
 
         return None
@@ -379,11 +412,11 @@ def delete_pipeline(
     except AppError as e:
         logger.error(f"Error deleting pipeline {pipeline_id}: {e}")
         if "not found" in str(e).lower():
-            raise HTTPException(
+            raise HTTPException(  # noqa: B904
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"error": "Not found", "message": str(e)},
             )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Bad request", "message": str(e)},
         )
@@ -391,7 +424,7 @@ def delete_pipeline(
         logger.error(
             f"Unexpected error deleting pipeline {pipeline_id}: {e}", exc_info=True
         )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -408,10 +441,10 @@ def delete_pipeline(
 )
 def trigger_pipeline_run(
     pipeline_id: int,
-    trigger_request: PipelineTriggerRequest = Body(...),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_editor),
+    trigger_request: PipelineTriggerRequest = Body(...),  # noqa: B008
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_editor),  # noqa: B008
 ):
     try:
         service = PipelineService(db)
@@ -423,7 +456,7 @@ def trigger_pipeline_run(
             user_id=current_user.id,
             workspace_id=current_user.active_workspace_id,
             is_backfill=trigger_request.is_backfill,
-            backfill_config=trigger_request.backfill_config
+            backfill_config=trigger_request.backfill_config,
         )
 
         AuditService.log_event(
@@ -433,7 +466,11 @@ def trigger_pipeline_run(
             event_type="pipeline.trigger",
             target_type="Pipeline",
             target_id=pipeline_id,
-            details={"job_id": result["job_id"], "version_id": trigger_request.version_id, "is_backfill": trigger_request.is_backfill}
+            details={
+                "job_id": result["job_id"],
+                "version_id": trigger_request.version_id,
+                "is_backfill": trigger_request.is_backfill,
+            },
         )
 
         return PipelineTriggerResponse(
@@ -448,11 +485,11 @@ def trigger_pipeline_run(
     except AppError as e:
         logger.error(f"Error triggering pipeline {pipeline_id}: {e}")
         if "not found" in str(e).lower():
-            raise HTTPException(
+            raise HTTPException(  # noqa: B904
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"error": "Not found", "message": str(e)},
             )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Bad request", "message": str(e)},
         )
@@ -460,7 +497,7 @@ def trigger_pipeline_run(
         logger.error(
             f"Unexpected error triggering pipeline {pipeline_id}: {e}", exc_info=True
         )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -472,36 +509,45 @@ def trigger_pipeline_run(
 @router.post(
     "/{pipeline_id}/backfill",
     summary="Trigger Date-Range Backfill",
-    description="Trigger multiple pipeline runs for each day in the specified range."
+    description="Trigger multiple pipeline runs for each day in the specified range.",
 )
 def backfill_pipeline(
     pipeline_id: int,
     backfill_request: PipelineBackfillRequest,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_editor),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_editor),  # noqa: B008
 ):
     try:
         service = PipelineService(db)
-        
+
         # Calculate days
-        from datetime import timedelta
-        start = backfill_request.start_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        end = backfill_request.end_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        
+        from datetime import timedelta  # noqa: PLC0415
+
+        start = backfill_request.start_date.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        end = backfill_request.end_date.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
         if start > end:
-            raise HTTPException(status_code=400, detail="Start date must be before end date")
-            
+            raise HTTPException(
+                status_code=400, detail="Start date must be before end date"
+            )
+
         days = (end - start).days + 1
-        if days > 31:
-            raise HTTPException(status_code=400, detail="Backfill range limited to 31 days per request")
-            
+        if days > 31:  # noqa: PLR2004
+            raise HTTPException(
+                status_code=400, detail="Backfill range limited to 31 days per request"
+            )
+
         jobs_started = []
-        
+
         curr = start
         while curr <= end:
             day_str = curr.strftime("%Y-%m-%d")
-            
+
             result = service.trigger_pipeline_run(
                 pipeline_id=pipeline_id,
                 version_id=backfill_request.version_id,
@@ -512,12 +558,12 @@ def backfill_pipeline(
                 backfill_config={
                     "date": day_str,
                     "start_time": curr.isoformat(),
-                    "end_time": (curr + timedelta(days=1)).isoformat()
-                }
+                    "end_time": (curr + timedelta(days=1)).isoformat(),
+                },
             )
             jobs_started.append(result["job_id"])
             curr += timedelta(days=1)
-            
+
         AuditService.log_event(
             db,
             user_id=current_user.id,
@@ -525,19 +571,23 @@ def backfill_pipeline(
             event_type="pipeline.backfill",
             target_type="Pipeline",
             target_id=pipeline_id,
-            details={"job_count": len(jobs_started), "start": start.isoformat(), "end": end.isoformat()}
+            details={
+                "job_count": len(jobs_started),
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+            },
         )
-        
+
         return {
             "message": f"Successfully initiated {len(jobs_started)} backfill runs.",
-            "job_ids": jobs_started
+            "job_ids": jobs_started,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Backfill failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))  # noqa: B904
 
 
 @router.post(
@@ -550,40 +600,40 @@ def backfill_pipeline(
 def create_pipeline_version(
     pipeline_id: int,
     version_create: PipelineVersionCreate,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_editor),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_editor),  # noqa: B008
 ):
     try:
         service = PipelineService(db)
         version = service.create_pipeline_version(
-            pipeline_id, 
-            version_create, 
+            pipeline_id,
+            version_create,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
         return PipelineVersionRead.model_validate(version)
 
     except ConfigurationError as e:
         logger.error(f"Configuration error creating version: {e}")
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"error": "Configuration error", "message": str(e)},
         )
     except AppError as e:
         logger.error(f"Error creating version for pipeline {pipeline_id}: {e}")
         if "not found" in str(e).lower():
-            raise HTTPException(
+            raise HTTPException(  # noqa: B904
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"error": "Not found", "message": str(e)},
             )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Bad request", "message": str(e)},
         )
     except Exception as e:
         logger.error(f"Unexpected error creating version: {e}", exc_info=True)
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -594,17 +644,21 @@ def create_pipeline_version(
 
 @router.get(
     "/{pipeline_id}/versions",
-    response_model=List[PipelineVersionSummary],
+    response_model=list[PipelineVersionSummary],
     summary="List Pipeline Versions",
     description="Get all versions of a pipeline",
 )
 def list_pipeline_versions(
     pipeline_id: int,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     service = PipelineService(db)
-    pipeline = service.get_pipeline(pipeline_id, user_id=current_user.id, workspace_id=current_user.active_workspace_id)
+    pipeline = service.get_pipeline(
+        pipeline_id,
+        user_id=current_user.id,
+        workspace_id=current_user.active_workspace_id,
+    )
 
     if not pipeline:
         raise HTTPException(
@@ -641,15 +695,15 @@ def list_pipeline_versions(
 def get_pipeline_version(
     pipeline_id: int,
     version_id: int,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     service = PipelineService(db)
     version = service.get_pipeline_version(
-        pipeline_id, 
-        version_id, 
+        pipeline_id,
+        version_id,
         user_id=current_user.id,
-        workspace_id=current_user.active_workspace_id
+        workspace_id=current_user.active_workspace_id,
     )
 
     if not version:
@@ -668,23 +722,23 @@ def get_pipeline_version(
     "/{pipeline_id}/versions/{version_id}/publish",
     response_model=PipelinePublishResponse,
     summary="Publish Pipeline Version",
-    description="Publish a specific version, making it the active version for execution",
+    description="Publish a specific version, making it the active version for execution",  # noqa: E501
 )
 def publish_pipeline_version(
     pipeline_id: int,
     version_id: int,
-    publish_request: PipelinePublishRequest = Body(...),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_editor),
+    publish_request: PipelinePublishRequest = Body(...),  # noqa: B008
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_editor),  # noqa: B008
 ):
     try:
         service = PipelineService(db)
         version = service.publish_version(
-            pipeline_id, 
-            version_id, 
+            pipeline_id,
+            version_id,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
 
         AuditService.log_event(
@@ -694,7 +748,7 @@ def publish_pipeline_version(
             event_type="pipeline.publish",
             target_type="Pipeline",
             target_id=pipeline_id,
-            details={"version_id": version_id, "version_number": version.version}
+            details={"version_id": version_id, "version_number": version.version},
         )
 
         return PipelinePublishResponse(
@@ -709,17 +763,17 @@ def publish_pipeline_version(
             f"Error publishing version {version_id} for pipeline {pipeline_id}: {e}"
         )
         if "not found" in str(e).lower():
-            raise HTTPException(
+            raise HTTPException(  # noqa: B904
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"error": "Not found", "message": str(e)},
             )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "Bad request", "message": str(e)},
         )
     except Exception as e:
         logger.error(f"Unexpected error publishing version: {e}", exc_info=True)
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -736,15 +790,15 @@ def publish_pipeline_version(
 )
 def validate_pipeline(
     pipeline_id: int,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     try:
         service = PipelineService(db)
         pipeline = service.get_pipeline(
-            pipeline_id, 
+            pipeline_id,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
 
         if not pipeline:
@@ -757,10 +811,10 @@ def validate_pipeline(
             )
 
         version = service.get_pipeline_version(
-            pipeline_id, 
-            None, 
+            pipeline_id,
+            None,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
 
         if not version:
@@ -792,7 +846,7 @@ def validate_pipeline(
 
     except Exception as e:
         logger.error(f"Error validating pipeline {pipeline_id}: {e}", exc_info=True)
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -809,19 +863,19 @@ def validate_pipeline(
 )
 def get_pipeline_stats(
     pipeline_id: int,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     try:
-        from sqlalchemy import func
-        from synqx_core.models.execution import Job
-        from synqx_core.models.enums import JobStatus
+        from sqlalchemy import func  # noqa: PLC0415
+        from synqx_core.models.enums import JobStatus  # noqa: PLC0415
+        from synqx_core.models.execution import Job  # noqa: PLC0415
 
         service = PipelineService(db)
         pipeline = service.get_pipeline(
-            pipeline_id, 
+            pipeline_id,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
 
         if not pipeline:
@@ -833,7 +887,7 @@ def get_pipeline_stats(
                 },
             )
 
-        # Assuming jobs are not strictly user-scoped beyond pipeline scope, 
+        # Assuming jobs are not strictly user-scoped beyond pipeline scope,
         # but we found the pipeline via user_id, so it is safe.
         total_runs = (
             db.query(func.count(Job.id)).filter(Job.pipeline_id == pipeline_id).scalar()
@@ -855,7 +909,8 @@ def get_pipeline_stats(
         )
 
         # Calculate total quarantined rows across all runs
-        from synqx_core.models.execution import PipelineRun
+        from synqx_core.models.execution import PipelineRun  # noqa: PLC0415
+
         total_quarantined = (
             db.query(func.coalesce(func.sum(PipelineRun.total_failed), 0))
             .filter(PipelineRun.pipeline_id == pipeline_id)
@@ -877,7 +932,7 @@ def get_pipeline_stats(
             func.avg(
                 func.coalesce(
                     Job.execution_time_ms,
-                    func.extract('epoch', Job.completed_at - Job.started_at) * 1000
+                    func.extract("epoch", Job.completed_at - Job.started_at) * 1000,
                 )
             )
         ).filter(
@@ -886,9 +941,11 @@ def get_pipeline_stats(
             Job.completed_at.isnot(None),
             Job.started_at.isnot(None),
         )
-        
+
         avg_duration_ms = avg_duration_query.scalar()
-        avg_duration_seconds = (float(avg_duration_ms) / 1000.0) if avg_duration_ms is not None else None
+        avg_duration_seconds = (
+            (float(avg_duration_ms) / 1000.0) if avg_duration_ms is not None else None
+        )
 
         last_run = (
             db.query(Job.completed_at)
@@ -919,7 +976,7 @@ def get_pipeline_stats(
         logger.error(
             f"Error getting stats for pipeline {pipeline_id}: {e}", exc_info=True
         )
-        raise HTTPException(
+        raise HTTPException(  # noqa: B904
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "error": "Internal server error",
@@ -932,129 +989,142 @@ def get_pipeline_stats(
     "/{pipeline_id}/diff",
     response_model=PipelineDiffResponse,
     summary="Diff Two Pipeline Versions",
-    description="Compare two versions of a pipeline and return structural and config differences"
+    description="Compare two versions of a pipeline and return structural and config differences",  # noqa: E501
 )
 def get_pipeline_diff(
     pipeline_id: int,
     base_v: int = Query(..., description="Base version ID"),
     target_v: int = Query(..., description="Target version ID"),
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     try:
-        from deepdiff import DeepDiff
+        from deepdiff import DeepDiff  # noqa: PLC0415
+
         service = PipelineService(db)
-        
+
         v1 = service.get_pipeline_version(
-            pipeline_id, 
-            base_v, 
+            pipeline_id,
+            base_v,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
         v2 = service.get_pipeline_version(
-            pipeline_id, 
-            target_v, 
+            pipeline_id,
+            target_v,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
-        
+
         if not v1 or not v2:
-            raise HTTPException(status_code=404, detail="One or both versions not found")
-            
+            raise HTTPException(
+                status_code=404, detail="One or both versions not found"
+            )
+
         # Diff Nodes
         v1_nodes = {n.node_id: n for n in v1.nodes}
         v2_nodes = {n.node_id: n for n in v2.nodes}
-        
+
         added_nodes = [nid for nid in v2_nodes if nid not in v1_nodes]
         removed_nodes = [nid for nid in v1_nodes if nid not in v2_nodes]
         modified_nodes = []
-        
-        for nid in v1_nodes:
+
+        for nid in v1_nodes:  # noqa: PLC0206
             if nid in v2_nodes:
                 n1, n2 = v1_nodes[nid], v2_nodes[nid]
-                
+
                 # Ensure configs are dicts
                 c1 = n1.config if isinstance(n1.config, dict) else {}
                 c2 = n2.config if isinstance(n2.config, dict) else {}
 
                 # Create a copy for comparison that ignores UI position noise
-                comp_c1 = {k: v for k, v in c1.items() if k != 'ui'}
-                comp_c2 = {k: v for k, v in c2.items() if k != 'ui'}
+                comp_c1 = {k: v for k, v in c1.items() if k != "ui"}
+                comp_c2 = {k: v for k, v in c2.items() if k != "ui"}
 
                 # Compare critical attributes and config
                 ddiff = DeepDiff(comp_c1, comp_c2, ignore_order=True)
                 config_diff_raw = json.loads(ddiff.to_json()) if ddiff else {}
-                
+
                 name_changed = n1.name != n2.name
                 type_changed = n1.operator_type != n2.operator_type
-                
-                if (name_changed or type_changed or config_diff_raw):
+
+                if name_changed or type_changed or config_diff_raw:
                     changes = {}
-                    if name_changed: 
+                    if name_changed:
                         changes["name"] = {"from": n1.name, "to": n2.name}
-                    if type_changed: 
-                        changes["operator_type"] = {"from": n1.operator_type, "to": n2.operator_type}
-                    if config_diff_raw: 
+                    if type_changed:
+                        changes["operator_type"] = {
+                            "from": n1.operator_type,
+                            "to": n2.operator_type,
+                        }
+                    if config_diff_raw:
                         changes["config"] = config_diff_raw
-                    
-                    modified_nodes.append({
-                        "node_id": nid,
-                        "changes": changes
-                    })
+
+                    modified_nodes.append({"node_id": nid, "changes": changes})
 
         # Diff Edges using logical node_id strings
-        v1_edges = {f"{e.from_node.node_id}->{e.to_node.node_id}" for e in v1.edges if e.from_node and e.to_node}
-        v2_edges = {f"{e.from_node.node_id}->{e.to_node.node_id}" for e in v2.edges if e.from_node and e.to_node}
-        
+        v1_edges = {
+            f"{e.from_node.node_id}->{e.to_node.node_id}"
+            for e in v1.edges
+            if e.from_node and e.to_node
+        }
+        v2_edges = {
+            f"{e.from_node.node_id}->{e.to_node.node_id}"
+            for e in v2.edges
+            if e.from_node and e.to_node
+        }
+
         added_edges = list(v2_edges - v1_edges)
         removed_edges = list(v1_edges - v2_edges)
-        
+
         return {
             "base_version": v1.version,
             "target_version": v2.version,
             "nodes": {
                 "added": added_nodes,
                 "removed": removed_nodes,
-                "modified": modified_nodes
+                "modified": modified_nodes,
             },
-            "edges": {
-                "added": added_edges,
-                "removed": removed_edges
-            }
+            "edges": {"added": added_edges, "removed": removed_edges},
         }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error diffing versions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))  # noqa: B904
+
 
 @router.get(
     "/{pipeline_id}/watermarks/{asset_id}",
     summary="Get Watermark State",
-    description="Get the current incremental sync state for a specific asset in this pipeline"
+    description="Get the current incremental sync state for a specific asset in this pipeline",  # noqa: E501
 )
 def get_pipeline_watermark(
     pipeline_id: int,
     asset_id: int,
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):
     try:
-        from synqx_core.models.execution import Watermark
+        from synqx_core.models.execution import Watermark  # noqa: PLC0415
+
         # Verify pipeline access
         service = PipelineService(db)
         pipeline = service.get_pipeline(
-            pipeline_id, 
+            pipeline_id,
             user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id
+            workspace_id=current_user.active_workspace_id,
         )
         if not pipeline:
             raise HTTPException(status_code=404, detail="Pipeline not found")
 
-        wm = db.query(Watermark).filter(
-            Watermark.pipeline_id == pipeline_id,
-            Watermark.asset_id == asset_id
-        ).first()
+        wm = (
+            db.query(Watermark)
+            .filter(
+                Watermark.pipeline_id == pipeline_id, Watermark.asset_id == asset_id
+            )
+            .first()
+        )
 
         if not wm:
             return {"last_value": None, "last_updated": None}
@@ -1062,10 +1132,10 @@ def get_pipeline_watermark(
         return {
             "last_value": wm.last_value,
             "last_updated": wm.last_updated,
-            "watermark_column": wm.watermark_column
+            "watermark_column": wm.watermark_column,
         }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting watermark: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error")  # noqa: B904

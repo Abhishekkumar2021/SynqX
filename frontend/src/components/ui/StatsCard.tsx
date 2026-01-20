@@ -1,142 +1,171 @@
-import React from 'react';
-import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import React from 'react'
+import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 
 interface StatsCardProps {
-    title: string;
-    value: string | number;
-    subtext?: string;
-    subtextSize?: string;
-    trend?: string;
-    trendUp?: boolean;
-    icon: LucideIcon;
-    active?: boolean;
-    variant?: 'primary' | 'success' | 'warning' | 'info' | 'destructive';
-    className?: string;
+  title: string
+  value: string | number
+  subtext?: string
+  subtextSize?: string
+  trend?: string
+  trendUp?: boolean
+  icon: LucideIcon
+  active?: boolean
+  variant?: 'primary' | 'success' | 'warning' | 'info' | 'destructive'
+  className?: string
 }
 
 export const StatsCard: React.FC<StatsCardProps> = ({
-    title,
-    value,
-    subtext,
-    subtextSize,
-    trend,
-    trendUp,
-    icon: Icon,
-    active,
-    variant = 'primary',
-    className
+  title,
+  value,
+  subtext,
+  subtextSize,
+  trend,
+  trendUp,
+  icon: Icon,
+  active,
+  variant = 'primary',
+  className,
 }) => {
-    const variantColors = {
-        primary: "text-primary bg-primary/10 border-primary/20 shadow-primary/5",
-        success: "text-success bg-success/10 border-success/20 shadow-success/5",
-        warning: "text-warning bg-warning/10 border-warning/20 shadow-warning/5",
-        info: "text-info bg-info/10 border-info/20 shadow-info/5",
-        destructive: "text-destructive bg-destructive/10 border-destructive/20 shadow-destructive/5",
-    };
+  const variantColors = {
+    primary: 'text-primary bg-primary/10 border-primary/20 shadow-primary/5',
+    success: 'text-success bg-success/10 border-success/20 shadow-success/5',
+    warning: 'text-warning bg-warning/10 border-warning/20 shadow-warning/5',
+    info: 'text-info bg-info/10 border-info/20 shadow-info/5',
+    destructive: 'text-destructive bg-destructive/10 border-destructive/20 shadow-destructive/5',
+  }
 
-    const ambientGlow = {
-        primary: "from-primary/10 to-transparent",
-        success: "from-success/10 to-transparent",
-        warning: "from-warning/10 to-transparent",
-        info: "from-info/10 to-transparent",
-        destructive: "from-destructive/10 to-transparent",
-    };
+  const ambientGlow = {
+    primary: 'from-primary/10 to-transparent',
+    success: 'from-success/10 to-transparent',
+    warning: 'from-warning/10 to-transparent',
+    info: 'from-info/10 to-transparent',
+    destructive: 'from-destructive/10 to-transparent',
+  }
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            whileHover={{ y: -4 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className={cn(
+        'relative group overflow-hidden rounded-2xl border border-white/10 p-1',
+        'bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-2xl transition-all duration-500',
+        'shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1',
+        'ring-1 ring-white/5 dark:ring-white/10',
+        active &&
+          'border-primary/40 ring-primary/20 shadow-[0_0_30px_-10px_rgba(var(--primary),0.3)]',
+        className
+      )}
+    >
+      {/* Top Rim Light - sharper */}
+      <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none z-20 opacity-50 group-hover:opacity-100 transition-opacity" />
+
+      <div className="relative z-10 p-6 md:p-8 flex flex-col h-full min-h-40 justify-between">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">
+              {title}
+            </p>
+            <div className="h-0.5 w-4 bg-muted-foreground/20 rounded-full group-hover:w-10 group-hover:bg-primary/40 transition-all duration-500" />
+          </div>
+          <div
             className={cn(
-                "relative group overflow-hidden rounded-2xl border border-white/10 p-1",
-                "bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-2xl transition-all duration-500",
-                "shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] hover:-translate-y-1",
-                "ring-1 ring-white/5 dark:ring-white/10",
-                active && "border-primary/40 ring-primary/20 shadow-[0_0_30px_-10px_rgba(var(--primary),0.3)]",
-                className
+              'p-3 rounded-2xl border transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg',
+              variantColors[variant]
             )}
-        >
-            {/* Top Rim Light - sharper */}
-            <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none z-20 opacity-50 group-hover:opacity-100 transition-opacity" />
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
 
-            <div className="relative z-10 p-6 md:p-8 flex flex-col h-full min-h-40 justify-between">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <div className="space-y-1.5">
-                        <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">{title}</p>
-                        <div className="h-0.5 w-4 bg-muted-foreground/20 rounded-full group-hover:w-10 group-hover:bg-primary/40 transition-all duration-500" />
-                    </div>
-                    <div className={cn(
-                        "p-3 rounded-2xl border transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg",
-                        variantColors[variant]
-                    )}>
-                        <Icon className="h-5 w-5" />
-                    </div>
+        {/* Value Section */}
+        <div className="space-y-4">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-4xl md:text-5xl font-bold tracking-tight tabular-nums text-foreground leading-none">
+              {value}
+            </h3>
+          </div>
+
+          {(trend || subtext) && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {trend && (
+                <div
+                  className={cn(
+                    'flex items-center px-2.5 py-1 rounded-xl border text-[10px] font-bold uppercase tracking-wider shadow-xs backdrop-blur-sm',
+                    trendUp
+                      ? 'text-success bg-success/10 border-success/20'
+                      : 'text-destructive bg-destructive/10 border-destructive/20'
+                  )}
+                >
+                  {trendUp ? (
+                    <TrendingUp className="mr-1.5 h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="mr-1.5 h-3 w-3" />
+                  )}
+                  {trend}
                 </div>
-
-                {/* Value Section */}
-                <div className="space-y-4">
-                    <div className="flex flex-col gap-1">
-                        <h3 className="text-4xl md:text-5xl font-bold tracking-tight tabular-nums text-foreground leading-none">
-                            {value}
-                        </h3>
-                    </div>
-
-                    {(trend || subtext) && (
-                        <div className="flex items-center gap-3 flex-wrap">
-                            {trend && (
-                                <div className={cn(
-                                    "flex items-center px-2.5 py-1 rounded-xl border text-[10px] font-bold uppercase tracking-wider shadow-xs backdrop-blur-sm",
-                                    trendUp
-                                        ? "text-success bg-success/10 border-success/20"
-                                        : "text-destructive bg-destructive/10 border-destructive/20"
-                                )}>
-                                    {trendUp ? <TrendingUp className="mr-1.5 h-3 w-3" /> : <TrendingDown className="mr-1.5 h-3 w-3" />}
-                                    {trend}
-                                </div>
-                            )}
-                            {subtext && (
-                                <span className={cn(
-                                    "text-muted-foreground/60 font-bold tracking-tight truncate uppercase text-[9px] tracking-widest",
-                                    subtextSize
-                                )}>
-                                    {subtext}
-                                </span>
-                            )}
-                        </div>
-                    )}
-                </div>
+              )}
+              {subtext && (
+                <span
+                  className={cn(
+                    'text-muted-foreground/60 font-bold tracking-tight truncate uppercase text-[9px] tracking-widest',
+                    subtextSize
+                  )}
+                >
+                  {subtext}
+                </span>
+              )}
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* --- Stylish Decorative Elements --- */}
-            
-            {/* Soft Ambient Inner Glow */}
-            <div className={cn(
-                "absolute inset-0 bg-linear-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none",
-                ambientGlow[variant]
-            )} />
+      {/* --- Stylish Decorative Elements --- */}
 
-            {/* Corner Light Burst */}
-            <div className={cn(
-                "absolute -top-24 -right-24 h-48 w-48 blur-[80px] opacity-0 group-hover:opacity-20 transition-opacity duration-1000 pointer-events-none rounded-full",
-                variant === 'primary' ? "bg-primary" : 
-                variant === 'success' ? "bg-success" :
-                variant === 'warning' ? "bg-warning" :
-                variant === 'info' ? "bg-info" : "bg-destructive"
-            )} />
+      {/* Soft Ambient Inner Glow */}
+      <div
+        className={cn(
+          'absolute inset-0 bg-linear-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none',
+          ambientGlow[variant]
+        )}
+      />
 
-            {/* Bottom Glow Bar */}
-            <div className={cn(
-                "absolute bottom-0 inset-x-12 h-0.5 opacity-0 group-hover:opacity-100 blur-sm transition-all duration-700",
-                variant === 'primary' ? "bg-primary" : 
-                variant === 'success' ? "bg-success" :
-                variant === 'warning' ? "bg-warning" :
-                variant === 'info' ? "bg-info" : "bg-destructive"
-            )} />
-        </motion.div>
-    );
-};
+      {/* Corner Light Burst */}
+      <div
+        className={cn(
+          'absolute -top-24 -right-24 h-48 w-48 blur-[80px] opacity-0 group-hover:opacity-20 transition-opacity duration-1000 pointer-events-none rounded-full',
+          variant === 'primary'
+            ? 'bg-primary'
+            : variant === 'success'
+              ? 'bg-success'
+              : variant === 'warning'
+                ? 'bg-warning'
+                : variant === 'info'
+                  ? 'bg-info'
+                  : 'bg-destructive'
+        )}
+      />
+
+      {/* Bottom Glow Bar */}
+      <div
+        className={cn(
+          'absolute bottom-0 inset-x-12 h-0.5 opacity-0 group-hover:opacity-100 blur-sm transition-all duration-700',
+          variant === 'primary'
+            ? 'bg-primary'
+            : variant === 'success'
+              ? 'bg-success'
+              : variant === 'warning'
+                ? 'bg-warning'
+                : variant === 'info'
+                  ? 'bg-info'
+                  : 'bg-destructive'
+        )}
+      />
+    </motion.div>
+  )
+}

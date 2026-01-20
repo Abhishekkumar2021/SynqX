@@ -1,33 +1,31 @@
 from datetime import datetime
-from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, asc
+from synqx_core.schemas.audit import AuditLogListResponse
 
 from app import models
 from app.api import deps
 from app.services.audit_service import AuditLog
-from synqx_core.schemas.audit import AuditLogListResponse
 
 router = APIRouter()
 
 
 @router.get("", response_model=AuditLogListResponse)
-def get_audit_logs(
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_admin),
+def get_audit_logs(  # noqa: PLR0913
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_admin),  # noqa: B008
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    user_id: Optional[int] = Query(None, description="Filter by user ID"),
-    event_type: Optional[str] = Query(None, description="Filter by event type"),
-    target_type: Optional[str] = Query(None, description="Filter by target type"),
-    target_id: Optional[int] = Query(None, description="Filter by target ID"),
-    status: Optional[str] = Query(
-        None, description="Filter by status (success/failure)"
-    ),
-    start_date: Optional[datetime] = Query(None, description="Filter by start date"),
-    end_date: Optional[datetime] = Query(None, description="Filter by end date"),
+    user_id: int | None = Query(None, description="Filter by user ID"),
+    event_type: str | None = Query(None, description="Filter by event type"),
+    target_type: str | None = Query(None, description="Filter by target type"),
+    target_id: int | None = Query(None, description="Filter by target ID"),
+    status: str | None = Query(None, description="Filter by status (success/failure)"),
+    start_date: datetime | None = Query(None, description="Filter by start date"),  # noqa: B008
+    end_date: datetime | None = Query(None, description="Filter by end date"),  # noqa: B008
     sort_by: str = Query("created_at", description="Field to sort by"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
 ):
@@ -66,22 +64,23 @@ def get_audit_logs(
 
 
 @router.get("/export")
-def export_audit_logs(
-    db: Session = Depends(deps.get_db),
-    current_user: models.User = Depends(deps.get_current_user),
-    _: models.WorkspaceMember = Depends(deps.require_admin),
-    user_id: Optional[int] = Query(None),
-    event_type: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    start_date: Optional[datetime] = Query(None),
-    end_date: Optional[datetime] = Query(None),
+def export_audit_logs(  # noqa: PLR0913
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_admin),  # noqa: B008
+    user_id: int | None = Query(None),
+    event_type: str | None = Query(None),
+    status: str | None = Query(None),
+    start_date: datetime | None = Query(None),  # noqa: B008
+    end_date: datetime | None = Query(None),  # noqa: B008
 ):
     """
     Export audit logs as CSV.
     """
-    import csv
-    import io
-    from fastapi.responses import StreamingResponse
+    import csv  # noqa: PLC0415
+    import io  # noqa: PLC0415
+
+    from fastapi.responses import StreamingResponse  # noqa: PLC0415
 
     query = db.query(AuditLog).filter(
         AuditLog.workspace_id == current_user.active_workspace_id

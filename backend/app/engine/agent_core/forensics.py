@@ -4,13 +4,14 @@ FILE 4: forensics.py - Enhanced Forensic Data Capture System
 =================================================================================
 """
 
-import os
 import json
+import os
 import shutil
 import threading
-from typing import Dict, Any, Optional, List
+from datetime import UTC, datetime
+from typing import Any
+
 import pandas as pd
-from datetime import datetime, timezone
 from synqx_core.utils.data import is_df_empty
 
 from app.core.logging import get_logger
@@ -41,13 +42,17 @@ class ForensicSniffer:
         # current_dir is backend/app/engine/agent_core
         # We need to go up 3 levels to reach 'backend'
         project_root = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
-        self.base_dir = os.path.join(project_root, ".synqx", "forensics", f"run_{run_id}")
+        self.base_dir = os.path.join(
+            project_root, ".synqx", "forensics", f"run_{run_id}"
+        )
         os.makedirs(self.base_dir, exist_ok=True)
 
         self._write_lock = threading.Lock()
-        self._row_counts: Dict[str, int] = {}
-        self._metadata: Dict[str, Dict] = {}
-        self._writers: Dict[str, Any] = {} # Keep writers open for active session performance
+        self._row_counts: dict[str, int] = {}
+        self._metadata: dict[str, dict] = {}
+        self._writers: dict[
+            str, Any
+        ] = {}  # Keep writers open for active session performance
 
         logger.debug(f"ForensicSniffer initialized at {self.base_dir}")
         self._write_metadata()
@@ -57,7 +62,7 @@ class ForensicSniffer:
         node_id: int,
         chunk: Any,
         direction: str = "out",
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ):
         """
         Thread-safe chunk capture with optimized batching using native PyArrow writers.
@@ -66,9 +71,9 @@ class ForensicSniffer:
             return
 
         try:
-            import pyarrow as pa
-            import pyarrow.parquet as pq
-            
+            import pyarrow as pa  # noqa: PLC0415
+            import pyarrow.parquet as pq  # noqa: PLC0415
+
             # Standardize on Pandas for PyArrow conversion if it's Polars
             if hasattr(chunk, "to_pandas"):
                 p_chunk = chunk.to_pandas()
@@ -83,7 +88,7 @@ class ForensicSniffer:
             with self._write_lock:
                 current_rows = self._row_counts.get(file_key, 0)
 
-                # Initialize row count from file if not in memory (e.g. distributed workers)
+                # Initialize row count from file if not in memory (e.g. distributed workers)  # noqa: E501
                 if current_rows == 0 and os.path.exists(file_path):
                     try:
                         current_rows = pq.read_metadata(file_path).num_rows
@@ -100,25 +105,23 @@ class ForensicSniffer:
                     if len(p_chunk) > available_space
                     else p_chunk
                 )
-                
+
                 rows_to_add = len(chunk_to_write)
                 if rows_to_add == 0:
                     return
 
                 # Convert to Arrow Table
                 table = pa.Table.from_pandas(chunk_to_write, preserve_index=False)
-                
+
                 # Use pq.ParquetWriter for efficient streaming appends
                 if file_key not in self._writers:
                     # Initialize writer
                     self._writers[file_key] = pq.ParquetWriter(
-                        file_path, 
-                        table.schema, 
-                        compression=self.COMPRESSION
+                        file_path, table.schema, compression=self.COMPRESSION
                     )
-                
+
                 self._writers[file_key].write_table(table)
-                
+
                 new_count = current_rows + rows_to_add
                 self._row_counts[file_key] = new_count
 
@@ -126,16 +129,14 @@ class ForensicSniffer:
                     self._metadata[file_key] = {
                         "node_id": node_id,
                         "direction": direction,
-                        "first_capture": datetime.now(timezone.utc).isoformat(),
+                        "first_capture": datetime.now(UTC).isoformat(),
                         "schema": list(p_chunk.columns),
                         "dtypes": {
                             col: str(dtype) for col, dtype in p_chunk.dtypes.items()
                         },
                     }
 
-                self._metadata[file_key]["last_capture"] = datetime.now(
-                    timezone.utc
-                ).isoformat()
+                self._metadata[file_key]["last_capture"] = datetime.now(UTC).isoformat()
                 self._metadata[file_key]["total_rows"] = new_count
 
                 if metadata:
@@ -148,10 +149,10 @@ class ForensicSniffer:
 
     def fetch_slice(
         self, node_id: int, direction: str = "out", limit: int = 100, offset: int = 0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Read a slice of forensic data with guaranteed JSON serialization and existence check.
-        """
+        """  # noqa: E501
         try:
             file_path = os.path.join(
                 self.base_dir, f"node_{node_id}_{direction}.parquet"
@@ -165,7 +166,7 @@ class ForensicSniffer:
                     "offset": offset,
                     "limit": limit,
                     "has_more": False,
-                    "found": False # Indicator for missing buffer
+                    "found": False,  # Indicator for missing buffer
                 }
 
             df = pd.read_parquet(file_path, engine="pyarrow")
@@ -187,14 +188,16 @@ class ForensicSniffer:
                 "returned": len(rows),
                 "has_more": end_idx < total,
                 "metadata": self._metadata.get(f"{node_id}_{direction}", {}),
-                "found": True
+                "found": True,
             }
 
         except Exception as e:
-            logger.error(f"Forensic data retrieval fault for node #{node_id} ({direction}): {e}")
+            logger.error(
+                f"Forensic data retrieval fault for node #{node_id} ({direction}): {e}"
+            )
             return {"rows": [], "columns": [], "total_cached": 0, "error": str(e)}
 
-    def get_node_summary(self, node_id: int) -> Dict[str, Any]:
+    def get_node_summary(self, node_id: int) -> dict[str, Any]:
         """Get summary of captured data for a specific node"""
         summary = {"node_id": node_id, "inputs": {}, "outputs": {}}
 
@@ -216,7 +219,7 @@ class ForensicSniffer:
 
         return summary
 
-    def get_run_summary(self) -> Dict[str, Any]:
+    def get_run_summary(self) -> dict[str, Any]:
         """Get summary of all forensic data for this run"""
         nodes = set()
         total_rows = 0
@@ -226,7 +229,7 @@ class ForensicSniffer:
             if filename.endswith(".parquet"):
                 # Extract node_id from filename
                 parts = filename.replace(".parquet", "").split("_")
-                if len(parts) >= 2:
+                if len(parts) >= 2:  # noqa: PLR2004
                     nodes.add(int(parts[1]))
 
                 file_path = os.path.join(self.base_dir, filename)
@@ -252,7 +255,7 @@ class ForensicSniffer:
                 json.dump(
                     {
                         "run_id": self.run_id,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "created_at": datetime.now(UTC).isoformat(),
                         "captures": self._metadata,
                     },
                     f,
@@ -263,7 +266,7 @@ class ForensicSniffer:
 
     def cleanup(self):
         """Clean up forensic data for this run"""
-        self.close() # Ensure writers are closed before deletion
+        self.close()  # Ensure writers are closed before deletion
         try:
             if os.path.exists(self.base_dir):
                 shutil.rmtree(self.base_dir)
@@ -297,7 +300,7 @@ class ForensicSniffer:
             logger.error(f"Failed to cleanup all forensic data: {e}")
 
     @staticmethod
-    def list_runs() -> List[Dict[str, Any]]:
+    def list_runs() -> list[dict[str, Any]]:
         """List all available forensic runs"""
         runs = []
         base_path = os.path.join(".synqx", "forensics")

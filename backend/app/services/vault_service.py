@@ -1,15 +1,17 @@
-from typing import Dict, Any
-import json
 import base64
 import hashlib
-from cryptography.fernet import Fernet
+import json
+from typing import Any
 
+from cryptography.fernet import Fernet
 from synqx_core.models.connections import Connection
-from app.core.errors import AppError, ConfigurationError
+
 from app.core.config import settings
+from app.core.errors import AppError, ConfigurationError
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
+
 
 class VaultService:
     """
@@ -33,7 +35,7 @@ class VaultService:
             raise AppError("System security initialization failed.") from e
 
     @classmethod
-    def encrypt_config(cls, config: Dict[str, Any]) -> str:
+    def encrypt_config(cls, config: dict[str, Any]) -> str:
         """
         Encrypts a configuration dictionary.
 
@@ -46,14 +48,14 @@ class VaultService:
         try:
             cipher = cls._get_cipher_suite()
             json_str = json.dumps(config)
-            encrypted_bytes = cipher.encrypt(json_str.encode('utf-8'))
-            return encrypted_bytes.decode('utf-8')
+            encrypted_bytes = cipher.encrypt(json_str.encode("utf-8"))
+            return encrypted_bytes.decode("utf-8")
         except Exception as e:
             logger.error(f"Failed to encrypt configuration: {e}")
             raise AppError(f"Configuration encryption failed: {e}") from e
 
     @classmethod
-    def decrypt_config(cls, encrypted_config: str) -> Dict[str, Any]:
+    def decrypt_config(cls, encrypted_config: str) -> dict[str, Any]:
         """
         Decrypts an encrypted configuration string.
 
@@ -65,14 +67,14 @@ class VaultService:
         """
         try:
             cipher = cls._get_cipher_suite()
-            decrypted_bytes = cipher.decrypt(encrypted_config.encode('utf-8'))
-            return json.loads(decrypted_bytes.decode('utf-8'))
+            decrypted_bytes = cipher.decrypt(encrypted_config.encode("utf-8"))
+            return json.loads(decrypted_bytes.decode("utf-8"))
         except Exception as e:
             logger.error(f"Failed to decrypt configuration: {e}")
             raise AppError(f"Configuration decryption failed: {e}") from e
 
     @classmethod
-    def get_connector_config(cls, connection: Connection) -> Dict[str, Any]:
+    def get_connector_config(cls, connection: Connection) -> dict[str, Any]:
         """
         Retrieves the decrypted configuration for a given connection.
 
@@ -83,22 +85,26 @@ class VaultService:
             A dictionary containing the connector configuration.
         """
         if not connection.config_encrypted:
-             # Fallback or error if no config is present
-             # In a real migration scenario, you might check for legacy fields
-             raise ConfigurationError(f"No configuration found for connection {connection.id}")
+            # Fallback or error if no config is present
+            # In a real migration scenario, you might check for legacy fields
+            raise ConfigurationError(
+                f"No configuration found for connection {connection.id}"
+            )
 
         try:
             decrypted_config = cls.decrypt_config(connection.config_encrypted)
-            
+
             # Merge metadata
             full_config = {
                 "id": connection.id,
                 "name": connection.name,
                 "connector_type": connection.connector_type.value,
-                **decrypted_config
+                **decrypted_config,
             }
             return full_config
         except AppError:
             raise
         except Exception as e:
-            raise AppError(f"Failed to retrieve connector configuration for {connection.id}: {e}") from e
+            raise AppError(
+                f"Failed to retrieve connector configuration for {connection.id}: {e}"
+            ) from e

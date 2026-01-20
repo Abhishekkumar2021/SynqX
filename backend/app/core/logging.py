@@ -1,7 +1,7 @@
 import logging
 import sys
-from pathlib import Path
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 import structlog
 from structlog.contextvars import bind_contextvars, clear_contextvars
@@ -22,7 +22,7 @@ def setup_logging() -> None:
     ]
 
     structlog.configure(
-        processors=shared_processors
+        processors=shared_processors  # noqa: RUF005
         + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
@@ -50,7 +50,6 @@ def setup_logging() -> None:
         console_handler.setFormatter(formatter)
         handlers.append(console_handler)
 
-
     if settings.LOG_FILE_ENABLED:
         log_path = Path(settings.LOG_FILE_PATH)
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -63,7 +62,7 @@ def setup_logging() -> None:
         )
         file_handler.setFormatter(formatter)
         handlers.append(file_handler)
-        
+
     root_logger = logging.getLogger()
     root_logger.handlers.clear()
 
@@ -84,8 +83,8 @@ def get_logger(name: str):
 
 
 __all__ = [
-    "setup_logging",
-    "get_logger",
     "bind_contextvars",
     "clear_contextvars",
+    "get_logger",
+    "setup_logging",
 ]

@@ -1,6 +1,6 @@
 ---
-title: "Introduction"
-description: "Core philosophy and architectural overview of the SynqX ETL Engine."
+title: 'Introduction'
+description: 'Core philosophy and architectural overview of the SynqX ETL Engine.'
 ---
 
 # Introduction
@@ -11,24 +11,27 @@ description: "Core philosophy and architectural overview of the SynqX ETL Engine
 
 The platform is built on four architectural pillars:
 
-| Pillar | Principle |
-| :--- | :--- |
-| **Immutability** | Pipelines are never edited in place. Every change creates a new, versioned snapshot, ensuring 100% reproducibility. |
-| **Observability** | Granular execution tracking at the job and step level provides a "Glass Box" experience for debugging. |
-| **Intelligence** | Automated schema inference and drift detection prevent structural changes from causing downstream corruption. |
-| **Resiliency** | Built-in retry mechanisms, concurrency controls, and high-watermark state management ensure reliability at scale. |
+| Pillar            | Principle                                                                                                           |
+| :---------------- | :------------------------------------------------------------------------------------------------------------------ |
+| **Immutability**  | Pipelines are never edited in place. Every change creates a new, versioned snapshot, ensuring 100% reproducibility. |
+| **Observability** | Granular execution tracking at the job and step level provides a "Glass Box" experience for debugging.              |
+| **Intelligence**  | Automated schema inference and drift detection prevent structural changes from causing downstream corruption.       |
+| **Resiliency**    | Built-in retry mechanisms, concurrency controls, and high-watermark state management ensure reliability at scale.   |
 
 ## Why SynqX?
 
 Data engineering teams frequently struggle with opaque failures, unversioned logic, and silent schema drift. SynqX resolves these challenges through:
 
 ### 1. Unified Logical Abstraction
+
 SynqX abstracts diverse physical systems (Postgres, S3, REST APIs) into a consistent logical model of **Connections** and **Assets**. This allow developers to define logic once and apply it across different infrastructures.
 
 ### 2. Native Schema Intelligence
+
 Every data asset is fingerprinted. The engine detects breaking changes in source systems before they reach your production data warehouse, enabling proactive incident management.
 
 ### 3. Real-time Forensic Orchestration
+
 Utilizing a distributed worker architecture powered by Celery and Redis, SynqX streams execution telemetry in real-time. Engineers can monitor row-level progress and resource utilization via a modern, unified console.
 
 ---
@@ -38,14 +41,14 @@ Utilizing a distributed worker architecture powered by Celery and Redis, SynqX s
 Explore the technical reference to start building reliable data pipelines.
 
 <Cards>
-  <Card 
-    title="Quickstart Guide" 
-    href="/docs/guides/first-pipeline" 
+  <Card
+    title="Quickstart Guide"
+    href="/docs/guides/first-pipeline"
     description="Deploy your first production-ready pipeline in minutes."
   />
-  <Card 
-    title="System Architecture" 
-    href="/docs/architecture" 
+  <Card
+    title="System Architecture"
+    href="/docs/architecture"
     description="Deep dive into the control plane and distributed worker engine."
   />
 </Cards>

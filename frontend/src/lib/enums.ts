@@ -1,231 +1,232 @@
 export const ConnectorType = {
-    // Relational
-    POSTGRESQL: "postgresql",
-    MYSQL: "mysql",
-    MARIADB: "mariadb",
-    MSSQL: "mssql",
-    ORACLE: "oracle",
-    SQLITE: "sqlite",
-    DUCKDB: "duckdb",
-    // NoSQL
-    MONGODB: "mongodb",
-    REDIS: "redis",
-    ELASTICSEARCH: "elasticsearch",
-    CASSANDRA: "cassandra",
-    DYNAMODB: "dynamodb",
-    // Warehouses
-    SNOWFLAKE: "snowflake",
-    BIGQUERY: "bigquery",
-    REDSHIFT: "redshift",
-    DATABRICKS: "databricks",
-    // File & Object Storage
-    LOCAL_FILE: "local_file",
-    S3: "s3",
-    GCS: "gcs",
-    AZURE_BLOB: "azure_blob",
-    FTP: "ftp",
-    SFTP: "sftp",
-    // APIs & Streams
-    REST_API: "rest_api",
-    GRAPHQL: "graphql",
-    KAFKA: "kafka",
-    RABBITMQ: "rabbitmq",
-    // SaaS
-    GOOGLE_SHEETS: "google_sheets",
-    AIRTABLE: "airtable",
-    SALESFORCE: "salesforce",
-    HUBSPOT: "hubspot",
-    STRIPE: "stripe",
-    // Generic
-    CUSTOM_SCRIPT: "custom_script",
-    SINGER_TAP: "singer_tap",
-    // Domain Specific
-    OSDU: "osdu",
-    PROSOURCE: "prosource"
-} as const;
-export type ConnectorType = typeof ConnectorType[keyof typeof ConnectorType];
+  // Relational
+  POSTGRESQL: 'postgresql',
+  MYSQL: 'mysql',
+  MARIADB: 'mariadb',
+  MSSQL: 'mssql',
+  ORACLE: 'oracle',
+  SQLITE: 'sqlite',
+  DUCKDB: 'duckdb',
+  // NoSQL
+  MONGODB: 'mongodb',
+  REDIS: 'redis',
+  ELASTICSEARCH: 'elasticsearch',
+  CASSANDRA: 'cassandra',
+  DYNAMODB: 'dynamodb',
+  // Warehouses
+  SNOWFLAKE: 'snowflake',
+  BIGQUERY: 'bigquery',
+  REDSHIFT: 'redshift',
+  DATABRICKS: 'databricks',
+  // File & Object Storage
+  LOCAL_FILE: 'local_file',
+  S3: 's3',
+  GCS: 'gcs',
+  AZURE_BLOB: 'azure_blob',
+  FTP: 'ftp',
+  SFTP: 'sftp',
+  // APIs & Streams
+  REST_API: 'rest_api',
+  GRAPHQL: 'graphql',
+  KAFKA: 'kafka',
+  RABBITMQ: 'rabbitmq',
+  // SaaS
+  GOOGLE_SHEETS: 'google_sheets',
+  AIRTABLE: 'airtable',
+  SALESFORCE: 'salesforce',
+  HUBSPOT: 'hubspot',
+  STRIPE: 'stripe',
+  // Generic
+  CUSTOM_SCRIPT: 'custom_script',
+  SINGER_TAP: 'singer_tap',
+  // Domain Specific
+  OSDU: 'osdu',
+  PROSOURCE: 'prosource',
+} as const
+export type ConnectorType = (typeof ConnectorType)[keyof typeof ConnectorType]
 
 export const AssetType = {
-    TABLE: "table",
-    VIEW: "view",
-    COLLECTION: "collection",
-    FILE: "file",
-    KEY_PATTERN: "key_pattern",
-    API_ENDPOINT: "endpoint",
-    STREAM: "stream",
-    SQL_QUERY: "sql_query",
-    NOSQL_QUERY: "nosql_query",
-    PYTHON_SCRIPT: "python",
-    SHELL_SCRIPT: "shell",
-    JAVASCRIPT_SCRIPT: "javascript",
-    // Domain Specific
-    OSDU_KIND: "osdu_kind",
-    DOMAIN_ENTITY: "domain_entity"
-} as const;
-export type AssetType = typeof AssetType[keyof typeof AssetType];
+  TABLE: 'table',
+  VIEW: 'view',
+  COLLECTION: 'collection',
+  FILE: 'file',
+  KEY_PATTERN: 'key_pattern',
+  API_ENDPOINT: 'endpoint',
+  STREAM: 'stream',
+  SQL_QUERY: 'sql_query',
+  NOSQL_QUERY: 'nosql_query',
+  PYTHON_SCRIPT: 'python',
+  SHELL_SCRIPT: 'shell',
+  JAVASCRIPT_SCRIPT: 'javascript',
+  // Domain Specific
+  OSDU_KIND: 'osdu_kind',
+  DOMAIN_ENTITY: 'domain_entity',
+} as const
+export type AssetType = (typeof AssetType)[keyof typeof AssetType]
 
 export const PipelineStatus = {
-    DRAFT: "draft",
-    ACTIVE: "active",
-    PAUSED: "paused",
-    ARCHIVED: "archived",
-    BROKEN: "broken"
-} as const;
-export type PipelineStatus = typeof PipelineStatus[keyof typeof PipelineStatus];
+  DRAFT: 'draft',
+  ACTIVE: 'active',
+  PAUSED: 'paused',
+  ARCHIVED: 'archived',
+  BROKEN: 'broken',
+} as const
+export type PipelineStatus = (typeof PipelineStatus)[keyof typeof PipelineStatus]
 
 export const PipelineRunStatus = {
-    PENDING: "pending",
-    INITIALIZING: "initializing",
-    RUNNING: "running",
-    COMPLETED: "completed",
-    PARTIAL_SUCCESS: "partial_success",
-    FAILED: "failed",
-    CANCELLED: "cancelled",
-    SKIPPED: "skipped"
-} as const;
-export type PipelineRunStatus = typeof PipelineRunStatus[keyof typeof PipelineRunStatus];
+  PENDING: 'pending',
+  INITIALIZING: 'initializing',
+  RUNNING: 'running',
+  COMPLETED: 'completed',
+  PARTIAL_SUCCESS: 'partial_success',
+  FAILED: 'failed',
+  CANCELLED: 'cancelled',
+  SKIPPED: 'skipped',
+} as const
+export type PipelineRunStatus = (typeof PipelineRunStatus)[keyof typeof PipelineRunStatus]
 
 export const OperatorType = {
-    EXTRACT: "extract",
-    TRANSFORM: "transform",
-    LOAD: "load",
-    VALIDATE: "validate",
-    NOOP: "noop",
-    MERGE: "merge",
-    UNION: "union",
-    JOIN: "join"
-} as const;
-export type OperatorType = typeof OperatorType[keyof typeof OperatorType];
+  EXTRACT: 'extract',
+  TRANSFORM: 'transform',
+  LOAD: 'load',
+  VALIDATE: 'validate',
+  NOOP: 'noop',
+  MERGE: 'merge',
+  UNION: 'union',
+  JOIN: 'join',
+} as const
+export type OperatorType = (typeof OperatorType)[keyof typeof OperatorType]
 
 export const OperatorRunStatus = {
-    PENDING: "pending",
-    RUNNING: "running",
-    SUCCESS: "success",
-    WARNING: "warning",
-    FAILED: "failed",
-    SKIPPED: "skipped"
-} as const;
-export type OperatorRunStatus = typeof OperatorRunStatus[keyof typeof OperatorRunStatus];
+  PENDING: 'pending',
+  RUNNING: 'running',
+  SUCCESS: 'success',
+  WARNING: 'warning',
+  FAILED: 'failed',
+  SKIPPED: 'skipped',
+} as const
+export type OperatorRunStatus = (typeof OperatorRunStatus)[keyof typeof OperatorRunStatus]
 
 export const JobStatus = {
-    PENDING: "pending",
-    QUEUED: "queued",
-    RUNNING: "running",
-    SUCCESS: "success",
-    FAILED: "failed",
-    RETRYING: "retrying",
-    CANCELLED: "cancelled"
-} as const;
-export type JobStatus = typeof JobStatus[keyof typeof JobStatus];
+  PENDING: 'pending',
+  QUEUED: 'queued',
+  RUNNING: 'running',
+  SUCCESS: 'success',
+  FAILED: 'failed',
+  RETRYING: 'retrying',
+  CANCELLED: 'cancelled',
+} as const
+export type JobStatus = (typeof JobStatus)[keyof typeof JobStatus]
 
 export const JobType = {
-    PIPELINE: "pipeline",
-    EXPLORER: "explorer",
-    METADATA: "metadata",
-    TEST: "test",
-    SYSTEM: "system",
-    FILE: "file"
-} as const;
-export type JobType = typeof JobType[keyof typeof JobType];
+  PIPELINE: 'pipeline',
+  EXPLORER: 'explorer',
+  METADATA: 'metadata',
+  TEST: 'test',
+  SYSTEM: 'system',
+  FILE: 'file',
+} as const
+export type JobType = (typeof JobType)[keyof typeof JobType]
 
 export const RetryStrategy = {
-    NONE: "none",
-    FIXED: "fixed",
-    EXPONENTIAL_BACKOFF: "exponential_backoff",
-    LINEAR_BACKOFF: "linear_backoff"
-} as const;
-export type RetryStrategy = typeof RetryStrategy[keyof typeof RetryStrategy];
+  NONE: 'none',
+  FIXED: 'fixed',
+  EXPONENTIAL_BACKOFF: 'exponential_backoff',
+  LINEAR_BACKOFF: 'linear_backoff',
+} as const
+export type RetryStrategy = (typeof RetryStrategy)[keyof typeof RetryStrategy]
 
 export const WriteStrategy = {
-    APPEND: "append",
-    OVERWRITE: "overwrite",
-    UPSERT: "upsert",
-    SCD2: "scd2"
-} as const;
-export type WriteStrategy = typeof WriteStrategy[keyof typeof WriteStrategy];
+  APPEND: 'append',
+  OVERWRITE: 'overwrite',
+  UPSERT: 'upsert',
+  SCD2: 'scd2',
+} as const
+export type WriteStrategy = (typeof WriteStrategy)[keyof typeof WriteStrategy]
 
 export const SyncMode = {
-    FULL_LOAD: "full_load",
-    INCREMENTAL: "incremental",
-    CDC: "cdc"
-} as const;
-export type SyncMode = typeof SyncMode[keyof typeof SyncMode];
+  FULL_LOAD: 'full_load',
+  INCREMENTAL: 'incremental',
+  CDC: 'cdc',
+} as const
+export type SyncMode = (typeof SyncMode)[keyof typeof SyncMode]
 
 export const SchemaEvolutionPolicy = {
-    STRICT: "strict",
-    EVOLVE: "evolve",
-    IGNORE: "ignore"
-} as const;
-export type SchemaEvolutionPolicy = typeof SchemaEvolutionPolicy[keyof typeof SchemaEvolutionPolicy];
+  STRICT: 'strict',
+  EVOLVE: 'evolve',
+  IGNORE: 'ignore',
+} as const
+export type SchemaEvolutionPolicy =
+  (typeof SchemaEvolutionPolicy)[keyof typeof SchemaEvolutionPolicy]
 
 export const DataDirection = {
-    SOURCE: "source",
-    DESTINATION: "destination",
-    INTERMEDIATE: "intermediate"
-} as const;
-export type DataDirection = typeof DataDirection[keyof typeof DataDirection];
+  SOURCE: 'source',
+  DESTINATION: 'destination',
+  INTERMEDIATE: 'intermediate',
+} as const
+export type DataDirection = (typeof DataDirection)[keyof typeof DataDirection]
 
 export const AlertLevel = {
-    INFO: "info",
-    SUCCESS: "success",
-    WARNING: "warning",
-    ERROR: "error",
-    CRITICAL: "critical"
-} as const;
-export type AlertLevel = typeof AlertLevel[keyof typeof AlertLevel];
+  INFO: 'info',
+  SUCCESS: 'success',
+  WARNING: 'warning',
+  ERROR: 'error',
+  CRITICAL: 'critical',
+} as const
+export type AlertLevel = (typeof AlertLevel)[keyof typeof AlertLevel]
 
 export const AlertStatus = {
-    PENDING: "pending",
-    SENDING: "sending",
-    SENT: "sent",
-    FAILED: "failed",
-    ACKNOWLEDGED: "acknowledged",
-    SKIPPED: "skipped"
-} as const;
-export type AlertStatus = typeof AlertStatus[keyof typeof AlertStatus];
+  PENDING: 'pending',
+  SENDING: 'sending',
+  SENT: 'sent',
+  FAILED: 'failed',
+  ACKNOWLEDGED: 'acknowledged',
+  SKIPPED: 'skipped',
+} as const
+export type AlertStatus = (typeof AlertStatus)[keyof typeof AlertStatus]
 
 export const AlertType = {
-    JOB_STARTED: "job_started",
-    JOB_FAILURE: "job_failure",
-    JOB_SUCCESS: "job_success",
-    DATA_QUALITY_FAILURE: "data_quality_failure",
-    SCHEMA_CHANGE_DETECTED: "schema_change_detected",
-    SLA_BREACH: "sla_breach",
-    MANUAL: "manual"
-} as const;
-export type AlertType = typeof AlertType[keyof typeof AlertType];
+  JOB_STARTED: 'job_started',
+  JOB_FAILURE: 'job_failure',
+  JOB_SUCCESS: 'job_success',
+  DATA_QUALITY_FAILURE: 'data_quality_failure',
+  SCHEMA_CHANGE_DETECTED: 'schema_change_detected',
+  SLA_BREACH: 'sla_breach',
+  MANUAL: 'manual',
+} as const
+export type AlertType = (typeof AlertType)[keyof typeof AlertType]
 
 export const AlertDeliveryMethod = {
-    EMAIL: "email",
-    SLACK: "slack",
-    TEAMS: "teams",
-    WEBHOOK: "webhook",
-    PAGERDUTY: "pagerduty",
-    IN_APP: "in_app"
-} as const;
-export type AlertDeliveryMethod = typeof AlertDeliveryMethod[keyof typeof AlertDeliveryMethod];
+  EMAIL: 'email',
+  SLACK: 'slack',
+  TEAMS: 'teams',
+  WEBHOOK: 'webhook',
+  PAGERDUTY: 'pagerduty',
+  IN_APP: 'in_app',
+} as const
+export type AlertDeliveryMethod = (typeof AlertDeliveryMethod)[keyof typeof AlertDeliveryMethod]
 
 export const WorkspaceRole = {
-    ADMIN: "admin",
-    EDITOR: "editor",
-    VIEWER: "viewer"
-} as const;
-export type WorkspaceRole = typeof WorkspaceRole[keyof typeof WorkspaceRole];
+  ADMIN: 'admin',
+  EDITOR: 'editor',
+  VIEWER: 'viewer',
+} as const
+export type WorkspaceRole = (typeof WorkspaceRole)[keyof typeof WorkspaceRole]
 
 export const AuditEvent = {
-    CREATE: "create",
-    UPDATE: "update",
-    DELETE: "delete",
-    LOGIN: "login",
-    EXPORT: "export",
-    ACTION: "action"
-} as const;
-export type AuditEvent = typeof AuditEvent[keyof typeof AuditEvent];
+  CREATE: 'create',
+  UPDATE: 'update',
+  DELETE: 'delete',
+  LOGIN: 'login',
+  EXPORT: 'export',
+  ACTION: 'action',
+} as const
+export type AuditEvent = (typeof AuditEvent)[keyof typeof AuditEvent]
 
 export const AgentStatus = {
-    ONLINE: "online",
-    OFFLINE: "offline",
-    BUSY: "busy",
-    MAINTENANCE: "maintenance"
-} as const;
-export type AgentStatus = typeof AgentStatus[keyof typeof AgentStatus];
+  ONLINE: 'online',
+  OFFLINE: 'offline',
+  BUSY: 'busy',
+  MAINTENANCE: 'maintenance',
+} as const
+export type AgentStatus = (typeof AgentStatus)[keyof typeof AgentStatus]

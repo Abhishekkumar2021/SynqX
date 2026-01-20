@@ -1,11 +1,11 @@
 from synqx_engine.connectors.factory import ConnectorFactory
-from synqx_engine.connectors.impl.nosql.mongodb import MongoDBConnector
-from synqx_engine.connectors.impl.nosql.dynamodb import DynamoDBConnector
 from synqx_engine.connectors.impl.nosql.cassandra import CassandraConnector
-from synqx_engine.connectors.impl.nosql.redis import RedisConnector
+from synqx_engine.connectors.impl.nosql.dynamodb import DynamoDBConnector
 from synqx_engine.connectors.impl.nosql.elasticsearch import ElasticsearchConnector
 from synqx_engine.connectors.impl.nosql.kafka import KafkaConnector
+from synqx_engine.connectors.impl.nosql.mongodb import MongoDBConnector
 from synqx_engine.connectors.impl.nosql.rabbitmq import RabbitMQConnector
+from synqx_engine.connectors.impl.nosql.redis import RedisConnector
 
 ConnectorFactory.register_connector("mongodb", MongoDBConnector)
 ConnectorFactory.register_connector("dynamodb", DynamoDBConnector)

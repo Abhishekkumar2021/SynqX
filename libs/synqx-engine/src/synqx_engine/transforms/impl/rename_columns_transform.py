@@ -1,7 +1,10 @@
-from typing import Iterator, List, Dict
+from collections.abc import Iterator
+
 import polars as pl
-from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.errors import ConfigurationError
+
+from synqx_engine.transforms.polars_base import PolarsTransform
+
 
 class RenameColumnsTransform(PolarsTransform):
     """
@@ -12,7 +15,9 @@ class RenameColumnsTransform(PolarsTransform):
 
     def validate_config(self) -> None:
         if "rename_map" not in self.config and "columns" not in self.config:
-            raise ConfigurationError("RenameColumnsTransform requires 'rename_map' or 'columns' as a dictionary in config.")
+            raise ConfigurationError(
+                "RenameColumnsTransform requires 'rename_map' or 'columns' as a dictionary in config."  # noqa: E501
+            )
 
     def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         rename_map = self.config.get("rename_map") or self.config.get("columns")
@@ -20,7 +25,7 @@ class RenameColumnsTransform(PolarsTransform):
             if df.is_empty():
                 yield df
                 continue
-            
+
             # Polars rename only handles columns that exist
             safe_map = {k: v for k, v in rename_map.items() if k in df.columns}
             if safe_map:
@@ -28,7 +33,7 @@ class RenameColumnsTransform(PolarsTransform):
             else:
                 yield df
 
-    def get_lineage_map(self, input_columns: List[str]) -> Dict[str, List[str]]:
+    def get_lineage_map(self, input_columns: list[str]) -> dict[str, list[str]]:
         rename_map = self.config.get("rename_map") or self.config.get("columns") or {}
         lineage = {}
         for col in input_columns:

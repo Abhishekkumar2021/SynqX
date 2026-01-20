@@ -1,12 +1,14 @@
 import asyncio
 import json
-from typing import Dict, Set, Optional
+
 from fastapi import WebSocket, WebSocketDisconnect
 from redis import asyncio as aioredis
+
 from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
+
 
 class ConnectionManager:
     """
@@ -14,15 +16,18 @@ class ConnectionManager:
     Uses a singleton-like pattern to share Redis listeners across multiple clients
     subscribing to the same channel.
     """
+
     def __init__(self):
         self.redis_url = settings.REDIS_URL
-        self._active_connections: Dict[str, Set[WebSocket]] = {}
-        self._redis_tasks: Dict[str, asyncio.Task] = {}
-        self._redis_client: Optional[aioredis.Redis] = None
+        self._active_connections: dict[str, set[WebSocket]] = {}
+        self._redis_tasks: dict[str, asyncio.Task] = {}
+        self._redis_client: aioredis.Redis | None = None
 
     async def _get_redis(self) -> aioredis.Redis:
         if self._redis_client is None:
-            self._redis_client = aioredis.from_url(self.redis_url, decode_responses=True)
+            self._redis_client = aioredis.from_url(
+                self.redis_url, decode_responses=True
+            )
         return self._redis_client
 
     async def connect_and_stream(self, websocket: WebSocket, channel: str):
@@ -31,14 +36,18 @@ class ConnectionManager:
         If no listener exists for this channel, one is started.
         """
         await websocket.accept()
-        
+
         if channel not in self._active_connections:
             self._active_connections[channel] = set()
             # Start a new background task to listen to this Redis channel
-            self._redis_tasks[channel] = asyncio.create_task(self._listen_to_redis(channel))
-        
+            self._redis_tasks[channel] = asyncio.create_task(
+                self._listen_to_redis(channel)
+            )
+
         self._active_connections[channel].add(websocket)
-        logger.info(f"Client connected to channel: {channel} (Total: {len(self._active_connections[channel])})")
+        logger.info(
+            f"Client connected to channel: {channel} (Total: {len(self._active_connections[channel])})"  # noqa: E501
+        )
 
         try:
             # Keep the connection alive
@@ -48,7 +57,7 @@ class ConnectionManager:
         except WebSocketDisconnect:
             self._active_connections[channel].remove(websocket)
             logger.info(f"Client disconnected from channel {channel}")
-            
+
             # Clean up if no more clients
             if not self._active_connections[channel]:
                 if channel in self._redis_tasks:
@@ -76,7 +85,7 @@ class ConnectionManager:
                             try:
                                 await ws.send_text(data)
                             except Exception:
-                                # Handle broken connections that weren't caught by receive_text yet
+                                # Handle broken connections that weren't caught by receive_text yet  # noqa: E501
                                 if ws in self._active_connections[channel]:
                                     self._active_connections[channel].remove(ws)
         except asyncio.CancelledError:
@@ -99,12 +108,14 @@ class ConnectionManager:
         Synchronously publishes a message to a Redis channel.
         Useful for Celery workers.
         """
-        import redis
+        import redis  # noqa: PLC0415
+
         try:
             r = redis.from_url(self.redis_url)
             r.publish(channel, json.dumps(message))
             r.close()
         except Exception as e:
             logger.warning(f"Failed to broadcast sync message to {channel}: {e}")
+
 
 manager = ConnectionManager()

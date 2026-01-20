@@ -1,11 +1,18 @@
-from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
-from synqx_core.models.enums import AlertType, AlertDeliveryMethod, AlertLevel, AlertStatus
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+from synqx_core.models.enums import (
+    AlertDeliveryMethod,
+    AlertLevel,
+    AlertStatus,
+    AlertType,
+)
+
 
 class AlertConfigBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    description: Optional[str] = None
+    description: str | None = None
     alert_type: AlertType
     delivery_method: AlertDeliveryMethod
     recipient: str = Field(..., min_length=1, max_length=255)
@@ -13,57 +20,63 @@ class AlertConfigBase(BaseModel):
     threshold_window_minutes: int = 60
     enabled: bool = True
     cooldown_minutes: int = 60
-    pipeline_filter: Optional[Dict[str, Any]] = None
-    severity_filter: Optional[Dict[str, Any]] = None
+    pipeline_filter: dict[str, Any] | None = None
+    severity_filter: dict[str, Any] | None = None
+
 
 class AlertConfigCreate(AlertConfigBase):
     pass
 
+
 class AlertConfigUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    alert_type: Optional[AlertType] = None
-    delivery_method: Optional[AlertDeliveryMethod] = None
-    recipient: Optional[str] = None
-    threshold_value: Optional[int] = None
-    threshold_window_minutes: Optional[int] = None
-    enabled: Optional[bool] = None
-    cooldown_minutes: Optional[int] = None
-    pipeline_filter: Optional[Dict[str, Any]] = None
-    severity_filter: Optional[Dict[str, Any]] = None
+    name: str | None = None
+    description: str | None = None
+    alert_type: AlertType | None = None
+    delivery_method: AlertDeliveryMethod | None = None
+    recipient: str | None = None
+    threshold_value: int | None = None
+    threshold_window_minutes: int | None = None
+    enabled: bool | None = None
+    cooldown_minutes: int | None = None
+    pipeline_filter: dict[str, Any] | None = None
+    severity_filter: dict[str, Any] | None = None
+
 
 class AlertConfigRead(AlertConfigBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    created_by: Optional[str] = None
-    last_triggered_at: Optional[datetime] = None
+    created_by: str | None = None
+    last_triggered_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class AlertRead(BaseModel):
     id: int
-    alert_config_id: Optional[int] = None
-    pipeline_id: Optional[int] = None
-    job_id: Optional[int] = None
+    alert_config_id: int | None = None
+    pipeline_id: int | None = None
+    job_id: int | None = None
     message: str
     level: AlertLevel
     status: AlertStatus
     delivery_method: AlertDeliveryMethod
     recipient: str
-    sent_at: Optional[datetime] = None
-    acknowledged_at: Optional[datetime] = None
+    sent_at: datetime | None = None
+    acknowledged_at: datetime | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class AlertUpdate(BaseModel):
-    status: Optional[AlertStatus] = None
-    acknowledged_at: Optional[datetime] = None
-    acknowledged_by: Optional[str] = None
+    status: AlertStatus | None = None
+    acknowledged_at: datetime | None = None
+    acknowledged_by: str | None = None
+
 
 class AlertListResponse(BaseModel):
-    items: List[AlertRead]
+    items: list[AlertRead]
     total: int
     limit: int
     offset: int

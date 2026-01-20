@@ -1,6 +1,3 @@
 {
-  "pages": [
-    "index",
-    "custom"
-  ]
+  "pages": ["index", "custom"]
 }

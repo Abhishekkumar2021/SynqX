@@ -1,11 +1,11 @@
-import * as React from "react"
-import { Check, Mail, Loader2 } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
-import { searchUsers } from "@/lib/api"
-import { useQuery } from "@tanstack/react-query"
-import { useDebounce } from "@/hooks/useDebounce"
+import * as React from 'react'
+import { Check, Mail, Loader2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { searchUsers } from '@/lib/api'
+import { useQuery } from '@tanstack/react-query'
+import { useDebounce } from '@/hooks/useDebounce'
 
 interface UserAutocompleteProps {
   value: string
@@ -21,7 +21,7 @@ export function UserAutocomplete({
   value,
   onChange,
   onSelect,
-  placeholder = "Search users by email...",
+  placeholder = 'Search users by email...',
   disabled = false,
   className,
   autoFocus = false,
@@ -37,8 +37,7 @@ export function UserAutocomplete({
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['users-search', debouncedQuery],
     queryFn: () => searchUsers(debouncedQuery),
-            enabled: Boolean(debouncedQuery.length >= 3 && isOpen),
-    
+    enabled: Boolean(debouncedQuery.length >= 3 && isOpen),
   })
 
   // Keyboard navigation
@@ -46,7 +45,7 @@ export function UserAutocomplete({
     if (disabled) return
 
     if (!isOpen) {
-      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
         e.preventDefault()
         setIsOpen(true)
       }
@@ -54,7 +53,7 @@ export function UserAutocomplete({
     }
 
     switch (e.key) {
-      case "ArrowDown":
+      case 'ArrowDown':
         e.preventDefault()
         setActiveIndex((prev) => {
           const nextIndex = prev + 1
@@ -62,7 +61,7 @@ export function UserAutocomplete({
         })
         break
 
-      case "ArrowUp":
+      case 'ArrowUp':
         e.preventDefault()
         setActiveIndex((prev) => {
           const nextIndex = prev - 1
@@ -70,19 +69,19 @@ export function UserAutocomplete({
         })
         break
 
-      case "Enter":
+      case 'Enter':
         e.preventDefault()
         if (activeIndex >= 0 && activeIndex < users.length) {
           handleSelect(users[activeIndex].email)
         }
         break
 
-      case "Escape":
+      case 'Escape':
         e.preventDefault()
         setIsOpen(false)
         break
 
-      case "Tab":
+      case 'Tab':
         setIsOpen(false)
         break
 
@@ -103,27 +102,24 @@ export function UserAutocomplete({
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside)
       return () => {
-        document.removeEventListener("mousedown", handleClickOutside)
+        document.removeEventListener('mousedown', handleClickOutside)
       }
     }
   }, [isOpen])
 
   return (
-    <div className={cn("relative w-full group", className)} ref={containerRef}>
+    <div className={cn('relative w-full group', className)} ref={containerRef}>
       <div className="relative">
         <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors z-10 pointer-events-none" />
-        
+
         <Input
           ref={inputRef}
           value={value}
@@ -146,7 +142,7 @@ export function UserAutocomplete({
           </div>
         )}
       </div>
-      
+
       <AnimatePresence>
         {isOpen && debouncedQuery.length >= 3 && (
           <motion.div
@@ -167,8 +163,10 @@ export function UserAutocomplete({
                     <div
                       key={user.id}
                       className={cn(
-                        "flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all duration-200",
-                        isActive ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-foreground/80"
+                        'flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all duration-200',
+                        isActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'hover:bg-muted/50 text-foreground/80'
                       )}
                       onClick={() => handleSelect(user.email)}
                       onMouseEnter={() => setActiveIndex(index)}
@@ -177,10 +175,16 @@ export function UserAutocomplete({
                         {user.full_name?.charAt(0) || user.email.charAt(0)}
                       </div>
                       <div className="flex flex-col overflow-hidden">
-                        <span className="text-xs font-bold truncate leading-tight">{user.full_name || 'Anonymous User'}</span>
-                        <span className="text-[10px] opacity-50 truncate font-medium">{user.email}</span>
+                        <span className="text-xs font-bold truncate leading-tight">
+                          {user.full_name || 'Anonymous User'}
+                        </span>
+                        <span className="text-[10px] opacity-50 truncate font-medium">
+                          {user.email}
+                        </span>
                       </div>
-                      {value === user.email && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+                      {value === user.email && (
+                        <Check className="ml-auto h-3.5 w-3.5 text-primary" />
+                      )}
                     </div>
                   )
                 })

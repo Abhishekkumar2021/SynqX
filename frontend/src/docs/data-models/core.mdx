@@ -1,6 +1,6 @@
 ---
-title: "Data Models: Core & Physical"
-description: "Deep dive into Connections, Assets, and Schema Intelligence."
+title: 'Data Models: Core & Physical'
+description: 'Deep dive into Connections, Assets, and Schema Intelligence.'
 ---
 
 # Core Data Models
@@ -12,15 +12,19 @@ These models define the core entities of SynqX, including how data is organized,
 SynqX enforces consistent metadata and security across all tables using specialized mixins.
 
 ### `AuditMixin`
+
 Every primary entity tracks its lifecycle:
--   `created_at`: Set on insert (UTC).
--   `updated_at`: Updated automatically on every save.
--   `created_by`: User's email of the creator.
--   `workspace_id`: Foreign key to the `Workspace` model. This is the primary mechanism for multi-tenancy.
+
+- `created_at`: Set on insert (UTC).
+- `updated_at`: Updated automatically on every save.
+- `created_by`: User's email of the creator.
+- `workspace_id`: Foreign key to the `Workspace` model. This is the primary mechanism for multi-tenancy.
 
 ### `OwnerMixin`
+
 Some resources are still directly tied to a user, especially in personal or legacy contexts.
--   `user_id`: Foreign key to the `User` model.
+
+- `user_id`: Foreign key to the `User` model.
 
 ---
 
@@ -29,14 +33,16 @@ Some resources are still directly tied to a user, especially in personal or lega
 Workspaces are the top-level containers for all resources, providing strict isolation between teams and projects.
 
 ### `workspaces` table
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `Integer` | Primary Key. |
-| `name` | `String` | Human-readable name of the workspace. |
-| `slug` | `String` | Unique, URL-friendly identifier. |
-| `description` | `Text` | Optional description of the workspace's purpose. |
+
+| Field         | Type      | Description                                      |
+| :------------ | :-------- | :----------------------------------------------- |
+| `id`          | `Integer` | Primary Key.                                     |
+| `name`        | `String`  | Human-readable name of the workspace.            |
+| `slug`        | `String`  | Unique, URL-friendly identifier.                 |
+| `description` | `Text`    | Optional description of the workspace's purpose. |
 
 ### `workspace_members` table
+
 This table links users to workspaces and defines their permissions.
 | Field | Type | Description |
 | :--- | :--- | :--- |
@@ -51,15 +57,16 @@ This table links users to workspaces and defines their permissions.
 The `Connection` model abstracts authentication and connectivity. All connections are scoped to a workspace.
 
 ### `connections` table
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `Integer` | Primary Key. |
-| `workspace_id` | `FK` | The workspace this connection belongs to. |
-| `name` | `String` | Friendly identifier. |
-| `connector_type` | `Enum` | `postgresql`, `mysql`, `snowflake`, `s3`, etc. |
-| `config_encrypted` | `Text` | The most sensitive field. Contains encrypted JSON credentials. |
-| `health_status` | `String` | Cached result of the last connectivity test. |
-| `last_test_at` | `DateTime` | When the connection was last validated. |
+
+| Field              | Type       | Description                                                    |
+| :----------------- | :--------- | :------------------------------------------------------------- |
+| `id`               | `Integer`  | Primary Key.                                                   |
+| `workspace_id`     | `FK`       | The workspace this connection belongs to.                      |
+| `name`             | `String`   | Friendly identifier.                                           |
+| `connector_type`   | `Enum`     | `postgresql`, `mysql`, `snowflake`, `s3`, etc.                 |
+| `config_encrypted` | `Text`     | The most sensitive field. Contains encrypted JSON credentials. |
+| `health_status`    | `String`   | Cached result of the last connectivity test.                   |
+| `last_test_at`     | `DateTime` | When the connection was last validated.                        |
 
 ---
 
@@ -68,25 +75,30 @@ The `Connection` model abstracts authentication and connectivity. All connection
 An `Asset` is a logical dataset within a `Connection`. All assets are implicitly scoped to a workspace via their parent connection.
 
 ### `assets` table
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `Integer` | Primary Key. |
-| `connection_id` | `FK` | Link to the parent `Connection`. |
-| `name` | `String` | Logical name (e.g., `orders`). |
-| `fully_qualified_name` | `String` | Physical path (e.g., `prod.sales.orders`). |
-| `is_source` | `Boolean` | Can be read from? |
-| `is_destination` | `Boolean` | Can be written to? |
+
+| Field                    | Type      | Description                                          |
+| :----------------------- | :-------- | :--------------------------------------------------- |
+| `id`                     | `Integer` | Primary Key.                                         |
+| `connection_id`          | `FK`      | Link to the parent `Connection`.                     |
+| `name`                   | `String`  | Logical name (e.g., `orders`).                       |
+| `fully_qualified_name`   | `String`  | Physical path (e.g., `prod.sales.orders`).           |
+| `is_source`              | `Boolean` | Can be read from?                                    |
+| `is_destination`         | `Boolean` | Can be written to?                                   |
 | `is_incremental_capable` | `Boolean` | Flag indicating if this asset supports watermarking. |
 
 ### Automated Discovery Mechanism
+
 When a user clicks "Scan for Assets", the backend:
+
 1.  **Instantiates the Connector**: Decrypts the config and creates a temporary session.
 2.  **Queries System Catalog**: For SQL databases, it queries `INFORMATION_SCHEMA`. For S3, it lists objects.
 3.  **Deduplication**: Compares found objects with existing assets to prevent duplicates.
 4.  **Batch Ingestion**: Persists multiple assets in a single transaction.
 
 ### Schema Intelligence: `asset_schema_versions`
+
 SynqX fingerprints every asset to detect drift.
--   **Immutable Versions**: Every time a schema is inferred, a new version is created.
--   **Drift Detection**: Uses a `schema_hash` to compare structural changes instantly.
--   **Breaking Changes**: A boolean flag used to pause pipelines if a destructive upstream change is detected.
+
+- **Immutable Versions**: Every time a schema is inferred, a new version is created.
+- **Drift Detection**: Uses a `schema_hash` to compare structural changes instantly.
+- **Breaking Changes**: A boolean flag used to pause pipelines if a destructive upstream change is detected.

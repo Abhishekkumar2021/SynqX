@@ -27,37 +27,42 @@ Connector settings are defined at the **Connection** level and can be overridden
 
 ### Core Parameters
 
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-| `base_url` | string | The root URL for all requests. |
-| `auth_type` | enum | `none`, `basic`, `bearer`, or `api_key`. |
-| `data_key` | string | Dot-notation path to the record array (e.g., `data.results`). |
-| `pagination_type` | enum | `none`, `limit_offset`, or `page_number`. |
+| Parameter         | Type   | Description                                                   |
+| :---------------- | :----- | :------------------------------------------------------------ |
+| `base_url`        | string | The root URL for all requests.                                |
+| `auth_type`       | enum   | `none`, `basic`, `bearer`, or `api_key`.                      |
+| `data_key`        | string | Dot-notation path to the record array (e.g., `data.results`). |
+| `pagination_type` | enum   | `none`, `limit_offset`, or `page_number`.                     |
 
 ---
 
 ## Usage Patterns
 
 ### As a Source (Extraction)
+
 Assets represent specific endpoints. The `fully_qualified_name` should be the endpoint path relative to the `base_url`.
 
--   **Asset FQN**: `/users` or `orders/search`.
--   **Incremental Loading**: Supports high-watermark filtering if the API provides a sortable field (e.g., `updated_at`).
--   **Schema Inference**: The engine automatically flattens nested JSON structures into a relational format for transformation nodes.
+- **Asset FQN**: `/users` or `orders/search`.
+- **Incremental Loading**: Supports high-watermark filtering if the API provides a sortable field (e.g., `updated_at`).
+- **Schema Inference**: The engine automatically flattens nested JSON structures into a relational format for transformation nodes.
 
 ### As a Destination (Loading)
+
 Data is transmitted as JSON payloads.
 
--   **Write Method**: Configurable per asset (`POST`, `PUT`, or `PATCH`).
--   **Batching**: Optimized for high-volume loading by grouping records into single HTTP requests if supported by the target API.
--   **Upsert Logic**: When the `upsert` strategy is selected, the connector utilizes `PUT` or `PATCH` based on the existence of a primary identifier.
+- **Write Method**: Configurable per asset (`POST`, `PUT`, or `PATCH`).
+- **Batching**: Optimized for high-volume loading by grouping records into single HTTP requests if supported by the target API.
+- **Upsert Logic**: When the `upsert` strategy is selected, the connector utilizes `PUT` or `PATCH` based on the existence of a primary identifier.
 
 ## Advanced Features
 
 ### Dot-Notation Record Extraction
+
 If an API wraps its data in a response envelope, use the `data_key` property to point the engine to the record array:
-*   Response: `{ "meta": {...}, "data": { "items": [...] } }`
-*   Config: `data_key: "data.items"`
+
+- Response: `{ "meta": {...}, "data": { "items": [...] } }`
+- Config: `data_key: "data.items"`
 
 ### Adaptive Pagination
+
 The connector automatically manages cursor or offset state across multiple batches to ensure complete dataset extraction without memory overflow.

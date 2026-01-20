@@ -1,17 +1,19 @@
-from sqlalchemy.orm import Session
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any
 import json
-import redis
+from datetime import UTC, datetime
+from typing import Any
 
+import redis
+from sqlalchemy.orm import Session
 from synqx_core.models.monitoring import JobLog, StepLog
-from app.core.logging import get_logger
+
 from app.core.config import settings
+from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 # Initialize Redis client for publishing events
 redis_client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+
 
 class DBLogger:
     """
@@ -20,16 +22,25 @@ class DBLogger:
     """
 
     @staticmethod
-    def log_job(session: Session, job_id: int, level: str, message: str, metadata: Optional[Dict[str, Any]] = None, source: str = "system", timestamp: Optional[datetime] = None):
+    def log_job(  # noqa: PLR0913
+        session: Session,
+        job_id: int,
+        level: str,
+        message: str,
+        metadata: dict[str, Any] | None = None,
+        source: str = "system",
+        timestamp: datetime | None = None,
+    ):
         """
         Writes a log entry to the job_logs table.
         """
         try:
-            timestamp = timestamp or datetime.now(timezone.utc)
+            timestamp = timestamp or datetime.now(UTC)
             log_id = None
-            
+
             # Fetch workspace_id from job
-            from synqx_core.models.execution import Job
+            from synqx_core.models.execution import Job  # noqa: PLC0415
+
             job = session.query(Job).filter(Job.id == job_id).first()
             workspace_id = job.workspace_id if job else None
 
@@ -45,9 +56,9 @@ class DBLogger:
                     source=source,
                 )
                 session.add(log_entry)
-                session.flush() # Flush to assign ID
+                session.flush()  # Flush to assign ID
                 log_id = log_entry.id
-            
+
             # Publish to Redis channel
             payload = {
                 "type": "job_log",
@@ -57,27 +68,38 @@ class DBLogger:
                 "level": level.upper(),
                 "message": message,
                 "timestamp": timestamp.isoformat(),
-                "source": source
+                "source": source,
             }
             redis_client.publish(f"job:{job_id}", json.dumps(payload))
             if workspace_id:
-                redis_client.publish(f"workspace_logs:{workspace_id}", json.dumps(payload))
-            
+                redis_client.publish(
+                    f"workspace_logs:{workspace_id}", json.dumps(payload)
+                )
+
         except Exception as e:
-            # Fallback to standard logger if DB write fails, to ensure we don't lose the error
+            # Fallback to standard logger if DB write fails, to ensure we don't lose the error  # noqa: E501
             logger.error(f"Failed to write JobLog (Job {job_id}): {e}")
 
     @staticmethod
-    def log_step(session: Session, step_run_id: int, level: str, message: str, metadata: Optional[Dict[str, Any]] = None, source: str = "runner", job_id: Optional[int] = None, timestamp: Optional[datetime] = None):
+    def log_step(  # noqa: PLR0913
+        session: Session,
+        step_run_id: int,
+        level: str,
+        message: str,
+        metadata: dict[str, Any] | None = None,
+        source: str = "runner",
+        job_id: int | None = None,
+        timestamp: datetime | None = None,
+    ):
         """
         Writes a log entry to the step_logs table.
         """
         try:
-            timestamp = timestamp or datetime.now(timezone.utc)
+            timestamp = timestamp or datetime.now(UTC)
             log_id = None
-            
-            from synqx_core.models.execution import StepRun, PipelineRun, Job
-            
+
+            from synqx_core.models.execution import Job, PipelineRun, StepRun  # noqa: PLC0415
+
             # Efficient lookup for workspace_id
             workspace_id = None
             if job_id:
@@ -107,7 +129,7 @@ class DBLogger:
                 session.add(log_entry)
                 session.flush()
                 log_id = log_entry.id
-            
+
             # Publish to Step Redis channel
             payload = {
                 "type": "step_log",
@@ -117,7 +139,7 @@ class DBLogger:
                 "level": level.upper(),
                 "message": message,
                 "timestamp": timestamp.isoformat(),
-                "source": source
+                "source": source,
             }
             redis_client.publish(f"step:{step_run_id}", json.dumps(payload))
 
@@ -132,14 +154,16 @@ class DBLogger:
                     "source": source,
                     "step_run_id": step_run_id,
                     "job_id": job_id,
-                    "workspace_id": workspace_id
+                    "workspace_id": workspace_id,
                 }
                 redis_client.publish(f"job:{job_id}", json.dumps(job_payload))
                 if workspace_id:
-                    redis_client.publish(f"workspace_logs:{workspace_id}", json.dumps(job_payload))
-            
+                    redis_client.publish(
+                        f"workspace_logs:{workspace_id}", json.dumps(job_payload)
+                    )
+
         except Exception as e:
             logger.error(f"Failed to write StepLog (StepRun {step_run_id}): {e}")
-            
-        except Exception as e:
+
+        except Exception as e:  # noqa: B025
             logger.error(f"Failed to write StepLog (StepRun {step_run_id}): {e}")

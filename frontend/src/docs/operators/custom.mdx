@@ -1,8 +1,7 @@
 ---
-title: "Custom Operators"
-description: "Extending SynqX with your own logic."
+title: 'Custom Operators'
+description: 'Extending SynqX with your own logic.'
 ---
-
 
 # Developing Custom Operators
 
@@ -19,10 +18,10 @@ class CurrencyConverter(BaseOperator):
     """
     Converts a money column from one currency to another using a live API.
     """
-    
+
     # 1. Define Metadata
     operator_type = OperatorType.TRANSFORM
-    
+
     # 2. Define Config Schema (for UI validation)
     config_schema = {
         "amount_column": {"type": "string", "required": True},
@@ -33,16 +32,16 @@ class CurrencyConverter(BaseOperator):
         # 3. Access Configuration
         col = self.config["amount_column"]
         target = self.config["target_currency"]
-        
+
         # 4. Get Input Data (Pandas DataFrame)
         df = inputs[0]
-        
+
         self.log.info(f"Converting {len(df)} rows to {target}...")
-        
+
         # ... Perform business logic ...
         rate = 1.15 # Fetch from API in real code
         df[f"{col}_{target}"] = df[col] * rate
-        
+
         # 5. Return Result
         return OperatorResult(
             status="SUCCESS",
@@ -56,10 +55,11 @@ class CurrencyConverter(BaseOperator):
 ## Context Object
 
 The `context` dictionary provides access to runtime variables:
--   `run_id`: The Pipeline Run ID.
--   `execution_date`: The logical date of the run (for idempotency).
--   `parameters`: Runtime parameters passed to the pipeline.
--   `watermarks`: Access to previous watermark values.
+
+- `run_id`: The Pipeline Run ID.
+- `execution_date`: The logical date of the run (for idempotency).
+- `parameters`: Runtime parameters passed to the pipeline.
+- `watermarks`: Access to previous watermark values.
 
 ## Registration
 

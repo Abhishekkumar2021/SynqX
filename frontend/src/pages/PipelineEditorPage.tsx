@@ -1,15 +1,15 @@
-import React from 'react';
-import { ReactFlowProvider } from '@xyflow/react';
-import { PipelineCanvas } from '@/components/features/pipelines/PipelineCanvas';
-import { PageMeta } from '@/components/common/PageMeta';
+import React from 'react'
+import { ReactFlowProvider } from '@xyflow/react'
+import { PipelineCanvas } from '@/components/features/pipelines/PipelineCanvas'
+import { PageMeta } from '@/components/common/PageMeta'
 
 export const PipelineEditorPage: React.FC = () => {
-    return (
-        <div className="h-full w-full relative overflow-hidden">
-            <PageMeta title="Editor" description="Visual pipeline editor." />
-            <ReactFlowProvider>
-                <PipelineCanvas />
-            </ReactFlowProvider>
-        </div>
-    );
+  return (
+    <div className="h-full w-full relative overflow-hidden">
+      <PageMeta title="Editor" description="Visual pipeline editor." />
+      <ReactFlowProvider>
+        <PipelineCanvas />
+      </ReactFlowProvider>
+    </div>
+  )
 }

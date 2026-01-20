@@ -1,13 +1,17 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, UniqueConstraint, JSON
+import enum
+
+from sqlalchemy import JSON, Column, Enum, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
+
 from synqx_core.models.base import Base, TimestampMixin
 from synqx_core.utils.agent import is_remote_group
-import enum
+
 
 class WorkspaceRole(str, enum.Enum):
     ADMIN = "admin"
     EDITOR = "editor"
     VIEWER = "viewer"
+
 
 class Workspace(Base, TimestampMixin):
     __tablename__ = "workspaces"
@@ -16,14 +20,22 @@ class Workspace(Base, TimestampMixin):
     name = Column(String, nullable=False)
     slug = Column(String, unique=True, index=True, nullable=False)
     description = Column(String, nullable=True)
-    default_agent_group = Column(String, nullable=False, server_default="internal", default="internal", comment="Default agent tag for all jobs in this workspace")
+    default_agent_group = Column(
+        String,
+        nullable=False,
+        server_default="internal",
+        default="internal",
+        comment="Default agent tag for all jobs in this workspace",
+    )
     git_config = Column(JSON, nullable=True)
-    
+
     # Relationships
-    members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
+    members = relationship(
+        "WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan"
+    )
     pipelines = relationship("Pipeline", back_populates="workspace")
     connections = relationship("Connection", back_populates="workspace")
-    
+
     @property
     def is_remote_group(self) -> bool:
         """
@@ -32,12 +44,17 @@ class Workspace(Base, TimestampMixin):
         """
         return is_remote_group(self.default_agent_group)
 
+
 class WorkspaceMember(Base, TimestampMixin):
     __tablename__ = "workspace_members"
 
     id = Column(Integer, primary_key=True, index=True)
-    workspace_id = Column(Integer, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    workspace_id = Column(
+        Integer, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     role = Column(Enum(WorkspaceRole), default=WorkspaceRole.VIEWER, nullable=False)
 
     # Relationships

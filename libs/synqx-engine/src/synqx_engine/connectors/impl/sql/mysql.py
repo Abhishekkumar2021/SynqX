@@ -1,17 +1,21 @@
 import logging
-import pandas as pd
 import time
-from typing import Iterator
+from collections.abc import Iterator
+
+import pandas as pd
+from pydantic import Field
+from synqx_core.errors import ConfigurationError, DataTransferError
+
 from synqx_engine.connectors.impl.sql.base import SQLConnector
 from synqx_engine.connectors.impl.sql.postgres import PostgresConfig
-from synqx_core.errors import ConfigurationError, DataTransferError
-from pydantic import Field
 
 logger = logging.getLogger(__name__)
+
 
 class MySQLConfig(PostgresConfig):
     port: int = 3306
     server_id: int = Field(999, description="Unique MySQL replication server ID")
+
 
 class MySQLConnector(SQLConnector):
     """
@@ -22,7 +26,7 @@ class MySQLConnector(SQLConnector):
         try:
             MySQLConfig.model_validate(self.config)
         except Exception as e:
-            raise ConfigurationError(f"Invalid MySQL configuration: {e}")
+            raise ConfigurationError(f"Invalid MySQL configuration: {e}")  # noqa: B904
 
     def _sqlalchemy_url(self) -> str:
         conf = MySQLConfig.model_validate(self.config)
@@ -33,32 +37,32 @@ class MySQLConnector(SQLConnector):
             f"{conf.database}"
         )
 
-    def read_cdc(
-        self,
-        batch_size: int = 1000,
-        **kwargs
-    ) -> Iterator[pd.DataFrame]:
+    def read_cdc(self, batch_size: int = 1000, **kwargs) -> Iterator[pd.DataFrame]:
         """
         MySQL CDC implementation using Binlog Tailing.
         """
-        from pymysqlreplication import BinLogStreamReader
-        from pymysqlreplication.row_event import (
-            DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent
+        from pymysqlreplication import BinLogStreamReader  # noqa: PLC0415
+        from pymysqlreplication.row_event import (  # noqa: PLC0415
+            DeleteRowsEvent,
+            UpdateRowsEvent,
+            WriteRowsEvent,
         )
-        
+
         conf = MySQLConfig.model_validate(self.config)
-        
+
         # Connect settings for pymysql
         mysql_settings = {
             "host": conf.host,
             "port": conf.port,
             "user": conf.username,
-            "passwd": conf.password
+            "passwd": conf.password,
         }
 
         # Retrieve starting position from watermark if provided in kwargs
-        resume_pos = kwargs.get("resume_token") # e.g. {"file": "mysql-bin.000001", "pos": 123}
-        
+        resume_pos = kwargs.get(
+            "resume_token"
+        )  # e.g. {"file": "mysql-bin.000001", "pos": 123}
+
         log_file = resume_pos.get("file") if resume_pos else None
         log_pos = resume_pos.get("pos") if resume_pos else None
 
@@ -72,11 +76,13 @@ class MySQLConnector(SQLConnector):
             log_pos=log_pos,
             only_events=[DeleteRowsEvent, WriteRowsEvent, UpdateRowsEvent],
             blocking=True,
-            every_checkpoint=True
+            every_checkpoint=True,
         )
 
         try:
-            logger.info(f"MySQL Binlog Stream Active [Resume: {log_file}:{log_pos if log_pos else 'START'}]")
+            logger.info(
+                f"MySQL Binlog Stream Active [Resume: {log_file}:{log_pos if log_pos else 'START'}]"  # noqa: E501
+            )
             pending_changes = []
 
             for binlogevent in stream:
@@ -95,11 +101,8 @@ class MySQLConnector(SQLConnector):
                     change = {
                         "_cdc_event": event_type,
                         "_cdc_ts": binlogevent.timestamp,
-                        "_cdc_token": {
-                            "file": stream.log_file,
-                            "pos": stream.log_pos
-                        },
-                        **vals
+                        "_cdc_token": {"file": stream.log_file, "pos": stream.log_pos},
+                        **vals,
                     }
                     pending_changes.append(change)
 
@@ -115,6 +118,6 @@ class MySQLConnector(SQLConnector):
                     time.sleep(0.1)
 
         except Exception as e:
-            raise DataTransferError(f"MySQL CDC Stream Failed: {e}")
+            raise DataTransferError(f"MySQL CDC Stream Failed: {e}")  # noqa: B904
         finally:
             stream.close()

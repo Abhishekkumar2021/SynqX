@@ -1,4 +1,5 @@
-from typing import List, Literal
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,7 +11,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["*"]
+    ALLOWED_ORIGINS: list[str] = ["*"]
 
     LOG_LEVEL: str = "INFO"
 
@@ -43,7 +44,9 @@ class Settings(BaseSettings):
     OIDC_ENABLED: bool = False
     OIDC_CLIENT_ID: str = ""
     OIDC_CLIENT_SECRET: str = ""
-    OIDC_DISCOVERY_URL: str = ""  # e.g. https://accounts.google.com/.well-known/openid-configuration
+    OIDC_DISCOVERY_URL: str = (
+        ""  # e.g. https://accounts.google.com/.well-known/openid-configuration
+    )
     OIDC_REDIRECT_URI: str = "http://localhost:3000/callback"
     OIDC_SCOPE: str = "openid email profile"
 

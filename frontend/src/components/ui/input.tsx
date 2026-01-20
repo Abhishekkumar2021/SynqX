@@ -1,5 +1,5 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from 'react'
+import { cn } from '@/lib/utils'
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>
 
@@ -10,21 +10,21 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           // Base Layout & Typography
-          "flex h-10 w-full rounded-xl px-4 py-2 text-sm transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium",
+          'flex h-10 w-full rounded-xl px-4 py-2 text-sm transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium',
 
           // Theme Aware Colors (Glass/Surface)
-          "border border-input/50 bg-background/50 backdrop-blur-sm",
-          "text-foreground placeholder:text-muted-foreground/70",
+          'border border-input/50 bg-background/50 backdrop-blur-sm',
+          'text-foreground placeholder:text-muted-foreground/70',
 
           // Shadows & Depth
-          "shadow-sm shadow-black/5",
+          'shadow-sm shadow-black/5',
 
           // Interactions (Hover & Focus)
-          "hover:bg-accent/5 hover:border-accent/50",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/50 focus-visible:bg-background",
+          'hover:bg-accent/5 hover:border-accent/50',
+          'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/50 focus-visible:bg-background',
 
           // Disabled State
-          "disabled:cursor-not-allowed disabled:opacity-50",
+          'disabled:cursor-not-allowed disabled:opacity-50',
 
           className
         )}
@@ -34,6 +34,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     )
   }
 )
-Input.displayName = "Input"
+Input.displayName = 'Input'
 
 export { Input }

@@ -1,7 +1,10 @@
-from typing import Iterator
+from collections.abc import Iterator
+
 import polars as pl
-from synqx_engine.transforms.polars_base import PolarsTransform
 from synqx_core.errors import ConfigurationError, TransformationError
+
+from synqx_engine.transforms.polars_base import PolarsTransform
+
 
 class FillNullsTransform(PolarsTransform):
     """
@@ -16,22 +19,24 @@ class FillNullsTransform(PolarsTransform):
         value = self.get_config_value("value")
         strategy = self.get_config_value("strategy")
         if value is None and strategy is None:
-            raise ConfigurationError("FillNullsTransform requires either 'value' or 'strategy'.")
+            raise ConfigurationError(
+                "FillNullsTransform requires either 'value' or 'strategy'."
+            )
 
     def transform(self, data: Iterator[pl.DataFrame]) -> Iterator[pl.DataFrame]:
         value = self.config.get("value")
         strategy = self.config.get("strategy")
         self.config.get("subset")
-        
+
         # Strategy mapping from Pandas names to Polars
         strategy_map = {
-            'ffill': 'forward',
-            'bfill': 'backward',
-            'mean': 'mean',
-            'min': 'min',
-            'max': 'max',
-            'zero': 'zero',
-            'one': 'one'
+            "ffill": "forward",
+            "bfill": "backward",
+            "mean": "mean",
+            "min": "min",
+            "max": "max",
+            "zero": "zero",
+            "one": "one",
         }
         polars_strategy = strategy_map.get(strategy, strategy)
 
@@ -39,7 +44,7 @@ class FillNullsTransform(PolarsTransform):
             if df.is_empty():
                 yield df
                 continue
-                
+
             try:
                 if value is not None:
                     # Fill with specific value
@@ -47,11 +52,12 @@ class FillNullsTransform(PolarsTransform):
                 else:
                     # Fill with strategy
                     result_df = df.fill_null(strategy=polars_strategy)
-                
+
                 if self.on_chunk:
-                    import pandas as pd
+                    import pandas as pd  # noqa: PLC0415
+
                     self.on_chunk(pd.DataFrame(), direction="intermediate")
-                    
+
                 yield result_df
             except Exception as e:
                 raise TransformationError(f"Polars FillNulls failed: {e}") from e

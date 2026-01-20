@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from "path"
-import tailwindcss from "@tailwindcss/vite"
+import path from 'path'
+import tailwindcss from '@tailwindcss/vite'
 import mdx from '@mdx-js/rollup'
 import remarkGfm from 'remark-gfm'
 import remarkFrontmatter from 'remark-frontmatter'
@@ -27,19 +27,19 @@ export default defineConfig({
             },
           ],
         ],
-        providerImportSource: "@mdx-js/react",
-      })
+        providerImportSource: '@mdx-js/react',
+      }),
     },
-    react(), 
-    tailwindcss()
+    react(),
+    tailwindcss(),
   ],
   optimizeDeps: {
     include: ['@scalar/api-reference-react', 'mermaid', 'lucide-react', 'framer-motion', 'ajv'],
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@docs": path.resolve(__dirname, "./src/docs"),
+      '@': path.resolve(__dirname, './src'),
+      '@docs': path.resolve(__dirname, './src/docs'),
     },
   },
 })
