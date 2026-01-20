@@ -44,6 +44,51 @@ class OracleConnector(SQLConnector):
         }
         return options
 
+    def test_connection(self) -> bool:
+        try:
+            self.connect()
+            self._connection.execute(text("SELECT 1 FROM DUAL"))
+            return True
+        except Exception as e:
+            logger.error(f"Oracle connection test failed: {e}")
+            return False
+
+    def check_health(self) -> dict[str, Any]:
+        """
+        Deeper diagnostic for Oracle connector.
+        """
+        try:
+            import time  # noqa: PLC0415
+            from datetime import datetime, UTC  # noqa: PLC0415
+
+            start = time.perf_counter()
+            self.connect()
+            dialect = str(self._engine.dialect.name)
+            version = (
+                str(self._engine.dialect.server_version_info)
+                if hasattr(self._engine.dialect, "server_version_info")
+                else "unknown"
+            )
+
+            # Execute Oracle ping
+            self._connection.execute(text("SELECT 1 FROM DUAL"))
+            latency = (time.perf_counter() - start) * 1000
+
+            return {
+                "status": "healthy",
+                "dialect": dialect,
+                "server_version": version,
+                "latency_ms": round(latency, 2),
+                "pool_size": self._get_engine_options().get("pool_size"),
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+
     @retry(exceptions=(Exception,), max_attempts=3)
     def execute_query(
         self,
