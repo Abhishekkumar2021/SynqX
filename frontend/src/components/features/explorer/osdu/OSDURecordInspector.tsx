@@ -7,16 +7,13 @@ import {
   Lock,
   Map as MapIcon,
   RefreshCw,
-  PanelRight,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { OSDUAncestryGraph } from './OSDUAncestryGraph'
 import { InspectorHeader } from './inspector/InspectorHeader'
-import { InspectorSidebar } from './inspector/InspectorSidebar'
 import { InspectorPayload } from './inspector/InspectorPayload'
-import { InspectorRelationships } from './inspector/InspectorRelationships'
+import { InspectorGraph } from './inspector/InspectorGraph'
 import { InspectorPolicy } from './inspector/InspectorPolicy'
 import { InspectorSpatial } from './inspector/InspectorSpatial'
 
@@ -36,14 +33,34 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
   onDownload,
 }) => {
   const [activeTab, setActiveTab] = useState('payload')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   const coordinates = useMemo(() => {
-    if (!record?.spatial) return null
-    const coords = record.spatial.geometries?.[0]?.coordinates || record.spatial.coordinates
-    if (Array.isArray(coords) && coords.length >= 2) {
-      return { lon: coords[0], lat: coords[1] }
+    // 1. Check pre-calculated spatial helper
+    if (record?.spatial) {
+      const coords = record.spatial.geometries?.[0]?.coordinates || record.spatial.coordinates
+      if (Array.isArray(coords) && coords.length >= 2) {
+        return { lon: coords[0], lat: coords[1] }
+      }
     }
+
+    // 2. Check OSDU native SpatialLocation (Standard)
+    const wgs84 = record?.details?.data?.SpatialLocation?.Wgs84Coordinates
+    if (wgs84?.geometries?.length > 0) {
+        const coords = wgs84.geometries[0]?.coordinates
+        if (Array.isArray(coords) && coords.length >= 2) {
+            return { lon: coords[0], lat: coords[1] }
+        }
+    }
+
+    // 3. Check legacy or alternative SpatialPoint
+    const spatialPoint = record?.details?.data?.SpatialPoint
+    if (spatialPoint?.Wgs84Coordinates?.geometries?.length > 0) {
+         const coords = spatialPoint.Wgs84Coordinates.geometries[0]?.coordinates
+         if (Array.isArray(coords) && coords.length >= 2) {
+            return { lon: coords[0], lat: coords[1] }
+        }
+    }
+
     return null
   }, [record])
 
@@ -110,16 +127,6 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
                       </TabsTrigger>
                     )}
                   </TabsList>
-                  
-                  <Button
-                    variant={isSidebarOpen ? "secondary" : "ghost"}
-                    size="icon"
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className="h-8 w-8 rounded-lg"
-                    title="Toggle Sidebar"
-                  >
-                    <PanelRight size={16} className={isSidebarOpen ? "text-primary" : "text-muted-foreground"} />
-                  </Button>
                 </div>
 
                 <div className="flex-1 min-h-0 relative">
@@ -131,11 +138,11 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
                     value="relationships"
                     className="h-full m-0 overflow-hidden bg-muted/5"
                   >
-                    <InspectorRelationships record={record} onNavigate={onNavigate} />
+                    <InspectorGraph record={record} onNavigate={onNavigate} />
                   </TabsContent>
 
                   <TabsContent value="ancestry" className="h-full m-0 relative overflow-hidden">
-                    <OSDUAncestryGraph ancestryData={record.ancestry} rootId={record.details.id} />
+                    <OSDUAncestryGraph ancestryData={record.ancestry} rootId={record.details.id} onNavigate={onNavigate} />
                   </TabsContent>
 
                   <TabsContent value="security" className="h-full m-0 bg-muted/5">
@@ -151,21 +158,6 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
                 </div>
               </Tabs>
             </main>
-
-            <AnimatePresence initial={false}>
-                {isSidebarOpen && (
-                    <motion.div
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: 320, opacity: 1 }}
-                        exit={{ width: 0, opacity: 0 }}
-                        className="h-full border-l border-border/40 bg-muted/5 overflow-hidden flex flex-col shrink-0"
-                    >
-                        <div className="w-80 h-full flex flex-col">
-                            <InspectorSidebar record={record} />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
           </>
         ) : null}
       </div>

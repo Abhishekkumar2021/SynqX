@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { getConnection } from '@/lib/api/connections'
 import { getHistory, clearHistory } from '@/lib/api/explorer'
 import { SQLExplorer } from '@/components/features/explorer/components/SQLExplorer'
@@ -8,7 +8,7 @@ import { ExecutionHistory } from '@/components/features/explorer/ExecutionHistor
 import { type HistoryItem } from '@/components/features/explorer/types'
 import { PageMeta } from '@/components/common/PageMeta'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Database, History, Search, Activity } from 'lucide-react'
+import { ArrowLeft, Database, History } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -22,7 +22,6 @@ export const SQLExplorerPage: React.FC = () => {
   const navigate = useNavigate()
   const { isZenMode } = useZenMode()
   const { isAdmin } = useWorkspace()
-  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // URL Synced State
@@ -36,10 +35,18 @@ export const SQLExplorerPage: React.FC = () => {
   }
 
   // 1. Connection Details
-  const { data: connection } = useQuery({
+  const { data: connection, isError: isConnectionError } = useQuery({
     queryKey: ['connection', connectionId],
     queryFn: () => getConnection(connectionId),
   })
+
+  // Handle connection error
+  useEffect(() => {
+    if (isConnectionError) {
+      toast.error('Failed to load connection details')
+      navigate('/explorer')
+    }
+  }, [isConnectionError, navigate])
 
   // 2. History Data
   const { data: historyData, refetch: refetchHistory } = useQuery({
@@ -92,13 +99,13 @@ export const SQLExplorerPage: React.FC = () => {
             >
               <ArrowLeft className="h-6 w-6" />
             </Button>
-            <div className="p-2 bg-blue-500/10 rounded-2xl ring-1 ring-border/50 backdrop-blur-md shadow-sm">
-              <Database className="h-6 w-6 text-blue-500" />
+            <div className="p-2 bg-primary/10 rounded-2xl ring-1 ring-primary/20 backdrop-blur-md shadow-sm">
+              <Database className="h-6 w-6 text-primary" />
             </div>
             {connection?.name || 'Query Studio'}
             <Badge
               variant="outline"
-              className="h-7 px-3 rounded-xl bg-blue-500/10 text-blue-600 border-blue-500/20 font-bold uppercase tracking-widest text-[9px] gap-1.5 uppercase"
+              className="h-7 px-3 rounded-xl bg-primary/10 text-primary border-primary/20 font-bold uppercase tracking-widest text-[9px] gap-1.5 uppercase"
             >
               {connection?.connector_type}
             </Badge>

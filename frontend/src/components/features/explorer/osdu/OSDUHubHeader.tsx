@@ -39,7 +39,7 @@ export const OSDUHubHeader: React.FC<OSDUHubHeaderProps> = ({
           <ChevronRight size={14} className="text-muted-foreground/20 shrink-0" />
           <Badge
             variant="outline"
-            className="h-5 px-2 rounded-md bg-indigo-500/5 text-indigo-600/80 border-indigo-500/20 font-bold uppercase tracking-widest text-[8px]"
+            className="px-2 rounded-md bg-indigo-500/5 text-indigo-600/80 border-indigo-500/20 font-bold uppercase tracking-widest text-[8px]"
           >
             {partitionId || '...'}
           </Badge>

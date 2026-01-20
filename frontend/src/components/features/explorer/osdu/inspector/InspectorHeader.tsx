@@ -61,7 +61,8 @@ export const InspectorHeader: React.FC<InspectorHeaderProps> = ({
       <div className="flex items-center gap-3 shrink-0">
         {!isLoading && record && (
           <div className="flex items-center gap-2">
-            {record.details.kind?.includes('dataset--File') && (
+            {(record.details?.kind?.toLowerCase().includes('dataset--') || 
+              record.details?.data?.DatasetProperties) && (
               <Button
                 onClick={onDownload}
                 variant="outline"

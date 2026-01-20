@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
+import { InspectorEmptyState } from './InspectorEmptyState'
 
 interface InspectorRelationshipsProps {
   record: any
@@ -31,7 +32,7 @@ export const InspectorRelationships: React.FC<InspectorRelationshipsProps> = ({
   return (
     <div className="h-full bg-muted/5 overflow-hidden">
       <ScrollArea className="h-full">
-        <div className="p-10 space-y-12 max-w-5xl mx-auto pb-32">
+        <div className="p-10 space-y-12 pb-32">
           {/* Outbound */}
           <div className="space-y-6">
             <div className="flex items-center justify-between border-b border-border/20 pb-4 px-1">
@@ -85,9 +86,11 @@ export const InspectorRelationships: React.FC<InspectorRelationshipsProps> = ({
                 </div>
               ))}
               {outbound.length === 0 && (
-                  <div className="p-4 text-center text-muted-foreground/40 text-xs italic">
-                      No outbound references found.
-                  </div>
+                  <InspectorEmptyState
+                      icon={ArrowUpRight}
+                      title="No Outbound Links"
+                      description="This record does not reference any other entities."
+                  />
               )}
             </div>
           </div>
@@ -145,9 +148,11 @@ export const InspectorRelationships: React.FC<InspectorRelationshipsProps> = ({
                 </div>
               ))}
                {inbound.length === 0 && (
-                  <div className="p-4 text-center text-muted-foreground/40 text-xs italic">
-                      No inbound dependencies found.
-                  </div>
+                  <InspectorEmptyState
+                      icon={Link2}
+                      title="No Inbound Links"
+                      description="No other entities reference this record."
+                  />
               )}
             </div>
           </div>

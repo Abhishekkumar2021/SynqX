@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Search,
   RefreshCw,
@@ -32,19 +32,30 @@ export const MeshHeader: React.FC<MeshHeaderProps> = ({
   selectedKind,
   onKindChange,
 }) => {
+  const [localQuery, setLocalQuery] = useState(searchQuery)
+
+  // Sync local state with prop changes (e.g. AI applying a query)
+  useEffect(() => {
+    setLocalQuery(searchQuery)
+  }, [searchQuery])
+
+  const handleSearch = () => {
+    onQueryChange(localQuery)
+    // Small timeout to allow state sync if needed, though URL params usually batch
+    setTimeout(() => onExecute(), 50)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      onExecute()
+      handleSearch()
     }
   }
 
-  const handleApplyQuery = (q: string) => {
-    onQueryChange(q)
-    // Small delay to allow state update before execute if needed, 
-    // or just let the user hit execute. 
-    // The original code had a timeout, but usually direct execution is better or debounced.
-    // Here we just clear the query if '*' is passed, essentially.
+  const handleClear = () => {
+    setLocalQuery('*')
+    onQueryChange('*')
+    setTimeout(() => onExecute(), 50)
   }
 
   return (
@@ -72,18 +83,18 @@ export const MeshHeader: React.FC<MeshHeaderProps> = ({
           <Input
             placeholder="Search partition via Lucene query..."
             className="h-12 pl-11 pr-32 rounded-2xl bg-background border-border/40 focus:border-primary/40 focus:ring-4 focus:ring-primary/5 transition-all text-sm font-medium shadow-sm"
-            value={searchQuery}
-            onChange={(e) => onQueryChange(e.target.value)}
+            value={localQuery === '*' ? '' : localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
             <AnimatePresence>
-              {searchQuery && searchQuery !== '*' && (
+              {localQuery && localQuery !== '*' && (
                 <motion.button
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
-                  onClick={() => handleApplyQuery('*')}
+                  onClick={handleClear}
                   className="h-8 w-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <X size={16} />
@@ -93,7 +104,7 @@ export const MeshHeader: React.FC<MeshHeaderProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={onExecute}
+              onClick={handleSearch}
               disabled={isLoading}
               className="h-8 px-4 rounded-xl font-black uppercase text-[10px] tracking-widest border-border/40"
             >

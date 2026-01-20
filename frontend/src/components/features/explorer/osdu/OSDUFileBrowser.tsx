@@ -4,7 +4,6 @@ import React, { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import {
-  FileSearch,
   Box,
   Database,
   Clock,
@@ -12,46 +11,49 @@ import {
   ChevronLeft,
   FileDown,
   Package,
-  Eye,
   HardDrive,
   RefreshCw,
-  Upload,
-  Search,
-  Download,
-  X,
-  Globe,
-  MoreHorizontal,
-  Copy,
-  Trash2,
-  ChevronRight,
   Share2,
   FileCode,
+  Globe,
+  Copy,
+  ChevronRight,
   FileArchive,
-  FileText,
   Image,
+  FileText,
   File,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
-import { cn, formatNumber, formatBytes } from '@/lib/utils'
-import { motion, AnimatePresence } from 'framer-motion'
+import { formatNumber, formatBytes } from '@/lib/utils'
 import { getConnectionMetadata } from '@/lib/api/connections'
 import { CodeBlock } from '@/components/ui/docs/CodeBlock'
 
+// Import new sub-components
+import { StorageHeader } from './storage/StorageHeader'
+import { StorageToolbar } from './storage/StorageToolbar'
+import { StorageGrid } from './storage/StorageGrid'
+import { StorageList } from './storage/StorageList'
+
 interface OSDUFileBrowserProps {
   connectionId: number
+}
+
+// Helper for details dialog icon (kept local as it's simple)
+const getFileIcon = (name: string = '') => {
+  const ext = name.split('.').pop()?.toLowerCase()
+  if (['zip', 'tar', 'gz', '7z'].includes(ext || ''))
+    return <FileArchive className="text-orange-500" />
+  if (['jpg', 'jpeg', 'png', 'svg', 'webp'].includes(ext || ''))
+    return <Image className="text-pink-500" />
+  if (['json', 'yaml', 'xml', 'csv', 'sql'].includes(ext || ''))
+    return <FileCode className="text-blue-500" />
+  if (['pdf', 'doc', 'docx', 'txt'].includes(ext || ''))
+    return <FileText className="text-rose-500" />
+  return <File className="text-amber-500" />
 }
 
 export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }) => {
@@ -66,6 +68,7 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
 
   const [isUploading, setIsUploading] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   const updateParams = (updates: Record<string, string | null>) => {
     setSearchParams((prev) => {
@@ -81,20 +84,6 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
   const setSearch = (q: string) => updateParams({ q: q || null, offset: '0' })
   const setOffset = (o: number) => updateParams({ offset: String(o) })
   const setActiveFileId = (id: string | null) => updateParams({ fileId: id })
-
-  // --- File Type Recognition ---
-  const getFileIcon = (name: string = '') => {
-    const ext = name.split('.').pop()?.toLowerCase()
-    if (['zip', 'tar', 'gz', '7z'].includes(ext || ''))
-      return <FileArchive className="text-orange-500" />
-    if (['jpg', 'jpeg', 'png', 'svg', 'webp'].includes(ext || ''))
-      return <Image className="text-pink-500" />
-    if (['json', 'yaml', 'xml', 'csv', 'sql'].includes(ext || ''))
-      return <FileCode className="text-blue-500" />
-    if (['pdf', 'doc', 'docx', 'txt'].includes(ext || ''))
-      return <FileText className="text-rose-500" />
-    return <File className="text-amber-500" />
-  }
 
   // --- Data Queries ---
   const { data: fileResponse, isLoading } = useQuery({
@@ -228,109 +217,27 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background/5 animate-in fade-in duration-500 relative">
       {/* --- PRIMARY HUB HEADER --- */}
-      <div className="h-16 px-8 border-b border-border/40 bg-card backdrop-blur-md flex items-center justify-between shrink-0 relative z-30 shadow-sm">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="h-10 w-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-600 border border-amber-500/30 shrink-0">
-            <HardDrive size={20} />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-xl font-black tracking-tight text-foreground leading-none truncate">
-              Storage Hub
-            </h2>
-            <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-1.5 leading-none opacity-60">
-              Technical Partition Discovery
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="relative group w-full md:w-80">
-            <Search className="z-20 absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-amber-500 transition-colors" />
-            <Input
-              placeholder="Discover files by name or ID..."
-              className="h-10 pl-10 rounded-xl bg-background border-border/40 focus:border-amber-500/60 transition-all text-xs font-bold shadow-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <input
-            type="file"
-            id="osdu-upload-v16"
-            className="hidden"
-            onChange={handleUpload}
-            disabled={isUploading}
-          />
-          <Button
-            size="sm"
-            onClick={() => document.getElementById('osdu-upload-v16')?.click()}
-            disabled={isUploading}
-            className="h-10 px-5 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2 bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-500/20"
-          >
-            {isUploading ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-            Upload
-          </Button>
-        </div>
-      </div>
+      <StorageHeader
+        search={search}
+        setSearch={setSearch}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        isUploading={isUploading}
+        handleUpload={handleUpload}
+        onTriggerUpload={() => document.getElementById('osdu-upload-v16')?.click()}
+      />
 
       <div className="flex-1 flex flex-col min-h-0 relative">
         {/* TOOLBAR */}
-        <div className="px-8 py-2 border-b border-border/10 bg-muted/5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-3">
-              <Checkbox
-                checked={results.length > 0 && selectedIds.size === results.length}
-                onCheckedChange={toggleSelectAll}
-                className="h-4 w-4 rounded border-border/40 bg-background"
-              />
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5">
-                <FileSearch size={12} /> Registry Index
-              </span>
-            </div>
-            <Badge
-              variant="outline"
-              className="h-5 px-2 border-border/40 bg-background text-[10px] font-black text-amber-600 shadow-sm"
-            >
-              {isLoading ? '...' : formatNumber(totalAvailable)} AVAILABLE
-            </Badge>
-          </div>
-
-          <AnimatePresence>
-            {selectedIds.size > 0 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-3"
-              >
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
-                  {selectedIds.size} SELECTED
-                </span>
-                <div className="h-5 w-px bg-border/20 mx-1" />
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-7 px-4 rounded-lg gap-2 font-black uppercase text-[9px] tracking-widest bg-amber-600 text-white shadow-lg shadow-amber-500/20"
-                  onClick={handleBulkDownload}
-                >
-                  <Download size={12} /> Bulk Fetch
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg hover:bg-muted"
-                  onClick={() => setSelectedIds(new Set())}
-                >
-                  <X size={14} />
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <StorageToolbar
+          totalAvailable={totalAvailable}
+          isLoading={isLoading}
+          selectedCount={selectedIds.size}
+          onClearSelection={() => setSelectedIds(new Set())}
+          onBulkDownload={handleBulkDownload}
+          isAllSelected={results.length > 0 && selectedIds.size === results.length}
+          onToggleSelectAll={toggleSelectAll}
+        />
 
         <div className="flex-1 min-h-0 relative overflow-hidden">
           {/* EMPTY STATE */}
@@ -359,127 +266,23 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
                     Materializing storage frame...
                   </span>
                 </div>
+              ) : viewMode === 'grid' ? (
+                <StorageGrid
+                  files={filteredFiles}
+                  selectedIds={selectedIds}
+                  toggleSelection={toggleSelection}
+                  onSelectFile={setActiveFileId}
+                  onDownload={downloadFileAction}
+                  onCopyId={(id) => copyToClipboard(id, 'Registry ID')}
+                />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-24">
-                  {filteredFiles.map((f: any) => (
-                    <motion.div
-                      key={f.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={cn(
-                        'group p-5 rounded-[1.75rem] bg-card border transition-all cursor-default flex flex-col gap-4 relative overflow-hidden shadow-md ring-1 ring-white/5',
-                        selectedIds.has(f.id)
-                          ? 'border-amber-500/40 shadow-xl ring-amber-500/10 scale-[1.01] z-10'
-                          : 'border-border/40 hover:border-amber-500/30 hover:shadow-lg'
-                      )}
-                    >
-                      <div className="absolute top-4 left-4 z-30 opacity-0 group-hover:opacity-100 transition-all">
-                        <Checkbox
-                          checked={selectedIds.has(f.id)}
-                          onCheckedChange={() => toggleSelection(f.id)}
-                          className="h-4.5 w-4.5 rounded-md border-border/40 bg-background"
-                        />
-                      </div>
-
-                      <div className="flex items-start gap-4 pt-1 min-w-0">
-                        <div className="h-10 w-10 rounded-2xl bg-muted/20 border border-border/10 flex items-center justify-center text-muted-foreground shrink-0 transition-colors shadow-inner">
-                          {getFileIcon(f.name)}
-                        </div>
-                        <div className="min-w-0 flex-1 overflow-hidden">
-                          <h4
-                            className="font-black text-[13px] truncate text-foreground/90 tracking-tight leading-none uppercase pr-8"
-                            title={f.name}
-                          >
-                            {f.name}
-                          </h4>
-                          <div className="flex items-center gap-2 mt-1.5 min-w-0">
-                            <Badge
-                              variant="secondary"
-                              className="text-[8px] font-black uppercase bg-amber-500/10 text-amber-600 border-none px-1.5 h-4 tracking-widest shrink-0"
-                            >
-                              {f.category}
-                            </Badge>
-                            <span
-                              className="text-[9px] font-mono text-muted-foreground/40 truncate"
-                              title={f.id}
-                            >
-                              {f.id}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-muted/30 rounded-xl p-3.5 border border-border/10 shadow-inner">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[8px] font-black uppercase opacity-30 tracking-widest mb-1 leading-none">
-                              Volume
-                            </span>
-                            <span className="text-[10px] font-bold text-amber-600/70">
-                              {formatBytes(parseInt(f.size))}
-                            </span>
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[8px] font-black uppercase opacity-30 tracking-widest mb-1 leading-none">
-                              Indexed
-                            </span>
-                            <span className="text-[10px] font-bold text-foreground/60">
-                              {new Date(f.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-border/10 flex items-center justify-between px-1">
-                        <span className="text-[9px] font-mono text-muted-foreground/40 flex items-center gap-1.5 italic shrink-0">
-                          <Globe size={10} /> {f.source.split('/').pop() || 'Persistent'}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-md hover:bg-amber-500/10 hover:text-amber-600"
-                            onClick={() => setActiveFileId(f.id)}
-                          >
-                            <Eye size={14} />
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 rounded-md hover:bg-muted"
-                              >
-                                <MoreHorizontal size={14} />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className="w-48 rounded-xl border-border/40 shadow-2xl p-2"
-                            >
-                              <DropdownMenuItem
-                                className="text-xs font-bold gap-3 py-2.5 rounded-lg"
-                                onClick={() => downloadFileAction(f.id, f.name)}
-                              >
-                                <FileDown size={14} /> Download Binary
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-xs font-bold gap-3 py-2.5 rounded-lg"
-                                onClick={() => copyToClipboard(f.id, 'Registry ID')}
-                              >
-                                <Copy size={14} /> Copy Registry ID
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator className="my-2 opacity-5" />
-                              <DropdownMenuItem className="text-xs font-bold gap-3 py-2.5 rounded-lg text-rose-500 hover:bg-rose-500/10 focus:bg-rose-500/10">
-                                <Trash2 size={14} /> Delete Record
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                <StorageList 
+                  files={filteredFiles}
+                  selectedIds={selectedIds}
+                  toggleSelection={toggleSelection}
+                  onSelectFile={setActiveFileId}
+                  onDownload={downloadFileAction}
+                />
               )}
             </div>
           </ScrollArea>

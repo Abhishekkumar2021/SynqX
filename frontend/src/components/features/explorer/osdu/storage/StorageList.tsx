@@ -18,7 +18,20 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Eye, ArrowUpDown, MoreHorizontal, Hash, Binary, Trash2 } from 'lucide-react'
+import { 
+  Eye, 
+  ArrowUpDown, 
+  MoreHorizontal, 
+  FileDown, 
+  Copy, 
+  Trash2,
+  FileArchive,
+  Image,
+  FileCode,
+  FileText,
+  File,
+  Globe
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,19 +40,35 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { toast } from 'sonner'
+import { formatBytes } from '@/lib/utils'
 
-interface MeshListProps {
-  results: any[]
+interface StorageListProps {
+  files: any[]
   selectedIds: Set<string>
-  onToggleSelection: (id: string) => void
-  onSelectRecord: (id: string) => void
+  toggleSelection: (id: string) => void
+  onSelectFile: (id: string) => void
+  onDownload: (id: string, name: string) => void
 }
 
-export const MeshList: React.FC<MeshListProps> = ({
-  results,
+const getFileIcon = (name: string = '') => {
+  const ext = name.split('.').pop()?.toLowerCase()
+  if (['zip', 'tar', 'gz', '7z'].includes(ext || ''))
+    return <FileArchive className="text-orange-500" />
+  if (['jpg', 'jpeg', 'png', 'svg', 'webp'].includes(ext || ''))
+    return <Image className="text-pink-500" />
+  if (['json', 'yaml', 'xml', 'csv', 'sql'].includes(ext || ''))
+    return <FileCode className="text-blue-500" />
+  if (['pdf', 'doc', 'docx', 'txt'].includes(ext || ''))
+    return <FileText className="text-rose-500" />
+  return <File className="text-primary" />
+}
+
+export const StorageList: React.FC<StorageListProps> = ({
+  files,
   selectedIds,
-  onToggleSelection,
-  onSelectRecord,
+  toggleSelection,
+  onSelectFile,
+  onDownload,
 }) => {
   const [sorting, setSorting] = useState<SortingState>([])
 
@@ -54,25 +83,20 @@ export const MeshList: React.FC<MeshListProps> = ({
     () => [
       columnHelper.display({
         id: 'select',
-        header: ({ table }) => (
-            <div className="px-1">
-                 {/* Select All is handled by parent Toolbar, but we could add it here too if desired */}
-                 {/* For now keeping it simple as per MeshGrid parity */}
-            </div>
-        ),
+        header: ({ table }) => <div className="px-1" />,
         cell: ({ row }) => (
           <div className="px-1" onClick={(e) => e.stopPropagation()}>
             <Checkbox
               checked={selectedIds.has(row.original.id)}
-              onCheckedChange={() => onToggleSelection(row.original.id)}
-              className="translate-y-[2px]"
+              onCheckedChange={() => toggleSelection(row.original.id)}
+              className="translate-y-[2px] border-muted-foreground/40 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
             />
           </div>
         ),
         enableSorting: false,
         size: 40,
       }),
-      columnHelper.accessor('id', {
+      columnHelper.accessor('name', {
         header: ({ column }) => {
           return (
             <Button
@@ -80,88 +104,90 @@ export const MeshList: React.FC<MeshListProps> = ({
               onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
               className="h-8 px-2 text-[10px] font-black uppercase tracking-widest hover:bg-transparent"
             >
-              Entity ID
+              File Name
               <ArrowUpDown className="ml-2 h-3 w-3" />
             </Button>
           )
         },
         cell: ({ row }) => (
-          <div className="flex flex-col max-w-[200px]">
-             <span className="font-bold text-xs truncate" title={row.original.id}>
-                {row.original.id.split(':').pop()}
-             </span>
-             <span className="text-[9px] text-muted-foreground/50 truncate font-mono">
-                {row.original.id}
-             </span>
+          <div className="flex items-center gap-3 max-w-[300px]">
+             <div className="h-8 w-8 rounded-lg bg-muted/30 border border-border/50 flex items-center justify-center shrink-0">
+                {React.cloneElement(getFileIcon(row.original.name) as any, { size: 16 })}
+             </div>
+             <div className="flex flex-col min-w-0">
+                 <span className="font-bold text-xs truncate text-foreground/90" title={row.original.name}>
+                    {row.original.name}
+                 </span>
+                 <span className="text-[9px] text-muted-foreground/60 truncate font-mono">
+                    {row.original.id.split(':').pop()}
+                 </span>
+             </div>
           </div>
         ),
       }),
-      columnHelper.accessor('kind', {
-        header: 'Kind',
-        cell: ({ row }) => {
-             // Parse URN: authority:source:entity:version
-             const parts = row.original.kind.split(':')
-             const shortKind = parts[2] || 'Unknown'
-             return (
-                 <div className="flex flex-col max-w-[250px]">
-                    <div className="flex items-center gap-2">
-                         <Badge variant="outline" className="h-5 px-2 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary/80">
-                             {shortKind}
-                         </Badge>
-                    </div>
-                 </div>
-             )
-        },
+      columnHelper.accessor('category', {
+        header: 'Category',
+        cell: ({ row }) => (
+            <Badge variant="outline" className="h-5 px-2 text-[9px] font-black uppercase tracking-widest border-primary/20 bg-primary/5 text-primary">
+                 {row.original.category}
+            </Badge>
+        ),
       }),
-       columnHelper.accessor('authority', {
-        header: 'Partition',
-        cell: ({ row }) => {
-            const parts = row.original.kind.split(':')
-            const authority = parts[0] || row.original.authority || 'OSDU'
-            return (
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                    {authority}
-                </span>
-            )
-        },
+      columnHelper.accessor('size', {
+        header: 'Size',
+        cell: ({ row }) => (
+            <span className="text-[11px] font-mono font-medium text-foreground/80">
+                {formatBytes(parseInt(row.original.size))}
+            </span>
+        ),
       }),
        columnHelper.accessor('source', {
         header: 'Source',
         cell: ({ row }) => {
-            const parts = row.original.kind.split(':')
-            const source = parts[1] || row.original.source || 'Standard'
+            const src = row.original.source.split('/').pop() || 'Persistent';
             return (
-                <span className="text-[10px] font-medium text-foreground/70">
-                    {source}
-                </span>
+                <div className="flex items-center gap-1.5 opacity-70">
+                    <Globe size={12} className="text-muted-foreground" />
+                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                        {src}
+                    </span>
+                </div>
             )
         },
       }),
-      columnHelper.accessor('version', {
-        header: 'Version',
+      columnHelper.accessor('createdAt', {
+        header: 'Indexed',
         cell: ({ row }) => (
              <span className="font-mono text-[10px] text-muted-foreground">
-                {row.original.version ? String(row.original.version) : '-'}
+                {new Date(row.original.createdAt).toLocaleDateString()}
              </span>
         ),
       }),
       columnHelper.display({
         id: 'actions',
         cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+             <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 hover:bg-primary/5 hover:text-primary transition-colors text-muted-foreground"
+              onClick={() => onDownload(row.original.id, row.original.name)}
+            >
+              <FileDown size={14} />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 hover:bg-primary/5 hover:text-primary transition-colors"
-              onClick={() => onSelectRecord(row.original.id)}
+              className="h-8 w-8 hover:bg-primary/5 hover:text-primary transition-colors text-muted-foreground"
+              onClick={() => onSelectFile(row.original.id)}
             >
               <Eye size={14} />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground/60">
                   <span className="sr-only">Open menu</span>
-                  <MoreHorizontal className="h-4 w-4 text-muted-foreground/50" />
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm">
@@ -169,16 +195,16 @@ export const MeshList: React.FC<MeshListProps> = ({
                     className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
                      onClick={() => copyToClipboard(row.original.id, 'ID')}
                 >
-                    <Hash size={12} className="opacity-50" /> Copy ID
+                    <Copy size={12} className="opacity-50" /> Copy ID
                 </DropdownMenuItem>
                  <DropdownMenuItem
                     className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                    onClick={() => onSelectRecord(row.original.id)}
+                    onClick={() => onDownload(row.original.id, row.original.name)}
                 >
-                    <Binary size={12} className="opacity-50" /> Inspect
+                    <FileDown size={12} className="opacity-50" /> Download
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="opacity-20" />
-                <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-rose-500 focus:text-rose-500 cursor-pointer">
+                <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-destructive focus:text-destructive cursor-pointer">
                     <Trash2 size={12} /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -187,11 +213,11 @@ export const MeshList: React.FC<MeshListProps> = ({
         ),
       }),
     ],
-    [selectedIds, onToggleSelection, onSelectRecord]
+    [selectedIds, toggleSelection, onSelectFile, onDownload]
   )
 
   const table = useReactTable({
-    data: results,
+    data: files,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -202,7 +228,7 @@ export const MeshList: React.FC<MeshListProps> = ({
   })
 
   return (
-    <div className="w-full">
+    <div className="w-full pb-24">
       <Table wrapperClassName="border-0 shadow-none bg-transparent overflow-visible">
         <TableHeader className="bg-muted/90 backdrop-blur-xl sticky top-0 z-10 border-b border-border/40">
           {table.getHeaderGroups().map((headerGroup) => (
@@ -227,10 +253,10 @@ export const MeshList: React.FC<MeshListProps> = ({
                 key={row.id}
                 data-state={row.getIsSelected() && 'selected'}
                 className="border-border/20 hover:bg-muted/10 transition-colors group cursor-pointer"
-                onClick={() => onSelectRecord(row.original.id)} // Click row to inspect
+                onClick={() => onSelectFile(row.original.id)} 
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id} className="py-3">
+                  <TableCell key={cell.id} className="py-2.5">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

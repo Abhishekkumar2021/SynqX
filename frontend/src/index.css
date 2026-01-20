@@ -188,10 +188,10 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border selection:bg-primary selection:text-primary-foreground;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-indigo-600 selection:text-white relative overflow-x-hidden font-sans;
+    @apply bg-background text-foreground antialiased relative overflow-x-hidden font-sans;
     font-feature-settings: 'ss01', 'ss02', 'cv01', 'cv02';
   }
 
@@ -209,6 +209,9 @@
   }
   ::-webkit-scrollbar-thumb {
     @apply bg-foreground/10 rounded-full transition-colors;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/20;
   }
 }
 

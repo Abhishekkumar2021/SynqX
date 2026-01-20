@@ -1,5 +1,5 @@
  
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -59,7 +59,8 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
     updateParams({ service, recordId: null, offset: '0' })
   const setKind = (kind: string | null) => {
     setCurrentCursor(null)
-    updateParams({ kind, service: kind ? 'mesh' : activeService, recordId: null, offset: '0' })
+    // Sync: Clear search query when switching kinds to avoid stale filters
+    updateParams({ kind, service: kind ? 'mesh' : activeService, recordId: null, offset: '0', q: '*' })
   }
   const setRecordId = (recordId: string | null) => updateParams({ recordId })
   const setQuery = (q: string) => {
@@ -137,21 +138,46 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
   const totalCount = useMemo(() => searchResponse?.total_count || 0, [searchResponse])
 
   // Record Deep Dive
-  const { data: record, isLoading: isLoadingRecord } = useQuery({
+  const { data: record, isLoading: isLoadingRecord, isError: isRecordError, error: recordError } = useQuery({
     queryKey: ['osdu', 'record', connectionId, activeRecordId],
     queryFn: async () => {
+      // Strip version suffix if present (e.g., :123456) to ensure Storage Service finds the record
+      const cleanId = activeRecordId!.replace(/:\d+$/, '')
+      
       const [details, relationships, ancestry, spatial] = await Promise.all([
-        getConnectionMetadata(connectionId, 'get_record', { record_id: activeRecordId }),
+        getConnectionMetadata(connectionId, 'get_record', { record_id: cleanId }),
         getConnectionMetadata(connectionId, 'get_record_relationships', {
-          record_id: activeRecordId,
+          record_id: cleanId,
         }),
-        getConnectionMetadata(connectionId, 'get_ancestry', { record_id: activeRecordId }),
-        getConnectionMetadata(connectionId, 'get_spatial_data', { record_id: activeRecordId }),
+        getConnectionMetadata(connectionId, 'get_ancestry', { record_id: cleanId }),
+        getConnectionMetadata(connectionId, 'get_spatial_data', { record_id: cleanId }),
       ])
       return { details, relationships, ancestry, spatial }
     },
     enabled: !!activeRecordId,
+    retry: false
   })
+
+  // Handle Record Fetch Error
+  useEffect(() => {
+    if (isRecordError && recordError) {
+        let msg = (recordError as any).message || 'Unknown error'
+        try {
+            // Attempt to parse standard backend error structure or JSON string
+            if ((recordError as any).response?.data?.detail) {
+                msg = (recordError as any).response.data.detail
+            } else {
+                const parsed = JSON.parse(msg)
+                if (parsed.detail) msg = parsed.detail
+            }
+        } catch {}
+
+        toast.error('Unable to inspect record', { 
+            description: msg.length > 100 ? msg.substring(0, 100) + '...' : msg 
+        })
+        setRecordId(null)
+    }
+  }, [isRecordError, recordError])
 
   // Identity & Governance
   const { data: groups = [] } = useQuery({
@@ -167,12 +193,37 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
   })
 
   const downloadMutation = useMutation({
-    mutationFn: (datasetId: string) =>
-      getConnectionMetadata(connectionId, 'get_dataset_url', { dataset_registry_id: datasetId }),
-    onSuccess: (url) => {
-      if (url) window.open(url, '_blank')
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const cleanId = id.replace(/:\d+$/, '')
+      const data = await getConnectionMetadata(connectionId, 'download_file', { file_id: cleanId })
+      return data
     },
-    onError: (err: any) => toast.error('File resolution failed', { description: err.message }),
+    onSuccess: (data, variables) => {
+      // Handle direct file download
+      try {
+        const blob = new Blob([data], { type: 'application/octet-stream' })
+        const link = document.createElement('a')
+        link.href = window.URL.createObjectURL(blob)
+        link.download = variables.name || `download-${Date.now()}.bin` 
+        link.click()
+        window.URL.revokeObjectURL(link.href)
+        toast.success(`Download started: ${variables.name}`)
+      } catch (e) {
+        toast.error('Failed to process download')
+      }
+    },
+    onError: (err: any) => {
+        let msg = err.message || 'Unknown error'
+        try {
+            if (err.response?.data?.detail) {
+                msg = err.response.data.detail
+            } else {
+                const parsed = JSON.parse(msg)
+                if (parsed.detail) msg = parsed.detail
+            }
+        } catch {}
+        toast.error('Download failed', { description: msg })
+    },
   })
 
   return (
@@ -254,7 +305,14 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
               isLoading={isLoadingRecord}
               onClose={() => setRecordId(null)}
               onNavigate={setRecordId}
-              onDownload={() => record && downloadMutation.mutate(record.details.id)}
+              onDownload={() => {
+                if (!record) return
+                const name =
+                  record.details?.data?.DatasetProperties?.FileSourceInfo?.Name ||
+                  record.details?.id?.split(':').pop() ||
+                  'dataset.bin'
+                downloadMutation.mutate({ id: record.details.id, name })
+              }}
             />
           )}
         </AnimatePresence>

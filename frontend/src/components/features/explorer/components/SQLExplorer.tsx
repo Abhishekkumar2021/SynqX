@@ -14,6 +14,8 @@ import {
 } from 'lucide-react'
 import { format } from 'sql-formatter'
 import { toast } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
+import { getConnectionSchemaMetadata } from '@/lib/api'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Button } from '@/components/ui/button'
 import { SchemaBrowser } from '@/components/features/explorer/SchemaBrowser'
@@ -65,6 +67,87 @@ export const SQLExplorer: React.FC<SQLExplorerProps> = ({
   const [activeTabId, setActiveTabId] = useState('1')
   const [isMaximized, setIsMaximized] = useState(false)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+
+  // Fetch schema metadata for autocomplete
+  const { data: schemaMetadata } = useQuery({
+    queryKey: ['schema-metadata', connectionId],
+    queryFn: () => getConnectionSchemaMetadata(connectionId!),
+    enabled: !!connectionId,
+  })
+
+  // Register Autocomplete Provider
+  useEffect(() => {
+    if (!monaco || !schemaMetadata?.metadata) return
+
+    const completionProvider = monaco.languages.registerCompletionItemProvider('sql', {
+      triggerCharacters: ['.', ' '],
+      provideCompletionItems: (model, position) => {
+        const word = model.getWordUntilPosition(position)
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn,
+        }
+
+        const lineContent = model.getLineContent(position.lineNumber)
+        const textBeforeCursor = lineContent.substring(0, position.column - 1)
+        const tableDotMatch = textBeforeCursor.match(/([a-zA-Z0-9_]+)\.$/)
+
+        if (tableDotMatch) {
+          const tableName = tableDotMatch[1]
+          const tableColumns = schemaMetadata.metadata[tableName]
+
+          if (tableColumns) {
+            return {
+              suggestions: tableColumns.map((col: string) => ({
+                label: col,
+                kind: monaco.languages.CompletionItemKind.Field,
+                insertText: col,
+                detail: `Column from ${tableName}`,
+                range: range,
+              })),
+            }
+          }
+        }
+
+        const suggestions: any[] = []
+
+        // Add Tables
+        Object.keys(schemaMetadata.metadata).forEach((table) => {
+          suggestions.push({
+            label: table,
+            kind: monaco.languages.CompletionItemKind.Class,
+            insertText: table,
+            detail: 'Table',
+            range: range,
+          })
+        })
+
+        // Add Columns (global list)
+        Object.values(schemaMetadata.metadata).forEach((columns: any) => {
+          columns.forEach((col: string) => {
+            suggestions.push({
+              label: col,
+              kind: monaco.languages.CompletionItemKind.Field,
+              insertText: col,
+              detail: 'Column',
+              range: range,
+            })
+          })
+        })
+
+        // Filter duplicates
+        const uniqueSuggestions = suggestions.filter(
+          (v, i, a) => a.findIndex((t) => t.label === v.label && t.detail === v.detail) === i
+        )
+
+        return { suggestions: uniqueSuggestions }
+      },
+    })
+
+    return () => completionProvider.dispose()
+  }, [monaco, schemaMetadata, connectionId])
 
   const activeTab = useMemo(
     () => tabs.find((t) => t.id === activeTabId) || tabs[0],

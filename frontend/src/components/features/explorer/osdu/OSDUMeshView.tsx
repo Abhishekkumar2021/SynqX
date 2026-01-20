@@ -8,6 +8,7 @@ import { MeshFooter } from './mesh/MeshFooter'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { RefreshCw, Search, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface OSDUMeshViewProps {
   searchQuery: string
@@ -39,7 +40,7 @@ export const OSDUMeshView: React.FC<OSDUMeshViewProps> = ({
   onToggleAI,
 }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   
   const results = useMemo(() => searchResults?.results || [], [searchResults])
   const totalAvailable = useMemo(() => searchResults?.total_count || 0, [searchResults])
@@ -119,7 +120,10 @@ export const OSDUMeshView: React.FC<OSDUMeshViewProps> = ({
                 </div>
             ) : (
                 <ScrollArea className="h-full">
-                    <div className="p-10 max-w-[1600px] mx-auto w-full">
+                    <div className={cn(
+                        "w-full mx-auto",
+                        viewMode === 'grid' ? "p-10 max-w-[1600px]" : "p-0"
+                    )}>
                         {viewMode === 'grid' ? (
                             <MeshGrid
                                 isLoading={isLoading}
@@ -137,7 +141,7 @@ export const OSDUMeshView: React.FC<OSDUMeshViewProps> = ({
                                 onSelectRecord={onSelectRecord}
                             />
                         )}
-                        <div className="h-24" /> {/* Spacer */}
+                        {viewMode === 'grid' && <div className="h-24" />}
                     </div>
                 </ScrollArea>
             )}
