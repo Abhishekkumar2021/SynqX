@@ -11,6 +11,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getConnectionMetadata } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { ReactFlow, Background, Controls, useNodesState, useEdgesState } from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 
 interface ProSourceRecordInspectorProps {
   connectionId: number
@@ -25,12 +27,17 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
 }) => {
   const [activeTab, setActiveTab] = useState('data')
 
+  // Derive key properties for header
+  const recordId = record.ID || record.id || record.UWI || record.uwi || 'Unknown'
+  const recordName = record.NAME || record.name || record.well_name || record.WELL_NAME || 'Unnamed Record'
+  const recordType = record.TYPE || record.type || 'Entity'
+
   // Fetch documents for this specific record
   const { data: documentData, isLoading: isLoadingDocs } = useQuery({
     queryKey: ['prosource', 'record-documents', connectionId, record],
     queryFn: () =>
       getConnectionMetadata(connectionId, 'list_documents', {
-        entity_ids: [record.ID || record.id || record.uwi || record.well_id],
+        entity_ids: [recordId],
       }),
     enabled: !!record,
   })
@@ -40,15 +47,22 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
     toast.success('Copied to clipboard')
   }
 
-  // Derive key properties for header
-  const recordId = record.ID || record.id || record.UWI || record.uwi || 'Unknown'
-  const recordName = record.NAME || record.name || record.well_name || record.WELL_NAME || 'Unnamed Record'
-  const recordType = record.TYPE || record.type || 'Entity'
-
   // Filter out large/complex objects for the "Properties" quick view
   const simpleProperties = Object.entries(record).filter(([_, v]) => 
     typeof v !== 'object' && v !== null && String(v).length < 50
   )
+
+  // React Flow State for Lineage
+  const [nodes, setNodes, onNodesChange] = useNodesState([
+    {
+        id: '1',
+        type: 'input',
+        data: { label: recordName },
+        position: { x: 250, y: 5 },
+        style: { background: '#fff', border: '1px solid #777', width: 180 }
+    },
+  ])
+  const [edges, setEdges, onEdgesChange] = useEdgesState([])
 
   return (
     <motion.div
@@ -227,15 +241,18 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="lineage" className="h-full m-0 p-0 absolute inset-0 flex items-center justify-center">
-             <div className="text-center p-12 opacity-60 max-w-sm mx-auto">
-                <div className="p-6 bg-muted/20 rounded-full inline-flex mb-6 border border-border/40">
-                    <Shield size={40} className="text-muted-foreground/50" />
-                </div>
-                <h4 className="text-lg font-bold text-foreground mb-2">Lineage Graph Unavailable</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                    Relationship mapping is currently disabled for this connection type. Enable semantic indexing to visualize data lineage.
-                </p>
+          <TabsContent value="lineage" className="h-full m-0 p-0 absolute inset-0 flex flex-col">
+             <div className="flex-1 bg-muted/10 relative">
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    fitView
+                >
+                    <Background />
+                    <Controls />
+                </ReactFlow>
              </div>
           </TabsContent>
         </div>
