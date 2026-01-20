@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getConnectionAssets, getConnection, getConnectionMetadata } from '@/lib/api/connections'
@@ -11,10 +11,8 @@ import { ProSourceReferenceView } from './ProSourceReferenceView'
 import { ProSourceRegistryView } from './ProSourceRegistryView'
 import { ProSourceDocumentView } from './ProSourceDocumentView'
 import { ProSourceSecurityView } from './ProSourceSecurityView'
-import { Loader2, Sparkles, Shield, FileText, ListTree } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ResultsGrid } from '@/components/features/explorer/ResultsGrid'
 
 interface ProSourceExplorerProps {
   connectionId: number
@@ -82,7 +80,6 @@ export const ProSourceExplorer: React.FC<ProSourceExplorerProps> = ({ connection
   })
 
   // Fetch record details if recordId is present
-  // Note: ProSource records need context (assetName) which we have from URL
   const { data: record, isLoading: isLoadingRecord } = useQuery({
     queryKey: ['prosource', 'record', connectionId, selectedAssetName, activeRecordId],
     queryFn: async () => {
@@ -93,19 +90,6 @@ export const ProSourceExplorer: React.FC<ProSourceExplorerProps> = ({ connection
       return res?.results?.[0] || res?.rows?.[0] || null
     },
     enabled: !!activeRecordId && !!selectedAssetName,
-  })
-
-  // Specialized queries for global tabs
-  const { data: docData, isLoading: isLoadingDocs } = useQuery({
-    queryKey: ['prosource', 'global-docs', connectionId],
-    queryFn: () => getConnectionMetadata(connectionId, 'list_all_documents', { limit: 100 }),
-    enabled: activeService === 'documents',
-  })
-
-  const { data: accountData, isLoading: isLoadingAccounts } = useQuery({
-    queryKey: ['prosource', 'accounts', connectionId],
-    queryFn: () => getConnectionMetadata(connectionId, 'list_accounts', { limit: 100 }),
-    enabled: activeService === 'security',
   })
 
   const renderService = () => {
@@ -129,7 +113,7 @@ export const ProSourceExplorer: React.FC<ProSourceExplorerProps> = ({ connection
           />
         )
       case 'registry':
-        return <ProSourceRegistryView assets={assets || []} />
+        return <ProSourceRegistryView connectionId={connectionId} assets={assets || []} />
       case 'reference':
         return <ProSourceReferenceView connectionId={connectionId} />
       case 'documents':
@@ -152,14 +136,17 @@ export const ProSourceExplorer: React.FC<ProSourceExplorerProps> = ({ connection
     )
   }
 
+  // Type-safe config access
+  const connectionConfig = (connection as any)?.config || {}
+
   return (
     <div className="h-full flex flex-col relative overflow-hidden bg-background">
       <ProSourceHubHeader
         connectionName={connection?.name}
-        projectName={connection?.config?.project_name}
-        schema={connection?.config?.db_schema}
-        crs={projectMeta?.crs?.NAME || projectMeta?.crs?.name}
-        unitSystem={projectMeta?.unit_system}
+        projectName={connectionConfig.project_name}
+        schema={connectionConfig.db_schema}
+        crs={projectMeta?.crs?.NAME || projectMeta?.crs?.name || projectMeta?.CRS?.NAME}
+        unitSystem={projectMeta?.unit_system || projectMeta?.UNIT_SYSTEM}
         onBack={() => navigate('/explorer')}
       >
         <div className="flex items-center gap-6">

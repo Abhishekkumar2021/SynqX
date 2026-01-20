@@ -35,18 +35,32 @@ class ProSourceConnector(OracleConnector):
 
     def get_dashboard_diagnostics(self) -> dict[str, Any]:
         """Fetches dynamic distribution data for dashboard visualizations."""
+        import time
+        start = time.perf_counter()
+        
         diag = {
             "doc_formats": [],
             "entity_types": [],
             "schema_sources": [],
-            "domain_counts": self.get_domain_stats().get("domains", {})
+            "domain_counts": self.get_domain_stats().get("domains", {}),
+            "driver_info": "Oracle Thin Driver",
+            "latency_ms": 0
         }
         try:
             diag["doc_formats"] = self.execute_query(self._resolve_query(Q_DOC_FORMAT_STATS))
             diag["entity_types"] = self.execute_query(self._resolve_query(Q_ENTITY_TYPE_STATS))
             diag["schema_sources"] = self.execute_query(self._resolve_query(Q_SCHEMA_SOURCE_STATS))
+            
+            # Identify driver version if possible
+            if self._connection:
+                try:
+                    diag["driver_info"] = f"Oracle {self._connection.version} Thin"
+                except Exception:
+                    pass
         except Exception as e:
             logger.warning(f"Failed to fetch dashboard diagnostics: {e}")
+        
+        diag["latency_ms"] = round((time.perf_counter() - start) * 1000, 2)
         return diag
 
     def _discover_schemas(self) -> dict[str, str]:
@@ -57,23 +71,25 @@ class ProSourceConnector(OracleConnector):
         
         # 1. Discover DD Schema
         try:
-            q_dd = "SELECT owner FROM all_tables WHERE table_name = 'META_ENTITY' ORDER BY CASE WHEN owner LIKE 'DD_%' THEN 1 ELSE 2 END, owner DESC"
+            q_dd = Q_DISCOVER_SCHEMA
             rows = self.execute_query(q_dd)
             if rows:
                 schemas["dd"] = rows[0]["owner"]
         except Exception as e:
-            logger.warning(f"DD discovery fallback: {e}")
+            logger.warning(f"DD discovery failed: {e}")
 
-        # 2. Discover Data Schema via SDS_ACCOUNT if project_name is set
+        # 2. Discover Data Schema via SDS_ACCOUNT (Improved recursive lookup)
         project_name = self.config.get("project_name")
         if project_name:
             try:
-                q_sds = f"SELECT scope FROM SDS_ACCOUNT WHERE account = '{project_name}' AND scope IS NOT NULL"
-                rows = self.execute_query(q_sds)
-                if rows:
+                # Resolve PROJECT_NAME placeholder manually for discovery query
+                discovery_q = Q_SCOPE_VALIDATION.replace("{PROJECT_NAME}", f"'{project_name}'")
+                rows = self.execute_query(discovery_q)
+                if rows and rows[0].get("scope"):
                     schemas["data"] = rows[0]["scope"]
+                    logger.info(f"Discovered ProSource Project Schema: {schemas['data']}")
             except Exception as e:
-                logger.warning(f"Data schema discovery via SDS_ACCOUNT failed: {e}")
+                logger.warning(f"Data schema discovery failed for project {project_name}: {e}")
         
         # Fallback if data schema not found
         if schemas["data"] == "SEABED" and schemas["dd"] != "SEABED":

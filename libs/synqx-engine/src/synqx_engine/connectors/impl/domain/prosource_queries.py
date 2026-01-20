@@ -1,6 +1,6 @@
 # ProSource / Seabed SQL Templates
 
-# 1. Scope / Schema Validation
+# 1. Scope / Schema Validation (Improved)
 Q_SCOPE_VALIDATION = """
 WITH project_name AS (
     SELECT scope, type 
@@ -20,19 +20,17 @@ WHERE table_name = 'META_ENTITY'
 ORDER BY CASE WHEN owner LIKE 'DD_%' THEN 1 ELSE 2 END, owner DESC
 """
 
-# 3. Asset Discovery (Views/Tables with Domain Metadata)
-# Uses LEFT JOIN optimization over correlated subqueries
+# 3. Asset Discovery (Views/Tables with Domain Metadata and Counts)
 Q_DISCOVER_ASSETS = """
 SELECT 
     me.entity AS view_name, 
-    NULL AS count, 
+    TO_NUMBER(EXTRACTVALUE(XMLTYPE(DBMS_XMLGEN.getxml('SELECT COUNT(*) cnt FROM ' || me.entity)), '/ROWSET/ROW/CNT')) AS count,
     mov.base_entity, 
-    COALESCE(me2.primary_submodel, me.primary_submodel) AS domain, 
+    NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD}.meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel) AS domain, 
     me.description, 
     me.entity_type AS view_type 
 FROM {SCHEMA_DD}.meta_entity me 
 LEFT JOIN {SCHEMA_DD}.meta_object_view mov ON me.entity = mov.view_name 
-LEFT JOIN {SCHEMA_DD}.meta_entity me2 ON me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'
 WHERE me.primary_submodel NOT IN ('Spatial','Meta','Root','System') 
 AND me.entity_type IN ('View','ObjectView','Extension','Table')
 """
@@ -73,7 +71,7 @@ FROM {PROJECT}.project_default pd
 JOIN {SCHEMA_DD}.r_unit_system us ON pd.storage_unit_system = us.code
 """
 
-# 8. Document Listing (Unfiltered)
+# 8. Document Listing (Filtered by entities)
 Q_LIST_DOCUMENTS = """
 SELECT 
     ed.document_id, 
@@ -95,14 +93,13 @@ WHERE entity_id IN ({ENTITY_IDS})
 # 9. Domain Stats Aggregation
 Q_DOMAIN_STATS = """
 SELECT 
-    COALESCE(me2.primary_submodel, me.primary_submodel) AS domain, 
+    NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD}.meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel) AS domain, 
     COUNT(*) as count
 FROM {SCHEMA_DD}.meta_entity me 
 LEFT JOIN {SCHEMA_DD}.meta_object_view mov ON me.entity = mov.view_name 
-LEFT JOIN {SCHEMA_DD}.meta_entity me2 ON me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'
 WHERE me.primary_submodel NOT IN ('Spatial','Meta','Root','System') 
 AND me.entity_type IN ('View','ObjectView','Extension','Table')
-GROUP BY COALESCE(me2.primary_submodel, me.primary_submodel)
+GROUP BY NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD}.meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel)
 """
 
 # 10. Relationship Metadata (Lineage)

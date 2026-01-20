@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getConnectionMetadata } from '@/lib/api'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { motion } from 'framer-motion'
 import {
   FileText,
   Download,
@@ -286,7 +285,6 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                     </div>
                   </div>
                 ))}
-                n{' '}
               </div>
             </div>
           )}
