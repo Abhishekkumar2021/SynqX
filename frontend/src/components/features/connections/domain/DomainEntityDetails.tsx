@@ -565,7 +565,7 @@ export const DomainEntityDetails: React.FC<DomainEntityDetailsProps> = ({
                           <DetailItem label="Unit System" value={liveDetails.unit_system} />
                         )}
                         {liveDetails.project && (
-                           <DetailItem label="Project" value={liveDetails.project} />
+                          <DetailItem label="Project" value={liveDetails.project} />
                         )}
                       </>
                     ) : isOSDU ? (

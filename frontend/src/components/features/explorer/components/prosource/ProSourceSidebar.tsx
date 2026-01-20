@@ -7,7 +7,7 @@ import {
   Box,
   Droplet,
   Mountain,
-  FileStack
+  FileStack,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -110,13 +110,18 @@ export const ProSourceSidebar: React.FC<ProSourceSidebarProps> = ({
                           : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground'
                       )}
                     >
-                      <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", style.bg.replace('/10', ''))} />
+                      <div
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full shrink-0',
+                          style.bg.replace('/10', '')
+                        )}
+                      />
                       <span className="text-[11px] font-medium truncate flex-1 leading-tight">
                         {asset.name}
                       </span>
                       {isActive && (
                         <motion.div layoutId="active-indicator" className="absolute right-2">
-                            <ChevronRight size={12} />
+                          <ChevronRight size={12} />
                         </motion.div>
                       )}
                     </button>
@@ -127,7 +132,7 @@ export const ProSourceSidebar: React.FC<ProSourceSidebarProps> = ({
           })}
           {Object.keys(groupedAssets).length === 0 && (
             <div className="p-8 text-center text-muted-foreground/40 text-[10px] uppercase font-bold tracking-widest">
-                No entities found
+              No entities found
             </div>
           )}
         </div>

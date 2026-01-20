@@ -18,14 +18,20 @@ class EngineManager:
     _engines: dict[str, Engine] = {}  # noqa: RUF012
 
     @classmethod
-    def _get_config_hash(cls, connector_type: str, config: dict[str, Any]) -> str:
+    def _get_config_hash(cls, connector_type: str, config: dict[str, Any], options: dict[str, Any]) -> str:
         # Exclude volatile keys that don't affect the connection itself
         clean_config = {
             k: v
             for k, v in config.items()
             if k not in ["execution_context", "ui", "connection_id"]
         }
-        config_str = f"{connector_type}:{json.dumps(clean_config, sort_keys=True)}"
+        # Include options in hash to detect changes in connection parameters
+        combined = {
+            "connector_type": connector_type,
+            "config": clean_config,
+            "options": options
+        }
+        config_str = json.dumps(combined, sort_keys=True, default=str)
         return hashlib.sha256(config_str.encode()).hexdigest()
 
     @classmethod
@@ -36,7 +42,7 @@ class EngineManager:
         options: dict[str, Any],
         config: dict[str, Any],
     ) -> Engine:
-        config_hash = cls._get_config_hash(connector_type, config)
+        config_hash = cls._get_config_hash(connector_type, config, options)
 
         if config_hash not in cls._engines:
             logger.info(

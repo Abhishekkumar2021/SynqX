@@ -89,8 +89,21 @@ class EphemeralHandler:
 
             # --- Type: Metadata / Discovery ---
             elif job_type == "metadata":
+                method_name = payload.get("method")
                 task = payload.get("task_type")
-                if task == "discover_assets":
+
+                # BRANCH A: Generic Method Dispatcher (Preferred)
+                if method_name:
+                    if not hasattr(connector, method_name):
+                        raise ValueError(f"Connector does not support {method_name}")
+                    
+                    method = getattr(connector, method_name)
+                    params = payload.get("params", {})
+                    res = method(**params)
+                    result_update["result_sample"] = sanitize_for_json(res)
+
+                # BRANCH B: Legacy Task Type Dispatcher
+                elif task == "discover_assets":
                     result_update["result_sample"] = {
                         "assets": connector.discover_assets(
                             pattern=payload.get("pattern"),

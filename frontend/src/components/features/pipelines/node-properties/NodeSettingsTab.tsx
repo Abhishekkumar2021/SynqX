@@ -328,7 +328,7 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           <div className="p-5 rounded-[2rem] border border-primary/20 bg-primary/[0.02] space-y-5">
             <div className="space-y-2">
               <Label className="text-[10px] font-bold">Connection</Label>
-              {(!connections || connections.length === 0) ? (
+              {!connections || connections.length === 0 ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -348,7 +348,11 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-border/40">
                         {connections?.map((c: any) => (
-                          <SelectItem key={c.id} value={String(c.id)} className="text-xs font-medium">
+                          <SelectItem
+                            key={c.id}
+                            value={String(c.id)}
+                            className="text-xs font-medium"
+                          >
                             {c.name}
                           </SelectItem>
                         ))}
@@ -361,8 +365,10 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
 
             <div className="space-y-2">
               <Label className="text-[10px] font-bold">Target Asset</Label>
-              {selectedConnectionId && (!filteredAssets || filteredAssets.length === 0) && !isLoadingAssets ? (
-                 <Button
+              {selectedConnectionId &&
+              (!filteredAssets || filteredAssets.length === 0) &&
+              !isLoadingAssets ? (
+                <Button
                   type="button"
                   variant="outline"
                   className="w-full h-10 border-dashed border-muted-foreground/30 text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 text-xs gap-2"
@@ -393,7 +399,11 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                       </SelectTrigger>
                       <SelectContent className="rounded-xl border-border/40">
                         {filteredAssets?.map((a: any) => (
-                          <SelectItem key={a.id} value={String(a.id)} className="text-xs font-medium">
+                          <SelectItem
+                            key={a.id}
+                            value={String(a.id)}
+                            className="text-xs font-medium"
+                          >
                             {a.name}
                           </SelectItem>
                         ))}

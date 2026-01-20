@@ -129,9 +129,11 @@ const PipelineNode = ({ id, data, selected }: NodeProps<AppNode>) => {
           ? 'ring-2 ring-primary/60 border-primary/60 scale-[1.01] z-50 shadow-2xl shadow-primary/10'
           : 'border-border/60 hover:border-border-strong',
         // Running State
-        isRunning && 'ring-2 ring-primary border-primary shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)]',
+        isRunning &&
+          'ring-2 ring-primary border-primary shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)]',
         // Error State
-        isError && 'ring-2 ring-destructive border-destructive shadow-[0_0_30px_-5px_rgba(var(--destructive),0.3)]',
+        isError &&
+          'ring-2 ring-destructive border-destructive shadow-[0_0_30px_-5px_rgba(var(--destructive),0.3)]',
         // Success State
         isSuccess && 'border-emerald-500/50',
         // Diff States
@@ -217,7 +219,7 @@ const PipelineNode = ({ id, data, selected }: NodeProps<AppNode>) => {
               >
                 {config.label}
               </span>
-              
+
               {/* Options Menu */}
               <div className="flex items-center -mr-2">
                 {nodeData.sub_pipeline_id && (
@@ -283,8 +285,11 @@ const PipelineNode = ({ id, data, selected }: NodeProps<AppNode>) => {
                 )}
               </div>
             </div>
-            
-            <h3 className="font-bold text-sm leading-snug text-foreground/90 line-clamp-2" title={nodeData.label}>
+
+            <h3
+              className="font-bold text-sm leading-snug text-foreground/90 line-clamp-2"
+              title={nodeData.label}
+            >
               {nodeData.label}
             </h3>
           </div>
@@ -298,7 +303,9 @@ const PipelineNode = ({ id, data, selected }: NodeProps<AppNode>) => {
       {/* --- Metrics & Status Body --- */}
       <div className="px-5 pt-5 pb-6 space-y-5 flex flex-col h-full justify-end">
         {/* Only show metrics grid if there is data or actively running */}
-        {(isRunning || (nodeData.rowsProcessed && nodeData.rowsProcessed > 0) || (nodeData.throughput && nodeData.throughput > 0)) && (
+        {(isRunning ||
+          (nodeData.rowsProcessed && nodeData.rowsProcessed > 0) ||
+          (nodeData.throughput && nodeData.throughput > 0)) && (
           <div className="grid grid-cols-2 gap-3">
             {/* Throughput Metric */}
             <div className="flex flex-col gap-1 p-3 rounded-2xl bg-muted/40 border border-border/40 hover:bg-muted/60 transition-colors">
@@ -331,43 +338,52 @@ const PipelineNode = ({ id, data, selected }: NodeProps<AppNode>) => {
         )}
 
         {/* Status Strip & Duration */}
-        <div className={cn(
-          "flex items-center justify-between py-2.5 px-3.5 rounded-xl border text-xs font-medium transition-colors mt-auto",
-          isRunning ? "bg-primary/5 border-primary/20 text-primary" : "bg-muted/30 border-border/40 text-muted-foreground",
-          isSuccess && "bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400",
-          isError && "bg-destructive/5 border-destructive/20 text-destructive"
-        )}>
+        <div
+          className={cn(
+            'flex items-center justify-between py-2.5 px-3.5 rounded-xl border text-xs font-medium transition-colors mt-auto',
+            isRunning
+              ? 'bg-primary/5 border-primary/20 text-primary'
+              : 'bg-muted/30 border-border/40 text-muted-foreground',
+            isSuccess &&
+              'bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+            isError && 'bg-destructive/5 border-destructive/20 text-destructive'
+          )}
+        >
           <div className="flex items-center gap-2">
-            <div className={cn(
-              "w-2 h-2 rounded-full",
-              isRunning ? "bg-current animate-pulse shadow-sm" : "bg-current opacity-40"
-            )} />
+            <div
+              className={cn(
+                'w-2 h-2 rounded-full',
+                isRunning ? 'bg-current animate-pulse shadow-sm' : 'bg-current opacity-40'
+              )}
+            />
             <span className="uppercase tracking-widest text-[10px] font-bold">
-               {isRunning ? 'Running...' : status || 'Idle'}
+              {isRunning ? 'Running...' : status || 'Idle'}
             </span>
           </div>
 
-          {(nodeData.duration && nodeData.duration > 0) && (
-             <div className="flex items-center gap-1.5 opacity-80 bg-background/50 px-2 py-0.5 rounded-md shadow-sm">
-               <Clock size={10} />
-               <span className="tabular-nums font-mono text-[10px]">{(nodeData.duration / 1000).toFixed(1)}s</span>
-             </div>
+          {nodeData.duration && nodeData.duration > 0 && (
+            <div className="flex items-center gap-1.5 opacity-80 bg-background/50 px-2 py-0.5 rounded-md shadow-sm">
+              <Clock size={10} />
+              <span className="tabular-nums font-mono text-[10px]">
+                {(nodeData.duration / 1000).toFixed(1)}s
+              </span>
+            </div>
           )}
         </div>
 
         {/* Error Display */}
         {isError && nodeData.error && (
-           <div className="group/error relative overflow-hidden rounded-xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/10 transition-colors">
-              <div className="p-3.5">
-                 <div className="flex items-center gap-2 text-destructive mb-2">
-                    <Zap size={12} strokeWidth={3} />
-                    <span className="text-[10px] font-black uppercase tracking-wider">Error Trace</span>
-                 </div>
-                 <p className="text-[10px] text-destructive/90 font-mono leading-relaxed line-clamp-3 group-hover/error:line-clamp-none transition-all break-all">
-                    {nodeData.error}
-                 </p>
+          <div className="group/error relative overflow-hidden rounded-xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/10 transition-colors">
+            <div className="p-3.5">
+              <div className="flex items-center gap-2 text-destructive mb-2">
+                <Zap size={12} strokeWidth={3} />
+                <span className="text-[10px] font-black uppercase tracking-wider">Error Trace</span>
               </div>
-           </div>
+              <p className="text-[10px] text-destructive/90 font-mono leading-relaxed line-clamp-3 group-hover/error:line-clamp-none transition-all break-all">
+                {nodeData.error}
+              </p>
+            </div>
+          </div>
         )}
       </div>
 
@@ -378,8 +394,8 @@ const PipelineNode = ({ id, data, selected }: NodeProps<AppNode>) => {
           type="target"
           position={Position.Left}
           className={cn(
-            "!w-3 !h-6 !rounded-r-md !rounded-l-none !bg-border !border-0 !-left-3",
-            "transition-all duration-300 hover:!bg-primary hover:!w-4 hover:!shadow-lg hover:!shadow-primary/30",
+            '!w-3 !h-6 !rounded-r-md !rounded-l-none !bg-border !border-0 !-left-3',
+            'transition-all duration-300 hover:!bg-primary hover:!w-4 hover:!shadow-lg hover:!shadow-primary/30',
             "after:content-[''] after:absolute after:inset-y-0 after:right-0 after:w-1 after:bg-background"
           )}
         />
@@ -391,9 +407,9 @@ const PipelineNode = ({ id, data, selected }: NodeProps<AppNode>) => {
           type="source"
           position={Position.Right}
           className={cn(
-             "!w-3 !h-6 !rounded-l-md !rounded-r-none !bg-border !border-0 !-right-3",
-             "transition-all duration-300 hover:!bg-primary hover:!w-4 hover:!shadow-lg hover:!shadow-primary/30",
-             "before:content-[''] before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-background"
+            '!w-3 !h-6 !rounded-l-md !rounded-r-none !bg-border !border-0 !-right-3',
+            'transition-all duration-300 hover:!bg-primary hover:!w-4 hover:!shadow-lg hover:!shadow-primary/30',
+            "before:content-[''] before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-background"
           )}
         />
       )}

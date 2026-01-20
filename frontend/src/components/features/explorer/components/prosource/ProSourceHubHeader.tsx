@@ -1,77 +1,90 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { Database, ChevronRight, ArrowLeft, Layers, Server, Globe, Ruler } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Database, ShieldCheck, Cpu } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface ProSourceHubHeaderProps {
   connectionName?: string
-  healthStatus?: string
+  projectName?: string
+  schema?: string
+  crs?: string
+  unitSystem?: string
+  onBack: () => void
   children?: React.ReactNode
 }
 
 export const ProSourceHubHeader: React.FC<ProSourceHubHeaderProps> = ({
   connectionName,
-  healthStatus,
+  projectName,
+  schema,
+  crs,
+  unitSystem,
+  onBack,
   children,
 }) => {
   return (
-    <header className="relative z-30 flex flex-col border-b border-white/5 bg-black/40 backdrop-blur-2xl px-6 pt-6 pb-0 shadow-2xl">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500" />
-            <div className="relative h-12 w-12 rounded-2xl bg-[#0a0a0c] border border-white/10 flex items-center justify-center text-indigo-400 shadow-inner">
-              <Database size={24} />
-            </div>
+    <header className="px-6 py-3 border-b border-border/10 bg-muted/5 flex items-center justify-between shrink-0 relative z-40 backdrop-blur-md">
+      <div className="flex items-center gap-4 min-w-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          className="h-8 w-8 rounded-lg hover:bg-muted active:scale-95 border border-border/40 shadow-sm"
+        >
+          <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+        </Button>
+
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2">
+            <Server size={12} className="text-primary/60" />
+            <h1 className="text-sm font-black tracking-tight text-foreground uppercase truncate max-w-[150px]">
+              {connectionName || 'ProSource'}
+            </h1>
           </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-black tracking-tight text-white uppercase italic italic-shorthand">
-                ProSource{' '}
-                <span className="text-indigo-500 not-italic tracking-normal">Explorer</span>
-              </h1>
+          <ChevronRight size={12} className="text-muted-foreground/20 shrink-0" />
+          <Badge
+            variant="outline"
+            className="px-2 rounded-md bg-blue-500/5 text-blue-600/80 border-blue-500/20 font-bold uppercase tracking-widest text-[8px]"
+          >
+            {projectName || 'Seabed'}
+          </Badge>
+
+          {crs && (
+            <>
+              <ChevronRight size={12} className="text-muted-foreground/20 shrink-0" />
               <Badge
                 variant="outline"
-                className={cn(
-                  'text-[10px] uppercase font-black px-2 py-0.5 rounded-full border-0',
-                  healthStatus === 'healthy'
-                    ? 'bg-emerald-500/10 text-emerald-400'
-                    : 'bg-amber-500/10 text-amber-400'
-                )}
+                className="px-2 rounded-md bg-emerald-500/5 text-emerald-600 border-emerald-500/20 font-bold uppercase tracking-widest text-[8px] gap-1"
               >
-                {healthStatus || 'Active'}
+                <Globe size={8} />
+                {crs}
               </Badge>
-            </div>
-            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-              <ShieldCheck size={10} className="text-indigo-500/50" />
-              SLB Seabed Master Data Management • {connectionName || 'Standard Context'}
-            </p>
-          </div>
-        </div>
+            </>
+          )}
 
-        <div className="flex items-center gap-3">
-          <div className="hidden lg:flex items-center gap-6 px-6 py-2 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">
-                Engine
-              </span>
-              <span className="text-[10px] font-mono text-white flex items-center gap-1.5">
-                <Cpu size={10} className="text-indigo-400" /> V1.8.4
-              </span>
-            </div>
-            <div className="h-6 w-px bg-white/10" />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">
-                Environment
-              </span>
-              <span className="text-[10px] font-mono text-white italic">PROD_SEABED_01</span>
-            </div>
-          </div>
+          {unitSystem && (
+            <>
+              <ChevronRight size={12} className="text-muted-foreground/20 shrink-0" />
+              <Badge
+                variant="outline"
+                className="px-2 rounded-md bg-amber-500/5 text-amber-600 border-amber-500/20 font-bold uppercase tracking-widest text-[8px] gap-1"
+              >
+                <Ruler size={8} />
+                {unitSystem}
+              </Badge>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="relative">{children}</div>
+      <div className="flex-1 flex justify-center px-4 overflow-hidden">{children}</div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
+          Oracle Live
+        </span>
+      </div>
     </header>
   )
 }

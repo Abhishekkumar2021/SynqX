@@ -128,15 +128,19 @@ def list_connections(  # noqa: PLR0913
             conn_read = ConnectionRead.model_validate(c)
             # Efficiently fetch stats for each connection in the list
             try:
-                conn_read.usage_stats = service.get_connection_usage_stats(
-                    c.id,
-                    user_id=current_user.id,
-                    workspace_id=current_user.active_workspace_id,
+                conn_read.usage_stats = ConnectionUsageStatsRead.model_validate(
+                    service.get_connection_usage_stats(
+                        c.id,
+                        user_id=current_user.id,
+                        workspace_id=current_user.active_workspace_id,
+                    )
                 )
-                conn_read.impact = service.get_connection_impact(
-                    c.id,
-                    user_id=current_user.id,
-                    workspace_id=current_user.active_workspace_id,
+                conn_read.impact = ConnectionImpactRead.model_validate(
+                    service.get_connection_impact(
+                        c.id,
+                        user_id=current_user.id,
+                        workspace_id=current_user.active_workspace_id,
+                    )
                 )
             except Exception as e:
                 logger.warning(f"Failed to fetch stats for connection {c.id}: {e}")
@@ -191,15 +195,19 @@ def get_connection(
 
     # Populate detailed stats and impact
     try:
-        response.usage_stats = service.get_connection_usage_stats(
-            connection.id,
-            user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id,
+        response.usage_stats = ConnectionUsageStatsRead.model_validate(
+            service.get_connection_usage_stats(
+                connection.id,
+                user_id=current_user.id,
+                workspace_id=current_user.active_workspace_id,
+            )
         )
-        response.impact = service.get_connection_impact(
-            connection.id,
-            user_id=current_user.id,
-            workspace_id=current_user.active_workspace_id,
+        response.impact = ConnectionImpactRead.model_validate(
+            service.get_connection_impact(
+                connection.id,
+                user_id=current_user.id,
+                workspace_id=current_user.active_workspace_id,
+            )
         )
     except Exception as e:
         logger.warning(

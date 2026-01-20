@@ -196,17 +196,20 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <div 
-                        role="button"
-                        onClick={(e) => toggleFavorite(entity.name, e)}
-                        className={cn("p-1 rounded-md hover:bg-background/80 transition-colors", isFav && "opacity-100 text-amber-400")}
-                     >
-                        <Star size={12} fill={isFav ? "currentColor" : "none"} />
-                     </div>
+                    <div
+                      role="button"
+                      onClick={(e) => toggleFavorite(entity.name, e)}
+                      className={cn(
+                        'p-1 rounded-md hover:bg-background/80 transition-colors',
+                        isFav && 'opacity-100 text-amber-400'
+                      )}
+                    >
+                      <Star size={12} fill={isFav ? 'currentColor' : 'none'} />
+                    </div>
                   </div>
-                  
+
                   {isActive && (
                     <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-primary" />
                   )}
@@ -270,11 +273,11 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-9 gap-2 text-xs font-bold border-border/40 hover:bg-muted/50"
-                        onClick={handleOpenSQL}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-2 text-xs font-bold border-border/40 hover:bg-muted/50"
+                      onClick={handleOpenSQL}
                     >
                       <Terminal size={14} className="text-muted-foreground" />
                       SQL Editor
@@ -292,8 +295,10 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                   size="sm"
                   onClick={() => setActiveTab('data')}
                   className={cn(
-                    "h-7 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
-                    activeTab === 'data' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    'h-7 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all',
+                    activeTab === 'data'
+                      ? 'bg-background text-primary shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   Data
@@ -303,8 +308,10 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                   size="sm"
                   onClick={() => setActiveTab('documents')}
                   className={cn(
-                    "h-7 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
-                    activeTab === 'documents' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    'h-7 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all',
+                    activeTab === 'documents'
+                      ? 'bg-background text-primary shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   Docs
@@ -326,18 +333,18 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                 className="h-full flex flex-col items-center justify-center gap-6"
               >
                 <div className="relative">
-                    <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-                    <div className="relative bg-background p-4 rounded-2xl border border-border/40 shadow-xl">
-                        <Zap className="h-8 w-8 text-primary animate-pulse" />
-                    </div>
+                  <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+                  <div className="relative bg-background p-4 rounded-2xl border border-border/40 shadow-xl">
+                    <Zap className="h-8 w-8 text-primary animate-pulse" />
+                  </div>
                 </div>
                 <div className="text-center space-y-1">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-foreground/80">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-foreground/80">
                     Retrieving Metadata
-                    </p>
-                    <p className="text-[10px] font-medium text-muted-foreground">
+                  </p>
+                  <p className="text-[10px] font-medium text-muted-foreground">
                     Fetching records from ProSource...
-                    </p>
+                  </p>
                 </div>
               </motion.div>
             ) : activeTab === 'data' ? (
@@ -353,11 +360,11 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                   noBorder
                   noBackground
                   onSelectRows={(indices) => {
-                     // Get the first selected row (assuming single selection for inspector for now)
-                     const index = Array.from(indices)[0]
-                     if (index !== undefined && recordData?.results?.[index]) {
-                        setSelectedRecord(recordData.results[index])
-                     }
+                    // Get the first selected row (assuming single selection for inspector for now)
+                    const index = Array.from(indices)[0]
+                    if (index !== undefined && recordData?.results?.[index]) {
+                      setSelectedRecord(recordData.results[index])
+                    }
                   }}
                 />
               </motion.div>
@@ -371,11 +378,11 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                 {!documentData?.documents || documentData.documents.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40 gap-4">
                     <div className="p-6 rounded-3xl bg-muted/30 border border-dashed border-border/60">
-                        <FileText size={40} className="opacity-50" />
+                      <FileText size={40} className="opacity-50" />
                     </div>
                     <div className="text-center">
-                        <p className="text-sm font-bold text-foreground/70">No Documents Found</p>
-                        <p className="text-xs mt-1">This entity has no associated files.</p>
+                      <p className="text-sm font-bold text-foreground/70">No Documents Found</p>
+                      <p className="text-xs mt-1">This entity has no associated files.</p>
                     </div>
                   </div>
                 ) : (
@@ -386,28 +393,37 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                         className="group relative p-4 rounded-2xl bg-card border border-border/40 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all cursor-pointer overflow-hidden"
                       >
                         <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                        
+
                         <div className="flex items-start justify-between mb-3 relative z-10">
                           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm border border-primary/10">
                             <FileText size={18} />
                           </div>
-                          <Badge variant="secondary" className="text-[9px] font-bold h-5 px-2 bg-muted/50">
+                          <Badge
+                            variant="secondary"
+                            className="text-[9px] font-bold h-5 px-2 bg-muted/50"
+                          >
                             {doc.document_format || 'FILE'}
                           </Badge>
                         </div>
-                        
+
                         <div className="space-y-1 relative z-10">
-                            <h4 className="text-sm font-bold text-foreground truncate leading-tight" title={doc.name}>
+                          <h4
+                            className="text-sm font-bold text-foreground truncate leading-tight"
+                            title={doc.name}
+                          >
                             {doc.name}
-                            </h4>
-                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                          </h4>
+                          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
                             {doc.document_type || 'Unknown Type'}
-                            </p>
+                          </p>
                         </div>
 
                         <div className="mt-4 pt-3 border-t border-border/20 flex items-center justify-between text-[10px] text-muted-foreground font-medium relative z-10">
-                            <span>{new Date(doc.update_date).toLocaleDateString()}</span>
-                            <Download size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
+                          <span>{new Date(doc.update_date).toLocaleDateString()}</span>
+                          <Download
+                            size={14}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-primary"
+                          />
                         </div>
                       </div>
                     ))}

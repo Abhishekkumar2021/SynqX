@@ -7,8 +7,13 @@ export interface AIConvertResponse {
 
 export const convertPrompt = async (
   prompt: string,
-  context: string = 'OSDU Lucene Search'
-): Promise<AIConvertResponse> => {
-  const { data } = await api.post<AIConvertResponse>('/ai/convert', { prompt, context })
+  context: string = 'OSDU Search',
+  metadata?: any[]
+) => {
+  const { data } = await api.post<AIConvertResponse>('/ai/convert', {
+    prompt,
+    context,
+    metadata,
+  })
   return data
 }

@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -16,6 +18,7 @@ router = APIRouter()
 class AIConvertRequest(BaseModel):
     prompt: str
     context: str = "OSDU Lucene Search"
+    metadata: list[dict[str, Any]] | None = None
 
 
 class AIConvertResponse(BaseModel):
@@ -43,23 +46,53 @@ async def convert_prompt(
     try:
         client = genai.Client(api_key=settings.GOOGLE_API_KEY)
 
-        system_prompt = f"""
-        You are the Synqx Data Mesh Orchestrator, an elite expert in OSDU (Open Subsurface Data Universe) and Lucene query syntax.
-        Your mission is to transform ambiguous natural language instructions into high-performance, valid Lucene Search queries for the OSDU Search API.
+        # Dynamic System Prompt Selection
+        is_sql = "sql" in request.context.lower() or "oracle" in request.context.lower() or "prosource" in request.context.lower()
 
-        STRATEGIC CONTEXT: {request.context}
+        # Format metadata for AI if provided
+        meta_context = ""
+        if request.metadata:
+            meta_context = "\nTECHNICAL SCHEMA CONTEXT (Use these exact column names):\n"
+            for col in request.metadata:
+                meta_context += f"- {col.get('name')} ({col.get('type')})\n"
 
-        OPERATIONAL RULES:
-        1. SCHEMA PRECISION: Use 'kind' for entity types. Master data should look like 'kind: "*:*:master-data--Well:*"' unless a specific version is implied.
-        2. ATTRIBUTE MAPPING: All domain data fields MUST be prefixed with 'data.' (e.g., 'data.Status', 'data.WellName').
-        3. WILDCARDS: Use '*' generously for prefix/suffix matching if the user is being broad.
-        4. OPERATORS: Support AND, OR, NOT, and range queries (e.g., data.Depth:[1000 TO 5000]).
-        5. OUTPUT FORMAT: You must return a strictly formatted response:
-           QUERY: <single_line_lucene_query>
-           EXPLANATION: <one_sentence_expert_explanation_of_the_logic>
+        if is_sql:
+            system_prompt = f"""
+            You are the Synqx Data Mesh Orchestrator, an elite expert in Oracle SQL and SLB ProSource (Seabed) schema.
+            Your mission is to transform ambiguous natural language instructions into high-performance, valid Oracle SQL select statements or WHERE clauses.
 
-        USER INSTRUCTION:
-        """  # noqa: E501
+            STRATEGIC CONTEXT: {request.context}
+            {meta_context}
+
+            OPERATIONAL RULES:
+            1. SYNTAX PRECISION: Use standard Oracle SQL. For string matching, prefer 'LIKE' with '%' wildcards.
+            2. COLUMN MAPPING: Prefer technical columns provided in the SCHEMA CONTEXT above. If not provided, use standard Seabed names.
+            3. QUOTING: Use single quotes for string literals. Do NOT use double quotes for identifiers unless strictly necessary.
+            4. SCOPE: Focus on generating the WHERE clause or a complete SELECT * FROM [TABLE] WHERE ... statement.
+            5. OUTPUT FORMAT: You must return a strictly formatted response:
+               QUERY: <single_line_sql_query>
+               EXPLANATION: <one_sentence_expert_explanation_of_the_logic>
+
+            USER INSTRUCTION:
+            """
+        else:
+            system_prompt = f"""
+            You are the Synqx Data Mesh Orchestrator, an elite expert in OSDU (Open Subsurface Data Universe) and Lucene query syntax.
+            Your mission is to transform ambiguous natural language instructions into high-performance, valid Lucene Search queries for the OSDU Search API.
+
+            STRATEGIC CONTEXT: {request.context}
+
+            OPERATIONAL RULES:
+            1. SCHEMA PRECISION: Use 'kind' for entity types. Master data should look like 'kind: "*:*:master-data--Well:*"' unless a specific version is implied.
+            2. ATTRIBUTE MAPPING: All domain data fields MUST be prefixed with 'data.' (e.g., 'data.Status', 'data.WellName').
+            3. WILDCARDS: Use '*' generously for prefix/suffix matching if the user is being broad.
+            4. OPERATORS: Support AND, OR, NOT, and range queries (e.g., data.Depth:[1000 TO 5000]).
+            5. OUTPUT FORMAT: You must return a strictly formatted response:
+               QUERY: <single_line_lucene_query>
+               EXPLANATION: <one_sentence_expert_explanation_of_the_logic>
+
+            USER INSTRUCTION:
+            """
 
         # Try primary model
         model_name = settings.GOOGLE_AI_MODEL

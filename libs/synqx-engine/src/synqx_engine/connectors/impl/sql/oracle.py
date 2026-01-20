@@ -23,6 +23,27 @@ class OracleConnector(SQLConnector):
         except Exception as e:
             raise ConfigurationError(f"Invalid Oracle configuration: {e}")  # noqa: B904
 
+    def _sqlalchemy_url(self) -> str:
+        conf = OracleConfig.model_validate(self.config)
+        return (
+            f"oracle+oracledb://"
+            f"{conf.username}:{conf.password}"
+            f"@{conf.host}:{conf.port}/"
+            f"{conf.database}"
+        )
+
+    def _get_engine_options(self) -> dict[str, Any]:
+        options = super()._get_engine_options()
+        # Use connection_timeout_seconds from config if available, default to 60 for Oracle
+        timeout = self.config.get("connection_timeout_seconds", 60)
+        
+        # Add Oracle-specific connection arguments
+        options["connect_args"] = {
+            "expire_time": 2, # TCP Keepalive (minutes)
+            "tcp_connect_timeout": timeout
+        }
+        return options
+
     @retry(exceptions=(Exception,), max_attempts=3)
     def execute_query(
         self,
@@ -64,6 +85,26 @@ class OracleConnector(SQLConnector):
                 con=self._connection,
                 params=bind_params if bind_params else None,
             )
+
+            # Handle BLOB/CLOB/Binary data for JSON safety and performance
+            for col in df.columns:
+                # Detect columns that might contain binary data
+                if df[col].dtype == 'object':
+                    def sanitize_lob(val):
+                        if val is None:
+                            return None
+                        # Handle bytes/bytearray (BLOB/RAW)
+                        if isinstance(val, (bytes, bytearray)):
+                            size_kb = len(val) / 1024
+                            if size_kb > 1024:
+                                return f"<BLOB: {size_kb/1024:.2f} MB>"
+                            return f"<BLOB: {size_kb:.2f} KB>"
+                        # Handle very long strings (CLOB) - cap at 10KB for preview
+                        if isinstance(val, str) and len(val) > 10240:
+                            return val[:1024] + "... <CLOB Truncated>"
+                        return val
+                    
+                    df[col] = df[col].apply(sanitize_lob)
 
             logger.info(f"Query Result: {len(df)} rows returned")
             return df.replace({np.nan: None}).to_dict(orient="records")

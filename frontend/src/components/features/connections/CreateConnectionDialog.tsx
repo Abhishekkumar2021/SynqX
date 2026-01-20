@@ -563,9 +563,7 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({
                                           type={field.type}
                                           min={field.min}
                                           placeholder={field.placeholder}
-                                          className={cn(
-                                            field.type === 'password' && 'pl-10'
-                                          )}
+                                          className={cn(field.type === 'password' && 'pl-10')}
                                         />
                                         {field.type === 'password' && (
                                           <Lock className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground opacity-50" />
