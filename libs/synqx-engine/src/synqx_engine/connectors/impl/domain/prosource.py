@@ -54,9 +54,9 @@ class ProSourceConnector(OracleConnector):
         Dynamically discovers the Data Dictionary schema using SDS_ACCOUNT.
         """
         try:
-            q_sds = "SELECT scope FROM SDS_ACCOUNT WHERE type = 'DD' ORDER BY scope DESC"
+            q_sds = "SELECT scope FROM SDS_ACCOUNT WHERE type = 'DD' AND scope IS NOT NULL ORDER BY scope DESC"
             rows = self.execute_query(q_sds)
-            if rows:
+            if rows and rows[0].get("scope"):
                 discovered = rows[0]["scope"]
                 logger.info(f"Discovered ProSource Schema via SDS_ACCOUNT: {discovered}")
                 return discovered
@@ -65,7 +65,7 @@ class ProSourceConnector(OracleConnector):
 
         try:
             rows = self.execute_query(Q_DISCOVER_SCHEMA)
-            if rows:
+            if rows and rows[0].get("owner"):
                 return rows[0]["owner"]
         except Exception as e:
             logger.warning(f"Failed to discover DD schema: {e}")
@@ -78,18 +78,20 @@ class ProSourceConnector(OracleConnector):
         if config_schema and config_schema != "SEABED":
              schema_dd = config_schema
         else:
-             schema_dd = self._discover_dd_schema()
+             schema_dd = self._discover_dd_schema() or "SEABED"
 
-        project = self.config.get("project_schema", schema_dd)
+        project = self.config.get("project_schema") or schema_dd
         project_name = self.config.get("project_name", "DEMO")
 
-        query = query_template.replace("{SCHEMA_DD}", schema_dd)
-        query = query.replace("{PROJECT}", project)
+        # Robust string conversion for all template values
+        query = query_template.replace("{SCHEMA_DD}", str(schema_dd))
+        query = query.replace("{PROJECT}", str(project))
         query = query.replace("{PROJECT_NAME}", f"'{project_name}'")
 
         for k, v in kwargs.items():
-            query = query.replace(f"{{ {k} }}", str(v))
-            query = query.replace(f"{{{k}}}", str(v))
+            val = str(v) if v is not None else ""
+            query = query.replace(f"{{ {k} }}", val)
+            query = query.replace(f"{{{k}}}", val)
 
         return query
 

@@ -28,6 +28,7 @@ export const ProSourceMeshView: React.FC<ProSourceMeshViewProps> = ({
   onOffsetChange,
 }) => {
   const [isAIOpen, setIsAIOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
 
   // Auto-select first asset if available and none selected
   useEffect(() => {
@@ -52,10 +53,12 @@ export const ProSourceMeshView: React.FC<ProSourceMeshViewProps> = ({
           onApplyQuery={onApplyQuery}
           onToggleAI={() => setIsAIOpen(true)}
           isLoading={false}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
 
         {selectedAsset ? (
-          <div className="flex-1 flex flex-col p-4 overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <ProSourceDataTable
               connectionId={connectionId}
               assetName={selectedAsset.name}
@@ -63,6 +66,7 @@ export const ProSourceMeshView: React.FC<ProSourceMeshViewProps> = ({
               onSelectRecord={onSelectEntity}
               pageOffset={pageOffset}
               onOffsetChange={onOffsetChange}
+              viewMode={viewMode}
             />
           </div>
         ) : (
