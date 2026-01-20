@@ -70,7 +70,11 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
   })
 
   const totalDocs = useMemo(
-    () => diagnostics?.doc_formats?.reduce((acc: number, curr: any) => acc + curr.VALUE, 0) || 0,
+    () =>
+      diagnostics?.doc_formats?.reduce(
+        (acc: number, curr: any) => acc + (curr.VALUE || curr.value || 0),
+        0
+      ) || 0,
     [diagnostics]
   )
 
@@ -183,8 +187,8 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
                   <PieChart>
                     <Pie
                       data={diagnostics?.entity_types?.map((t: any) => ({
-                        name: t.LABEL,
-                        value: t.VALUE,
+                        name: t.LABEL || t.label,
+                        value: t.VALUE || t.value,
                       }))}
                       innerRadius={80}
                       outerRadius={120}
@@ -220,8 +224,8 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={diagnostics?.doc_formats?.map((f: any) => ({
-                      name: f.LABEL,
-                      value: f.VALUE,
+                      name: f.LABEL || f.label,
+                      value: f.VALUE || f.value,
                     }))}
                     layout="vertical"
                   >
@@ -256,8 +260,8 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={diagnostics?.schema_sources?.map((s: any) => ({
-                      name: s.LABEL,
-                      value: s.VALUE,
+                      name: s.LABEL || s.label,
+                      value: s.VALUE || s.value,
                     }))}
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />

@@ -61,7 +61,7 @@ export const ProSourceMeshView: React.FC<ProSourceMeshViewProps> = ({
           <div className="flex-1 flex flex-col overflow-hidden">
             <ProSourceDataTable
               connectionId={connectionId}
-              assetName={selectedAsset.name}
+              assetName={selectedAsset.name || selectedAsset.NAME}
               customQuery={customQuery}
               onSelectRecord={onSelectEntity}
               pageOffset={pageOffset}

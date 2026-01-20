@@ -49,43 +49,49 @@ class ProSourceConnector(OracleConnector):
             logger.warning(f"Failed to fetch dashboard diagnostics: {e}")
         return diag
 
-    def _discover_dd_schema(self) -> str:
+    def _discover_schemas(self) -> dict[str, str]:
         """
-        Dynamically discovers the Data Dictionary schema using SDS_ACCOUNT.
+        Discovers both Data Dictionary (DD) and Project/Data schemas.
         """
-        try:
-            q_sds = "SELECT scope FROM SDS_ACCOUNT WHERE type = 'DD' AND scope IS NOT NULL ORDER BY scope DESC"
-            rows = self.execute_query(q_sds)
-            if rows and rows[0].get("scope"):
-                discovered = rows[0]["scope"]
-                logger.info(f"Discovered ProSource Schema via SDS_ACCOUNT: {discovered}")
-                return discovered
-        except Exception:
-            pass
-
-        try:
-            rows = self.execute_query(Q_DISCOVER_SCHEMA)
-            if rows and rows[0].get("owner"):
-                return rows[0]["owner"]
-        except Exception as e:
-            logger.warning(f"Failed to discover DD schema: {e}")
+        schemas = {"dd": "SEABED", "data": "SEABED"}
         
-        return "SEABED"
+        # 1. Discover DD Schema
+        try:
+            q_dd = "SELECT owner FROM all_tables WHERE table_name = 'META_ENTITY' ORDER BY CASE WHEN owner LIKE 'DD_%' THEN 1 ELSE 2 END, owner DESC"
+            rows = self.execute_query(q_dd)
+            if rows:
+                schemas["dd"] = rows[0]["owner"]
+        except Exception as e:
+            logger.warning(f"DD discovery fallback: {e}")
+
+        # 2. Discover Data Schema via SDS_ACCOUNT if project_name is set
+        project_name = self.config.get("project_name")
+        if project_name:
+            try:
+                q_sds = f"SELECT scope FROM SDS_ACCOUNT WHERE account = '{project_name}' AND scope IS NOT NULL"
+                rows = self.execute_query(q_sds)
+                if rows:
+                    schemas["data"] = rows[0]["scope"]
+            except Exception as e:
+                logger.warning(f"Data schema discovery via SDS_ACCOUNT failed: {e}")
+        
+        # Fallback if data schema not found
+        if schemas["data"] == "SEABED" and schemas["dd"] != "SEABED":
+            schemas["data"] = schemas["dd"]
+
+        return schemas
 
     def _resolve_query(self, query_template: str, **kwargs) -> str:
-        """Resolves placeholders in the query using connection config."""
-        config_schema = self.config.get("db_schema")
-        if config_schema and config_schema != "SEABED":
-             schema_dd = config_schema
-        else:
-             schema_dd = self._discover_dd_schema() or "SEABED"
-
-        project = self.config.get("project_schema") or schema_dd
+        """Resolves placeholders in the query using connection context."""
+        schemas = self._discover_schemas()
+        
+        # Priority: Config > Discovery
+        schema_dd = self.config.get("db_schema") or schemas["dd"]
+        project_data = self.config.get("project_schema") or schemas["data"]
         project_name = self.config.get("project_name", "DEMO")
 
-        # Robust string conversion for all template values
         query = query_template.replace("{SCHEMA_DD}", str(schema_dd))
-        query = query.replace("{PROJECT}", str(project))
+        query = query.replace("{PROJECT}", str(project_data))
         query = query.replace("{PROJECT_NAME}", f"'{project_name}'")
 
         for k, v in kwargs.items():

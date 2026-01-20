@@ -1,7 +1,15 @@
 import React, { useState, useMemo } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ListTree, ChevronRight, ChevronDown, Database, Search, RefreshCw, Layers } from 'lucide-react'
+import {
+  ListTree,
+  ChevronRight,
+  ChevronDown,
+  Database,
+  Search,
+  RefreshCw,
+  Layers,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -49,10 +57,13 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({ as
           </div>
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-                Object Matrix
-                <Badge variant="secondary" className="h-5 px-2 bg-emerald-500/10 text-emerald-600 border-none text-[9px] font-black uppercase">
-                    {assets.length} Technical Definitions
-                </Badge>
+              Object Matrix
+              <Badge
+                variant="secondary"
+                className="h-5 px-2 bg-emerald-500/10 text-emerald-600 border-none text-[9px] font-black uppercase"
+              >
+                {assets.length} Technical Definitions
+              </Badge>
             </h2>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1 opacity-60">
               Global Data Dictionary & Semantic Catalog
@@ -61,18 +72,22 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({ as
         </div>
 
         <div className="flex items-center gap-4">
-            <div className="relative group w-80">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-emerald-500" />
-                <Input
-                    placeholder="Search technical definitions..."
-                    className="h-10 pl-10 rounded-xl bg-background/50 border-border/40 focus:ring-emerald-500/10 shadow-sm text-[11px] font-bold placeholder:uppercase"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                />
-            </div>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted active:scale-95 transition-all">
-                <RefreshCw size={18} className="text-emerald-500" />
-            </Button>
+          <div className="relative group w-80">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-emerald-500" />
+            <Input
+              placeholder="Search technical definitions..."
+              className="h-10 pl-10 rounded-xl bg-background/50 border-border/40 focus:ring-emerald-500/10 shadow-sm text-[11px] font-bold placeholder:uppercase"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 rounded-xl hover:bg-muted active:scale-95 transition-all"
+          >
+            <RefreshCw size={18} className="text-emerald-500" />
+          </Button>
         </div>
       </div>
 
@@ -92,10 +107,12 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({ as
                   )}
                 </div>
                 <div className="flex flex-col">
-                    <h3 className="text-base font-black uppercase tracking-widest text-foreground/80 group-hover:text-emerald-600 transition-colors">
-                        {group}
-                    </h3>
-                    <span className="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">Domain Namespace Partition</span>
+                  <h3 className="text-base font-black uppercase tracking-widest text-foreground/80 group-hover:text-emerald-600 transition-colors">
+                    {group}
+                  </h3>
+                  <span className="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em]">
+                    Domain Namespace Partition
+                  </span>
                 </div>
                 <Badge
                   variant="secondary"
@@ -125,21 +142,26 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({ as
                               <Database size={24} />
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                                <Badge variant="outline" className="text-[8px] font-black h-5 px-2 bg-muted/30 border-none uppercase tracking-widest">
-                                    {asset.metadata?.view_type || 'TABLE'}
-                                </Badge>
-                                {asset.rows > 0 && (
-                                    <span className="text-[9px] font-mono font-bold opacity-30 tabular-nums">[{formatNumber(asset.rows)}]</span>
-                                )}
+                              <Badge
+                                variant="outline"
+                                className="text-[8px] font-black h-5 px-2 bg-muted/30 border-none uppercase tracking-widest"
+                              >
+                                {asset.metadata?.view_type || 'TABLE'}
+                              </Badge>
+                              {asset.rows > 0 && (
+                                <span className="text-[9px] font-mono font-bold opacity-30 tabular-nums">
+                                  [{formatNumber(asset.rows)}]
+                                </span>
+                              )}
                             </div>
                           </div>
 
                           <div className="min-w-0 flex-1 relative z-10">
                             <h4 className="text-sm font-black text-foreground uppercase tracking-tight group-hover:text-emerald-600 transition-colors">
-                                {asset.name}
+                              {asset.name}
                             </h4>
                             <p className="text-[9px] font-mono font-bold text-muted-foreground/40 truncate uppercase mt-1 tracking-widest">
-                                {asset.metadata?.table}
+                              {asset.metadata?.table}
                             </p>
                           </div>
 
@@ -150,11 +172,16 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({ as
 
                           <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/10 relative z-10">
                             <div className="flex items-center gap-3">
-                                <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">Active Model</span>
+                              <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">
+                                Active Model
+                              </span>
                             </div>
-                            <Button variant="ghost" className="h-8 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest text-emerald-600 opacity-0 group-hover:opacity-100 transition-all bg-emerald-500/5 hover:bg-emerald-500/10">
-                                Inspect Schema <ChevronRight size={12} className="ml-1" />
+                            <Button
+                              variant="ghost"
+                              className="h-8 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest text-emerald-600 opacity-0 group-hover:opacity-100 transition-all bg-emerald-500/5 hover:bg-emerald-500/10"
+                            >
+                              Inspect Schema <ChevronRight size={12} className="ml-1" />
                             </Button>
                           </div>
 
@@ -168,14 +195,18 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({ as
               </AnimatePresence>
             </div>
           ))}
-          
+
           {groupedAssets.length === 0 && (
             <div className="p-24 flex flex-col items-center justify-center text-center space-y-6 opacity-20 grayscale">
-                <Layers size={80} strokeWidth={1} />
-                <div className="space-y-2">
-                    <p className="font-black uppercase text-[10px] tracking-[0.4em]">No technical matches</p>
-                    <p className="text-[9px] font-bold uppercase tracking-widest">Search query returned zero definitions in the registry</p>
-                </div>
+              <Layers size={80} strokeWidth={1} />
+              <div className="space-y-2">
+                <p className="font-black uppercase text-[10px] tracking-[0.4em]">
+                  No technical matches
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-widest">
+                  Search query returned zero definitions in the registry
+                </p>
+              </div>
             </div>
           )}
         </div>

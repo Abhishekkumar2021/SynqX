@@ -86,14 +86,11 @@ export const ProSourceExplorer: React.FC<ProSourceExplorerProps> = ({ connection
   const { data: record, isLoading: isLoadingRecord } = useQuery({
     queryKey: ['prosource', 'record', connectionId, selectedAssetName, activeRecordId],
     queryFn: async () => {
-      // In ProSource, we usually query the record by its PK from the table
-      // For now, we assume the 'activeRecordId' is enough to identify it
-      // if the backend 'get_record' is implemented, or we fetch it via SQL.
       const res = await getConnectionMetadata(connectionId, 'execute_query', {
         query: `SELECT * FROM ${selectedAssetName} WHERE ID = '${activeRecordId}' OR WELL_ID = '${activeRecordId}' OR UWI = '${activeRecordId}'`,
         limit: 1,
       })
-      return res?.results?.[0] || null
+      return res?.results?.[0] || res?.rows?.[0] || null
     },
     enabled: !!activeRecordId && !!selectedAssetName,
   })
