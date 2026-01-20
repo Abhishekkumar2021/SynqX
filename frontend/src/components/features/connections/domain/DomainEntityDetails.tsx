@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useQuery } from '@tanstack/react-query'
 import { executeQuery } from '@/lib/api/ephemeral'
-import { getConnectionMetadata } from '@/lib/api/connections'
+import { getConnectionMetadata, getAssetDetails } from '@/lib/api/connections'
 import { toast } from 'sonner'
 import { type DomainConfig } from '@/lib/domain-definitions'
 import { CodeBlock } from '@/components/ui/docs/CodeBlock'
@@ -62,6 +62,15 @@ export const DomainEntityDetails: React.FC<DomainEntityDetailsProps> = ({
   const [activeTab, setActiveTab] = useState(initialTab)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
+  const isProSource = config.connectorType === 'prosource'
+
+  // Fetch live details for ProSource (CRS, Units, Exact Count)
+  const { data: liveDetails } = useQuery({
+    queryKey: ['prosource', 'asset-details', connectionId, item.name],
+    queryFn: () => getAssetDetails(connectionId, item.name),
+    enabled: isProSource,
+  })
+
   const normalizedItem = useMemo(() => {
     // Managed Asset from Synqx DB
     if (item.asset_type && item.schema_metadata) {
@@ -79,7 +88,7 @@ export const DomainEntityDetails: React.FC<DomainEntityDetailsProps> = ({
       return {
         ...item,
         // Map DB field to the 'rows' attribute used by DOMAIN_CONFIGS stats
-        rows: item.row_count_estimate,
+        rows: liveDetails?.rows ?? item.row_count_estimate,
         // Ensure 'schema' (partition) is available
         schema: item.schema || authority,
         // Map back to 'metadata' format
@@ -92,8 +101,19 @@ export const DomainEntityDetails: React.FC<DomainEntityDetailsProps> = ({
         name: osduKind,
       }
     }
+    // For Discovery items, merge live details if available
+    if (isProSource && liveDetails) {
+      return {
+        ...item,
+        rows: liveDetails.rows ?? item.rows,
+        metadata: {
+          ...item.metadata,
+          ...liveDetails,
+        },
+      }
+    }
     return item
-  }, [item])
+  }, [item, liveDetails, isProSource])
 
   // Clean up for technical descriptor (remove internal DB fields)
   const displayJson = useMemo(() => {
@@ -531,6 +551,19 @@ export const DomainEntityDetails: React.FC<DomainEntityDetailsProps> = ({
                     {metadataItems.map(({ key, value }) => (
                       <DetailItem key={key} label={key} value={value} />
                     ))}
+                    {isProSource && liveDetails && (
+                      <>
+                        {liveDetails.crs && (
+                          <DetailItem
+                            label="Coordinate System"
+                            value={liveDetails.crs.NAME || liveDetails.crs.name || 'Unknown'}
+                          />
+                        )}
+                        {liveDetails.unit_system && (
+                          <DetailItem label="Unit System" value={liveDetails.unit_system} />
+                        )}
+                      </>
+                    )}
                     {isOSDU ? (
                       <>
                         <DetailItem label="Authority" value={fullMetadata?.authority} />

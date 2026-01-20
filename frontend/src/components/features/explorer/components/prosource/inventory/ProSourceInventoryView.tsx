@@ -11,16 +11,17 @@ import {
   ChevronRight,
   Zap,
   Box,
+  FileText,
+  Globe,
+  Ruler,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { getConnectionMetadata } from '@/lib/api'
+import { getConnectionMetadata, getAssetDetails } from '@/lib/api'
 
 // Sub-components
-import { InventoryGrid } from './components/InventoryGrid'
-import { InventoryList } from './components/InventoryList'
 import { ResultsGrid } from '../../ResultsGrid'
 
 interface ProSourceInventoryViewProps {
@@ -40,15 +41,40 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedEntity, setSelectedEntity] = useState<any>(assets[0] || null)
+  const [activeTab, setActiveTab] = useState<'data' | 'documents'>('data')
 
-  // Fetch sample data for the selected entity
+  // 1. Fetch live details (CRS, Units, Exact Count)
+  const { data: assetDetails } = useQuery({
+    queryKey: ['prosource', 'asset-details', connectionId, selectedEntity?.name],
+    queryFn: () => getAssetDetails(connectionId, selectedEntity?.name),
+    enabled: !!selectedEntity,
+  })
+
+  // 2. Fetch sample data
   const { data: recordData, isLoading: isLoadingRecords } = useQuery({
     queryKey: ['prosource', 'records', connectionId, selectedEntity?.name],
     queryFn: () =>
       getConnectionMetadata(connectionId, 'execute_query', {
         query: `SELECT * FROM ${selectedEntity?.metadata?.table || selectedEntity?.name} FETCH FIRST 100 ROWS ONLY`,
       }),
-    enabled: !!selectedEntity,
+    enabled: !!selectedEntity && activeTab === 'data',
+  })
+
+  // 3. Fetch documents (if tab active)
+  const { data: documentData, isLoading: isLoadingDocs } = useQuery({
+    queryKey: ['prosource', 'documents', connectionId, selectedEntity?.name],
+    queryFn: () =>
+      getConnectionMetadata(connectionId, 'list_documents', {
+        entity_table: selectedEntity?.metadata?.table || selectedEntity?.name,
+        // In a real scenario, we'd pass specific entity IDs from selection,
+        // but here we might list generally or need a specific ID.
+        // For inventory view, listing ALL docs for a table might be heavy.
+        // We'll limit or just show empty state until a record is picked?
+        // Let's assume we want to show docs for the *sample* records if possible,
+        // or just recent docs.
+        entity_ids: [], // TODO: wired to selection or recent
+      }),
+    enabled: !!selectedEntity && activeTab === 'documents',
   })
 
   const filteredEntities = useMemo(() => {
@@ -60,6 +86,9 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
   }, [assets, searchQuery])
 
   const modules = Array.from(new Set(assets.map((a) => a.metadata?.module || 'Other')))
+
+  // Use live count if available, else estimated
+  const displayRowCount = assetDetails?.rows ?? selectedEntity?.rows ?? 0
 
   return (
     <div className="h-full flex overflow-hidden bg-[#020203]">
@@ -156,65 +185,109 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
 
       {/* Main Content: Data Explorer */}
       <section className="flex-1 flex flex-col relative overflow-hidden bg-black/40">
-        <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-black/20 backdrop-blur-xl">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-              <Box size={20} />
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-black text-white uppercase italic italic-shorthand">
-                  {selectedEntity?.name || 'Select Entity'}
-                </h2>
-                <Badge
-                  variant="outline"
-                  className="text-[9px] font-mono border-white/10 text-indigo-400 bg-indigo-500/5"
-                >
-                  {selectedEntity?.metadata?.table || 'RAW_TABLE'}
-                </Badge>
+        <div className="px-8 py-6 border-b border-white/5 bg-black/20 backdrop-blur-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                <Box size={20} />
               </div>
-              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">
-                Found {selectedEntity?.rows?.toLocaleString() || 0} records in master repository
-              </p>
-            </div>
-          </div>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-black text-white uppercase italic italic-shorthand">
+                    {selectedEntity?.name || 'Select Entity'}
+                  </h2>
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] font-mono border-white/10 text-indigo-400 bg-indigo-500/5"
+                  >
+                    {selectedEntity?.metadata?.table || 'RAW_TABLE'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-4 mt-1">
+                  <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                    {displayRowCount.toLocaleString()} records
+                  </p>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 p-1 rounded-xl shadow-inner">
-              <button
-                onClick={() => onViewModeChange('grid')}
-                className={cn(
-                  'p-2 rounded-lg transition-all',
-                  viewMode === 'grid'
-                    ? 'bg-white/[0.05] text-white shadow-xl'
-                    : 'text-muted-foreground/40 hover:text-white'
-                )}
-              >
-                <LayoutGrid size={14} />
-              </button>
-              <button
-                onClick={() => onViewModeChange('list')}
-                className={cn(
-                  'p-2 rounded-lg transition-all',
-                  viewMode === 'list'
-                    ? 'bg-white/[0.05] text-white shadow-xl'
-                    : 'text-muted-foreground/40 hover:text-white'
-                )}
-              >
-                <ListIcon size={14} />
-              </button>
+                  {/* CRS Info */}
+                  {assetDetails?.crs && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-emerald-400/80 uppercase font-bold tracking-wider">
+                      <Globe size={10} />
+                      {assetDetails.crs.NAME || 'WGS84'}
+                    </div>
+                  )}
+
+                  {/* Unit System Info */}
+                  {assetDetails?.unit_system && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-amber-400/80 uppercase font-bold tracking-wider">
+                      <Ruler size={10} />
+                      {assetDetails.unit_system}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="h-8 w-px bg-white/10 mx-2" />
-            <button className="flex items-center gap-2 px-4 h-10 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] group">
-              <Zap size={14} className="group-hover:animate-pulse" />
-              Analyze Mesh
-            </button>
+
+            <div className="flex items-center gap-4">
+              {/* View Mode Switcher */}
+              <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 p-1 rounded-xl shadow-inner">
+                <button
+                  onClick={() => setActiveTab('data')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2',
+                    activeTab === 'data'
+                      ? 'bg-indigo-500 text-white shadow-lg'
+                      : 'text-muted-foreground/60 hover:text-white'
+                  )}
+                >
+                  <Database size={12} /> Data
+                </button>
+                <button
+                  onClick={() => setActiveTab('documents')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2',
+                    activeTab === 'documents'
+                      ? 'bg-indigo-500 text-white shadow-lg'
+                      : 'text-muted-foreground/60 hover:text-white'
+                  )}
+                >
+                  <FileText size={12} /> Docs
+                </button>
+              </div>
+
+              <div className="h-8 w-px bg-white/10 mx-2" />
+
+              <div className="flex items-center gap-1 bg-white/[0.02] border border-white/5 p-1 rounded-xl shadow-inner">
+                <button
+                  onClick={() => onViewModeChange('grid')}
+                  className={cn(
+                    'p-2 rounded-lg transition-all',
+                    viewMode === 'grid'
+                      ? 'bg-white/[0.05] text-white shadow-xl'
+                      : 'text-muted-foreground/40 hover:text-white'
+                  )}
+                >
+                  <LayoutGrid size={14} />
+                </button>
+                <button
+                  onClick={() => onViewModeChange('list')}
+                  className={cn(
+                    'p-2 rounded-lg transition-all',
+                    viewMode === 'list'
+                      ? 'bg-white/[0.05] text-white shadow-xl'
+                      : 'text-muted-foreground/40 hover:text-white'
+                  )}
+                >
+                  <ListIcon size={14} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-hidden">
           <AnimatePresence mode="wait">
-            {isLoadingRecords ? (
+            {(isLoadingRecords && activeTab === 'data') ||
+            (isLoadingDocs && activeTab === 'documents') ? (
               <motion.div
                 key="loading"
                 initial={{ opacity: 0 }}
@@ -230,9 +303,9 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                   Streaming from Seabed...
                 </p>
               </motion.div>
-            ) : (
+            ) : activeTab === 'data' ? (
               <motion.div
-                key="results"
+                key="data-results"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="h-full"
@@ -241,6 +314,50 @@ export const ProSourceInventoryView: React.FC<ProSourceInventoryViewProps> = ({
                   results={recordData?.results || []}
                   onSelectRow={(row) => onSelectRecord(row.ID || row.WELL_ID || row.UWI)}
                 />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="doc-results"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="h-full p-8"
+              >
+                {/* Document List View */}
+                {!documentData?.documents || documentData.documents.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground/40">
+                    <FileText size={48} className="mb-4 opacity-20" />
+                    <p className="text-sm font-medium">No associated documents found</p>
+                    <p className="text-xs mt-2">Select a record to view specific files</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-4">
+                    {/* Render docs here */}
+                    {documentData.documents.map((doc: any, i: number) => (
+                      <div
+                        key={i}
+                        className="p-4 bg-white/5 rounded-xl border border-white/10 hover:border-indigo-500/50 transition-colors group cursor-pointer"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="h-10 w-10 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                            <FileText size={20} />
+                          </div>
+                          <Badge variant="outline" className="text-[10px] border-white/10">
+                            {doc.document_format}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-bold text-white truncate" title={doc.name}>
+                          {doc.name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {doc.document_type}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground/50 mt-4 uppercase">
+                          {new Date(doc.update_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

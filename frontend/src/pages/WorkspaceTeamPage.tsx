@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getWorkspaceMembers } from '@/lib/api'
 import { useWorkspace } from '@/hooks/useWorkspace'

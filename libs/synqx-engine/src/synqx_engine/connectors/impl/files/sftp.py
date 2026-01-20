@@ -39,9 +39,7 @@ class SFTPConfig(BaseSettings):
     )
     base_path: str = Field("/", description="Base path to search for files")
     recursive: bool = Field(True, description="Recursively search for files")
-    max_depth: int | None = Field(
-        None, ge=0, description="Maximum depth for recursion"
-    )
+    max_depth: int | None = Field(None, ge=0, description="Maximum depth for recursion")
     exclude_patterns: str | None = Field(
         None, description="Comma-separated list of folders/files to exclude"
     )

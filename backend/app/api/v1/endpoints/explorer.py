@@ -32,6 +32,10 @@ class QueryRequest(BaseModel):
     agent_group: str | None = None  # Support manual override
 
 
+class AssetDetailsRequest(BaseModel):
+    asset: str
+
+
 class HistoryItem(BaseModel):
     id: int
     query: str
@@ -44,6 +48,32 @@ class HistoryItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+@router.post("/{connection_id}/asset-details")
+def get_live_asset_details(
+    connection_id: int,
+    request: AssetDetailsRequest,
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: User = Depends(deps.get_current_user),  # noqa: B008
+    _: models.WorkspaceMember = Depends(deps.require_viewer),  # noqa: B008
+):
+    """
+    Fetch live details (e.g. row count) for a specific asset.
+    """
+    service = connection_service.ConnectionService(db)
+    try:
+        return service.get_live_asset_details(
+            connection_id=connection_id,
+            asset_name=request.asset,
+            user_id=current_user.id,
+            workspace_id=current_user.active_workspace_id,
+        )
+    except AppError as e:
+        raise HTTPException(status_code=400, detail=str(e))  # noqa: B904
+    except Exception as e:
+        logger.error(f"Failed to fetch asset details: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")  # noqa: B904
 
 
 @router.post("/{connection_id}/execute", response_model=EphemeralJobResponse)

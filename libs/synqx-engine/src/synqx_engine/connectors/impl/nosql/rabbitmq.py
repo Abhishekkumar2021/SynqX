@@ -37,9 +37,7 @@ class RabbitMQConnector(BaseConnector):
 
         self._config_model: RabbitMQConfig | None = None
         self._connection: pika.BlockingConnection | None = None
-        self._channel: pika.adapters.blocking_connection.BlockingChannel | None = (
-            None
-        )
+        self._channel: pika.adapters.blocking_connection.BlockingChannel | None = None
         super().__init__(config)
 
     def validate_config(self) -> None:

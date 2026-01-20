@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from google import genai
 from pydantic import BaseModel
+
+try:
+    from google import genai
+except Exception:
+    genai = None  # Handle missing dependency gracefully
 
 from app import models
 from app.api import deps
@@ -28,6 +32,12 @@ async def convert_prompt(
         raise HTTPException(
             status_code=500,
             detail="AI Configuration Missing: GOOGLE_API_KEY is not set.",
+        )
+
+    if genai is None:
+        raise HTTPException(
+            status_code=500,
+            detail="AI Dependency Missing: 'google-genai' library is not installed.",
         )
 
     try:

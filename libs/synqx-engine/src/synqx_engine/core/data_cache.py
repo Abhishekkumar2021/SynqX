@@ -50,6 +50,39 @@ class DataCache:
             pass
         return 0
 
+    def append(self, node_id: str, chunk: Any):
+        """Append a single chunk to the cache for a node, handling memory pressure and spilling"""
+        with self._lock:
+            chunk_size_mb = self._get_df_size(chunk) / (1024 * 1024)
+
+            # Check memory pressure before adding
+            if self._current_memory_mb + chunk_size_mb > self.max_memory_mb:
+                self._apply_spill_strategy(chunk_size_mb)
+
+            # If node is already spilled, we must write this chunk to disk immediately
+            if node_id in self._spilled_nodes:
+                file_idx = len(self._spilled_nodes[node_id])
+                file_path = os.path.join(self.spill_dir, f"{node_id}_{file_idx}.spill")
+
+                if isinstance(chunk, pl.DataFrame):
+                    chunk.write_ipc(file_path)
+                elif isinstance(chunk, pd.DataFrame):
+                    chunk.to_pickle(file_path)
+                else:
+                    with open(file_path, "wb") as f:
+                        pickle.dump(chunk, f)
+
+                self._spilled_nodes[node_id].append(file_path)
+                return
+
+            # Otherwise add to memory
+            if node_id not in self._cache:
+                self._cache[node_id] = []
+                self._access_order.append(node_id)
+
+            self._cache[node_id].append(chunk)
+            self._current_memory_mb += chunk_size_mb
+
     def store(self, node_id: str, chunks: list[Any]):
         """Store chunks with memory tracking and pressure handling"""
         with self._lock:

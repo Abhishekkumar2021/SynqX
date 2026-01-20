@@ -12,6 +12,7 @@ from synqx_core.models.workspace import Workspace, WorkspaceMember, WorkspaceRol
 from synqx_core.schemas.auth import TokenPayload
 
 from app.core import security
+from app.core.cache import cache
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.db.session import SessionLocal
@@ -36,7 +37,7 @@ def get_db() -> Generator[Session]:
         db.close()
 
 
-def _ensure_active_workspace(db: Session, user: User) -> User:
+def ensure_active_workspace(db: Session, user: User) -> User:
     """Helper to ensure a user has an active workspace, creating one if needed."""
     if user.active_workspace_id:
         return user
@@ -49,7 +50,7 @@ def _ensure_active_workspace(db: Session, user: User) -> User:
     if first_membership:
         user.active_workspace_id = first_membership.workspace_id
         db.add(user)
-        db.commit()
+        db.flush()  # Use flush instead of commit to avoid premature transaction end
         return user
 
     # Create a personal workspace for the user
@@ -69,7 +70,7 @@ def _ensure_active_workspace(db: Session, user: User) -> User:
 
     user.active_workspace_id = personal_ws.id
     db.add(user)
-    db.commit()
+    db.flush()
     return user
 
 
@@ -81,7 +82,22 @@ def get_current_user(
     # 1. Try API Key first
     if api_key:
         hashed_key = security.get_api_key_hash(api_key)
-        # Find key in DB (this could be optimized with caching)
+
+        # Try to get API key info from cache
+        cache_key = f"auth:apikey:{hashed_key}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            user_id = cached_data.get("user_id")
+            workspace_id = cached_data.get("workspace_id")
+            # We still fetch the user from DB to get a fresh SQLAlchemy object
+            user = db.query(User).filter(User.id == user_id).first()
+            if user and user.is_active:
+                if workspace_id:
+                    user.active_workspace_id = workspace_id
+                return ensure_active_workspace(db, user)
+
+        # Cache miss or invalid user in cache, check DB
         stored_key = db.query(ApiKey).filter(ApiKey.hashed_key == hashed_key).first()
 
         if stored_key:
@@ -91,9 +107,10 @@ def get_current_user(
             if stored_key.expires_at and stored_key.expires_at < datetime.now(UTC):
                 raise HTTPException(status_code=403, detail="API key has expired")
 
-            # Update last used
+            # Update last used (async or background would be better, but flush for now)
             stored_key.last_used_at = datetime.now(UTC)
-            db.commit()
+            db.add(stored_key)
+            db.flush()
 
             # Get associated user
             user = db.query(User).filter(User.id == stored_key.user_id).first()
@@ -104,13 +121,18 @@ def get_current_user(
             if not user.is_active:
                 raise HTTPException(status_code=400, detail="Inactive user")
 
-            # If API key is tied to a specific workspace, use it
+            # Cache the result for 5 minutes
+            cache.set(
+                cache_key,
+                {"user_id": user.id, "workspace_id": stored_key.workspace_id},
+                ttl=300,
+            )
+
+            # If API key is tied to a specific workspace, use it for this request
             if stored_key.workspace_id:
                 user.active_workspace_id = stored_key.workspace_id
-                db.add(user)
-                db.commit()
 
-            return _ensure_active_workspace(db, user)
+            return ensure_active_workspace(db, user)
         else:
             raise HTTPException(status_code=403, detail="Invalid API Key")
 
@@ -127,18 +149,31 @@ def get_current_user(
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
         )
         token_data = TokenPayload(**payload)
-    except (JWTError, ValidationError):
+        user_id = int(token_data.sub)
+    except (JWTError, ValidationError, ValueError):
         raise HTTPException(  # noqa: B904
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    user = db.query(User).filter(User.id == int(token_data.sub)).first()
+
+    # Cache user lookup
+    user_cache_key = f"auth:user:{user_id}"
+    cached_user_active = cache.get(user_cache_key)
+
+    if cached_user_active is False:
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:
+        cache.set(user_cache_key, False, ttl=300)
         raise HTTPException(status_code=400, detail="Inactive user")
 
-    return _ensure_active_workspace(db, user)
+    # Cache that user is active
+    cache.set(user_cache_key, True, ttl=300)
+
+    return ensure_active_workspace(db, user)
 
 
 def get_current_active_membership(

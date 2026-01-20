@@ -19,3 +19,8 @@ export const clearHistory = async () => {
   const { data } = await api.delete<{ status: string }>('/explorer/history')
   return data
 }
+
+export const getAssetDetails = async (connectionId: number, asset: string) => {
+  const { data } = await api.post<any>(`/explorer/${connectionId}/asset-details`, { asset })
+  return data
+}

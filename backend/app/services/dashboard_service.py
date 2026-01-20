@@ -35,7 +35,10 @@ from synqx_core.schemas.dashboard import (
 )
 from synqx_core.schemas.ephemeral import EphemeralJobResponse
 
+from app.core.cache import cached
 from app.core.logging import get_logger
+
+# New imports for Ephemeral Jobs
 
 logger = get_logger(__name__)
 
@@ -44,6 +47,7 @@ class DashboardService:
     def __init__(self, db_session: Session):
         self.db = db_session
 
+    @cached(key_prefix="dashboard:stats", ttl=60)
     def get_stats(  # noqa: PLR0912, PLR0915
         self,
         user_id: int,

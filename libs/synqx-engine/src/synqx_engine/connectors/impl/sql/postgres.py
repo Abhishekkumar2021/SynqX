@@ -46,9 +46,7 @@ class PostgresConnector(SQLConnector):
             f"{conf.database}"
         )
 
-    def _get_table_size(
-        self, table: str, schema: str | None = None
-    ) -> int | None:
+    def _get_table_size(self, table: str, schema: str | None = None) -> int | None:
         try:
             name, actual_schema = self.normalize_asset_identifier(table)
             if not actual_schema and schema:

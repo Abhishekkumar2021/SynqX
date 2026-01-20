@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from synqx_core.models.enums import PipelineStatus
 from synqx_core.schemas.pipeline import (
     PipelineBackfillRequest,
+    PipelineBulkStatsResponse,
     PipelineCreate,
     PipelineDetailRead,
     PipelineDiffResponse,
@@ -852,6 +853,88 @@ def validate_pipeline(
                 "error": "Internal server error",
                 "message": "Failed to validate pipeline",
             },
+        )
+
+
+@router.post(
+    "/bulk-stats",
+    response_model=PipelineBulkStatsResponse,
+    summary="Get Bulk Pipeline Statistics",
+    description="Get execution statistics for multiple pipelines in a single request",
+)
+def get_pipelines_bulk_stats(
+    pipeline_ids: list[int] = Body(...),
+    db: Session = Depends(deps.get_db),  # noqa: B008
+    current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
+):
+    try:
+        from sqlalchemy import func
+        from synqx_core.models.enums import JobStatus
+        from synqx_core.models.execution import Job
+
+        service = PipelineService(db)
+
+        # Scoped to user/workspace access
+        # For simplicity, we just verify they exist and are accessible
+        # In a real enterprise app, we'd do a batch filter query
+        results = {}
+
+        for pid in pipeline_ids:
+            # Reusing existing logic but could be optimized with a single complex
+            # SQL query. However, for now, a loop is already better than multiple
+            # HTTP roundtrips. A truly optimized version would use
+            # group_by(Job.pipeline_id)
+            try:
+                # Basic accessibility check
+                p = service.get_pipeline(
+                    pid,
+                    user_id=current_user.id,
+                    workspace_id=current_user.active_workspace_id,
+                )
+                if not p:
+                    continue
+
+                # Get stats (simplified version of get_pipeline_stats logic)
+                total_runs = (
+                    db.query(func.count(Job.id)).filter(Job.pipeline_id == pid).scalar()
+                    or 0
+                )
+                successful_runs = (
+                    db.query(func.count(Job.id))
+                    .filter(Job.pipeline_id == pid, Job.status == JobStatus.SUCCESS)
+                    .scalar()
+                    or 0
+                )
+                failed_runs = total_runs - successful_runs
+
+                last_run = (
+                    db.query(Job.completed_at)
+                    .filter(Job.pipeline_id == pid, Job.completed_at.isnot(None))
+                    .order_by(Job.completed_at.desc())
+                    .first()
+                )
+
+                results[pid] = PipelineStatsResponse(
+                    pipeline_id=pid,
+                    total_runs=total_runs,
+                    successful_runs=successful_runs,
+                    failed_runs=failed_runs,
+                    total_quarantined=0,  # Simplified for bulk
+                    total_records_processed=0,
+                    average_duration_seconds=None,
+                    last_run_at=last_run[0] if last_run else None,
+                    next_scheduled_run=None,
+                )
+            except Exception:
+                continue
+
+        return PipelineBulkStatsResponse(stats=results)
+
+    except Exception as e:
+        logger.error(f"Error getting bulk stats: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get bulk statistics",
         )
 
 

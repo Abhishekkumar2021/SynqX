@@ -37,20 +37,32 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({
   assets,
   projects,
 }) => {
-  // Logic to compute metrics from assets if API stats are missing
-  const wellsCount = assets.find((a) => a.name === 'Wells')?.rows || 0
-  const logsCount = assets.find((a) => a.name === 'Log Curves')?.rows || 0
-  const seismicCount = assets.find((a) => a.name === 'Seismic Lines')?.rows || 0
+  // Prefer stats from API (get_domain_stats), fallback to assets list if legacy
+  const domains = stats?.domains || {}
 
-  const entityDistribution = assets
-    .map((a) => ({
-      name: a.name,
-      value: a.rows || 0,
-      color: a.name === 'Wells' ? '#6366f1' : a.name.includes('Log') ? '#8b5cf6' : '#3b82f6',
-    }))
-    .filter((d) => d.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5)
+  const wellsCount = domains['Well'] || assets.find((a) => a.name === 'Wells')?.rows || 0
+  const logsCount = domains['Logs'] || assets.find((a) => a.name === 'Log Curves')?.rows || 0
+  const seismicCount =
+    domains['Seismic'] || assets.find((a) => a.name === 'Seismic Lines')?.rows || 0
+
+  // Create distribution data from stats if available, else assets
+  const entityDistribution =
+    Object.entries(domains).length > 0
+      ? Object.entries(domains).map(([name, count]: [string, any]) => ({
+          name,
+          value: count,
+          color: name === 'Well' ? '#6366f1' : name === 'Logs' ? '#8b5cf6' : '#3b82f6',
+        }))
+      : assets
+          .map((a) => ({
+            name: a.name,
+            value: a.rows || 0,
+            color: a.name === 'Wells' ? '#6366f1' : a.name.includes('Log') ? '#8b5cf6' : '#3b82f6',
+          }))
+          .filter((d) => d.value > 0)
+
+  // Sort and slice
+  const chartData = entityDistribution.sort((a, b) => b.value - a.value).slice(0, 5)
 
   const qualityTrend = [
     { name: 'Mon', score: 92 },
@@ -140,7 +152,7 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({
           <CardContent className="pt-8">
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={entityDistribution} layout="vertical" margin={{ left: 40 }}>
+                <BarChart data={chartData} layout="vertical" margin={{ left: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" horizontal={false} />
                   <XAxis type="number" hide />
                   <YAxis
@@ -169,7 +181,7 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({
                     }}
                   />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={24}>
-                    {entityDistribution.map((entry, index) => (
+                    {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.8} />
                     ))}
                   </Bar>

@@ -149,11 +149,25 @@ async def health() -> dict[str, Any]:
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 if __name__ == "__main__":
+    import platform
+
     import uvicorn
+
+    loop_type = "asyncio"
+    # Try to use uvloop for better performance on non-Windows systems
+    if platform.system() != "Windows":
+        try:
+            import uvloop
+
+            uvloop.install()
+            loop_type = "uvloop"
+        except ImportError:
+            pass  # Fallback to default asyncio loop
 
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=8000,
         reload=settings.ENVIRONMENT == "development",
+        loop=loop_type,
     )

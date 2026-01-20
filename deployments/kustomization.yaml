@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - backend-deployment.yaml
+  - frontend-deployment.yaml
+  - config-and-secrets.yaml
+  - ingress.yaml
+
+# Optional: Add common labels to all resources
+commonLabels:
+  app.kubernetes.io/name: synqx
+  app.kubernetes.io/instance: synqx-prod
+  app.kubernetes.io/version: "1.0.0"
+
+# Optional: Image customization (e.g., set image tag, or use a registry)
+images:
+  - name: synqx-backend
+    newName: your-registry/synqx-backend # Replace with your image repository
+    newTag: latest # Replace with desired image tag
+  - name: synqx-frontend
+    newName: your-registry/synqx-frontend # Replace with your image repository
+    newTag: latest # Replace with desired image tag
+
+# Optional: Namespace for all resources
+# namespace: synqx-prod # Uncomment to deploy into a specific namespace
+
+# Optional: Resource requests/limits for all containers
+# commonAnnotations:
+#   kubernetes.io/arch: "amd64"
+
+# Optional: Patches to modify resources (e.g., change replica count for specific environment)
+# patches:
+#   - target:
+#       kind: Deployment
+#       name: synqx-backend
+#     patch: |-
+#       - op: replace
+#         path: /spec/replicas
+#         value: 3

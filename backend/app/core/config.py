@@ -1,5 +1,6 @@
-from typing import Literal
+from typing import Any, Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,7 +8,18 @@ class Settings(BaseSettings):
     APP_NAME: str = "SynqX ETL Agent"
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
 
-    DATABASE_URL: str
+    DATABASE_HOST: str | None = None
+    DATABASE_PORT: int = 5432
+    DATABASE_USERNAME: str | None = None
+    DATABASE_PASSWORD: str | None = None
+    DATABASE_NAME: str = "synqx_db"
+    DATABASE_URL: str | None = None
+    
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_RECYCLE: int = 3600
+    DB_POOL_PRE_PING: bool = True
+    DB_ECHO: bool = False
     API_V1_STR: str = "/api/v1"
 
     # CORS
@@ -28,7 +40,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
 
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_HOST: str | None = None
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str | None = None
+    REDIS_URL: str | None = None
 
     # Orchestration & Execution
     # Number of parallel worker threads for node execution within a single job
@@ -73,6 +89,33 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def assemble_db_connection(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if not values.get("DATABASE_URL"):
+            host = values.get("DATABASE_HOST")
+            port = values.get("DATABASE_PORT", 5432)
+            user = values.get("DATABASE_USERNAME")
+            password = values.get("DATABASE_PASSWORD")
+            name = values.get("DATABASE_NAME", "synqx_db")
+            
+            if host and user and password:
+                values["DATABASE_URL"] = f"postgresql://{user}:{password}@{host}:{port}/{name}"
+            elif host: # Fallback for cases without auth or partial
+                 values["DATABASE_URL"] = f"postgresql://{host}:{port}/{name}"
+
+        if not values.get("REDIS_URL"):
+             host = values.get("REDIS_HOST")
+             port = values.get("REDIS_PORT", 6379)
+             db = values.get("REDIS_DB", 0)
+             password = values.get("REDIS_PASSWORD")
+             
+             if host:
+                 auth = f":{password}@" if password else ""
+                 values["REDIS_URL"] = f"redis://{auth}{host}:{port}/{db}"
+        
+        return values
 
 
 settings = Settings()

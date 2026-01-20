@@ -7,15 +7,14 @@
 
 **SynqX** is an open-source, production-ready platform designed to simplify the orchestration of complex data workflows. By treating pipelines as **versioned, immutable logic objects** and providing deep, **real-time observability**, SynqX ensures data reliability at scale.
 
-## Mission
-
-To eliminate the "Black Box" nature of traditional ETL. SynqX provides engineers with high-fidelity visibility into their data's journey—from extraction to destination—transforming fragile scripts into robust, observable engineering assets.
-
 ---
 
-## System Architecture
+## 🏗️ System Architecture
 
 SynqX employs a decoupled, event-driven architecture designed for high availability and horizontal scalability.
+
+*   **Control Plane:** React-based Console (UI) and FastAPI Gateway (API) managing state in PostgreSQL.
+*   **Data Plane:** Distributed Celery Workers (Local) and Portable Agents (Remote) executing tasks via Redis.
 
 ```mermaid
 graph TD
@@ -38,134 +37,112 @@ graph TD
 
 ---
 
-## Developer Quick Start
+## 🛠️ Tech Stack
 
-We provide a unified CLI tool `synqx.py` to manage the entire development lifecycle.
+### Backend
+- **Framework:** FastAPI (Python 3.13+)
+- **Task Queue:** Celery + Redis
+- **ORM/Migrations:** SQLAlchemy 2.0 + Alembic
+- **Package Management:** `uv` (fast, deterministic)
 
-### Prerequisites
-*   Python 3.9+
-*   Node.js 18+
-*   PostgreSQL 15+ (Running locally or via Docker)
-*   Redis 7+ (Running locally or via Docker)
-*   `uv` (fast Python package manager) recommended
+### Frontend
+- **Framework:** React 19 + TypeScript
+- **Styling:** Tailwind CSS v4 + Shadcn/ui
+- **State Management:** Zustand + React Query
+- **Canvas:** React Flow (Visual Pipeline Designer)
+
+---
+
+## 🚀 Developer Quick Start
+
+For a detailed walkthrough of the local environment requirements and troubleshooting, see the [Local Setup Guide](docs/LOCAL_SETUP.md).
 
 ### 1. Installation
-Clone the repository and install all dependencies (Backend, Agent, Frontend, Libraries) with a single command:
-
 ```bash
 git clone https://github.com/your-org/synqx.git
 cd synqx
 
-# Installs venvs, dependencies, and links internal libraries
-./scripts/synqx.py install
+# Install venvs, dependencies, and link internal libraries
+./scripts/synqx.py setup
 ```
 
-### 2. Development
-Start the full stack (API, Worker, Scheduler, Frontend):
-
+### 2. Local Development
 ```bash
-# Start Core Stack
+# Start API, Worker, and Frontend
 ./scripts/synqx.py start
 
-# Start Core Stack + Local Agent
+# Start with a Local Agent for testing
 ./scripts/synqx.py start --agent
 ```
-
-*   **UI:** [http://localhost:5173](http://localhost:5173)
-*   **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-
-### 3. Management
-Use the CLI to manage services and logs:
-
-```bash
-# Check status of all services
-./scripts/synqx.py status
-
-# Tail logs (Ctrl+C to exit)
-./scripts/synqx.py logs api      # backend logs
-./scripts/synqx.py logs worker   # worker logs
-./scripts/synqx.py logs agent    # agent logs
-
-# Restart everything
-./scripts/synqx.py restart
-
-# Stop everything
-./scripts/synqx.py stop
-```
-
-### 4. Database Operations
-Manage database migrations via the unified CLI:
-
-```bash
-# Apply pending migrations
-./scripts/synqx.py db migrate
-
-# Create new revision (after model changes)
-./scripts/synqx.py db revision -m "add_new_table"
-```
+- **Console UI:** `http://localhost:5173`
+- **API Docs:** `http://localhost:8000/docs`
 
 ---
 
-## Agent Management & Release
+## ⚙️ Configuration
 
-The SynqX Agent is designed to be **portable and self-contained**.
+SynqX uses a flexible configuration system that supports both local development and containerized environments.
 
-### Building the Portable Agent
-To generate a release artifact for remote deployment:
+### Environment Variables
+Copy the templates to start:
+- `backend/.env.example` -> `backend/.env`
+- `frontend/.env.example` -> `frontend/.env`
+
+### Dynamic Connection Strings
+The backend is designed for **Kubernetes-native** deployment. If `DATABASE_URL` is not provided, it will automatically construct it using:
+- `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `DATABASE_NAME`
+
+---
+
+## 📦 Deployment
+
+### Docker
+Build the stack using the provided Dockerfiles:
+```bash
+# Backend
+docker build -t synqx-backend -f backend/Dockerfile .
+
+# Frontend (injecting production API path)
+docker build -t synqx-frontend --build-arg VITE_API_BASE_URL=/api/v1 -f frontend/Dockerfile .
+```
+
+### Kubernetes
+Deployment manifests are located in `deployments/`.
+1. Configure `config-and-secrets.yaml` with your base64-encoded credentials.
+2. Apply the configuration: `kubectl apply -f deployments/kustomization.yaml` (if using Kustomize) or apply files individually.
+
+The backend deployment includes an **init container** that automatically handles database migrations before the application starts.
+
+---
+
+## 🤖 Agent Management
+
+The SynqX Agent is a portable binary designed for remote execution in isolated networks.
 
 ```bash
-# Builds 'synqx-agent-v1.0.0.tar.gz' and generates SHA256 checksum
+# Build a portable release (tar.gz + sha256)
 ./scripts/synqx.py build agent
-```
 
-### Security & Integrity
-Every build generates a `.sha256` file. Always verify the artifact before deployment:
-
-```bash
-# Linux / macOS
-sha256sum -c synqx-agent-v1.0.0.tar.gz.sha256
-
-# Windows (PowerShell)
-Get-FileHash synqx-agent-v1.0.0.tar.gz -Algorithm SHA256
-```
-
-### Post-Installation Audit
-After installing, we recommend running a connectivity audit to ensure the Agent can reach the SynqX Cloud and has valid credentials:
-
-```bash
-# Run from within the agent environment
-synqx-agent check
-```
-
-### Release Versioning
-To bump versions across the monorepo and rebuild the agent:
-
-```bash
-# Bump patch version (1.0.0 -> 1.0.1) and rebuild
+# Bump version and rebuild across the monorepo
 ./scripts/synqx.py release bump patch
-
-# Bump minor version (1.0.0 -> 1.1.0) and rebuild
-./scripts/synqx.py release bump minor
 ```
 
 ---
 
-## Project Structure
+## 📂 Project Structure
 
-| Module | Description | Path |
-| :--- | :--- | :--- |
-| **Backend** | Python/FastAPI engine, Celery worker cluster, Vault security. | [`/backend`](./backend) |
-| **Frontend** | Premium React-based Console UI with a visual DAG editor. | [`/frontend`](./frontend) |
-| **Agent** | Remote execution unit for isolated environments. | [`/agent`](./agent) |
-| **Libs** | Shared internal libraries (`synqx-core`, `synqx-engine`). | [`/libs`](./libs) |
-| **Scripts** | Unified lifecycle management CLI. | [`/scripts`](./scripts) |
+| Module | Description |
+| :--- | :--- |
+| `backend/` | FastAPI application, Celery workers, and Alembic migrations. |
+| `frontend/` | React 19 application with Shadcn/ui components. |
+| `agent/` | Portable remote execution unit. |
+| `libs/` | Shared monorepo libraries (`synqx-core`, `synqx-engine`). |
+| `deployments/` | K8s manifests (Deployments, Services, Ingress). |
 
 ---
 
-## Contributing
+## 🤝 Contributing
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to submit pull requests, report issues, and request features.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📄 License
+This project is licensed under the MIT License.

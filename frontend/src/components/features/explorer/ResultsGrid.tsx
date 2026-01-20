@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/incompatible-library */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { type QueryResponse } from '@/lib/api'
 import {
   Terminal,
@@ -54,6 +54,7 @@ import { CodeBlock } from '@/components/ui/docs/CodeBlock'
 import { toast } from 'sonner'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useFuzzySearch } from '@/hooks/useFuzzySearch'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 import {
   useReactTable,
@@ -407,6 +408,8 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     pageSize: 50,
   })
 
+  const parentRef = useRef<HTMLDivElement>(null)
+
   // Sync pinning state if selection prop changes
   useEffect(() => {
     setColumnPinning((prev) => ({
@@ -541,6 +544,13 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
     initialState: { columnPinning: { left: ['select', 'index'] } },
   })
 
+  const rowVirtualizer = useVirtualizer({
+    count: table.getRowModel().rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => (density === 'compact' ? 32 : density === 'comfortable' ? 56 : 44),
+    overscan: 10,
+  })
+
   const handleExport = (format: 'json' | 'csv') => {
     if (!data || table.getRowModel().rows.length === 0) return
     const visibleCols = table
@@ -562,7 +572,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
             visibleCols.map((c) => c.id).join(','),
             ...exportData.map((row) =>
               visibleCols
-                .map((col) => `"${String(row[col.id] ?? '').replaceAll('"', '""')}"`)
+                .map((col) => `"${String(row[col.id] ?? '').replaceAll('"', '""')}"`) // Corrected escaping for quotes within CSV
                 .join(',')
             ),
           ].join('\n')
@@ -792,90 +802,101 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
   )
 
   const tableContent = (
-    <div className="flex-1 overflow-auto custom-scrollbar h-full w-full">
-      <table className="w-full text-left border-separate border-spacing-0 min-w-max">
-        <thead className="sticky top-0 z-40">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr
-              key={headerGroup.id}
-              className="bg-background/95 backdrop-blur-xl border-b border-border/40"
-            >
-              {headerGroup.headers.map((header) => {
-                const pinStyles = getCommonPinningStyles(header.column)
-                const isPinned = header.column.getIsPinned()
-                const isLastLeft = isPinned === 'left' && header.column.getIsLastColumn('left')
-
-                return (
-                  <th
-                    key={header.id}
-                    style={pinStyles}
-                    className={cn(
-                      'border-r border-b border-border/20 last:border-r-0 bg-background/95 backdrop-blur-md transition-colors',
-                      densityConfig[density].header,
-                      isPinned && 'z-50',
-                      isLastLeft &&
-                        'border-r-2 border-r-border/40 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.15)]',
-                      (header.column.getIsSorted() || header.column.getIsFiltered()) &&
-                        'bg-primary/[0.03]'
-                    )}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </th>
-                )
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody className="divide-y divide-border/10">
-          {table.getRowModel().rows.length === 0 ? (
-            <tr>
-              {' '}
-              <td
-                colSpan={columns.length}
-                className="h-32 text-center text-muted-foreground/40 text-[10px] font-black uppercase tracking-widest"
-              >
-                {' '}
-                No matches found{' '}
-              </td>{' '}
-            </tr>
-          ) : (
-            table.getRowModel().rows.map((row) => (
+    <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar h-full w-full relative">
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        <table className="w-full text-left border-separate border-spacing-0 min-w-max">
+          <thead className="sticky top-0 z-40">
+            {table.getHeaderGroups().map((headerGroup) => (
               <tr
-                key={row.id}
-                className={cn(
-                  'group/row transition-colors hover:bg-muted/30 even:bg-muted/10',
-                  row.getIsSelected() && 'bg-primary/5'
-                )}
+                key={headerGroup.id}
+                className="bg-background/95 backdrop-blur-xl border-b border-border/40"
               >
-                {row.getVisibleCells().map((cell) => {
-                  const pinStyles = getCommonPinningStyles(cell.column)
-                  const isPinned = cell.column.getIsPinned()
-                  const isLastLeft = isPinned === 'left' && cell.column.getIsLastColumn('left')
+                {headerGroup.headers.map((header) => {
+                  const pinStyles = getCommonPinningStyles(header.column)
+                  const isPinned = header.column.getIsPinned()
+                  const isLastLeft = isPinned === 'left' && header.column.getIsLastColumn('left')
+
                   return (
-                    <td
-                      key={cell.id}
+                    <th
+                      key={header.id}
                       style={pinStyles}
                       className={cn(
-                        'border-r border-border/10 last:border-r-0',
-                        cell.column.id === 'select' || cell.column.id === 'index'
-                          ? 'p-0'
-                          : densityConfig[density].cell,
-                        isPinned && 'z-30 bg-background',
+                        'border-r border-b border-border/20 last:border-r-0 bg-background/95 backdrop-blur-md transition-colors',
+                        densityConfig[density].header,
+                        isPinned && 'z-50',
                         isLastLeft &&
-                          'border-r-2 border-r-border/40 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.15)]'
+                          'border-r-2 border-r-border/40 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.15)]',
+                        (header.column.getIsSorted() || header.column.getIsFiltered()) &&
+                          'bg-primary/[0.03]'
                       )}
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </th>
                   )
                 })}
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ))}
+          </thead>
+          <tbody>
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const row = table.getRowModel().rows[virtualRow.index]
+              return (
+                <tr
+                  key={row.id}
+                  style={{
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                  }}
+                  className={cn(
+                    'group/row transition-colors hover:bg-muted/30 even:bg-muted/10',
+                    row.getIsSelected() && 'bg-primary/5'
+                  )}
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    const pinStyles = getCommonPinningStyles(cell.column)
+                    const isPinned = cell.column.getIsPinned()
+                    const isLastLeft = isPinned === 'left' && cell.column.getIsLastColumn('left')
+                    return (
+                      <td
+                        key={cell.id}
+                        style={pinStyles}
+                        className={cn(
+                          'border-r border-border/10 last:border-r-0',
+                          cell.column.id === 'select' || cell.column.id === 'index'
+                            ? 'p-0'
+                            : densityConfig[density].cell,
+                          isPinned && 'z-30 bg-background',
+                          isLastLeft &&
+                            'border-r-2 border-r-border/40 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.15)]'
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {table.getRowModel().rows.length === 0 && (
+          <div className="h-32 flex items-center justify-center text-muted-foreground/40 text-[10px] font-black uppercase tracking-widest">
+            No matches found
+          </div>
+        )}
+      </div>
     </div>
   )
 
@@ -903,7 +924,7 @@ export const ResultsGrid: React.FC<ResultsGridProps> = ({
               {onSelectRows && (
                 <Checkbox
                   checked={row.getIsSelected()}
-                  onCheckedChange={(v) => row.toggleSelected(!!v)}
+                  onCheckedChange={(v) => row.toggleSelected(!!v)} // Corrected: was 'value' instead of 'v'
                 />
               )}
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">

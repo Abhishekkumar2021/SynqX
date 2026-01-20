@@ -53,7 +53,12 @@ def run_step(msg: str, cmd: list, cwd: Path | None = None):
         try:
             # Using subprocess.run for better control and error capturing
             result = subprocess.run(  # noqa: UP022
-                cmd, check=False, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True  # noqa: E501
+                cmd,
+                check=False,
+                cwd=cwd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
             )
             if result.returncode != 0:
                 console.print(f"[bold red]Error in {msg}:[/bold red]\n{result.stderr}")

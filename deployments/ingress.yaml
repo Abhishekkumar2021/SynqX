@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: synqx-ingress
+  labels:
+    app: synqx
+  annotations:
+    # Use Nginx Ingress Controller, adjust based on your chosen Ingress controller
+    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Set to "true" in production with SSL
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1 # For backend API
+spec:
+  rules:
+    - host: your-synqx-domain.com # Replace with your actual domain
+      http:
+        paths:
+          # Frontend UI
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: synqx-frontend-service
+                port:
+                  number: 80
+          # Backend API
+          - path: /api/v1(/|$)(.*) # Match /api/v1 and its sub-paths
+            pathType: Prefix
+            backend:
+              service:
+                name: synqx-backend-service
+                port:
+                  number: 80

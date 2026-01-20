@@ -12,8 +12,6 @@ from synqx_core.models.enums import (
     OperatorType,
     PipelineStatus,
     RetryStrategy,
-    SchemaEvolutionPolicy,
-    WriteStrategy,
 )
 from synqx_core.models.execution import Job
 from synqx_core.models.pipelines import (
@@ -101,16 +99,16 @@ class PipelineService:
             db_pipeline.current_version = db_version.version
 
             # Create Nodes for the version
-            self._create_pipeline_nodes(
+            node_map = self._create_pipeline_nodes(
                 db_version.id,
                 pipeline_create.initial_version.nodes,
             )
-            self.db_session.flush()  # Flush nodes before edges
 
             # Create Edges for the version
             self._create_pipeline_edges(
                 db_version.id,
                 pipeline_create.initial_version.edges,
+                node_map,
             )
 
             self.db_session.commit()
@@ -189,16 +187,16 @@ class PipelineService:
             self.db_session.flush()
 
             # Create Nodes
-            self._create_pipeline_nodes(
+            node_map = self._create_pipeline_nodes(
                 db_version.id,
                 version_data.nodes,
             )
-            self.db_session.flush()
 
             # Create Edges
             self._create_pipeline_edges(
                 db_version.id,
                 version_data.edges,
+                node_map,
             )
 
             self.db_session.commit()
@@ -219,7 +217,7 @@ class PipelineService:
             logger.error(f"Failed to create pipeline version: {e}", exc_info=True)
             raise AppError(f"Failed to create pipeline version: {e}") from e
 
-    def update_pipeline(  # noqa: PLR0912
+    def update_pipeline(
         self,
         pipeline_id: int,
         pipeline_update: PipelineUpdate,
@@ -236,44 +234,12 @@ class PipelineService:
             raise AppError(f"Pipeline {pipeline_id} not found")
 
         # Update fields
-        if pipeline_update.name is not None:
-            pipeline.name = pipeline_update.name
-        if pipeline_update.description is not None:
-            pipeline.description = pipeline_update.description
-        if pipeline_update.schedule_cron is not None:
-            pipeline.schedule_cron = pipeline_update.schedule_cron
-        if pipeline_update.schedule_enabled is not None:
-            pipeline.schedule_enabled = pipeline_update.schedule_enabled
-        if pipeline_update.schedule_timezone is not None:
-            pipeline.schedule_timezone = pipeline_update.schedule_timezone
-        if pipeline_update.status is not None:
-            pipeline.status = pipeline_update.status
-        if pipeline_update.max_parallel_runs is not None:
-            pipeline.max_parallel_runs = pipeline_update.max_parallel_runs
-        if pipeline_update.max_retries is not None:
-            pipeline.max_retries = pipeline_update.max_retries
-        if pipeline_update.retry_strategy is not None:
-            pipeline.retry_strategy = pipeline_update.retry_strategy
-        if pipeline_update.retry_delay_seconds is not None:
-            pipeline.retry_delay_seconds = pipeline_update.retry_delay_seconds
-        if pipeline_update.execution_timeout_seconds is not None:
-            pipeline.execution_timeout_seconds = (
-                pipeline_update.execution_timeout_seconds
-            )
-        if pipeline_update.priority is not None:
-            pipeline.priority = pipeline_update.priority
-
-        # agent_group can be explicitly set to None to revert to Internal worker
-        if pipeline_update.agent_group is not None:
-            pipeline.agent_group = pipeline_update.agent_group
-        elif (
-            "agent_group" in pipeline_update.model_fields_set
-            and pipeline_update.agent_group is None
-        ):
-            pipeline.agent_group = "internal"
-
-        if pipeline_update.tags is not None:
-            pipeline.tags = pipeline_update.tags
+        update_data = pipeline_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            if field == "agent_group" and value is None:
+                pipeline.agent_group = "internal"
+            else:
+                setattr(pipeline, field, value)
 
         pipeline.updated_at = datetime.now(UTC)
         if user_id:
@@ -322,13 +288,9 @@ class PipelineService:
         try:
             # Unpublish current published version
             if pipeline.published_version_id:
-                current_published = (
-                    self.db_session.query(PipelineVersion)
-                    .filter(PipelineVersion.id == pipeline.published_version_id)
-                    .first()
-                )
-                if current_published:
-                    current_published.is_published = False
+                self.db_session.query(PipelineVersion).filter(
+                    PipelineVersion.id == pipeline.published_version_id
+                ).update({"is_published": False})
 
             # Publish new version
             version.is_published = True
@@ -785,72 +747,63 @@ class PipelineService:
         self,
         pipeline_version_id: int,
         nodes_data: list[PipelineNodeCreate],
-    ) -> None:
-        """Helper to create PipelineNode objects."""
+    ) -> dict[str, PipelineNode]:
+        """Helper to create PipelineNode objects and return a map."""
+        node_map: dict[str, PipelineNode] = {}
         for node_data in nodes_data:
+            # Map fields directly from Pydantic model to SQLAlchemy model
+            # Exclude fields that are synthetic or handled specially
             db_node = PipelineNode(
                 pipeline_version_id=pipeline_version_id,
-                node_id=node_data.node_id,
-                name=node_data.name,
-                description=node_data.description,
-                operator_type=node_data.operator_type,
-                operator_class=node_data.operator_class,
-                config=node_data.config or {},
-                sync_mode=node_data.sync_mode,
-                # Fix: Handle cdc_config correctly (ensure it's a dict)
-                cdc_config=node_data.cdc_config
-                if isinstance(node_data.cdc_config, dict)
-                else {},
-                order_index=node_data.order_index,
-                source_asset_id=node_data.source_asset_id,
-                destination_asset_id=node_data.destination_asset_id,
-                # New: Map missing fields from schema/request to model
-                write_strategy=getattr(
-                    node_data, "write_strategy", WriteStrategy.APPEND
+                **node_data.model_dump(
+                    exclude={
+                        "max_retries",
+                        "retry_strategy",
+                        "retry_delay_seconds",
+                        "cdc_config",
+                        "connection_id",
+                    }
                 ),
-                schema_evolution_policy=getattr(
-                    node_data, "schema_evolution_policy", SchemaEvolutionPolicy.STRICT
-                ),
-                guardrails=getattr(node_data, "guardrails", []),
-                data_contract=getattr(node_data, "data_contract", {}),
-                column_mapping=getattr(node_data, "column_mapping", {}),
-                quarantine_asset_id=getattr(node_data, "quarantine_asset_id", None),
-                # Advanced Orchestration
-                sub_pipeline_id=getattr(node_data, "sub_pipeline_id", None),
-                is_dynamic=getattr(node_data, "is_dynamic", False),
-                mapping_expr=getattr(node_data, "mapping_expr", None),
-                worker_tag=getattr(node_data, "worker_tag", None),
-                # Retry logic
+                # Explicitly set these to handle defaults and custom logic
                 max_retries=node_data.max_retries or 0,
                 retry_strategy=node_data.retry_strategy or RetryStrategy.FIXED,
                 retry_delay_seconds=node_data.retry_delay_seconds or 60,
-                timeout_seconds=node_data.timeout_seconds,
+                cdc_config=node_data.cdc_config
+                if isinstance(node_data.cdc_config, dict)
+                else {},
             )
             self.db_session.add(db_node)
+            node_map[node_data.node_id] = db_node
+        return node_map
 
     def _create_pipeline_edges(
         self,
         pipeline_version_id: int,
         edges_data: list[PipelineEdgeCreate],
+        node_map: dict[str, PipelineNode],
     ) -> None:
-        """Helper to create PipelineEdge objects."""
+        """Helper to create PipelineEdge objects using the provided node map."""
         for edge_data in edges_data:
+            from_node = node_map.get(edge_data.from_node_id)
+            to_node = node_map.get(edge_data.to_node_id)
+
+            if not from_node or not to_node:
+                raise ConfigurationError(
+                    f"Edge references non-existent nodes: {edge_data.from_node_id} -> {edge_data.to_node_id}"  # noqa: E501
+                )
+
             db_edge = PipelineEdge(
                 pipeline_version_id=pipeline_version_id,
-                from_node_id=self._get_node_db_id(
-                    pipeline_version_id, edge_data.from_node_id
-                ),
-                to_node_id=self._get_node_db_id(
-                    pipeline_version_id, edge_data.to_node_id
-                ),
+                from_node=from_node,
+                to_node=to_node,
                 edge_type=edge_data.edge_type,
             )
             self.db_session.add(db_edge)
 
     def _get_node_db_id(self, pipeline_version_id: int, node_code_id: str) -> int:
         """
-        Helper to get the database ID of a node given its pipeline_version_id and node_id.
-        """  # noqa: E501
+        Deprecated: Use the node_map pattern instead.
+        """
         node = (
             self.db_session.query(PipelineNode)
             .filter(
@@ -865,7 +818,6 @@ class PipelineService:
         if not node:
             raise ConfigurationError(
                 f"Node with ID '{node_code_id}' not found for version {pipeline_version_id}. "  # noqa: E501
-                "Ensure nodes are created before edges referencing them."
             )
         return node.id
 

@@ -1349,7 +1349,7 @@ export const PipelineCanvas: React.FC = () => {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: '100%', opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                className="absolute top-0 right-0 w-full md:w-128 h-full border-l border-white/10 bg-gradient-to-b from-card/95 to-card/90 backdrop-blur-3xl z-[70] flex flex-col overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] ring-1 ring-white/5"
+                className="absolute top-0 right-0 w-full md:w-128 h-full border-l border-white/10 bg-gradient-to-b from-card/95 to-card/90 backdrop-blur-3xl z-30 flex flex-col overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] ring-1 ring-white/5"
               >
                 <div className="p-6 border-b border-white/10 bg-muted/20 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-3">
@@ -1399,7 +1399,7 @@ export const PipelineCanvas: React.FC = () => {
         {/* Properties Inspector */}
         <div
           className={cn(
-            'absolute top-0 right-0 w-full md:w-128 h-full border-l border-white/10 bg-gradient-to-b from-card/95 to-card/90 backdrop-blur-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)] ring-1 ring-white/5 flex flex-col overflow-hidden z-[60] transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)',
+            'absolute top-0 right-0 w-full md:w-128 h-full border-l border-white/10 bg-gradient-to-b from-card/95 to-card/90 backdrop-blur-3xl shadow-[0_0_100px_rgba(0,0,0,0.5)] ring-1 ring-white/5 flex flex-col overflow-hidden z-20 transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)',
             selectedNode
               ? 'translate-x-0 opacity-100'
               : 'translate-x-full opacity-0 pointer-events-none'

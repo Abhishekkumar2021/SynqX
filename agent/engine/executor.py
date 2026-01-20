@@ -27,13 +27,13 @@ class NodeExecutor:
     def __init__(self, connections: dict[str, Any]):
         self.connections = connections
         self.profiler = DataProfiler()
+        self._process = psutil.Process(os.getpid())
 
     def _get_process_metrics(self) -> tuple[float, float]:
         try:
-            process = psutil.Process(os.getpid())
-            return float(process.cpu_percent()), process.memory_info().rss / (
-                1024 * 1024
-            )
+            return float(
+                self._process.cpu_percent()
+            ), self._process.memory_info().rss / (1024 * 1024)
         except Exception:
             return 0.0, 0.0
 
@@ -59,20 +59,22 @@ class NodeExecutor:
         except Exception:
             return None
 
-    def execute(  # noqa: PLR0912, PLR0915
+    def execute(  # noqa: PLR0912, PLR0915, PLR0915
         self,
         node: dict[str, Any],
         inputs: dict[str, list[Any]],
         status_cb: Any = None,
         log_cb: Any = None,
-    ) -> list[Any]:
+        storage_cb: Any = None,
+    ) -> tuple[list[Any], dict[str, Any]]:
         node_id = node.get("node_id", "unknown")
 
         # PERFORMANCE: Handle nodes collapsed via ELT Pushdown
         if node.get("config", {}).get("_collapsed_into"):
             collapsed_id = node.get("config", {}).get("_collapsed_into")
             logger.info(
-                f"Node '{node_id}' was collapsed into '{collapsed_id}' via ELT Pushdown. Skipping local execution."  # noqa: E501
+                f"Node '{node_id}' was collapsed into '{collapsed_id}' via ELT "
+                "Pushdown. Skipping local execution."
             )
             if status_cb:
                 status_cb(
@@ -84,13 +86,13 @@ class NodeExecutor:
                         "message": f"Pushed down to {collapsed_id}",
                     },
                 )
-            return [], {}
+            return [], {{}}
 
         op_type = node.get("operator_type", "noop").lower()
         op_class = node.get("operator_class") or op_type
 
         # CLEANUP: Remove UI and routing metadata that shouldn't reach the engine/connectors  # noqa: E501
-        config = {**node.get("config", {})}
+        config = {**node.get("config", {{}})}
         config.pop("ui", None)
         config.pop("connection_id", None)
 
@@ -99,11 +101,11 @@ class NodeExecutor:
         )
 
         stats = {"in": 0, "out": 0, "error": 0, "bytes": 0, "chunks": 0}
-        samples = {}
-        results = []
-        quality_profile = {}
+        samples = {{}}
+        results = []  # Keep for compatibility, but we'll try to use storage_cb
+        quality_profile = {{}}
 
-        def on_chunk(  # noqa: PLR0912
+        def on_chunk(  # noqa: PLR0912, PLR0915
             chunk: Any,
             direction: str = "out",
             error_count: int = 0,
@@ -124,7 +126,7 @@ class NodeExecutor:
                 )
 
                 # ENFORCE GUARDRAILS (The "Circuit Breaker")
-                guardrails = node.get("guardrails", []) or node.get("config", {}).get(
+                guardrails = node.get("guardrails", []) or node.get("config", {{}}).get(
                     "guardrails", []
                 )
                 total_rows = stats["out"] + len(chunk)
@@ -139,8 +141,8 @@ class NodeExecutor:
 
             # PERFORMANCE: Native Database Quarantine on Agent
             if direction == "quarantine" and not chunk_is_empty:
-                q_asset_id = node.get("config", {}).get("quarantine_asset_id")
-                q_conn_id = node.get("config", {}).get(
+                q_asset_id = node.get("config", {{}}).get("quarantine_asset_id")
+                q_conn_id = node.get("config", {{}}).get(
                     "quarantine_connection_id"
                 )  # May be passed from backend
 
@@ -167,6 +169,12 @@ class NodeExecutor:
                         logger.error(
                             f"Agent failed to write native quarantine: {q_err}"
                         )
+
+            # NEW: Stream to storage if available
+            if direction == "out" and storage_cb:
+                storage_cb(node_id, chunk)
+            elif direction == "out":
+                results.append(chunk)
 
             if direction not in samples and not chunk_is_empty:
                 samples[direction] = self._sniff_data(chunk)
@@ -221,12 +229,13 @@ class NodeExecutor:
             if op_type == "extract":
                 conn_id = str(
                     node.get("connection_id")
-                    or (node.get("source_asset") or {}).get("connection_id")
+                    or (node.get("source_asset") or {{}}).get("connection_id")
                 )
                 conn_data = self.connections.get(conn_id)
                 if not conn_data:
                     raise ValueError(
-                        f"Target connection metadata (ID: {conn_id}) is missing from payload."  # noqa: E501
+                        f"Target connection metadata (ID: {conn_id}) is missing "
+                        "from payload."
                     )
 
                 connector = ConnectorFactory.get_connector(
@@ -266,13 +275,12 @@ class NodeExecutor:
                             pass
 
                         on_chunk(chunk, direction="out")
-                        results.append(chunk)
 
             # LOAD
             elif op_type == "load":
                 conn_id = str(
                     node.get("connection_id")
-                    or (node.get("destination_asset") or {}).get("connection_id")
+                    or (node.get("destination_asset") or {{}}).get("connection_id")
                 )
                 conn_data = self.connections.get(conn_id)
                 if not conn_data:
@@ -287,9 +295,10 @@ class NodeExecutor:
                 # PERFORMANCE: Zero-Movement ELT Pushdown
                 native_query = config.get("_native_elt_query")
                 if native_query:
-                    logger.info(
-                        "  ELT Pushdown active: Executing Zero-Movement transfer inside database."
-                    )
+                logger.info(
+                    "  ELT Pushdown active: Executing Zero-Movement transfer inside "
+                    "database."
+                )
                     with connector.session():
                         for stmt in native_query.split(";"):
                             if stmt.strip():
@@ -310,23 +319,21 @@ class NodeExecutor:
                                 on_chunk(df, direction="in")
                                 yield df
 
-                    logger.info(
-                        f"  Streaming commit to {conn_data['type'].upper()} entity: '{asset_name}'"
-                    )
-                    
+                logger.info(
+                    f"  Streaming commit to {conn_data['type'].upper()} entity: "
+                    f"'{asset_name}'"
+                )
+
                     # Map write_strategy to mode for connector compatibility
                     write_mode = (
-                        config.get("write_strategy") 
-                        or config.get("write_mode") 
+                        config.get("write_strategy")
+                        or config.get("write_mode")
                         or "append"
                     )
 
                     with connector.session():
                         rows_written = connector.write_batch(
-                            input_stream(),
-                            asset=asset_name,
-                            mode=write_mode,
-                            **config
+                            input_stream(), asset=asset_name, mode=write_mode, **config
                         )
                         stats["out"] = rows_written
                 results = []
@@ -342,7 +349,7 @@ class NodeExecutor:
                 try:
                     transform = TransformFactory.get_transform(op_class, t_config)
                 except Exception as e:
-                    logger.warning(
+                    logger.warn(
                         f"Transform '{op_class}' not found, using pass-through: {e}"
                     )
                     transform = TransformFactory.get_transform("noop", t_config)
@@ -378,7 +385,7 @@ class NodeExecutor:
                 samples["lineage"] = lineage_map
 
                 # Prepare input iterators with engine conversion
-                input_iters = {}
+                input_iters = {{}}
                 for uid, chunks in inputs.items():
 
                     def make_it(c, target_engine):
@@ -407,7 +414,6 @@ class NodeExecutor:
 
                 for chunk in data_iter:
                     on_chunk(chunk, direction="out")
-                    results.append(chunk)
 
             return results, quality_profile
 
@@ -439,7 +445,11 @@ class ParallelAgent:
         self.metrics = ExecutionMetrics()
 
     def run(  # noqa: PLR0915
-        self, dag: Any, node_map: dict[str, Any], log_cb: Any, status_cb: Any = None
+        self,
+        dag: Any,
+        node_map: dict[str, Any],
+        log_cb: Any,
+        status_cb: Any = None,
     ):
         self.metrics.execution_start = datetime.now(UTC)
         self.metrics.total_nodes = len(node_map)
@@ -451,7 +461,7 @@ class ParallelAgent:
                 with concurrent.futures.ThreadPoolExecutor(
                     max_workers=self.max_workers
                 ) as pool:
-                    futures = {}
+                    futures = {{}}
                     for nid in layer_nodes_ids:
                         node = node_map[nid]
                         inputs = {
@@ -465,15 +475,32 @@ class ParallelAgent:
                             strategy = n.get("retry_strategy") or "fixed"
                             delay = n.get("retry_delay_seconds") or 5
 
+                            # Definition of storage callback for streaming to cache
+                            def storage_callback(nid, chunk):
+                                self.cache.append(nid, chunk)
+                            
                             for attempt in range(max_attempts):
                                 try:
-                                    # Create a local context for capturing quality_profile  # noqa: E501
+                                    # Create a local context for capturing quality_profile
                                     results, quality_profile = self.executor.execute(
-                                        n, inp, s_cb, log_cb
+                                        n, inp, s_cb, log_cb, storage_callback
                                     )
                                     return results, quality_profile
                                 except Exception as exc:
                                     if attempt + 1 < max_attempts:
+                                        # Cleanup any partial data in cache for this attempt
+                                        self.cache.clear_node(n.get("node_id"))
+
+                                        wait_time = delay
+                                        if strategy == "exponential_backoff":
+                                            wait_time = delay * (2**attempt)
+                                        elif strategy == "linear_backoff":
+                                            wait_time = delay * (attempt + 1)
+
+                                    else:
+                                        # Cleanup any partial data in cache for this attempt
+                                        self.cache.clear_node(n.get("node_id"))
+                                        
                                         wait_time = delay
                                         if strategy == "exponential_backoff":
                                             wait_time = delay * (2**attempt)
@@ -481,7 +508,9 @@ class ParallelAgent:
                                             wait_time = delay * (attempt + 1)
 
                                         log_cb(
-                                            f"[RETRY] Node '{n.get('node_id')}' failed (Attempt {attempt + 1}/{max_attempts}). Retrying in {wait_time}s: {exc}",  # noqa: E501
+                                            f"[RETRY] Node '{n.get('node_id')}' failed "
+                                            f"(Attempt {attempt + 1}/{max_attempts}). Retrying "
+                                            f"in {wait_time}s: {exc}",
                                             n.get("node_id"),
                                         )
                                         if s_cb:
@@ -489,7 +518,10 @@ class ParallelAgent:
                                                 n.get("node_id"),
                                                 "pending",
                                                 {
-                                                    "message": f"Retrying ({attempt + 1}/{max_attempts})..."  # noqa: E501
+                                                    "message": (
+                                                        f"Retrying ({attempt + 1}/"
+                                                        f"{max_attempts})..."
+                                                    )
                                                 },
                                             )
                                         time.sleep(wait_time)
@@ -508,13 +540,17 @@ class ParallelAgent:
                         nid = futures[future]
                         try:
                             # Capture both data chunks and the final quality profile
-                            chunks, quality_profile = future.result()
-                            self.cache.store(nid, chunks)
+                            # Note: chunks will likely be empty if storage_cb was used,
+                            # but we've already stored them in self.cache.append
+                            _, quality_profile = future.result()
+
+                            chunks = self.cache.retrieve(nid)
                             self.metrics.completed_nodes += 1
                             total_rows = sum(len(df) for df in chunks)
                             self.metrics.total_records_processed += total_rows
                             log_cb(
-                                f"[SUCCESS] Node '{nid}' finalized successfully. [{total_rows:,} records processed]",  # noqa: E501
+                                f"[SUCCESS] Node '{nid}' finalized successfully. "
+                                f"[{total_rows:,} records processed]",
                                 nid,
                             )
                             if status_cb:
@@ -537,7 +573,7 @@ class ParallelAgent:
                             self.metrics.failed_nodes += 1
                             tb_str = traceback.format_exc()
                             log_cb(
-                                f"[FAILED] Node '{nid}' aborted due to a terminal error:\n{tb_str}",  # noqa: E501
+                                f"[FAILED] Node '{nid}' aborted due to a terminal error:\n{{tb_str}}",  # noqa: E501
                                 nid,
                             )
                             if status_cb:

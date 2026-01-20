@@ -35,9 +35,7 @@ class AzureBlobConfig(BaseSettings):
     account_key: str | None = Field(None, description="Storage Account Key")
     container_name: str = Field(..., description="Container Name")
     recursive: bool = Field(True, description="Recursively search for files")
-    max_depth: int | None = Field(
-        None, ge=0, description="Maximum depth for recursion"
-    )
+    max_depth: int | None = Field(None, ge=0, description="Maximum depth for recursion")
     exclude_patterns: str | None = Field(
         None, description="Comma-separated list of folders/files to exclude"
     )

@@ -5,6 +5,7 @@ import {
   type PipelineListResponse,
   type PipelineDetailRead,
   type PipelineStatsResponse,
+  type PipelineBulkStatsResponse,
   type PipelineVersionCreate,
   type PipelineVersionRead,
   type PipelineVersionSummary,
@@ -25,6 +26,11 @@ export const getPipeline = async (id: number) => {
 export const getPipelineStats = async (id: number) => {
   const { data } = await api.get<PipelineStatsResponse>(`/pipelines/${id}/stats`)
   return data
+}
+
+export const getBulkPipelineStats = async (ids: number[]) => {
+  const { data } = await api.post<PipelineBulkStatsResponse>('/pipelines/bulk-stats', ids)
+  return data.stats
 }
 
 export const createPipeline = async (payload: PipelineCreate) => {

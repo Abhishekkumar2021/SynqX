@@ -28,16 +28,12 @@ class S3Config(BaseSettings):
     bucket: str = Field(..., description="S3 Bucket Name")
     region_name: str = Field("us-east-1", description="AWS Region")
     aws_access_key_id: str | None = Field(None, description="AWS Access Key ID")
-    aws_secret_access_key: str | None = Field(
-        None, description="AWS Secret Access Key"
-    )
+    aws_secret_access_key: str | None = Field(None, description="AWS Secret Access Key")
     endpoint_url: str | None = Field(
         None, description="Custom Endpoint URL (e.g. for MinIO)"
     )
     recursive: bool = Field(True, description="Recursively search for files")
-    max_depth: int | None = Field(
-        None, ge=0, description="Maximum depth for recursion"
-    )
+    max_depth: int | None = Field(None, ge=0, description="Maximum depth for recursion")
     exclude_patterns: str | None = Field(
         None, description="Comma-separated list of folders/files to exclude"
     )

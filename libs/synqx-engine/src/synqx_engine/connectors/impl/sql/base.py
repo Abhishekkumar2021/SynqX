@@ -202,9 +202,7 @@ class SQLConnector(BaseConnector):
         except Exception:
             return None
 
-    def _get_table_size(
-        self, table: str, schema: str | None = None
-    ) -> int | None:
+    def _get_table_size(self, table: str, schema: str | None = None) -> int | None:
         """
         Estimate table size in bytes.
         Override this in specific dialects (Postgres, MySQL, etc).
@@ -227,9 +225,7 @@ class SQLConnector(BaseConnector):
                 return self._schema_from_sample(asset, schema, sample_size)
             raise
 
-    def _schema_from_metadata(
-        self, asset: str, schema: str | None
-    ) -> dict[str, Any]:
+    def _schema_from_metadata(self, asset: str, schema: str | None) -> dict[str, Any]:
         try:
             name, actual_schema = self.normalize_asset_identifier(asset)
             inspector = inspect(self._engine)

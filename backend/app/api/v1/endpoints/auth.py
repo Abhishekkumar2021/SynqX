@@ -43,7 +43,9 @@ async def get_oidc_login_url():
 
 @router.post("/oidc/callback", response_model=Token)
 async def oidc_callback(
-    code: str, request: Request, db: Session = Depends(deps.get_db)  # noqa: B008
+    code: str,
+    request: Request,
+    db: Session = Depends(deps.get_db),  # noqa: B008
 ) -> Any:
     """
     Handle OIDC callback after user authorization.
@@ -208,6 +210,11 @@ def register_user(
             is_superuser=user_in.is_superuser,
         )
         db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+
+        # Ensure workspace is created
+        deps.ensure_active_workspace(db, db_user)
         db.commit()
         db.refresh(db_user)
 

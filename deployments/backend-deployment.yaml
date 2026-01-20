@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synqx-backend
+  labels:
+    app: synqx
+    component: backend
+spec:
+  replicas: 2 # For high availability and load balancing
+  selector:
+    matchLabels:
+      app: synqx
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: synqx
+        component: backend
+    spec:
+      initContainers:
+        # Init container to run database migrations
+        # Ensures DB is ready before the application pods start
+        - name: migrate-db
+          image: synqx-backend:latest # Use the same image as the backend app
+          command: ["/bin/bash", "-c"]
+          args: ["alembic upgrade head"]
+          envFrom:
+            - configMapRef:
+                name: synqx-config
+            - secretRef:
+                name: synqx-secrets
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      containers:
+        - name: backend
+          image: synqx-backend:latest # Placeholder, replace with your image registry path
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: synqx-config
+            - secretRef:
+                name: synqx-secrets
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health # FastAPI health check endpoint
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: synqx-backend-service
+  labels:
+    app: synqx
+    component: backend
+spec:
+  selector:
+    app: synqx
+    component: backend
+  ports:
+    - protocol: TCP
+      port: 80 # Service port
+      targetPort: 8000 # Container port
+  type: ClusterIP # Exposes the Service on an internal IP in the cluster

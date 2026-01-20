@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Controller } from 'react-hook-form'
-import { Zap, Lock, Globe, Shield, Info, FileCode } from 'lucide-react'
+import { Zap, Lock, Globe, Shield, Info, FileCode, Plus } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -70,6 +71,7 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
   selectedConnectionId,
   opDef,
 }) => {
+  const navigate = useNavigate()
   const selectedConnection = connections?.find((c: any) => String(c.id) === selectedConnectionId)
   const isOSDU = selectedConnection?.connector_type === 'osdu'
   const [schemaMode, setSchemaMode] = useState<'visual' | 'manual'>('visual')
@@ -326,60 +328,80 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
           <div className="p-5 rounded-[2rem] border border-primary/20 bg-primary/[0.02] space-y-5">
             <div className="space-y-2">
               <Label className="text-[10px] font-bold">Connection</Label>
-              <Controller
-                control={control}
-                name="connection_id"
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
-                    <SelectTrigger className="h-10 rounded-xl bg-background border-primary/10 hover:border-primary/30 transition-all">
-                      <SelectValue placeholder="Select connection" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/40">
-                      {connections?.map((c: any) => (
-                        <SelectItem key={c.id} value={String(c.id)} className="text-xs font-medium">
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+              {(!connections || connections.length === 0) ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-10 border-dashed border-primary/30 text-primary hover:bg-primary/5 text-xs gap-2"
+                  onClick={() => navigate('/connections')}
+                >
+                  <Plus size={14} /> Create Connection
+                </Button>
+              ) : (
+                <Controller
+                  control={control}
+                  name="connection_id"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditor}>
+                      <SelectTrigger className="h-10 rounded-xl bg-background border-primary/10 hover:border-primary/30 transition-all">
+                        <SelectValue placeholder="Select connection" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/40">
+                        {connections?.map((c: any) => (
+                          <SelectItem key={c.id} value={String(c.id)} className="text-xs font-medium">
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              )}
             </div>
 
             <div className="space-y-2">
               <Label className="text-[10px] font-bold">Target Asset</Label>
-              <Controller
-                control={control}
-                name="asset_id"
-                render={({ field }) => (
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={!selectedConnectionId || !isEditor || isLoadingAssets}
-                  >
-                    <SelectTrigger className="h-10 rounded-xl bg-background border-primary/10 hover:border-primary/30 transition-all">
-                      <SelectValue
-                        placeholder={
-                          isLoadingAssets
-                            ? 'Loading assets...'
-                            : !selectedConnectionId
-                              ? 'Connect first'
-                              : filteredAssets.length === 0
-                                ? 'No assets found'
+              {selectedConnectionId && (!filteredAssets || filteredAssets.length === 0) && !isLoadingAssets ? (
+                 <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-10 border-dashed border-muted-foreground/30 text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 text-xs gap-2"
+                  onClick={() => navigate(`/connections/${selectedConnectionId}`)}
+                >
+                  <Plus size={14} /> Register Asset
+                </Button>
+              ) : (
+                <Controller
+                  control={control}
+                  name="asset_id"
+                  render={({ field }) => (
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={!selectedConnectionId || !isEditor || isLoadingAssets}
+                    >
+                      <SelectTrigger className="h-10 rounded-xl bg-background border-primary/10 hover:border-primary/30 transition-all">
+                        <SelectValue
+                          placeholder={
+                            isLoadingAssets
+                              ? 'Loading assets...'
+                              : !selectedConnectionId
+                                ? 'Connect first'
                                 : 'Select asset'
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/40">
-                      {filteredAssets?.map((a: any) => (
-                        <SelectItem key={a.id} value={String(a.id)} className="text-xs font-medium">
-                          {a.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/40">
+                        {filteredAssets?.map((a: any) => (
+                          <SelectItem key={a.id} value={String(a.id)} className="text-xs font-medium">
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              )}
             </div>
 
             {nodeType === 'source' && (

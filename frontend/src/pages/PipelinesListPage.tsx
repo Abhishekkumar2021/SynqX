@@ -1,7 +1,14 @@
 import React, { useState, useMemo } from 'react'
-import { getPipelines, getJobs, triggerPipeline, getPipelineStats, type Pipeline } from '@/lib/api'
+import {
+  getPipelines,
+  getJobs,
+  triggerPipeline,
+  getPipelineStats,
+  getBulkPipelineStats,
+  type Pipeline,
+} from '@/lib/api'
 import { truncateText } from '@/lib/utils'
-import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -119,25 +126,14 @@ export const PipelinesListPage: React.FC = () => {
     queryFn: () => getJobs(),
   })
 
-  // Derived Dialog State
-  const settingsPipeline = useMemo(
-    () => pipelines?.find((p) => String(p.id) === settingsId) || null,
-    [pipelines, settingsId]
-  )
-
-  const historyPipeline = useMemo(
-    () => pipelines?.find((p) => String(p.id) === historyId) || null,
-    [pipelines, historyId]
-  )
-
-  // Fetch stats for all pipelines
-  const pipelineStatsQueries = useQueries({
-    queries: (pipelines || []).map((pipeline) => ({
-      queryKey: ['pipeline-stats', pipeline.id],
-      queryFn: () => getPipelineStats(pipeline.id),
-      enabled: !!pipelines, // Only run these queries if pipelines data is available
-    })),
+  // Fetch stats for all pipelines in bulk
+  const { data: bulkStats } = useQuery({
+    queryKey: ['pipeline-stats', 'bulk', pipelines?.map((p) => p.id)],
+    queryFn: () => getBulkPipelineStats(pipelines?.map((p) => p.id) || []),
+    enabled: !!pipelines && pipelines.length > 0,
   })
+
+  // Derived Dialog State
 
   // Mutations
   const runMutation = useMutation({
@@ -186,6 +182,17 @@ export const PipelinesListPage: React.FC = () => {
     }
   }
 
+  // Derived Dialog State
+  const settingsPipeline = useMemo(
+    () => pipelines?.find((p) => String(p.id) === settingsId) || null,
+    [pipelines, settingsId]
+  )
+
+  const historyPipeline = useMemo(
+    () => pipelines?.find((p) => String(p.id) === historyId) || null,
+    [pipelines, historyId]
+  )
+
   // Derived State: Unique Tags
   const allTags = useMemo(() => {
     if (!pipelines) return []
@@ -206,7 +213,7 @@ export const PipelinesListPage: React.FC = () => {
       .map((p) => {
         const jobs = recentJobs?.filter((j) => j.pipeline_id === p.id) || []
         const lastJob = jobs.sort((a, b) => b.id - a.id)[0]
-        const stats = pipelineStatsQueries.find((q) => q.data?.pipeline_id === p.id)?.data
+        const stats = bulkStats?.[p.id]
         return { ...p, lastJob, stats }
       })
       .filter((p) => {
@@ -219,7 +226,7 @@ export const PipelinesListPage: React.FC = () => {
 
         return matchesSearch && matchesTag
       })
-  }, [pipelines, recentJobs, filter, tagFilter, pipelineStatsQueries])
+  }, [pipelines, recentJobs, filter, tagFilter, bulkStats])
 
   if (isLoadingPipelines) return <LoadingSkeleton />
 

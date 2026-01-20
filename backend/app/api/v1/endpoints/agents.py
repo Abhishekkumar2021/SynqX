@@ -316,7 +316,8 @@ def list_agent_releases(
 
 @router.get("/download/{version_or_latest}")
 def download_agent_package(
-    version_or_latest: str = "latest", db: Session = Depends(deps.get_db)  # noqa: B008
+    version_or_latest: str = "latest",
+    db: Session = Depends(deps.get_db),  # noqa: B008
 ):
     """
     Downloads a specific version of the SynqX Agent or the 'latest' build.
@@ -351,7 +352,8 @@ def download_agent_package(
 
 @router.get("/download/{version_or_latest}/checksum")
 def download_agent_checksum(
-    version_or_latest: str = "latest", db: Session = Depends(deps.get_db)  # noqa: B008
+    version_or_latest: str = "latest",
+    db: Session = Depends(deps.get_db),  # noqa: B008
 ):
     """
     Downloads the SHA256 checksum for a specific agent package.

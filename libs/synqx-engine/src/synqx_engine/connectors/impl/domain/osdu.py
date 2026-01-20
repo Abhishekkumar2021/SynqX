@@ -178,36 +178,47 @@ class OSDUConnector(BaseConnector):
         # Handle 'overwrite' strategy: Delete existing records of this kind
         mode = kwargs.get("mode", "append")
         if mode == "overwrite":
-            logger.info(f"OSDU Strategy: OVERWRITE active for Kind '{asset}'. Purging existing records...")
+            logger.info(
+                f"OSDU Strategy: OVERWRITE active for Kind '{asset}'. Purging "
+                "existing records..."
+            )
             # We search for all IDs of this kind and delete them
             try:
                 # Use a loop to handle potential search result limits
                 while True:
-                    search_res = self.core.search(kind=asset, returnedFields=["id"], limit=1000)
+                    search_res = self.core.search(
+                        kind=asset, returnedFields=["id"], limit=1000
+                    )
                     ids_to_delete = [r["id"] for r in search_res.get("results", [])]
                     if not ids_to_delete:
                         break
-                    
+
                     for rid in ids_to_delete:
                         self.core.delete_record(rid)
-                    
+
                     logger.debug(f"  Purged batch of {len(ids_to_delete)} records.")
                     if len(ids_to_delete) < 1000:
                         break
             except Exception as e:
-                logger.warning(f"OSDU Overwrite purge failed: {e}. Proceeding with ingestion.")
+                logger.warning(
+                    f"OSDU Overwrite purge failed: {e}. Proceeding with ingestion."
+                )
 
         # Prepare records for ingestion
         records = []
         for _, row in data.iterrows():
-            # ID Generation Strategy: 
+            # ID Generation Strategy:
             # 1. Use provided 'id' if exists
             # 2. Use 'id' from config mapping (logical primary key)
             # 3. Fallback to deterministic hash of the entire row
-            
+
             pk_col = kwargs.get("primary_key") or "id"
-            row_id = str(row.get(pk_col)) if row.get(pk_col) else hashlib.sha256(str(row.to_dict()).encode()).hexdigest()[:16]
-            
+            row_id = (
+                str(row.get(pk_col))
+                if row.get(pk_col)
+                else hashlib.sha256(str(row.to_dict()).encode()).hexdigest()[:16]
+            )
+
             # Ensure the ID follows OSDU format: data-partition-id:kind:record-id
             full_id = f"{self.config['data_partition_id']}:{asset}:{row_id}"
 
@@ -226,7 +237,7 @@ class OSDUConnector(BaseConnector):
         chunk_size = 500
         total_ingested = 0
         for i in range(0, len(records), chunk_size):
-            batch = records[i:i + chunk_size]
+            batch = records[i : i + chunk_size]
             ids = self.core.upsert_records(batch)
             total_ingested += len(ids)
 
@@ -241,8 +252,10 @@ class OSDUConnector(BaseConnector):
             self.core.get_schema(kind)
             logger.debug(f"OSDU Kind '{kind}' already exists. Skipping provision.")
         except Exception:
-            logger.info(f"OSDU Kind '{kind}' not found. Initiating auto-provisioning...")
-            
+            logger.info(
+                f"OSDU Kind '{kind}' not found. Initiating auto-provisioning..."
+            )
+
             # Map pandas/numpy types to OSDU/JSON types
             properties = {}
             for col, dtype in df.dtypes.items():
@@ -266,32 +279,34 @@ class OSDUConnector(BaseConnector):
                     "schemaIdentity": {
                         "authority": parts[0],
                         "source": parts[1],
-                        "entityType": parts[2].split("--")[-1] if "--" in parts[2] else parts[2],
+                        "entityType": parts[2].split("--")[-1]
+                        if "--" in parts[2]
+                        else parts[2],
                         "schemaVersionMajor": 1,
                         "schemaVersionMinor": 0,
-                        "schemaVersionPatch": 0
+                        "schemaVersionPatch": 0,
                     },
-                    "status": "PUBLISHED"
+                    "status": "PUBLISHED",
                 },
                 "schema": {
                     "x-osdu-license": "Copyright 2024, SLB",
                     "x-osdu-schema-source": "Synqx-AutoProvision",
                     "type": "object",
                     "properties": {
-                        "data": {
-                            "type": "object",
-                            "properties": properties
-                        }
-                    }
-                }
+                        "data": {"type": "object", "properties": properties}
+                    },
+                },
             }
-            
+
             try:
                 self.core.create_schema(schema_obj)
                 logger.info(f"Successfully provisioned OSDU Kind: {kind}")
             except Exception as e:
                 logger.error(f"Failed to auto-provision OSDU Kind '{kind}': {e}")
-                raise ConfigurationError(f"Target Kind '{kind}' does not exist and auto-provision failed: {e}")
+                raise ConfigurationError(
+                    f"Target Kind '{kind}' does not exist and auto-provision "
+                    f"failed: {e}"
+                )
 
     # --- Generic Metadata & Action Dispatcher ---
 

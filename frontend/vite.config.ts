@@ -36,6 +36,25 @@ export default defineConfig({
   optimizeDeps: {
     include: ['@scalar/api-reference-react', 'mermaid', 'lucide-react', 'framer-motion', 'ajv'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-tooltip',
+            'framer-motion',
+            'lucide-react',
+          ],
+          'monaco-editor': ['@monaco-editor/react'],
+          'data-viz': ['recharts', 'mermaid', '@xyflow/react'],
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

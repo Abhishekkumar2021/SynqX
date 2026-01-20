@@ -24,7 +24,7 @@ from synqx_core.schemas.connection import (
 )
 from synqx_engine.connectors.factory import ConnectorFactory
 
-from app.core.cache import cache
+from app.core.cache import cache, cached
 from app.core.errors import AppError
 from app.core.logging import get_logger
 from app.services.dependency_service import DependencyService
@@ -40,6 +40,155 @@ logger = get_logger(__name__)
 class ConnectionService:
     def __init__(self, db_session: Session):
         self.db_session = db_session
+
+    def get_connection(
+        self,
+        connection_id: int,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> Connection | None:
+        query = self.db_session.query(Connection).filter(
+            and_(Connection.id == connection_id, Connection.deleted_at.is_(None))
+        )
+        if workspace_id is not None:
+            query = query.filter(Connection.workspace_id == workspace_id)
+        elif user_id is not None:
+            query = query.filter(Connection.user_id == user_id)
+        return query.first()
+
+    def get_asset(
+        self, asset_id: int, user_id: int | None = None, workspace_id: int | None = None
+    ) -> Asset | None:
+        query = (
+            self.db_session.query(Asset)
+            .join(Connection)
+            .filter(and_(Asset.id == asset_id, Asset.deleted_at.is_(None)))
+        )
+        if workspace_id is not None:
+            query = query.filter(Connection.workspace_id == workspace_id)
+        elif user_id is not None:
+            query = query.filter(Connection.user_id == user_id)
+        return query.first()
+
+    @cached(key_prefix="connection:impact", ttl=600)
+    def get_connection_impact(
+        self,
+        connection_id: int,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> ConnectionImpactRead:
+        # Validate connection exists and user has access
+        pipeline_count_query = (
+            self.db_session.query(func.count(distinct(Pipeline.id)))
+            .join(PipelineVersion, Pipeline.id == PipelineVersion.pipeline_id)
+            .join(PipelineNode, PipelineVersion.id == PipelineNode.pipeline_version_id)
+            .join(
+                Asset,
+                or_(
+                    PipelineNode.source_asset_id == Asset.id,
+                    PipelineNode.destination_asset_id == Asset.id,
+                ),
+            )
+            .filter(Asset.connection_id == connection_id)
+        )
+
+        if workspace_id is not None:
+            pipeline_count_query = pipeline_count_query.filter(
+                Pipeline.workspace_id == workspace_id
+            )
+        elif user_id is not None:
+            pipeline_count_query = pipeline_count_query.filter(
+                Pipeline.user_id == user_id
+            )
+
+        pipeline_count = pipeline_count_query.scalar()
+
+        return ConnectionImpactRead(pipeline_count=int(pipeline_count or 0))
+
+    @cached(key_prefix="connection:stats", ttl=600)
+    def get_connection_usage_stats(
+        self,
+        connection_id: int,
+        user_id: int | None = None,
+        workspace_id: int | None = None,
+    ) -> ConnectionUsageStatsRead:
+        now = datetime.now(UTC)
+        last_24h = now - timedelta(hours=24)
+        last_7d = now - timedelta(days=7)
+
+        # Base query for jobs related to this connection
+        base_job_query = (
+            self.db_session.query(Job, PipelineRun)
+            .join(Pipeline, Job.pipeline_id == Pipeline.id)
+            .join(PipelineVersion, Pipeline.id == PipelineVersion.pipeline_id)
+            .join(PipelineNode, PipelineVersion.id == PipelineNode.pipeline_version_id)
+            .join(
+                Asset,
+                or_(
+                    PipelineNode.source_asset_id == Asset.id,
+                    PipelineNode.destination_asset_id == Asset.id,
+                ),
+            )
+            .join(PipelineRun, Job.id == PipelineRun.job_id)
+            .filter(Asset.connection_id == connection_id)
+        )
+
+        if workspace_id is not None:
+            base_job_query = base_job_query.filter(
+                Pipeline.workspace_id == workspace_id
+            )
+        elif user_id is not None:
+            base_job_query = base_job_query.filter(Pipeline.user_id == user_id)
+
+        # Filter for jobs that have actually completed (SUCCESS or FAILED)
+        completed_jobs_filter = Job.status.in_([JobStatus.SUCCESS, JobStatus.FAILED])
+
+        # 24h stats
+        results_24h = base_job_query.filter(
+            Job.completed_at >= last_24h, completed_jobs_filter
+        ).all()
+        jobs_24h = [job for job, run in results_24h]
+        pipeline_runs_24h = [run for job, run in results_24h]
+
+        total_runs_24h = len(jobs_24h)
+        successful_runs_24h = len(
+            [j for j in jobs_24h if j.status == JobStatus.SUCCESS]
+        )
+
+        sync_success_rate = (
+            (successful_runs_24h / total_runs_24h * 100) if total_runs_24h > 0 else 0.0
+        )
+
+        total_latency_seconds = sum(
+            [
+                r.duration_seconds
+                for r in pipeline_runs_24h
+                if r.duration_seconds is not None
+            ]
+        )
+        average_latency_ms = (
+            (total_latency_seconds / total_runs_24h * 1000)
+            if total_runs_24h > 0
+            else None
+        )
+
+        # Last 7 days runs count
+        subq = base_job_query.with_entities(Job.id, Job.completed_at).subquery()
+        last_7d_runs_count = (
+            self.db_session.query(func.count(distinct(subq.c.id)))
+            .filter(subq.c.completed_at >= last_7d)
+            .scalar()
+        )
+
+        return ConnectionUsageStatsRead(
+            sync_success_rate=round(float(sync_success_rate), 2),
+            average_latency_ms=round(float(average_latency_ms), 2)
+            if average_latency_ms is not None
+            else None,
+            data_extracted_gb_24h=0.0,
+            last_24h_runs=int(total_runs_24h),
+            last_7d_runs=int(last_7d_runs_count or 0),
+        )
 
     def _trigger_ephemeral_job(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915
         self,
@@ -195,6 +344,16 @@ class ConnectionService:
                         res = connector.list_files(path=config.get("path", ""))
                         return {"files": sanitize_for_json(res)}
 
+                    elif "list documents" in task_key:
+                        entity_ids = config.get("entity_ids", [])
+                        entity_table = config.get("entity_table", "WELL")
+
+                        if hasattr(connector, "list_documents"):
+                            res = connector.list_documents(entity_ids, entity_table)
+                            return {"documents": sanitize_for_json(res)}
+                        else:
+                            return {"documents": []}  # Not supported
+
                     elif "create directory" in task_key:
                         res = connector.create_directory(path=config.get("path"))
                         return {"success": res}
@@ -223,6 +382,18 @@ class ConnectionService:
                         import base64  # noqa: PLC0415
 
                         return {"content": base64.b64encode(res).decode("utf-8")}
+
+                    elif "asset_details" in task_key:
+                        asset_name = config.get("asset")
+                        if not asset_name:
+                            raise AppError("Asset name is required for details.")
+
+                        if hasattr(connector, "get_asset_details"):
+                            res = connector.get_asset_details(asset_name)
+                            return sanitize_for_json(res)
+                        else:
+                            # Fallback for connectors that don't support it
+                            return {"error": "Not supported by this connector"}
 
                     elif "metadata" in task_key:
                         method_name = config.get("method")
@@ -300,21 +471,6 @@ class ConnectionService:
             self.db_session.rollback()
             raise AppError(f"Failed to create connection: {e!s}")  # noqa: B904
 
-    def get_connection(
-        self,
-        connection_id: int,
-        user_id: int | None = None,
-        workspace_id: int | None = None,
-    ) -> Connection | None:
-        query = self.db_session.query(Connection).filter(
-            and_(Connection.id == connection_id, Connection.deleted_at.is_(None))
-        )
-        if workspace_id is not None:
-            query = query.filter(Connection.workspace_id == workspace_id)
-        elif user_id is not None:
-            query = query.filter(Connection.user_id == user_id)
-        return query.first()
-
     def list_connections(  # noqa: PLR0913
         self,
         connector_type: ConnectorType | None = None,
@@ -324,20 +480,6 @@ class ConnectionService:
         user_id: int | None = None,
         workspace_id: int | None = None,
     ) -> tuple[list[Connection], int]:
-        # Cache Key Generation
-        key_parts = [
-            f"type={connector_type.value if connector_type else 'all'}",
-            f"status={health_status or 'all'}",
-            f"limit={limit}",
-            f"offset={offset}",
-            f"user={user_id or 'all'}",
-            f"ws={workspace_id or 'all'}",
-        ]
-        f"connections:list:{':'.join(key_parts)}"
-
-        # Try Cache
-        # (Skipping for now due to complex ORM objects, but key is ready)
-
         query = self.db_session.query(Connection).filter(
             Connection.deleted_at.is_(None)
         )
@@ -359,33 +501,6 @@ class ConnectionService:
             .all()
         )
 
-        return items, total
-        f"connections:list:{':'.join(key_parts)}"
-
-        # Try Cache (We need to cache Pydantic-ready dicts, but this returns ORM objects)  # noqa: E501
-        # This is the friction point. Service returns ORM objects.
-        # If we return dicts, the API layer (Pydantic) usually handles it fine via from_attributes=True?  # noqa: E501
-        # No, from_attributes expects objects attributes.
-        # We will skip caching implementation in Service layer to avoid ORM detaching hell.  # noqa: E501
-        # Instead, we should implement caching in the API Endpoint layer where we have Pydantic models.  # noqa: E501
-
-        query = self.db_session.query(Connection).filter(
-            Connection.deleted_at.is_(None)
-        )
-        if user_id is not None:
-            query = query.filter(Connection.user_id == user_id)
-
-        if connector_type:
-            query = query.filter(Connection.connector_type == connector_type)
-        if health_status:
-            query = query.filter(Connection.health_status == health_status)
-        total = query.count()
-        items = (
-            query.order_by(Connection.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-            .all()
-        )
         return items, total
 
     def update_connection(
@@ -749,20 +864,6 @@ class ConnectionService:
         except Exception as e:
             self.db_session.rollback()
             raise AppError(f"Failed to create asset: {e!s}")  # noqa: B904
-
-    def get_asset(
-        self, asset_id: int, user_id: int | None = None, workspace_id: int | None = None
-    ) -> Asset | None:
-        query = (
-            self.db_session.query(Asset)
-            .join(Connection)
-            .filter(and_(Asset.id == asset_id, Asset.deleted_at.is_(None)))
-        )
-        if workspace_id is not None:
-            query = query.filter(Connection.workspace_id == workspace_id)
-        elif user_id is not None:
-            query = query.filter(Connection.user_id == user_id)
-        return query.first()
 
     def list_assets(  # noqa: PLR0913
         self,
@@ -1470,142 +1571,33 @@ class ConnectionService:
                 return True
         return False
 
-    def get_connection_impact(
+    def get_live_asset_details(
         self,
         connection_id: int,
+        asset_name: str,
         user_id: int | None = None,
         workspace_id: int | None = None,
-    ) -> ConnectionImpactRead:
-        # Validate connection exists and user has access
+    ) -> dict[str, Any]:
+        """
+        Fetch live details (e.g. row count) for a specific asset without full discovery.
+        """
         connection = self.get_connection(
             connection_id, user_id=user_id, workspace_id=workspace_id
         )
         if not connection:
-            raise AppError(f"Connection {connection_id} not found.")
+            raise AppError(f"Connection {connection_id} not found")
 
-        # Query to find distinct pipelines that use assets from this connection
-        # A pipeline uses a connection if any of its nodes refer to an asset belonging to that connection  # noqa: E501
-        pipeline_count_query = (
-            self.db_session.query(func.count(distinct(Pipeline.id)))
-            .join(PipelineVersion, Pipeline.id == PipelineVersion.pipeline_id)
-            .join(PipelineNode, PipelineVersion.id == PipelineNode.pipeline_version_id)
-            .join(
-                Asset,
-                or_(
-                    PipelineNode.source_asset_id == Asset.id,
-                    PipelineNode.destination_asset_id == Asset.id,
-                ),
-            )
-            .filter(Asset.connection_id == connection_id)
-        )  # Only count non-deleted pipelines
-
-        if workspace_id is not None:
-            pipeline_count_query = pipeline_count_query.filter(
-                Pipeline.workspace_id == workspace_id
-            )
-        elif user_id is not None:
-            pipeline_count_query = pipeline_count_query.filter(
-                Pipeline.user_id == user_id
-            )
-
-        pipeline_count = pipeline_count_query.scalar()
-
-        return ConnectionImpactRead(pipeline_count=int(pipeline_count or 0))
-
-    def get_connection_usage_stats(
-        self,
-        connection_id: int,
-        user_id: int | None = None,
-        workspace_id: int | None = None,
-    ) -> ConnectionUsageStatsRead:
-        # Validate connection exists and user has access
-        connection = self.get_connection(
-            connection_id, user_id=user_id, workspace_id=workspace_id
-        )
-        if not connection:
-            raise AppError(f"Connection {connection_id} not found.")
-
-        now = datetime.now(UTC)
-        last_24h = now - timedelta(hours=24)
-        last_7d = now - timedelta(days=7)
-
-        # Base query for jobs related to this connection
-        # A job is related if its pipeline uses any asset from this connection
-        base_job_query = (
-            self.db_session.query(Job, PipelineRun)
-            .join(Pipeline, Job.pipeline_id == Pipeline.id)
-            .join(PipelineVersion, Pipeline.id == PipelineVersion.pipeline_id)
-            .join(PipelineNode, PipelineVersion.id == PipelineNode.pipeline_version_id)
-            .join(
-                Asset,
-                or_(
-                    PipelineNode.source_asset_id == Asset.id,
-                    PipelineNode.destination_asset_id == Asset.id,
-                ),
-            )
-            .join(PipelineRun, Job.id == PipelineRun.job_id)
-            .filter(Asset.connection_id == connection_id)
+        agent_group = (
+            connection.workspace.default_agent_group if connection.workspace else None
         )
 
-        if workspace_id is not None:
-            base_job_query = base_job_query.filter(
-                Pipeline.workspace_id == workspace_id
-            )
-        elif user_id is not None:
-            base_job_query = base_job_query.filter(Pipeline.user_id == user_id)
+        task_config = {"asset": asset_name}
 
-        # Filter for jobs that have actually completed (SUCCESS or FAILED)
-        completed_jobs_filter = Job.status.in_([JobStatus.SUCCESS, JobStatus.FAILED])
-
-        # 24h stats
-        results_24h = base_job_query.filter(
-            Job.completed_at >= last_24h, completed_jobs_filter
-        ).all()
-        jobs_24h = [job for job, run in results_24h]
-        pipeline_runs_24h = [run for job, run in results_24h]
-
-        total_runs_24h = len(jobs_24h)
-        successful_runs_24h = len(
-            [j for j in jobs_24h if j.status == JobStatus.SUCCESS]
-        )
-
-        sync_success_rate = (
-            (successful_runs_24h / total_runs_24h * 100) if total_runs_24h > 0 else 0.0
-        )
-
-        total_latency_seconds = sum(
-            [
-                r.duration_seconds
-                for r in pipeline_runs_24h
-                if r.duration_seconds is not None
-            ]
-        )
-        average_latency_ms = (
-            (total_latency_seconds / total_runs_24h * 1000)
-            if total_runs_24h > 0
-            else None
-        )
-
-        # Last 7 days runs count (any status, just for total activity)
-        # Using a distinct count of job IDs to avoid overcounting if a job has multiple related pipeline nodes  # noqa: E501
-        # Fix Cartesian product warning by explicitly selecting Job columns in subquery
-        subq = base_job_query.with_entities(Job.id, Job.completed_at).subquery()
-        last_7d_runs_count = (
-            self.db_session.query(func.count(distinct(subq.c.id)))
-            .filter(subq.c.completed_at >= last_7d)
-            .scalar()
-        )
-
-        # Data Extracted (GB) - Currently not explicitly tracked per connection/job in this system  # noqa: E501
-        # A placeholder value is used. Future enhancement would involve detailed metrics.  # noqa: E501
-        data_extracted_gb_24h = 0.0  # Placeholder
-
-        return ConnectionUsageStatsRead(
-            sync_success_rate=round(float(sync_success_rate), 2),
-            average_latency_ms=round(float(average_latency_ms), 2)
-            if average_latency_ms is not None
-            else None,
-            data_extracted_gb_24h=float(data_extracted_gb_24h),
-            last_24h_runs=int(total_runs_24h),
-            last_7d_runs=int(last_7d_runs_count or 0),
+        return self._trigger_ephemeral_job(
+            connection_id,
+            agent_group,
+            user_id or 0,  # Should be valid user_id
+            workspace_id or 0,
+            "asset_details",
+            task_config,
         )

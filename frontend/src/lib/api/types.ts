@@ -58,6 +58,7 @@ export interface WorkspaceMember {
 }
 
 export interface Connection {
+  config: boolean
   id: number
   name: string
   connector_type: ConnectorType
@@ -705,6 +706,10 @@ export interface PipelineStatsResponse {
   average_duration_seconds?: number
   last_run_at?: string
   next_scheduled_run?: string
+}
+
+export interface PipelineBulkStatsResponse {
+  stats: Record<number, PipelineStatsResponse>
 }
 
 export interface PipelineTriggerRequest {

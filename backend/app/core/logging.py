@@ -74,8 +74,10 @@ def setup_logging() -> None:
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
 
-    if settings.ENVIRONMENT == "development":
+    if settings.DB_ECHO:
         logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+    else:
+        logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 
 def get_logger(name: str):

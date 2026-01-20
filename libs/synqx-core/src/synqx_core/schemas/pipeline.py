@@ -414,6 +414,10 @@ class PipelineStatsResponse(BaseModel):
     next_scheduled_run: datetime | None
 
 
+class PipelineBulkStatsResponse(BaseModel):
+    stats: dict[int, PipelineStatsResponse]
+
+
 class NodeDiff(BaseModel):
     node_id: str
     changes: dict[str, Any]
