@@ -3,6 +3,7 @@ import { API_BASE_URL } from '@/lib/api'
 import { useAuth } from './useAuth'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { truncateText } from '@/lib/utils'
 
 export function useNotifications() {
   const { user } = useAuth()
@@ -35,8 +36,8 @@ export function useNotifications() {
           // Invalidate alerts history to trigger a refetch
           queryClient.invalidateQueries({ queryKey: ['alerts-history'] })
 
-          // Show a toast for the new alert
-          toast(data.message, {
+          // Show a toast for the new alert with truncated message
+          toast(truncateText(data.message, 80), {
             description: `Pipeline: ${data.pipeline_id}`,
             action: data.job_id
               ? {

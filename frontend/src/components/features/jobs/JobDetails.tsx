@@ -5,7 +5,7 @@ import { RefreshCw } from 'lucide-react'
 import { JobLogViewer } from '@/components/features/jobs/JobLogViewer'
 import { type Job, getJobRun, cancelJob, retryJob, getPipeline } from '@/lib/api'
 import { toast } from 'sonner'
-import { formatDuration } from '@/lib/utils'
+import { formatDuration, truncateText } from '@/lib/utils'
 import { JobSummary } from './JobSummary'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { JobDetailsHeader } from './JobDetailsHeader'
@@ -72,7 +72,10 @@ export const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
       toast.success('Job cancellation requested')
       queryClient.invalidateQueries({ queryKey: ['jobs'] })
     },
-    onError: () => toast.error('Failed to cancel job'),
+    onError: (err: any) =>
+      toast.error('Failed to cancel job', {
+        description: truncateText(err.response?.data?.detail?.message || err.message),
+      }),
   })
 
   const retryMutation = useMutation({
@@ -85,12 +88,15 @@ export const JobDetails: React.FC<JobDetailsProps> = ({ job }) => {
         navigate(`/jobs/${newJob.id}`)
       }
     },
-    onError: () => toast.error('Failed to retry job'),
+    onError: (err: any) =>
+      toast.error('Failed to retry job', {
+        description: truncateText(err.response?.data?.detail?.message || err.message),
+      }),
   })
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text)
-    toast.success(`${label} copied to clipboard`)
+    toast.success(`${truncateText(label, 20)} copied to clipboard`)
   }
 
   return (

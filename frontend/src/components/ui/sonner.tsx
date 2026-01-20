@@ -50,7 +50,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
               'group-[.toast]:text-[13px] group-[.toast]:font-bold group-[.toast]:uppercase group-[.toast]:tracking-[0.1em] !text-foreground',
 
             description:
-              'group-[.toast]:text-[11px] group-[.toast]:font-medium group-[.toast]:leading-relaxed !text-muted-foreground group-[.toast]:mt-1',
+              'group-[.toast]:text-[11px] group-[.toast]:font-medium group-[.toast]:leading-relaxed !text-muted-foreground group-[.toast]:mt-1 line-clamp-3',
 
             actionButton:
               'group-[.toast]:!bg-primary group-[.toast]:!text-primary-foreground group-[.toast]:font-bold group-[.toast]:uppercase group-[.toast]:text-[10px] group-[.toast]:rounded-xl group-[.toast]:h-8 group-[.toast]:px-4 group-[.toast]:hover:scale-105 group-[.toast]:transition-transform group-[.toast]:shadow-lg group-[.toast]:shadow-primary/20 group-[.toast]:border-none',

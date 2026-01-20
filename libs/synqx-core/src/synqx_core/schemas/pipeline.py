@@ -26,20 +26,27 @@ class PipelineNodeBase(BaseModel):
     destination_asset_id: int | None = Field(None, gt=0)
     connection_id: int | None = None
 
-    # Data Reliability & Movement
+    # Strategy & Movement
     sync_mode: SyncMode = Field(default=SyncMode.FULL_LOAD)
     write_strategy: WriteStrategy = Field(default=WriteStrategy.APPEND)
     schema_evolution_policy: SchemaEvolutionPolicy = Field(
         default=SchemaEvolutionPolicy.STRICT
     )
 
-    # Mission Critical: Governance & Quality
+    # Governance & Quality
     data_contract: dict[str, Any] | None = Field(default_factory=dict)
+    column_mapping: dict[str, Any] | None = Field(default_factory=dict)
     guardrails: list[dict[str, Any]] | None = Field(default_factory=list)
     quarantine_asset_id: int | None = Field(None, gt=0)
 
     # Real-time Capabilities
     cdc_config: dict[str, Any] | None = Field(default_factory=dict)
+
+    # Advanced Orchestration
+    is_dynamic: bool = Field(default=False)
+    mapping_expr: str | None = Field(None, max_length=500)
+    sub_pipeline_id: int | None = Field(None, gt=0)
+    worker_tag: str | None = Field(None, max_length=100)
 
     max_retries: int = Field(default=3, ge=0, le=10)
     retry_strategy: RetryStrategy = Field(default=RetryStrategy.FIXED)
@@ -65,7 +72,17 @@ class PipelineNodeUpdate(BaseModel):
     description: str | None = Field(None, max_length=2000)
     config: dict[str, Any] | None = None
     sync_mode: SyncMode | None = None
+    write_strategy: WriteStrategy | None = None
+    schema_evolution_policy: SchemaEvolutionPolicy | None = None
+    data_contract: dict[str, Any] | None = None
+    column_mapping: dict[str, Any] | None = None
+    guardrails: list[dict[str, Any]] | None = None
+    quarantine_asset_id: int | None = None
     cdc_config: dict[str, Any] | None = None
+    is_dynamic: bool | None = None
+    mapping_expr: str | None = None
+    sub_pipeline_id: int | None = None
+    worker_tag: str | None = None
     max_retries: int | None = Field(None, ge=0, le=10)
     timeout_seconds: int | None = Field(None, gt=0, le=86400)
 

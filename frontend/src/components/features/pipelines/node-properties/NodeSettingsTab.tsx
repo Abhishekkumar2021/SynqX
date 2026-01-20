@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { RuleBuilder } from './RuleBuilder'
+import { truncateText } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface NodeSettingsTabProps {
@@ -82,7 +83,6 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
       initialConnectionId.current !== selectedConnectionId
     ) {
       setValue('asset_id', '')
-      if (isOSDU) setValue('osdu_kind', '')
     }
     initialConnectionId.current = selectedConnectionId
   }, [selectedConnectionId, setValue, isOSDU])
@@ -192,7 +192,7 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                         const text = await file.text()
                         setValue(field.name, text)
                         toast.success('Script Imported', {
-                          description: `Successfully loaded ${file.name}`,
+                          description: `Successfully loaded ${truncateText(file.name, 30)}`,
                         })
                       }
                     }}
@@ -353,21 +353,7 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                 name="asset_id"
                 render={({ field }) => (
                   <Select
-                    onValueChange={(val) => {
-                      field.onChange(val)
-                      if (isOSDU) {
-                        const selectedAsset = assets?.find((a: any) => String(a.id) === val)
-                        if (
-                          selectedAsset?.metadata?.full_kind ||
-                          selectedAsset?.fully_qualified_name
-                        ) {
-                          setValue(
-                            'osdu_kind',
-                            selectedAsset.metadata.full_kind || selectedAsset.fully_qualified_name
-                          )
-                        }
-                      }
-                    }}
+                    onValueChange={field.onChange}
                     value={field.value}
                     disabled={!selectedConnectionId || !isEditor || isLoadingAssets}
                   >
@@ -496,6 +482,30 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
             {nodeType === 'sink' && (
               <div className="space-y-4 pt-4 border-t border-primary/10 mt-2">
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-primary/[0.03] border border-primary/10 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-[10px] font-bold">Auto-Provision</Label>
+                        <HelpIcon content="Automatically create the target table or Kind if it does not exist." />
+                      </div>
+                      <Controller
+                        control={control}
+                        name="auto_create_schema"
+                        render={({ field }) => (
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={!isEditor}
+                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          />
+                        )}
+                      />
+                    </div>
+                    <p className="text-[8px] text-muted-foreground/60 leading-tight">
+                      Ensures destination is ready before ingestion.
+                    </p>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold flex items-center">
                       Write Strategy{' '}
@@ -531,38 +541,39 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
                       )}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold flex items-center">
-                      Evolution Policy{' '}
-                      <HelpIcon content="Defines behavior when incoming data schema differs from target." />
-                    </Label>
-                    <Controller
-                      control={control}
-                      name="schema_evolution_policy"
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={!isEditor}
-                        >
-                          <SelectTrigger className="h-9 rounded-xl bg-background border-primary/10">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-border/40">
-                            <SelectItem value="strict" className="text-xs">
-                              Strict
-                            </SelectItem>
-                            <SelectItem value="evolve" className="text-xs">
-                              Evolve
-                            </SelectItem>
-                            <SelectItem value="ignore" className="text-xs">
-                              Ignore
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold flex items-center">
+                    Evolution Policy{' '}
+                    <HelpIcon content="Defines behavior when incoming data schema differs from target." />
+                  </Label>
+                  <Controller
+                    control={control}
+                    name="schema_evolution_policy"
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!isEditor}
+                      >
+                        <SelectTrigger className="h-9 rounded-xl bg-background border-primary/10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-border/40">
+                          <SelectItem value="strict" className="text-xs">
+                            Strict
+                          </SelectItem>
+                          <SelectItem value="evolve" className="text-xs">
+                            Evolve
+                          </SelectItem>
+                          <SelectItem value="ignore" className="text-xs">
+                            Ignore
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
               </div>
             )}
@@ -583,47 +594,29 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
             <div className="absolute -right-12 -top-12 h-40 w-40 bg-primary/5 blur-3xl rounded-full" />
 
             <div className="space-y-4 relative z-10">
-              {nodeType === 'sink' && (
+              {nodeType === 'sink' && watch('auto_create_schema') && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-2xl bg-background border border-primary/10 flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-bold">Auto-Provision</Label>
-                      <Controller
-                        control={control}
-                        name="auto_create_schema"
-                        render={({ field }) => (
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                          />
-                        )}
-                      />
-                    </div>
-                    {watch('auto_create_schema') && (
-                      <Controller
-                        control={control}
-                        name="osdu_inference_strategy"
-                        render={({ field }) => (
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value || 'data_driven'}
-                          >
-                            <SelectTrigger className="h-8 text-[10px] bg-background border-primary/10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-xl border-border/40">
-                              <SelectItem value="data_driven" className="text-[10px]">
-                                Data-driven
-                              </SelectItem>
-                              <SelectItem value="canonical" className="text-[10px]">
-                                Contract-driven
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-                      />
-                    )}
+                    <Label className="text-[10px] font-bold">Inference Strategy</Label>
+                    <Controller
+                      control={control}
+                      name="osdu_inference_strategy"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value || 'data_driven'}>
+                          <SelectTrigger className="h-8 text-[10px] bg-background border-primary/10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl border-border/40">
+                            <SelectItem value="data_driven" className="text-[10px]">
+                              Data-driven
+                            </SelectItem>
+                            <SelectItem value="canonical" className="text-[10px]">
+                              Contract-driven
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
                   <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex flex-col items-center justify-center text-center gap-1.5">
                     <Shield size={16} className="text-primary opacity-60" />

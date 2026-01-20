@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 // Domain Explorers
 import { DomainBrowser } from '@/components/features/connections/domain/DomainBrowser'
 import { OSDUExplorer } from './osdu/OSDUExplorer'
+import { ProSourceExplorer } from './prosource/ProSourceExplorer'
 import { LiveFileExplorer } from '@/components/features/connections/LiveFileExplorer'
 import { SQLExplorer } from './SQLExplorer'
 import { ExplorerZeroState } from './ExplorerZeroState'
@@ -67,14 +68,7 @@ export const ExplorerContentRouter: React.FC<ExplorerContentRouterProps> = ({
         animate={{ opacity: 1 }}
         className="h-full"
       >
-        <DomainBrowser
-          connectionId={parseInt(selectedConnectionId)}
-          connectionName={connectionName}
-          connectorType={explorerType}
-          assets={discoveredAssets || []}
-          isLoading={isLoadingDiscovered || isDiscoverMutationPending}
-          onDiscover={onDiscover}
-        />
+        <ProSourceExplorer connectionId={parseInt(selectedConnectionId)} />
       </motion.div>
     )
   }

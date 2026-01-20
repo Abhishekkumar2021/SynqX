@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
 import { getPipelines, getJobs, triggerPipeline, getPipelineStats, type Pipeline } from '@/lib/api'
+import { truncateText } from '@/lib/utils'
+import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -152,8 +153,9 @@ export const PipelinesListPage: React.FC = () => {
     },
     onError: (err: any) => {
       toast.error('Trigger Failed', {
-        description:
-          err.response?.data?.detail?.message || 'There was an error starting the pipeline.',
+        description: truncateText(
+          err.response?.data?.detail?.message || 'There was an error starting the pipeline.'
+        ),
       })
     },
   })
@@ -177,7 +179,7 @@ export const PipelinesListPage: React.FC = () => {
       })
       queryClient.invalidateQueries({ queryKey: ['pipelines'] })
     } catch (err: any) {
-      toast.error('Import Aborted', { description: err.message })
+      toast.error('Import Aborted', { description: truncateText(err.message) })
     } finally {
       setIsExecutingImport(false)
       e.target.value = ''

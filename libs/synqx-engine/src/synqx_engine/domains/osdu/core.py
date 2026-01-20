@@ -146,6 +146,9 @@ class OSDUCoreService(OSDUBaseClient):
     def get_schema(self, kind: str) -> dict[str, Any]:
         return self._get(f"api/schema-service/v1/schema/{kind}").json()
 
+    def create_schema(self, schema_obj: dict[str, Any]) -> dict[str, Any]:
+        return self._post("api/schema-service/v1/schema", json=schema_obj).json()
+
     def list_schemas(
         self, authority: str | None = None, source: str | None = None
     ) -> list[str]:

@@ -5,9 +5,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createConnection,
   updateConnection,
+  testConnectionAdhoc,
   type ConnectionCreate,
   getConnections,
 } from '@/lib/api'
+import { truncateText } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,6 +23,7 @@ import {
   Search,
   Plus,
   Loader2,
+  Shield,
 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -128,7 +131,7 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({
   }, [open, connectionToEdit, form])
 
   const mutation = useMutation({
-    mutationFn: (data: ConnectionCreate) =>
+    mutationFn: (data: any) =>
       connectionToEdit ? updateConnection(connectionToEdit.id, data) : createConnection(data),
     onSuccess: () => {
       toast.success(connectionToEdit ? 'Connection Updated' : 'Connection Created')
@@ -137,13 +140,53 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({
     },
     onError: (err: any) => {
       toast.error('Operation Failed', {
-        description: err.response?.data?.detail?.message || 'An unexpected error occurred.',
+        description: truncateText(
+          err.response?.data?.detail?.message || 'An unexpected error occurred.'
+        ),
+      })
+    },
+  })
+
+  const testMutation = useMutation({
+    mutationFn: (data: { type: string; config: any }) =>
+      testConnectionAdhoc(data.type, data.config),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('Connection Successful', {
+          description: truncateText(res.message || 'Successfully connected to the data source.'),
+        })
+      } else {
+        toast.error('Connection Failed', {
+          description: truncateText(res.message || 'Could not establish connection.'),
+        })
+      }
+    },
+    onError: (err: any) => {
+      toast.error('Test Failed', {
+        description: truncateText(
+          err.response?.data?.detail?.message || 'An unexpected error occurred during testing.'
+        ),
       })
     },
   })
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutation.mutate(values as ConnectionCreate)
+    // We explicitly disable auto-validation on save to keep them separate as requested
+    const payload = {
+      ...values,
+      validate_on_create: false,
+      validate_on_update: false,
+    }
+    mutation.mutate(payload)
+  }
+
+  const handleTestConnection = () => {
+    const values = form.getValues()
+    if (!selectedType) return
+    testMutation.mutate({
+      type: selectedType,
+      config: values.config,
+    })
   }
 
   const schema = selectedType ? CONNECTOR_TYPE_INFO[selectedType] : null
@@ -630,6 +673,22 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({
                       </>
                     )}
                   </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-2xl h-12 px-8 font-bold border-primary/20 hover:bg-primary/5 text-primary"
+                    onClick={handleTestConnection}
+                    disabled={testMutation.isPending}
+                  >
+                    {testMutation.isPending ? (
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                      <Shield className="mr-2 h-5 w-5" />
+                    )}
+                    Test Connectivity
+                  </Button>
+
                   <Button
                     type="submit"
                     className="rounded-2xl h-12 px-10 font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"

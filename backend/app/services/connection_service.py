@@ -270,14 +270,19 @@ class ConnectionService:
             )
             self.db_session.add(connection)
             self.db_session.flush()
-            test_result = self._test_connection_internal(connection)
-            connection.health_status = (
-                "healthy" if test_result["success"] else "unhealthy"
-            )
-            connection.last_test_at = datetime.now(UTC)
-            connection.error_message = (
-                None if test_result["success"] else test_result["message"]
-            )
+
+            if connection_create.validate_on_create:
+                test_result = self._test_connection_internal(connection)
+                connection.health_status = (
+                    "healthy" if test_result["success"] else "unhealthy"
+                )
+                connection.last_test_at = datetime.now(UTC)
+                connection.error_message = (
+                    None if test_result["success"] else test_result["message"]
+                )
+            else:
+                connection.health_status = "unknown"
+
             self.db_session.commit()
             self.db_session.refresh(connection)
 
@@ -414,14 +419,17 @@ class ConnectionService:
             if connection_update.config is not None:
                 encrypted = VaultService.encrypt_config(connection_update.config)
                 connection.config_encrypted = encrypted
-                test_result = self._test_connection_internal(connection)
-                connection.health_status = (
-                    "healthy" if test_result["success"] else "unhealthy"
-                )
-                connection.last_test_at = datetime.now(UTC)
-                connection.error_message = (
-                    None if test_result["success"] else test_result["message"]
-                )
+                if connection_update.validate_on_update:
+                    test_result = self._test_connection_internal(connection)
+                    connection.health_status = (
+                        "healthy" if test_result["success"] else "unhealthy"
+                    )
+                    connection.last_test_at = datetime.now(UTC)
+                    connection.error_message = (
+                        None if test_result["success"] else test_result["message"]
+                    )
+                else:
+                    connection.health_status = "unknown"
             connection.updated_at = datetime.now(UTC)
             if user_id:
                 connection.updated_by = str(user_id)
@@ -560,6 +568,21 @@ class ConnectionService:
             )
             self.db_session.commit()
 
+        return ConnectionTestResponse(**result)
+
+    def test_connection_adhoc(
+        self,
+        connector_type: ConnectorType,
+        config: dict[str, Any],
+    ) -> ConnectionTestResponse:
+        """
+        Test connectivity for a configuration that hasn't been saved yet.
+        """
+        temp_connection = Connection(
+            connector_type=connector_type,
+            config_encrypted=VaultService.encrypt_config(config),
+        )
+        result = self._test_connection_internal(temp_connection)
         return ConnectionTestResponse(**result)
 
     def get_environment_info(

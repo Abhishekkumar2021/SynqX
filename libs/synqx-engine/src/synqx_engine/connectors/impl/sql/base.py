@@ -541,8 +541,13 @@ class SQLConnector(BaseConnector):
                     if clean_mode == "overwrite":
                         if_exists_val = "replace"
                     elif not table_exists:
-                        if_exists_val = "replace"
-                        table_exists = True  # Created now
+                        if kwargs.get("auto_create_schema"):
+                            if_exists_val = "replace"
+                            table_exists = True  # Created now
+                        else:
+                            raise DataTransferError(
+                                f"Target table '{asset}' does not exist and 'auto_create_schema' is disabled."
+                            )
 
                 # Robust type conversion
                 for col in df.columns:

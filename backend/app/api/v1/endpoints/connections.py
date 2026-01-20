@@ -21,6 +21,7 @@ from synqx_core.schemas.connection import (
     ConnectionImpactRead,
     ConnectionListResponse,
     ConnectionRead,
+    ConnectionTestAdhocRequest,
     ConnectionTestRequest,
     ConnectionTestResponse,
     ConnectionUpdate,
@@ -332,6 +333,36 @@ def delete_connection(
             detail={
                 "error": "Internal server error",
                 "message": "Failed to delete connection",
+            },
+        )
+
+
+@router.post(
+    "/test-adhoc",
+    response_model=ConnectionTestResponse,
+    summary="Test Ad-hoc Connection",
+    description="Test connectivity for an unsaved configuration",
+)
+def test_connection_adhoc(
+    test_request: ConnectionTestAdhocRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+    _: models.WorkspaceMember = Depends(deps.require_editor),
+):
+    try:
+        service = ConnectionService(db)
+        result = service.test_connection_adhoc(
+            connector_type=test_request.connector_type,
+            config=test_request.config,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error testing ad-hoc connection: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "Internal server error",
+                "message": "Failed to test ad-hoc connection",
             },
         )
 

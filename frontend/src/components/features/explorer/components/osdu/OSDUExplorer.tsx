@@ -180,7 +180,9 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
           const parsed = JSON.parse(msg)
           if (parsed.detail) msg = parsed.detail
         }
-      } catch {}
+      } catch {
+        // Fallback to raw message if parsing fails
+      }
 
       toast.error('Unable to inspect record', {
         description: msg.length > 100 ? msg.substring(0, 100) + '...' : msg,
@@ -231,7 +233,9 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
           const parsed = JSON.parse(msg)
           if (parsed.detail) msg = parsed.detail
         }
-      } catch {}
+      } catch {
+        // Fallback to raw message if parsing fails
+      }
       toast.error('Download failed', { description: msg })
     },
   })

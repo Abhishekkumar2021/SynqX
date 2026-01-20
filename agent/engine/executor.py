@@ -233,8 +233,7 @@ class NodeExecutor:
                     conn_data["type"], conn_data["config"]
                 )
                 asset_name = (
-                    config.get("osdu_kind")
-                    or config.get("table")
+                    config.get("table")
                     or config.get("asset")
                     or config.get("query")
                     or "unknown"
@@ -298,10 +297,9 @@ class NodeExecutor:
                     stats["out"] = 0
                     logger.info("  [SUCCESS] Native ELT command completed.")
                 else:
-                    # Resolve asset name (Kind for OSDU, Table for SQL)
+                    # Resolve asset name (Table for SQL/OSDU)
                     asset_name = (
-                        config.get("osdu_kind")
-                        or config.get("table")
+                        config.get("table")
                         or config.get("target_table")
                         or "synqx_output"
                     )

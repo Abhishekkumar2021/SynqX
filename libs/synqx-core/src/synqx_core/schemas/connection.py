@@ -47,6 +47,9 @@ class ConnectionCreate(ConnectionBase):
     config: dict[str, Any] = Field(
         ..., description="Connection configuration (will be encrypted)"
     )
+    validate_on_create: bool = Field(
+        default=True, description="Whether to test connection immediately"
+    )
 
     @model_validator(mode="after")
     def validate_connection_config(self) -> ConnectionCreate:
@@ -64,6 +67,9 @@ class ConnectionUpdate(BaseModel):
     tags: dict[str, Any] | None = None
     max_concurrent_connections: int | None = Field(None, ge=1, le=100)
     connection_timeout_seconds: int | None = Field(None, ge=1, le=300)
+    validate_on_update: bool = Field(
+        default=True, description="Whether to test connection immediately"
+    )
 
     @field_validator("name")
     @classmethod
@@ -112,6 +118,11 @@ class ConnectionTestResponse(BaseModel):
     message: str
     latency_ms: float | None = None
     details: dict[str, Any] | None = None
+
+
+class ConnectionTestAdhocRequest(BaseModel):
+    connector_type: ConnectorType
+    config: dict[str, Any]
 
 
 class AssetSchemaVersionBase(BaseModel):

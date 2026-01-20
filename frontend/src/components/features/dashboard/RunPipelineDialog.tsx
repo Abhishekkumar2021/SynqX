@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getPipelines, triggerPipeline } from '@/lib/api'
+import { truncateText } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -70,7 +71,7 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
       const pipelineName =
         pipelines?.find((p) => p.id.toString() === selectedPipelineId)?.name || 'Pipeline'
       toast.success('Pipeline Triggered', {
-        description: `Successfully started execution for "${pipelineName}". Job ID: ${data.job_id}`,
+        description: `Successfully started execution for "${truncateText(pipelineName, 40)}". Job ID: ${data.job_id}`,
       })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['jobs'] })
@@ -80,9 +81,10 @@ export const RunPipelineDialog: React.FC<RunPipelineDialogProps> = ({ open, onOp
     },
     onError: (err: any) => {
       toast.error('Trigger Failed', {
-        description:
+        description: truncateText(
           err.response?.data?.detail?.message ||
-          'There was an error starting the pipeline. Please try again.',
+            'There was an error starting the pipeline. Please try again.'
+        ),
       })
     },
   })

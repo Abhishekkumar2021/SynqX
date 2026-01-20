@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { getConnections, getConnection, getConnectionAssets, getPipelines } from '@/lib/api'
 import { getNodeIcon, getOperatorDefinition, type OperatorField } from '@/lib/pipeline-definitions'
 import { useWorkspace } from '@/hooks/useWorkspace'
+import { truncateText } from '@/lib/utils'
 import { type PipelineNodeData } from '@/types/pipeline'
 
 // Sub-components
@@ -164,7 +165,6 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         mapping_expr: node.data.mapping_expr || '',
         sub_pipeline_id: node.data.sub_pipeline_id ? String(node.data.sub_pipeline_id) : '',
         worker_tag: node.data.worker_tag || '',
-        osdu_kind: node.data.osdu_kind || config.osdu_kind || '',
         auto_create_schema: config.auto_create_schema === true,
         osdu_inference_strategy: config.osdu_inference_strategy || 'data_driven',
         osdu_acl: config.acl ? JSON.stringify(config.acl, null, 2) : '',
@@ -241,7 +241,6 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         config: {
           ...baseConfig,
           ...dynamicConfig,
-          osdu_kind: data.osdu_kind || undefined,
           auto_create_schema: data.auto_create_schema,
           osdu_inference_strategy: data.osdu_inference_strategy,
           acl: data.osdu_acl ? JSON.parse(data.osdu_acl) : undefined,
@@ -249,7 +248,6 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         },
         connection_id: data.connection_id ? parseInt(data.connection_id) : undefined,
         asset_id: data.asset_id ? parseInt(data.asset_id) : undefined,
-        osdu_kind: data.osdu_kind || undefined,
         write_strategy: data.write_strategy,
         schema_evolution_policy: data.schema_evolution_policy,
         sync_mode: data.sync_mode,
@@ -269,8 +267,10 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
 
       onUpdate(node.id, payload)
       toast.success('Configuration saved')
-    } catch (e) {
-      toast.error('Invalid configuration schema')
+    } catch (e: any) {
+      toast.error('Invalid configuration schema', {
+        description: truncateText(e.message || 'Please check your JSON syntax.'),
+      })
     }
   }
 

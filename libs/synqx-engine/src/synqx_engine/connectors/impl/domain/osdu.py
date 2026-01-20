@@ -161,14 +161,59 @@ class OSDUConnector(BaseConnector):
         """
         if data.empty:
             return 0
+
+        # Auto-provision Kind if requested and missing
+        if kwargs.get("auto_create_schema"):
+            self._provision_kind_if_needed(asset, data)
+
+        # Resolve governance metadata
         acl = kwargs.get("acl") or self.config.get("default_acl")
         legal = kwargs.get("legal") or self.config.get("default_legal")
 
+        if not acl or not legal:
+            raise ConfigurationError(
+                f"Missing OSDU Governance metadata (acl/legal) for Kind '{asset}'"
+            )
+
+        # Handle 'overwrite' strategy: Delete existing records of this kind
+        mode = kwargs.get("mode", "append")
+        if mode == "overwrite":
+            logger.info(f"OSDU Strategy: OVERWRITE active for Kind '{asset}'. Purging existing records...")
+            # We search for all IDs of this kind and delete them
+            try:
+                # Use a loop to handle potential search result limits
+                while True:
+                    search_res = self.core.search(kind=asset, returnedFields=["id"], limit=1000)
+                    ids_to_delete = [r["id"] for r in search_res.get("results", [])]
+                    if not ids_to_delete:
+                        break
+                    
+                    for rid in ids_to_delete:
+                        self.core.delete_record(rid)
+                    
+                    logger.debug(f"  Purged batch of {len(ids_to_delete)} records.")
+                    if len(ids_to_delete) < 1000:
+                        break
+            except Exception as e:
+                logger.warning(f"OSDU Overwrite purge failed: {e}. Proceeding with ingestion.")
+
+        # Prepare records for ingestion
         records = []
         for _, row in data.iterrows():
+            # ID Generation Strategy: 
+            # 1. Use provided 'id' if exists
+            # 2. Use 'id' from config mapping (logical primary key)
+            # 3. Fallback to deterministic hash of the entire row
+            
+            pk_col = kwargs.get("primary_key") or "id"
+            row_id = str(row.get(pk_col)) if row.get(pk_col) else hashlib.sha256(str(row.to_dict()).encode()).hexdigest()[:16]
+            
+            # Ensure the ID follows OSDU format: data-partition-id:kind:record-id
+            full_id = f"{self.config['data_partition_id']}:{asset}:{row_id}"
+
             records.append(
                 {
-                    "id": f"{self.config['data_partition_id']}:{asset}:{hash(str(row))}",  # noqa: E501
+                    "id": full_id,
                     "kind": asset,
                     "acl": acl,
                     "legal": legal,
@@ -176,8 +221,77 @@ class OSDUConnector(BaseConnector):
                 }
             )
 
-        ids = self.core.upsert_records(records)
-        return len(ids)
+        # Batch ingestion via Storage Service (Standard OSDU pattern)
+        # Note: Large batches might need to be split into chunks of 500-1000
+        chunk_size = 500
+        total_ingested = 0
+        for i in range(0, len(records), chunk_size):
+            batch = records[i:i + chunk_size]
+            ids = self.core.upsert_records(batch)
+            total_ingested += len(ids)
+
+        return total_ingested
+
+    def _provision_kind_if_needed(self, kind: str, df: pd.DataFrame) -> None:
+        """
+        Verifies Kind existence and registers a new schema if missing.
+        """
+        try:
+            # Check if schema exists
+            self.core.get_schema(kind)
+            logger.debug(f"OSDU Kind '{kind}' already exists. Skipping provision.")
+        except Exception:
+            logger.info(f"OSDU Kind '{kind}' not found. Initiating auto-provisioning...")
+            
+            # Map pandas/numpy types to OSDU/JSON types
+            properties = {}
+            for col, dtype in df.dtypes.items():
+                dt = str(dtype).lower()
+                if "int" in dt:
+                    properties[col] = {"type": "integer"}
+                elif "float" in dt or "double" in dt:
+                    properties[col] = {"type": "number"}
+                elif "bool" in dt:
+                    properties[col] = {"type": "boolean"}
+                elif "datetime" in dt:
+                    properties[col] = {"type": "string", "format": "date-time"}
+                else:
+                    properties[col] = {"type": "string"}
+
+            # Construct OSDU Schema object
+            parts = kind.split(":")
+            schema_obj = {
+                "kind": kind,
+                "schemaInfo": {
+                    "schemaIdentity": {
+                        "authority": parts[0],
+                        "source": parts[1],
+                        "entityType": parts[2].split("--")[-1] if "--" in parts[2] else parts[2],
+                        "schemaVersionMajor": 1,
+                        "schemaVersionMinor": 0,
+                        "schemaVersionPatch": 0
+                    },
+                    "status": "PUBLISHED"
+                },
+                "schema": {
+                    "x-osdu-license": "Copyright 2024, SLB",
+                    "x-osdu-schema-source": "Synqx-AutoProvision",
+                    "type": "object",
+                    "properties": {
+                        "data": {
+                            "type": "object",
+                            "properties": properties
+                        }
+                    }
+                }
+            }
+            
+            try:
+                self.core.create_schema(schema_obj)
+                logger.info(f"Successfully provisioned OSDU Kind: {kind}")
+            except Exception as e:
+                logger.error(f"Failed to auto-provision OSDU Kind '{kind}': {e}")
+                raise ConfigurationError(f"Target Kind '{kind}' does not exist and auto-provision failed: {e}")
 
     # --- Generic Metadata & Action Dispatcher ---
 

@@ -438,8 +438,12 @@ class NodeExecutor:
                         )
 
                 # Prepare read parameters
-                # Use fully_qualified_name as the primary identifier if available
-                asset_identifier = asset.fully_qualified_name or asset.name
+                # Resolve asset name (OSDU Kind or physical table)
+                asset_identifier = (
+                    node.config.get("osdu_kind")
+                    or asset.fully_qualified_name
+                    or asset.name
+                )
                 read_params = {"asset": asset_identifier}
 
                 # Merge asset config first, then override with node-specific config
@@ -797,7 +801,11 @@ class NodeExecutor:
                     )
                     evolution_policy = node.schema_evolution_policy.value
 
-                    asset_identifier = asset.fully_qualified_name or asset.name
+                    asset_identifier = (
+                        node.config.get("osdu_kind")
+                        or asset.fully_qualified_name
+                        or asset.name
+                    )
                     logger.info(
                         f"  Write mode: {write_mode.upper()} | Policy: {evolution_policy.upper()}"  # noqa: E501
                     )

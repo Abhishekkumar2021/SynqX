@@ -47,6 +47,14 @@ export const testConnection = async (id: number, config: any = {}) => {
   return data
 }
 
+export const testConnectionAdhoc = async (connectorType: string, config: any) => {
+  const { data } = await api.post<ConnectionTestResult>('/connections/test-adhoc', {
+    connector_type: connectorType,
+    config,
+  })
+  return data
+}
+
 export const discoverAssets = async (id: number, includeMetadata: boolean = false) => {
   const { data } = await api.post<any>(`/connections/${id}/discover`, {
     include_metadata: includeMetadata,

@@ -55,6 +55,8 @@ import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { useUndoRedo } from '@/hooks/useUndoRedo'
 import { useWorkspace } from '@/hooks/useWorkspace'
+import { truncateText } from '@/lib/utils'
+import { type PipelineNodeData } from '@/types/pipeline'
 import { RetryStrategy } from '@/lib/enums'
 import Editor from '@monaco-editor/react'
 
@@ -309,15 +311,16 @@ export const PipelineCanvas: React.FC = () => {
     mutationFn: () => deletePipeline(parseInt(id!)),
     onSuccess: () => {
       toast.success('Pipeline Deleted', {
-        description: `"${pipelineName}" has been permanently removed.`,
+        description: `"${truncateText(pipelineName, 40)}" has been permanently removed.`,
       })
       queryClient.invalidateQueries({ queryKey: ['pipelines'] })
       navigate('/pipelines')
     },
     onError: (err: any) => {
       toast.error('Deletion Failed', {
-        description:
-          err.response?.data?.detail?.message || 'There was an error deleting the pipeline.',
+        description: truncateText(
+          err.response?.data?.detail?.message || 'There was an error deleting the pipeline.'
+        ),
       })
     },
   })
@@ -660,8 +663,9 @@ export const PipelineCanvas: React.FC = () => {
     },
     onError: (err: any) => {
       toast.error('Execution Failed', {
-        description:
-          err.response?.data?.detail?.message || 'There was an error starting the pipeline.',
+        description: truncateText(
+          err.response?.data?.detail?.message || 'There was an error starting the pipeline.'
+        ),
       })
       setIsRunning(false)
     },
@@ -749,7 +753,7 @@ export const PipelineCanvas: React.FC = () => {
     onSuccess: (result, vars) => {
       if (result.type === 'create' && result.pipeline) {
         toast.success('Pipeline Created', {
-          description: `"${pipelineName}" has been successfully initialized.`,
+          description: `"${truncateText(pipelineName, 40)}" has been successfully initialized.`,
         })
         window.history.replaceState(null, '', `/pipelines/${result.pipeline.id}`)
         window.location.reload()
@@ -770,10 +774,11 @@ export const PipelineCanvas: React.FC = () => {
     },
     onError: (err: any) => {
       toast.error('Save Failed', {
-        description:
+        description: truncateText(
           err.response?.data?.detail?.message ||
-          err.message ||
-          'An unexpected error occurred while saving.',
+            err.message ||
+            'An unexpected error occurred while saving.'
+        ),
       })
     },
   })
