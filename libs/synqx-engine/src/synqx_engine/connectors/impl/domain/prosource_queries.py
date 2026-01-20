@@ -1,6 +1,7 @@
 # ProSource / Seabed SQL Templates
 
-# 1. Scope / Schema Validation (Improved)
+# 1. Scope / Schema Validation
+# finds the Data Dictionary (DD) schema for a given project
 Q_SCOPE_VALIDATION = """
 WITH project_name AS (
     SELECT scope, type 
@@ -20,11 +21,11 @@ WHERE table_name = 'META_ENTITY'
 ORDER BY CASE WHEN owner LIKE 'DD_%' THEN 1 ELSE 2 END, owner DESC
 """
 
-# 3. Asset Discovery (Views/Tables with Domain Metadata and Counts)
+# 3. Asset Discovery (Lightweight)
+# view_name, base_entity, domain, description, view_type
 Q_DISCOVER_ASSETS = """
 SELECT 
     me.entity AS view_name, 
-    TO_NUMBER(EXTRACTVALUE(XMLTYPE(DBMS_XMLGEN.getxml('SELECT COUNT(*) cnt FROM ' || me.entity)), '/ROWSET/ROW/CNT')) AS count,
     mov.base_entity, 
     NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD}.meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel) AS domain, 
     me.description, 
@@ -35,7 +36,7 @@ WHERE me.primary_submodel NOT IN ('Spatial','Meta','Root','System')
 AND me.entity_type IN ('View','ObjectView','Extension','Table')
 """
 
-# 4. Schema Inference (Columns & Types)
+# 4. Schema Inference (Attributes)
 Q_INFER_SCHEMA = """
 SELECT 
     mfa.entity, 
@@ -48,8 +49,8 @@ FROM {SCHEMA_DD}.meta_flat_attribute mfa
 WHERE mfa.entity = '{ASSET}'
 """
 
-# 5. Row Count (Simple)
-Q_ROW_COUNT = "SELECT COUNT(*) as cnt FROM {SCHEMA_DD}.{ASSET}"
+# 5. Row Count
+Q_ROW_COUNT = "SELECT COUNT(*) as cnt FROM {PROJECT}.{ASSET}"
 
 # 6. Coordinate Reference System (CRS)
 Q_CRS_INFO = """
@@ -71,7 +72,7 @@ FROM {PROJECT}.project_default pd
 JOIN {SCHEMA_DD}.r_unit_system us ON pd.storage_unit_system = us.code
 """
 
-# 8. Document Listing (Filtered by entities)
+# 8. Document Listing (Filtered)
 Q_LIST_DOCUMENTS = """
 SELECT 
     ed.document_id, 
@@ -124,11 +125,26 @@ WHERE rankedrows = 1
 """
 
 # 11. Reference Data Listing
-Q_LIST_CRS = "SELECT * FROM {SCHEMA_DD}.r_coordinate_ref_system"
+Q_LIST_CRS = "SELECT name, opengis_well_known_text AS persistable_reference FROM {SCHEMA_DD}.r_coordinate_ref_system"
 Q_LIST_UNITS = "SELECT * FROM {SCHEMA_DD}.r_unit_system"
 
 # 12. Global Discovery
-Q_LIST_ALL_DOCUMENTS = "SELECT * FROM {PROJECT}.entity_document"
+Q_LIST_ALL_DOCUMENTS = """
+SELECT 
+    ed.document_id, 
+    ed.document_format, 
+    ed.document_type, 
+    ed.path, 
+    ed.contributor, 
+    ed.name, 
+    ed.original_path, 
+    ed.update_date, 
+    ed.insert_date, 
+    ed.entity_id, 
+    ed.entity_tbl, 
+    ed.file_size 
+FROM {PROJECT}.entity_document ed
+"""
 Q_LIST_ACCOUNTS = "SELECT * FROM SDS_ACCOUNT"
 
 # 13. Dashboard Diagnostics

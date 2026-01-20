@@ -13,12 +13,15 @@ import {
   List as ListIcon,
   Download,
   Hash,
+  X,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { Checkbox } from '@/components/ui/checkbox'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface ProSourceReferenceViewProps {
   connectionId: number
@@ -27,7 +30,8 @@ interface ProSourceReferenceViewProps {
 export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ connectionId }) => {
   const [activeTab, setActiveTab] = useState('crs')
   const [search, setSearch] = useState('')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const [selectedCodes, setSelectedIds] = useState<Set<string>>(new Set())
 
   const {
     data: crsData,
@@ -49,29 +53,47 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
     enabled: activeTab === 'units',
   })
 
+  const rawData = useMemo(() => {
+    return activeTab === 'crs' ? crsData?.results || crsData : unitData?.results || unitData
+  }, [activeTab, crsData, unitData])
+
   const currentData = useMemo(() => {
-    const data = activeTab === 'crs' ? crsData?.results || crsData : unitData?.results || unitData
-    if (!Array.isArray(data)) return []
-    return data.filter((item: any) =>
+    if (!Array.isArray(rawData)) return []
+    return rawData.filter((item: any) =>
       Object.values(item).some((v) => String(v).toLowerCase().includes(search.toLowerCase()))
     )
-  }, [activeTab, crsData, unitData, search])
+  }, [rawData, search])
 
   const isLoading = activeTab === 'crs' ? isLoadingCRS : isLoadingUnits
   const refetch = activeTab === 'crs' ? refetchCRS : refetchUnits
 
-  const handleDownload = (item: any) => {
-    const blob = new Blob([JSON.stringify(item, null, 2)], { type: 'application/json' })
+  const handleDownload = (items: any[]) => {
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${activeTab}_${item.CODE || item.code || 'export'}.json`
+    a.download = `prosource_${activeTab}_export_${Date.now()}.json`
     a.click()
-    toast.success('Reference data exported')
+    toast.success(`${items.length} records exported`)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedCodes.size === currentData.length && currentData.length > 0) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(currentData.map((item: any) => item.CODE || item.code)))
+    }
+  }
+
+  const toggleSelect = (code: string) => {
+    const next = new Set(selectedCodes)
+    if (next.has(code)) next.delete(code)
+    else next.add(code)
+    setSelectedIds(next)
   }
 
   return (
-    <div className="h-full flex flex-col bg-muted/5">
+    <div className="h-full flex flex-col bg-muted/5 relative overflow-hidden">
       <div className="px-8 py-6 border-b border-border/10 bg-card backdrop-blur-md flex items-center justify-between shrink-0 relative z-30">
         <div className="flex items-center gap-5">
           <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 border border-amber-500/20 shadow-inner group">
@@ -79,7 +101,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
           </div>
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-              Geodetic & Measurement Standards
+              Technical Standards
               <Badge
                 variant="secondary"
                 className="h-5 px-2 bg-amber-500/10 text-amber-600 border-none text-[9px] font-black uppercase"
@@ -88,13 +110,56 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
               </Badge>
             </h2>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1 opacity-60">
-              Global Spatial Reference Systems & Unit Definitions
+              Global Geodetic Framework & Measurement Definitions
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+          <AnimatePresence>
+            {selectedCodes.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-center gap-3 bg-amber-500/5 border border-amber-500/20 rounded-xl px-4 py-1.5 shadow-lg shadow-amber-500/5"
+              >
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
+                  {selectedCodes.size} Selected
+                </span>
+                <div className="h-4 w-px bg-amber-500/20 mx-1" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-3 rounded-lg gap-2 font-black uppercase text-[9px] tracking-widest text-amber-600 hover:bg-amber-500/10"
+                  onClick={() =>
+                    handleDownload(
+                      currentData.filter((item: any) => selectedCodes.has(item.CODE || item.code))
+                    )
+                  }
+                >
+                  <Download size={14} /> Bulk_Export
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 rounded-lg text-amber-600 hover:bg-amber-500/10 p-0 flex items-center justify-center"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  <X size={14} />
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => {
+              setActiveTab(v)
+              setSelectedIds(new Set())
+            }}
+            className="w-auto"
+          >
             <TabsList className="bg-muted p-1 rounded-xl border border-border/20 shadow-inner">
               <TabsTrigger
                 value="crs"
@@ -114,7 +179,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
           <div className="relative group w-64">
             <Search className="z-20 absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 transition-all group-focus-within:text-amber-500" />
             <Input
-              placeholder="Search standards..."
+              placeholder="Filter standards..."
               className="h-10 pl-10 rounded-xl bg-background/50 border-border/40 focus:ring-amber-500/10 shadow-sm text-[11px] font-bold placeholder:uppercase"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -153,7 +218,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-xl hover:bg-muted active:scale-95 transition-all"
+            className="h-10 w-10 rounded-xl hover:bg-muted active:scale-95 transition-all shadow-sm bg-background border-border/40"
             onClick={() => refetch()}
             disabled={isLoading}
           >
@@ -162,7 +227,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 relative z-10">
         <div className="w-full pb-32">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-48 gap-6 opacity-40">
@@ -175,150 +240,211 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
               </span>
             </div>
           ) : currentData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-48 opacity-20 grayscale">
+            <div className="flex flex-col items-center justify-center py-48 opacity-20 grayscale gap-6">
               <Box size={80} strokeWidth={1} />
-              <p className="mt-6 font-black uppercase text-[10px] tracking-[0.3em]">
-                No standards found
+              <p className="font-black uppercase text-[10px] tracking-[0.3em]">
+                No standards discovered
               </p>
             </div>
           ) : viewMode === 'grid' ? (
             <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1800px] mx-auto">
-              {currentData.map((item: any, i: number) => (
-                <div
-                  key={i}
-                  className="p-6 rounded-[2.5rem] bg-card border border-border/40 hover:border-amber-500/30 hover:shadow-2xl hover:-translate-y-1 transition-all group flex flex-col gap-5 relative overflow-hidden shadow-sm"
-                >
-                  <div className="flex items-start justify-between relative z-10">
-                    <div className="h-12 w-12 rounded-2xl bg-muted/20 flex items-center justify-center group-hover:bg-amber-500/10 transition-colors shadow-inner text-muted-foreground group-hover:text-amber-600">
-                      {activeTab === 'crs' ? <Globe size={24} /> : <Ruler size={24} />}
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className="text-[8px] font-black h-5 px-2 bg-muted/30 border-none uppercase tracking-widest"
-                    >
-                      {item.CODE || item.code || 'REF'}
-                    </Badge>
-                  </div>
-
-                  <div className="min-w-0 space-y-1 relative z-10">
-                    <h4 className="text-[13px] font-black text-foreground uppercase tracking-tight truncate group-hover:text-amber-600 transition-colors">
-                      {item.NAME || item.name || 'Untitled Standard'}
-                    </h4>
-                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate opacity-60">
-                      {item.DESCRIPTION || item.description || 'Global Reference Object'}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-muted/20 border border-border/10">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[7px] font-black uppercase text-muted-foreground/40">
-                        Type
-                      </span>
-                      <span className="text-[9px] font-bold text-foreground/70 truncate">
-                        {item.DIMENSION_TYPE || item.type || 'Standard'}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[7px] font-black uppercase text-muted-foreground/40">
-                        Authority
-                      </span>
-                      <span className="text-[9px] font-bold text-foreground/70">
-                        {item.AUTHORITY || 'EPSG'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {activeTab === 'crs' &&
-                    (item.OPENGIS_WELL_KNOWN_TEXT || item.opengis_well_known_text) && (
-                      <div className="p-3 rounded-xl bg-black/40 border border-border/5 relative z-10">
-                        <span className="text-[7px] font-black uppercase text-amber-500/60 block mb-1">
-                          WKT Payload
-                        </span>
-                        <p className="text-[8px] font-mono text-muted-foreground line-clamp-3 leading-relaxed break-all opacity-40">
-                          {item.OPENGIS_WELL_KNOWN_TEXT || item.opengis_well_known_text}
-                        </p>
-                      </div>
-                    )}
-
-                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/10 relative z-10">
-                    <Button
-                      onClick={() => handleDownload(item)}
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 rounded-xl hover:bg-amber-500/10 hover:text-amber-600 transition-all active:scale-90 border border-transparent hover:border-amber-500/20 shadow-sm"
-                    >
-                      <Download size={16} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 rounded-xl hover:bg-muted active:scale-90 border border-transparent"
-                    >
-                      <Hash size={16} />
-                    </Button>
-                  </div>
-
-                  {/* Decorative gradient */}
-                  <div className="absolute -right-4 -bottom-4 h-24 w-24 bg-amber-500/5 blur-3xl rounded-full group-hover:bg-amber-500/10 transition-colors" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="w-full">
-              <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b bg-muted/50 backdrop-blur-xl sticky top-0 z-20 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shadow-sm">
-                <div className="col-span-2">Standard_Code</div>
-                <div className="col-span-5">Identity_Reference</div>
-                <div className="col-span-2">Dimension_Type</div>
-                <div className="col-span-2 text-center">Source_Authority</div>
-                <div className="col-span-1 text-right">Action</div>
-              </div>
-              <div className="divide-y divide-border/5">
-                {currentData.map((item: any, i: number) => (
+              {currentData.map((item: any, i: number) => {
+                const code = item.CODE || item.code
+                const isSelected = selectedCodes.has(code)
+                return (
                   <div
                     key={i}
-                    className="grid grid-cols-12 gap-4 px-8 py-5 items-center hover:bg-amber-500/[0.02] transition-colors group"
+                    onClick={() => toggleSelect(code)}
+                    className={cn(
+                      'p-6 rounded-[2.5rem] bg-card border transition-all duration-500 group flex flex-col gap-5 relative overflow-hidden shadow-sm cursor-pointer hover:shadow-2xl hover:-translate-y-1',
+                      isSelected
+                        ? 'border-amber-500/40 bg-amber-500/[0.02] shadow-xl shadow-amber-500/5'
+                        : 'border-border/40 hover:border-amber-500/20'
+                    )}
                   >
-                    <div className="col-span-2">
-                      <code className="text-[10px] font-mono font-black text-amber-600 bg-amber-500/5 px-2 py-1 rounded-md">
-                        {item.CODE || item.code}
-                      </code>
-                    </div>
-                    <div className="col-span-5 flex items-center gap-4">
-                      <div className="h-9 w-9 rounded-xl bg-muted/20 flex items-center justify-center shrink-0 group-hover:bg-amber-500/10 transition-colors shadow-inner">
-                        {activeTab === 'crs' ? <Globe size={16} /> : <Ruler size={16} />}
-                      </div>
-                      <div className="min-w-0 flex flex-col gap-0.5">
-                        <span className="text-[13px] font-black truncate text-foreground/80 uppercase group-hover:text-amber-600 transition-colors">
-                          {item.NAME || item.name}
-                        </span>
-                        <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest truncate">
-                          {item.DESCRIPTION || item.description}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <Badge
-                        variant="secondary"
-                        className="bg-muted/50 text-foreground/60 border-none text-[8px] font-black uppercase tracking-widest h-5"
+                    <div className="flex items-start justify-between relative z-10">
+                      <div
+                        className={cn(
+                          'h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-inner',
+                          isSelected
+                            ? 'bg-amber-500/20 text-amber-600 scale-110'
+                            : 'bg-muted/20 text-muted-foreground group-hover:bg-amber-500/10 group-hover:text-amber-600'
+                        )}
                       >
-                        {item.DIMENSION_TYPE || item.type || 'Standard'}
-                      </Badge>
+                        {activeTab === 'crs' ? (
+                          <Globe size={24} strokeWidth={1.5} />
+                        ) : (
+                          <Ruler size={24} strokeWidth={1.5} />
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-3">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[8px] font-black h-5 px-2 uppercase tracking-widest border-none transition-colors',
+                            isSelected ? 'bg-amber-500 text-white' : 'bg-muted/30 text-muted-foreground/60'
+                          )}
+                        >
+                          {code || 'REF'}
+                        </Badge>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(code)}
+                          onClick={(e) => e.stopPropagation()}
+                          className={cn(
+                            'h-5 w-5 rounded-lg border-2 transition-all',
+                            isSelected
+                              ? 'bg-amber-500 border-amber-500'
+                              : 'border-border/40 group-hover:border-amber-500/40'
+                          )}
+                        />
+                      </div>
                     </div>
-                    <div className="col-span-2 text-center text-[10px] font-bold text-muted-foreground/60 uppercase">
-                      {item.AUTHORITY || item.authority || '---'}
+
+                    <div className="min-w-0 space-y-1.5 relative z-10 flex-1">
+                      <h4
+                        className={cn(
+                          'text-[13px] font-black uppercase tracking-tight truncate transition-colors',
+                          isSelected ? 'text-amber-600' : 'text-foreground group-hover:text-amber-600'
+                        )}
+                      >
+                        {item.NAME || item.name || 'Untitled Standard'}
+                      </h4>
+                      <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest truncate">
+                        {item.DESCRIPTION || item.description || 'Global Reference Object'}
+                      </p>
                     </div>
-                    <div className="col-span-1 flex justify-end">
+
+                    <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-muted/20 border border-border/10 relative z-10">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[7px] font-black uppercase text-muted-foreground/40 tracking-widest">
+                          Dimension
+                        </span>
+                        <span className="text-[9px] font-bold text-foreground/70 truncate">
+                          {item.DIMENSION_TYPE || item.type || 'Standard'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[7px] font-black uppercase text-muted-foreground/40 tracking-widest">
+                          Authority
+                        </span>
+                        <span className="text-[9px] font-bold text-foreground/70">
+                          {item.AUTHORITY || item.authority || 'EPSG'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/10 relative z-10">
                       <Button
-                        onClick={() => handleDownload(item)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDownload([item])
+                        }}
                         variant="ghost"
                         size="icon"
-                        className="h-9 w-9 rounded-xl hover:bg-amber-500/10 hover:text-amber-600 transition-all"
+                        className="h-9 w-9 rounded-xl hover:bg-amber-500/10 hover:text-amber-600 transition-all active:scale-90 border border-transparent hover:border-amber-500/20 shadow-sm"
                       >
                         <Download size={16} />
                       </Button>
+                      <div className="h-1 w-1 rounded-full bg-amber-500 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
+
+                    {/* Decorative gradient */}
+                    <div className="absolute -right-4 -bottom-4 h-24 w-24 bg-amber-500/[0.03] blur-3xl rounded-full group-hover:bg-amber-500/10 transition-colors pointer-events-none" />
                   </div>
-                ))}
+                )
+              })}
+            </div>
+          ) : (
+            <div className="w-full">
+              <div className="grid grid-cols-12 gap-4 px-10 py-4 border-b bg-muted/50 backdrop-blur-xl sticky top-0 z-20 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shadow-sm">
+                <div className="col-span-1 flex items-center gap-4">
+                  <Checkbox
+                    checked={currentData.length > 0 && selectedCodes.size === currentData.length}
+                    onCheckedChange={toggleSelectAll}
+                    className="h-4.5 w-4.5 rounded-md"
+                  />
+                  CODE
+                </div>
+                <div className="col-span-5 px-4">Identity_Reference</div>
+                <div className="col-span-2">Dimension_Type</div>
+                <div className="col-span-2 text-center">Source_Authority</div>
+                <div className="col-span-2 text-right">Action</div>
+              </div>
+              <div className="divide-y divide-border/5 bg-background/30">
+                {currentData.map((item: any, i: number) => {
+                  const code = item.CODE || item.code
+                  const isSelected = selectedCodes.has(code)
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => toggleSelect(code)}
+                      className={cn(
+                        'grid grid-cols-12 gap-4 px-10 py-5 items-center transition-colors group cursor-pointer border-b border-border/5 hover:bg-amber-500/[0.02]',
+                        isSelected && 'bg-amber-500/[0.03]'
+                      )}
+                    >
+                      <div className="col-span-1 flex items-center gap-4">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(code)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4.5 w-4.5 rounded-md border-border/40"
+                        />
+                        <code className="text-[10px] font-mono font-black text-amber-600/80">
+                          {code}
+                        </code>
+                      </div>
+                      <div className="col-span-5 flex items-center gap-4 px-4">
+                        <div
+                          className={cn(
+                            'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-inner',
+                            isSelected ? 'bg-amber-500/20 text-amber-600' : 'bg-muted/20 text-muted-foreground group-hover:bg-amber-500/10 group-hover:text-amber-600'
+                          )}
+                        >
+                          {activeTab === 'crs' ? <Globe size={18} /> : <Ruler size={18} />}
+                        </div>
+                        <div className="min-w-0 flex flex-col gap-0.5">
+                          <span
+                            className={cn(
+                              'text-[13px] font-black truncate uppercase transition-colors',
+                              isSelected ? 'text-amber-600' : 'text-foreground/80 group-hover:text-amber-600'
+                            )}
+                          >
+                            {item.NAME || item.name}
+                          </span>
+                          <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest truncate">
+                            {item.DESCRIPTION || item.description}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <Badge
+                          variant="secondary"
+                          className="bg-muted/50 text-foreground/60 border-none text-[8px] font-black uppercase tracking-widest h-5"
+                        >
+                          {item.DIMENSION_TYPE || item.type || 'Standard'}
+                        </Badge>
+                      </div>
+                      <div className="col-span-2 text-center text-[10px] font-bold text-muted-foreground/60 uppercase">
+                        {item.AUTHORITY || item.authority || '---'}
+                      </div>
+                      <div className="col-span-2 flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-xl hover:bg-amber-500/10 hover:text-amber-600 transition-all shadow-sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDownload([item])
+                          }}
+                        >
+                          <Download size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}

@@ -16,6 +16,7 @@ import {
   Sparkle,
   ArrowUpRight,
   Filter,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,7 +37,67 @@ interface ProSourceAICommandCenterProps {
   schema?: any
 }
 
-// ... (existing templates)
+const TEMPLATES = [
+  {
+    label: 'Identify Active Wells',
+    prompt: 'Show me all wells where the current status is active and spud date is in 2023',
+    icon: Database,
+    color: 'text-emerald-500',
+  },
+  {
+    label: 'Spatial Search',
+    prompt: 'Find records within 50km of the main field hub coordinates',
+    icon: Search,
+    color: 'text-amber-500',
+  },
+  {
+    label: 'Technical Audit',
+    prompt: 'List entities inserted by SIS_ADMIN in the last 30 days',
+    icon: Terminal,
+    color: 'text-blue-500',
+  },
+  {
+    label: 'Format Filter',
+    prompt: 'Find all PDF documents associated with Wellbore data',
+    icon: FileText,
+    color: 'text-rose-500',
+  },
+]
+
+const HELP_EXAMPLES = [
+  {
+    category: 'Relational Logic',
+    icon: Database,
+    items: [
+      {
+        label: 'Attribute Match',
+        code: "SELECT * FROM {TABLE} WHERE status = 'Active'",
+        desc: 'Filter by standard functional status codes.',
+      },
+      {
+        label: 'Fuzzy Search',
+        code: "SELECT * FROM {TABLE} WHERE name LIKE '%VALLEY%'",
+        desc: 'Search for partial string matches in entity names.',
+      },
+    ],
+  },
+  {
+    category: 'Spatial & Metadata',
+    icon: Search,
+    items: [
+      {
+        label: 'Date Range',
+        code: "SELECT * FROM {TABLE} WHERE insert_date > SYSDATE - 7",
+        desc: 'Find objects created within the last week.',
+      },
+      {
+        label: 'Complex Joins',
+        code: 'Find wells with associated seismic lines in the Northern sector',
+        desc: 'Natural language synthesis for domain-aware joins.',
+      },
+    ],
+  },
+]
 
 export const ProSourceAICommandCenter: React.FC<ProSourceAICommandCenterProps> = ({
   isOpen,

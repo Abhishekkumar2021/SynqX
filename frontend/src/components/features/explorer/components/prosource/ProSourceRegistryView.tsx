@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Code,
   X,
+  BookOpen,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getConnectionMetadata } from '@/lib/api'
 import { CodeBlock } from '@/components/ui/docs/CodeBlock'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Checkbox } from '@/components/ui/checkbox'
+import { toast } from 'sonner'
 
 interface ProSourceRegistryViewProps {
   connectionId: number
@@ -39,6 +42,7 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
   const [inspectingAsset, setInspectingAsset] = useState<any | null>(null)
+  const [selectedAssets, setSelectedIds] = useState<Set<string>>(new Set())
 
   const filteredAssets = useMemo(() => {
     return assets.filter(
@@ -52,7 +56,9 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
   const groupedAssets = useMemo(() => {
     const groups: Record<string, any[]> = {}
     filteredAssets.forEach((a) => {
-      const mod = a.metadata?.module || 'General'
+      let mod = a.metadata?.module || a.metadata?.MODULE || 'General'
+      // Normalize casing
+      mod = mod.charAt(0).toUpperCase() + mod.slice(1).toLowerCase()
       if (!groups[mod]) groups[mod] = []
       groups[mod].push(a)
     })
@@ -65,40 +71,90 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
     )
   }
 
+  const handleDownload = (items: any[]) => {
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `prosource_registry_export_${Date.now()}.json`
+    a.click()
+    toast.success(`${items.length} definitions exported`)
+  }
+
+  const toggleSelect = (name: string) => {
+    const next = new Set(selectedAssets)
+    if (next.has(name)) next.delete(name)
+    else next.add(name)
+    setSelectedIds(next)
+  }
+
   return (
     <div className="h-full flex flex-col bg-muted/5 relative overflow-hidden">
       <div className="px-8 py-6 border-b border-border/10 bg-card backdrop-blur-md flex items-center justify-between shrink-0 relative z-30">
         <div className="flex items-center gap-5">
           <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 border border-emerald-500/20 shadow-inner group">
-            <ListTree size={24} className="group-hover:scale-110 transition-transform" />
+            <BookOpen size={24} className="group-hover:scale-110 transition-transform" />
           </div>
           <div>
             <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-3">
-              Object Matrix
+              Schema Registry
               <Badge
                 variant="secondary"
                 className="h-5 px-2 bg-emerald-500/10 text-emerald-600 border-none text-[9px] font-black uppercase"
               >
-                {assets.length} Technical Definitions
+                {filteredAssets.length} Definitions
               </Badge>
             </h2>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1 opacity-60">
-              Global Data Dictionary & Semantic Catalog
+              Technical Metadata Catalog & Data Model Definitions
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
+          <AnimatePresence>
+            {selectedAssets.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-center gap-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-1.5 shadow-lg shadow-emerald-500/5"
+              >
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                  {selectedAssets.size} Selected
+                </span>
+                <div className="h-4 w-px bg-emerald-500/20 mx-1" />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-3 rounded-lg gap-2 font-black uppercase text-[9px] tracking-widest text-emerald-600 hover:bg-emerald-500/10"
+                  onClick={() =>
+                    handleDownload(filteredAssets.filter((a) => selectedAssets.has(a.name)))
+                  }
+                >
+                  <Download size={14} /> Bulk_Export
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 rounded-lg text-emerald-600 hover:bg-emerald-500/10 p-0 flex items-center justify-center"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  <X size={14} />
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="relative group w-80">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-emerald-500" />
+            <Search className="z-20 absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 transition-all group-focus-within:text-emerald-500" />
             <Input
-              placeholder="Search technical definitions..."
+              placeholder="Filter definitions..."
               className="h-10 pl-10 rounded-xl bg-background/50 border-border/40 focus:ring-emerald-500/10 shadow-sm text-[11px] font-bold placeholder:uppercase"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
           <div className="flex bg-muted p-1 rounded-xl border border-border/20 shadow-inner">
             <Button
               variant="ghost"
@@ -127,18 +183,10 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
               <ListIcon size={14} /> List
             </Button>
           </div>
-
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 rounded-xl hover:bg-muted active:scale-95 transition-all"
-          >
-            <RefreshCw size={18} className="text-emerald-500" />
-          </Button>
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 relative z-10">
         <div className="w-full pb-32">
           {groupedAssets.map(([group, items]) => (
             <div key={group} className="space-y-0">
@@ -180,117 +228,180 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
                   >
                     {viewMode === 'grid' ? (
                       <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1800px] mx-auto pb-12">
-                        {items.map((asset) => (
-                          <div
-                            key={asset.name}
-                            onClick={() => setInspectingAsset(asset)}
-                            className="p-6 rounded-[2.5rem] bg-card border border-border/40 hover:border-emerald-500/30 hover:shadow-2xl transition-all group flex flex-col gap-5 relative overflow-hidden shadow-sm cursor-pointer"
-                          >
-                            <div className="flex items-start justify-between gap-4 relative z-10">
-                              <div className="h-12 w-12 rounded-2xl bg-muted/20 border border-border/10 flex items-center justify-center text-muted-foreground group-hover:bg-emerald-500/10 group-hover:text-emerald-600 transition-colors shadow-inner">
-                                <Database size={24} />
-                              </div>
-                              <div className="flex flex-col items-end gap-1">
-                                <Badge
-                                  variant="outline"
-                                  className="text-[8px] font-black h-5 px-2 bg-muted/30 border-none uppercase tracking-widest"
+                        {items.map((asset) => {
+                          const isSelected = selectedAssets.has(asset.name)
+                          return (
+                            <div
+                              key={asset.name}
+                              onClick={() => toggleSelect(asset.name)}
+                              className={cn(
+                                'p-6 rounded-[2.5rem] bg-card border transition-all duration-500 group flex flex-col gap-5 relative overflow-hidden shadow-sm cursor-pointer hover:shadow-2xl hover:-translate-y-1',
+                                isSelected
+                                  ? 'border-emerald-500/40 bg-emerald-500/[0.02] shadow-xl shadow-emerald-500/5'
+                                  : 'border-border/40 hover:border-emerald-500/20'
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-4 relative z-10">
+                                <div
+                                  className={cn(
+                                    'h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-inner',
+                                    isSelected
+                                      ? 'bg-emerald-500/20 text-emerald-600 scale-110'
+                                      : 'bg-muted/20 text-muted-foreground group-hover:bg-emerald-500/10 group-hover:text-emerald-600'
+                                  )}
                                 >
-                                  {asset.metadata?.view_type || 'TABLE'}
-                                </Badge>
-                                {asset.rows > 0 && (
-                                  <span className="text-[9px] font-mono font-bold opacity-30 tabular-nums">
-                                    [{formatNumber(asset.rows)}]
-                                  </span>
-                                )}
+                                  <Database size={24} />
+                                </div>
+                                <div className="flex flex-col items-end gap-3">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'text-[8px] font-black h-5 px-2 bg-muted/30 border-none uppercase tracking-widest transition-colors',
+                                      isSelected ? 'bg-emerald-500 text-white' : 'text-muted-foreground/60'
+                                    )}
+                                  >
+                                    {asset.metadata?.view_type || 'TABLE'}
+                                  </Badge>
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleSelect(asset.name)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={cn(
+                                      'h-5 w-5 rounded-lg border-2 transition-all',
+                                      isSelected
+                                        ? 'bg-emerald-500 border-emerald-500'
+                                        : 'border-border/40 group-hover:border-emerald-500/40'
+                                    )}
+                                  />
+                                </div>
                               </div>
-                            </div>
 
-                            <div className="min-w-0 flex-1 relative z-10">
-                              <h4 className="text-sm font-black text-foreground uppercase tracking-tight group-hover:text-emerald-600 transition-colors">
-                                {asset.name}
-                              </h4>
-                              <p className="text-[9px] font-mono font-bold text-muted-foreground/40 truncate uppercase mt-1 tracking-widest">
-                                {asset.metadata?.table}
+                              <div className="min-w-0 flex-1 relative z-10">
+                                <h4
+                                  className={cn(
+                                    'text-sm font-black uppercase tracking-tight transition-colors',
+                                    isSelected ? 'text-emerald-600' : 'text-foreground group-hover:text-emerald-600'
+                                  )}
+                                >
+                                  {asset.name}
+                                </h4>
+                                <p className="text-[9px] font-mono font-bold text-muted-foreground/40 truncate uppercase mt-1 tracking-widest">
+                                  {asset.metadata?.table}
+                                </p>
+                              </div>
+
+                              <p className="text-[11px] font-medium text-muted-foreground/60 line-clamp-3 leading-relaxed min-h-[3rem] relative z-10">
+                                {asset.metadata?.description ||
+                                  'Standard Seabed technical view optimized for domain entity processing and attribute mapping.'}
                               </p>
-                            </div>
 
-                            <p className="text-[11px] font-medium text-muted-foreground/60 line-clamp-3 leading-relaxed min-h-[3rem] relative z-10">
-                              {asset.metadata?.description ||
-                                'Standard Seabed technical view optimized for domain entity processing and attribute mapping.'}
-                            </p>
-
-                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/10 relative z-10">
-                              <div className="flex items-center gap-3">
-                                <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-[0.2em]">
-                                  Active Model
-                                </span>
+                              <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/10 relative z-10">
+                                <Button
+                                  variant="ghost"
+                                  className={cn(
+                                    'h-8 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all',
+                                    isSelected
+                                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                                      : 'text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/10'
+                                  )}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setInspectingAsset(asset)
+                                  }}
+                                >
+                                  Inspect_Schema
+                                </Button>
+                                <ChevronRight size={14} className="text-emerald-600" />
                               </div>
-                              <Button
-                                variant="ghost"
-                                className="h-8 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest text-emerald-600 opacity-0 group-hover:opacity-100 transition-all bg-emerald-500/5 hover:bg-emerald-500/10"
-                              >
-                                Inspect Schema <ChevronRight size={12} className="ml-1" />
-                              </Button>
-                            </div>
 
-                            {/* Decorative gradient */}
-                            <div className="absolute -right-8 -bottom-8 h-32 w-32 bg-emerald-500/[0.02] blur-3xl rounded-full group-hover:bg-emerald-500/10 transition-all duration-700" />
-                          </div>
-                        ))}
+                              {/* Decorative gradient */}
+                              <div className="absolute -right-8 -bottom-8 h-32 w-32 bg-emerald-500/[0.02] blur-3xl rounded-full group-hover:bg-emerald-500/10 transition-all duration-700 pointer-events-none" />
+                            </div>
+                          )
+                        })}
                       </div>
                     ) : (
                       <div className="w-full">
                         <div className="grid grid-cols-12 gap-4 px-10 py-4 border-b bg-muted/30 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
-                          <div className="col-span-5 pl-12">Entity_Definition</div>
+                          <div className="col-span-5 pl-12 flex items-center gap-4">
+                            Entity_Definition
+                          </div>
                           <div className="col-span-3">Base_Mapping</div>
                           <div className="col-span-2 text-center">Object_Type</div>
                           <div className="col-span-2 text-right">Action</div>
                         </div>
                         <div className="divide-y divide-border/5">
-                          {items.map((asset) => (
-                            <div
-                              key={asset.name}
-                              onClick={() => setInspectingAsset(asset)}
-                              className="grid grid-cols-12 gap-4 px-10 py-4 items-center hover:bg-emerald-500/[0.02] transition-colors group cursor-pointer"
-                            >
-                              <div className="col-span-5 flex items-center gap-4">
-                                <div className="h-10 w-10 rounded-xl bg-muted/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500/10 transition-colors shadow-inner">
-                                  <Database size={18} />
+                          {items.map((asset) => {
+                            const isSelected = selectedAssets.has(asset.name)
+                            return (
+                              <div
+                                key={asset.name}
+                                onClick={() => toggleSelect(asset.name)}
+                                className={cn(
+                                  'grid grid-cols-12 gap-4 px-10 py-4 items-center transition-colors group cursor-pointer border-b border-border/5 hover:bg-emerald-500/[0.02]',
+                                  isSelected && 'bg-emerald-500/[0.03]'
+                                )}
+                              >
+                                <div className="col-span-5 flex items-center gap-4">
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleSelect(asset.name)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-4.5 w-4.5 rounded-md border-border/40"
+                                  />
+                                  <div
+                                    className={cn(
+                                      'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-inner',
+                                      isSelected
+                                        ? 'bg-emerald-500/20 text-emerald-600'
+                                        : 'bg-muted/20 text-muted-foreground group-hover:bg-emerald-500/10 group-hover:text-emerald-600'
+                                    )}
+                                  >
+                                    <Database size={18} />
+                                  </div>
+                                  <div className="min-w-0 flex flex-col">
+                                    <span
+                                      className={cn(
+                                        'text-[13px] font-black truncate uppercase transition-colors',
+                                        isSelected ? 'text-emerald-600' : 'text-foreground/80 group-hover:text-emerald-600'
+                                      )}
+                                    >
+                                      {asset.name}
+                                    </span>
+                                    <span className="text-[9px] font-bold text-muted-foreground/40 uppercase truncate">
+                                      {asset.metadata?.description || 'No description available'}
+                                    </span>
+                                  </div>
                                 </div>
-                                <div className="min-w-0 flex flex-col">
-                                  <span className="text-[13px] font-black truncate text-foreground/80 uppercase group-hover:text-emerald-600 transition-colors">
-                                    {asset.name}
-                                  </span>
-                                  <span className="text-[9px] font-bold text-muted-foreground/40 uppercase truncate">
-                                    {asset.metadata?.description || 'No description available'}
-                                  </span>
+                                <div className="col-span-3">
+                                  <code className="text-[10px] font-mono font-bold text-muted-foreground/60 uppercase">
+                                    {asset.metadata?.table}
+                                  </code>
+                                </div>
+                                <div className="col-span-2 text-center">
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-muted/30 text-[8px] font-black uppercase h-5"
+                                  >
+                                    {asset.metadata?.view_type}
+                                  </Badge>
+                                </div>
+                                <div className="col-span-2 flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-500/5 hover:bg-emerald-500/10"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setInspectingAsset(asset)
+                                    }}
+                                  >
+                                    Inspect
+                                  </Button>
                                 </div>
                               </div>
-                              <div className="col-span-3">
-                                <code className="text-[10px] font-mono font-bold text-muted-foreground/60 uppercase">
-                                  {asset.metadata?.table}
-                                </code>
-                              </div>
-                              <div className="col-span-2 text-center">
-                                <Badge
-                                  variant="outline"
-                                  className="bg-muted/30 text-[8px] font-black uppercase h-5"
-                                >
-                                  {asset.metadata?.view_type}
-                                </Badge>
-                              </div>
-                              <div className="col-span-2 flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest text-emerald-600 opacity-0 group-hover:opacity-100 transition-all bg-emerald-500/5 hover:bg-emerald-500/10"
-                                >
-                                  Inspect
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )}

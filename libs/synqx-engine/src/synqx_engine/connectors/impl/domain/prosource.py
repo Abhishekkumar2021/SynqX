@@ -66,34 +66,34 @@ class ProSourceConnector(OracleConnector):
     def _discover_schemas(self) -> dict[str, str]:
         """
         Discovers both Data Dictionary (DD) and Project/Data schemas.
+        Project/Data schema is the project_name itself.
+        DD schema is the 'scope' of that project in SDS_ACCOUNT.
         """
         schemas = {"dd": "SEABED", "data": "SEABED"}
         
-        # 1. Discover DD Schema
-        try:
-            q_dd = Q_DISCOVER_SCHEMA
-            rows = self.execute_query(q_dd)
-            if rows:
-                schemas["dd"] = rows[0]["owner"]
-        except Exception as e:
-            logger.warning(f"DD discovery failed: {e}")
-
-        # 2. Discover Data Schema via SDS_ACCOUNT (Improved recursive lookup)
+        # 1. Map Data Schema directly to project_name
         project_name = self.config.get("project_name")
         if project_name:
+            schemas["data"] = project_name
+            # 2. Discover DD Schema (scope) for this specific project
             try:
-                # Resolve PROJECT_NAME placeholder manually for discovery query
+                # Use project_name to find its DD scope
                 discovery_q = Q_SCOPE_VALIDATION.replace("{PROJECT_NAME}", f"'{project_name}'")
                 rows = self.execute_query(discovery_q)
                 if rows and rows[0].get("scope"):
-                    schemas["data"] = rows[0]["scope"]
-                    logger.info(f"Discovered ProSource Project Schema: {schemas['data']}")
+                    schemas["dd"] = rows[0]["scope"]
+                    logger.info(f"ProSource Context: Project={project_name}, DD={schemas['dd']}")
             except Exception as e:
-                logger.warning(f"Data schema discovery failed for project {project_name}: {e}")
-        
-        # Fallback if data schema not found
-        if schemas["data"] == "SEABED" and schemas["dd"] != "SEABED":
-            schemas["data"] = schemas["dd"]
+                logger.warning(f"Failed to find DD scope for project {project_name}: {e}")
+
+        # 3. Fallback for DD Schema if project discovery failed
+        if schemas["dd"] == "SEABED":
+            try:
+                rows = self.execute_query(Q_DISCOVER_SCHEMA)
+                if rows:
+                    schemas["dd"] = rows[0]["owner"]
+            except Exception:
+                pass
 
         return schemas
 
