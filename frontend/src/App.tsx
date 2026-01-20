@@ -71,6 +71,11 @@ const OSDUExplorerPage = lazy(() =>
     default: module.OSDUExplorerPage,
   }))
 )
+const ProSourceExplorerPage = lazy(() =>
+  import('./pages/explorer/ProSourceExplorerPage').then((module) => ({
+    default: module.ProSourceExplorerPage,
+  }))
+)
 const SQLExplorerPage = lazy(() =>
   import('./pages/explorer/SQLExplorerPage').then((module) => ({ default: module.SQLExplorerPage }))
 )
@@ -371,6 +376,7 @@ const AppRoutes = () => (
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/explorer" element={<ExplorerPage />} />
       <Route path="/explorer/osdu/:id" element={<OSDUExplorerPage />} />
+      <Route path="/explorer/prosource/:id" element={<ProSourceExplorerPage />} />
       <Route path="/explorer/sql/:id" element={<SQLExplorerPage />} />
       <Route path="/explorer/file/:id" element={<FileExplorerPage />} />
 

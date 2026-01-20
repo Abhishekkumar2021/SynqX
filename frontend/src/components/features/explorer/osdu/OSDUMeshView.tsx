@@ -66,6 +66,13 @@ export const OSDUMeshView: React.FC<OSDUMeshViewProps> = ({
         onToggleAI={onToggleAI}
         selectedKind={selectedKind}
         onKindChange={onKindChange}
+        payload={{
+          kind: selectedKind || '*:*:*:*',
+          query: searchQuery,
+          limit,
+          offset: pageOffset,
+          returnedFields: ['id', 'kind', 'legal', 'acl', 'data'],
+        }}
       />
 
       {/* CONTENT VIEWPORT */}
@@ -100,22 +107,51 @@ export const OSDUMeshView: React.FC<OSDUMeshViewProps> = ({
                   <Search size={48} strokeWidth={1} className="text-muted-foreground/40" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="font-black text-3xl tracking-tighter uppercase text-foreground">
-                  Discovery Idle
-                </p>
-                <p className="text-[11px] font-bold uppercase tracking-[0.3em] max-w-sm mx-auto text-muted-foreground leading-relaxed">
-                  The mesh is empty. Execute a query or use the neural assistant to resolve
-                  partition entities.
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                className="rounded-2xl border-primary/20 hover:bg-primary/5 text-primary font-black uppercase text-[10px] tracking-[0.2em] h-11 px-8"
-                onClick={onToggleAI}
-              >
-                <Sparkles size={14} className="mr-3" /> Initialize Assistant
-              </Button>
+              
+              {searchQuery && searchQuery !== '*' ? (
+                 <div className="space-y-4">
+                    <div className="space-y-2">
+                        <p className="font-black text-3xl tracking-tighter uppercase text-foreground">
+                        No Matches Found
+                        </p>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.3em] max-w-sm mx-auto text-muted-foreground leading-relaxed">
+                        Your query for <span className="text-primary">"{searchQuery}"</span> returned 0 records.
+                        </p>
+                    </div>
+                    {searchQuery.startsWith('id:') && !searchQuery.includes('*') && (
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl max-w-md mx-auto">
+                            <p className="text-xs font-bold text-amber-500 mb-1">💡 Tip: Try a Wildcard</p>
+                            <p className="text-[10px] text-muted-foreground">
+                                IDs often have version suffixes (e.g. <code>:123</code>). 
+                                Try appending <code>*</code> to your query:
+                            </p>
+                            <code className="block mt-2 p-2 bg-background/50 rounded-lg text-xs font-mono text-foreground border border-amber-500/10">
+                                {searchQuery.replace(/"$/, '')}*"
+                            </code>
+                        </div>
+                    )}
+                 </div>
+              ) : (
+                <div className="space-y-2">
+                    <p className="font-black text-3xl tracking-tighter uppercase text-foreground">
+                    Discovery Idle
+                    </p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.3em] max-w-sm mx-auto text-muted-foreground leading-relaxed">
+                    The mesh is empty. Execute a query or use the neural assistant to resolve
+                    partition entities.
+                    </p>
+                </div>
+              )}
+
+              {(!searchQuery || searchQuery === '*') && (
+                <Button
+                    variant="outline"
+                    className="rounded-2xl border-primary/20 hover:bg-primary/5 text-primary font-black uppercase text-[10px] tracking-[0.2em] h-11 px-8"
+                    onClick={onToggleAI}
+                >
+                    <Sparkles size={14} className="mr-3" /> Initialize Assistant
+                </Button>
+              )}
             </div>
           ) : (
             <ScrollArea className="h-full">

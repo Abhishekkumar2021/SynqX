@@ -14,12 +14,51 @@ class ProSourceConnector(OracleConnector):
     logical entities like Wells, Logs, Seismic, and Projects.
     """
 
+    def _discover_dd_schema(self) -> str:
+        """
+        Dynamically discovers the Data Dictionary schema using SDS_ACCOUNT.
+        """
+        # Attempt 1: Use SDS_ACCOUNT to find DD scope
+        try:
+            # Look for a Data Dictionary (type usually 'DD' or inferred)
+            # If project_name is set, we can try the specific query, but for general DD discovery:
+            q_sds = "SELECT scope FROM SDS_ACCOUNT WHERE type = 'DD' ORDER BY scope DESC"
+            rows = self.execute_query(q_sds)
+            if rows:
+                discovered = rows[0]["scope"]
+                logger.info(f"Discovered ProSource Schema via SDS_ACCOUNT: {discovered}")
+                return discovered
+        except Exception:
+            pass
+
+        # Attempt 2: Fallback to metadata marker check
+        try:
+            q = """
+            SELECT owner 
+            FROM all_tables 
+            WHERE table_name = 'META_ENTITY' 
+            ORDER BY CASE WHEN owner LIKE 'DD_%' THEN 1 ELSE 2 END, owner DESC
+            """
+            rows = self.execute_query(q)
+            if rows:
+                return rows[0]["owner"]
+        except Exception as e:
+            logger.warning(f"Failed to discover DD schema: {e}")
+        
+        return "SEABED" # Fallback
+
     def _resolve_query(self, query_template: str, **kwargs) -> str:
         """
         Resolves placeholders in the query using connection config.
         """
         # Defaults
-        schema_dd = self.config.get("db_schema", "SEABED")  # Data Dictionary Schema
+        # Check if explicit schema is provided, otherwise discover
+        config_schema = self.config.get("db_schema")
+        if config_schema and config_schema != "SEABED":
+             schema_dd = config_schema
+        else:
+             schema_dd = self._discover_dd_schema()
+
         project = self.config.get(
             "project_schema", schema_dd
         )  # Project Schema (often same as DD or specific account)
@@ -120,13 +159,14 @@ class ProSourceConnector(OracleConnector):
             q_entities = f"""
             SELECT 
                 me.entity AS view_name, 
-                {count_expr} AS count, 
+                NULL AS count, 
                 mov.base_entity, 
-                NVL((SELECT me2.primary_submodel FROM {{SCHEMA_DD}}.meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel) AS domain, 
+                COALESCE(me2.primary_submodel, me.primary_submodel) AS domain, 
                 me.description, 
                 me.entity_type AS view_type 
             FROM {{SCHEMA_DD}}.meta_entity me 
             LEFT JOIN {{SCHEMA_DD}}.meta_object_view mov ON me.entity = mov.view_name 
+            LEFT JOIN {{SCHEMA_DD}}.meta_entity me2 ON me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'
             WHERE me.primary_submodel NOT IN ('Spatial','Meta','Root','System') 
             AND me.entity_type IN ('View','ObjectView','Extension','Table')
             """
@@ -248,19 +288,17 @@ class ProSourceConnector(OracleConnector):
         try:
             # 1. Get Row Count (using the XML trick if we didn't get it in discovery, or standard count)
             # Use the XML trick from user query for single entity
-            q_count = f"SELECT TO_NUMBER(EXTRACTVALUE(XMLTYPE(DBMS_XMLGEN.getxml('SELECT COUNT(*) cnt FROM {asset}')), '/ROWSET/ROW/CNT')) as cnt FROM DUAL"
+            q_count_tpl = "SELECT TO_NUMBER(EXTRACTVALUE(XMLTYPE(DBMS_XMLGEN.getxml('SELECT COUNT(*) cnt FROM {SCHEMA_DD}.{ASSET}')), '/ROWSET/ROW/CNT')) as cnt FROM DUAL"
+            q_count = self._resolve_query(q_count_tpl, ASSET=asset)
             try:
                 res = self.execute_query(q_count)
                 if res:
                     details["rows"] = res[0]["cnt"]
             except Exception:
                 # Fallback
-                super_details = super().get_asset_details(
-                    asset
-                )  # Hypothetical, but we don't have super().get_asset_details defined in OracleConnector?
-                # Actually we implemented get_asset_details in ProSource only in previous turn.
-                # Let's fallback to count(*)
-                c_res = self.execute_query(f"SELECT COUNT(*) as cnt FROM {asset}")
+                q_fallback_tpl = "SELECT COUNT(*) as cnt FROM {SCHEMA_DD}.{ASSET}"
+                q_fallback = self._resolve_query(q_fallback_tpl, ASSET=asset)
+                c_res = self.execute_query(q_fallback)
                 if c_res:
                     details["rows"] = c_res[0]["cnt"]
 
@@ -309,7 +347,7 @@ class ProSourceConnector(OracleConnector):
 
         q_docs = """
         SELECT ed.document_id, ed.document_format, ed.document_type, ed.path, ed.contributor, ed.name, ed.original_path, ed.update_date, ed.insert_date, ed.entity_id, ed.entity_tbl, ed.file_size 
-        FROM {PROJECT_NAME}.entity_document ed 
+        FROM {PROJECT}.entity_document ed 
         WHERE entity_id IN ({ENTITY_IDS}) AND ed.document_format IN ({DOCUMENT_FORMATS})
         """
 

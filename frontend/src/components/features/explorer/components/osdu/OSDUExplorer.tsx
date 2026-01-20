@@ -130,7 +130,13 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
       const params =
         currentCursor && pageOffset > 0
           ? { cursor: currentCursor }
-          : { kind: selectedKind || '*:*:*:*', query: searchQuery, limit, offset: pageOffset }
+          : { 
+              kind: selectedKind || '*:*:*:*', 
+              query: searchQuery, 
+              limit, 
+              offset: pageOffset, 
+              returnedFields: ['id', 'kind', 'legal', 'acl', 'data']
+            }
 
       const resp = await getConnectionMetadata(connectionId, method, params)
       if (resp.cursor) setCurrentCursor(resp.cursor)

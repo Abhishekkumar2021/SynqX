@@ -86,6 +86,8 @@ const TabsRoot = ({ defaultValue, children, className }: any) => {
 
 const TabsList = ({ children, className }: any) => (
   <div
+    role="tablist"
+    aria-orientation="horizontal"
     className={cn(
       'inline-flex items-center gap-1 p-1 rounded-xl backdrop-blur-xl',
       'bg-muted/20 border border-border/40 h-11',
@@ -102,6 +104,9 @@ const TabsTrigger = ({ value, children, className }: any) => {
 
   return (
     <button
+      role="tab"
+      aria-selected={isActive}
+      tabIndex={isActive ? 0 : -1}
       onClick={() => setActiveTab(value)}
       className={cn(
         'relative px-6 py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest',
@@ -121,7 +126,11 @@ const TabsContent = ({ value, children, className }: any) => {
   const { activeTab } = React.useContext(TabsContext)
   if (activeTab !== value) return null
 
-  return <div className={cn('mt-6', className)}>{children}</div>
+  return (
+    <div role="tabpanel" tabIndex={0} className={cn('mt-6 outline-none', className)}>
+      {children}
+    </div>
+  )
 }
 
 /**

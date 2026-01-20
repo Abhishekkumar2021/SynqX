@@ -27,7 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useQuery } from '@tanstack/react-query'
 import { executeQuery } from '@/lib/api/ephemeral'
-import { getConnectionMetadata, getAssetDetails } from '@/lib/api/connections'
+import { getConnectionMetadata, getAssetDetails } from '@/lib/api'
 import { toast } from 'sonner'
 import { type DomainConfig } from '@/lib/domain-definitions'
 import { CodeBlock } from '@/components/ui/docs/CodeBlock'
@@ -400,12 +400,14 @@ export const DomainEntityDetails: React.FC<DomainEntityDetailsProps> = ({
             >
               Schema
             </TabsTrigger>
-            <TabsTrigger
-              value="relationships"
-              className="flex-1 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-xl transition-all"
-            >
-              Relationships
-            </TabsTrigger>
+            {!isProSource && (
+              <TabsTrigger
+                value="relationships"
+                className="flex-1 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-xl transition-all"
+              >
+                Relationships
+              </TabsTrigger>
+            )}
             {isOSDU && (
               <TabsTrigger
                 value="security"
@@ -551,7 +553,7 @@ export const DomainEntityDetails: React.FC<DomainEntityDetailsProps> = ({
                     {metadataItems.map(({ key, value }) => (
                       <DetailItem key={key} label={key} value={value} />
                     ))}
-                    {isProSource && liveDetails && (
+                    {isProSource && liveDetails ? (
                       <>
                         {liveDetails.crs && (
                           <DetailItem
@@ -562,9 +564,11 @@ export const DomainEntityDetails: React.FC<DomainEntityDetailsProps> = ({
                         {liveDetails.unit_system && (
                           <DetailItem label="Unit System" value={liveDetails.unit_system} />
                         )}
+                        {liveDetails.project && (
+                           <DetailItem label="Project" value={liveDetails.project} />
+                        )}
                       </>
-                    )}
-                    {isOSDU ? (
+                    ) : isOSDU ? (
                       <>
                         <DetailItem label="Authority" value={fullMetadata?.authority} />
                         <DetailItem label="Source" value={fullMetadata?.source} />

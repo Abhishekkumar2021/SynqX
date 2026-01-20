@@ -62,7 +62,7 @@ export const ExplorerPage: React.FC = () => {
 
   const getExplorerType = (connectorType: string) => {
     const type = connectorType.toLowerCase()
-    if (type === 'osdu' || type === 'prosource') return 'domain'
+    if (type.includes('osdu') || type.includes('prosource')) return 'domain'
 
     const files = ['local_file', 's3', 'gcs', 'azure_blob', 'sftp', 'ftp']
     if (files.includes(type)) return 'file'
@@ -102,13 +102,30 @@ export const ExplorerPage: React.FC = () => {
       automation: [],
       unsupported: [],
     }
-    filtered.forEach((c) => groups[getExplorerType(c.connector_type)].push(c))
+    filtered.forEach((c) => {
+      const type = getExplorerType(c.connector_type)
+      groups[type].push(c)
+
+      // Feature: Allow ProSource to also appear in SQL Query Studio
+      if (type === 'domain' && c.connector_type.toLowerCase().includes('prosource')) {
+        groups['sql'].push(c)
+      }
+    })
     return groups
   }, [connections, searchResults])
 
-  const handleNavigate = (connection: any) => {
-    const type = getExplorerType(connection.connector_type)
-    const routeBase = CATEGORY_MAP[type].route
+  const handleNavigate = (connection: any, overrideType?: string) => {
+    const type = overrideType || getExplorerType(connection.connector_type)
+    let routeBase = CATEGORY_MAP[type]?.route
+
+    // Dynamic routing for Domain category (if not overridden)
+    if (type === 'domain' && !overrideType) {
+      if (connection.connector_type.toLowerCase().includes('prosource')) {
+        routeBase = 'prosource'
+      } else {
+        routeBase = 'osdu'
+      }
+    }
 
     if (!routeBase) {
       toast.info('Explorer not available', {
@@ -117,10 +134,6 @@ export const ExplorerPage: React.FC = () => {
       return
     }
 
-    if (connection.connector_type.toLowerCase() === 'prosource') {
-      navigate(`/explorer/sql/${connection.id}`)
-      return
-    }
     navigate(`/explorer/${routeBase}/${connection.id}`)
   }
 
@@ -225,7 +238,7 @@ export const ExplorerPage: React.FC = () => {
                         <ConnectionCard
                           key={conn.id}
                           connection={conn}
-                          onClick={() => handleNavigate(conn)}
+                          onClick={() => handleNavigate(conn, key === 'sql' ? 'sql' : undefined)}
                           colorClass={cat.color}
                           isUnsupported={!cat.route}
                         />

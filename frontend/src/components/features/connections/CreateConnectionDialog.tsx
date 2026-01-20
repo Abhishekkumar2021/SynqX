@@ -307,7 +307,7 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({
                                 form.setValue('connector_type', type as ConnectorType)
                                 setStep('config')
                               }}
-                              className="group relative flex items-center gap-4 p-4 rounded-3xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all text-left shadow-xs hover:shadow-lg hover:shadow-primary/10"
+                              className="group relative flex items-center gap-4 p-4 rounded-3xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all text-left shadow-xs hover:shadow-lg hover:shadow-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ring-offset-background"
                             >
                               <div
                                 className={cn(
@@ -353,7 +353,7 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({
                               form.setValue('connector_type', c.type as ConnectorType)
                               setStep('config')
                             }}
-                            className="group relative flex flex-col items-start p-6 rounded-[2rem] border border-border/40 bg-card/40 hover:bg-muted/10 hover:border-primary/20 transition-all text-left shadow-sm hover:shadow-xl hover:shadow-primary/5"
+                            className="group relative flex flex-col items-start p-6 rounded-[2rem] border border-border/40 bg-card/40 hover:bg-muted/10 hover:border-primary/20 transition-all text-left shadow-sm hover:shadow-xl hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ring-offset-background"
                           >
                             <div
                               className={cn(

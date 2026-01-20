@@ -79,7 +79,8 @@ const ConnectionCard = ({
     e.stopPropagation()
     const type = connection.connector_type.toLowerCase()
     let explorerType = 'sql'
-    if (type === 'osdu' || type === 'prosource') explorerType = 'osdu'
+    if (type.includes('osdu')) explorerType = 'osdu'
+    else if (type.includes('prosource')) explorerType = 'prosource'
     else if (['local_file', 's3', 'gcs', 'azure_blob', 'sftp', 'ftp'].includes(type))
       explorerType = 'file'
 
@@ -304,7 +305,8 @@ const ConnectionRow = ({
     e.stopPropagation()
     const type = connection.connector_type.toLowerCase()
     let explorerType = 'sql'
-    if (type === 'osdu' || type === 'prosource') explorerType = 'osdu'
+    if (type.includes('osdu')) explorerType = 'osdu'
+    else if (type.includes('prosource')) explorerType = 'prosource'
     else if (['local_file', 's3', 'gcs', 'azure_blob', 'sftp', 'ftp'].includes(type))
       explorerType = 'file'
 
