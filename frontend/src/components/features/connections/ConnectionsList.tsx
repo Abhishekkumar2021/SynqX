@@ -300,6 +300,17 @@ const ConnectionRow = ({
   const stats = connection.usage_stats
   const impact = connection.impact
 
+  const handleExplore = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const type = connection.connector_type.toLowerCase()
+    let explorerType = 'sql'
+    if (type === 'osdu' || type === 'prosource') explorerType = 'osdu'
+    else if (['local_file', 's3', 'gcs', 'azure_blob', 'sftp', 'ftp'].includes(type))
+      explorerType = 'file'
+
+    navigate(`/explorer/${explorerType}/${connection.id}`)
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
