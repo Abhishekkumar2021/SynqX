@@ -59,7 +59,9 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
     return docs.filter(
       (d: any) =>
         (d.NAME || d.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (d.DOCUMENT_FORMAT || d.document_format || '').toLowerCase().includes(search.toLowerCase()) ||
+        (d.DOCUMENT_FORMAT || d.document_format || '')
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
         (d.DOCUMENT_TYPE || d.document_type || '').toLowerCase().includes(search.toLowerCase())
     )
   }, [docData, search])
@@ -78,7 +80,9 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
     if (selectedIds.size === filteredDocs.length && filteredDocs.length > 0) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(filteredDocs.map((d: any) => d.DOCUMENT_ID || d.document_id || d.NAME)))
+      setSelectedIds(
+        new Set(filteredDocs.map((d: any) => d.DOCUMENT_ID || d.document_id || d.NAME))
+      )
     }
   }
 
@@ -220,7 +224,7 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
               </p>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1800px] mx-auto">
+            <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-[1600px] mx-auto">
               {filteredDocs.map((doc: any, i: number) => {
                 const id = doc.DOCUMENT_ID || doc.document_id || doc.NAME
                 const isSelected = selectedIds.has(id)
@@ -251,7 +255,9 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                           variant="outline"
                           className={cn(
                             'text-[8px] font-black h-5 px-2 uppercase tracking-widest border-none transition-colors',
-                            isSelected ? 'bg-rose-500 text-white' : 'bg-muted/30 text-muted-foreground/60'
+                            isSelected
+                              ? 'bg-rose-500 text-white'
+                              : 'bg-muted/30 text-muted-foreground/60'
                           )}
                         >
                           {doc.DOCUMENT_FORMAT || 'FILE'}
@@ -313,7 +319,9 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                           Registered
                         </span>
                         <span className="text-[9px] font-mono font-bold text-muted-foreground/60">
-                          {doc.INSERT_DATE ? new Date(doc.INSERT_DATE).toLocaleDateString() : 'Legacy'}
+                          {doc.INSERT_DATE
+                            ? new Date(doc.INSERT_DATE).toLocaleDateString()
+                            : 'Legacy'}
                         </span>
                       </div>
                       <Button
@@ -374,7 +382,9 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                         <div
                           className={cn(
                             'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-inner',
-                            isSelected ? 'bg-rose-500/20 text-rose-600' : 'bg-muted/20 text-muted-foreground group-hover:bg-rose-500/10 group-hover:text-rose-600'
+                            isSelected
+                              ? 'bg-rose-500/20 text-rose-600'
+                              : 'bg-muted/20 text-muted-foreground group-hover:bg-rose-500/10 group-hover:text-rose-600'
                           )}
                         >
                           {getFileIcon(doc.NAME)}
@@ -383,7 +393,9 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                           <span
                             className={cn(
                               'text-[13px] font-black truncate uppercase transition-colors',
-                              isSelected ? 'text-rose-600' : 'text-foreground/80 group-hover:text-rose-600'
+                              isSelected
+                                ? 'text-rose-600'
+                                : 'text-foreground/80 group-hover:text-rose-600'
                             )}
                           >
                             {doc.NAME}

@@ -87,7 +87,7 @@ const HELP_EXAMPLES = [
     items: [
       {
         label: 'Date Range',
-        code: "SELECT * FROM {TABLE} WHERE insert_date > SYSDATE - 7",
+        code: 'SELECT * FROM {TABLE} WHERE insert_date > SYSDATE - 7',
         desc: 'Find objects created within the last week.',
       },
       {

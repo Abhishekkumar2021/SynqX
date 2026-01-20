@@ -227,7 +227,7 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
                     className="overflow-hidden"
                   >
                     {viewMode === 'grid' ? (
-                      <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1800px] mx-auto pb-12">
+                      <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-[1600px] mx-auto pb-12">
                         {items.map((asset) => {
                           const isSelected = selectedAssets.has(asset.name)
                           return (
@@ -257,7 +257,9 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
                                     variant="outline"
                                     className={cn(
                                       'text-[8px] font-black h-5 px-2 bg-muted/30 border-none uppercase tracking-widest transition-colors',
-                                      isSelected ? 'bg-emerald-500 text-white' : 'text-muted-foreground/60'
+                                      isSelected
+                                        ? 'bg-emerald-500 text-white'
+                                        : 'text-muted-foreground/60'
                                     )}
                                   >
                                     {asset.metadata?.view_type || 'TABLE'}
@@ -280,7 +282,9 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
                                 <h4
                                   className={cn(
                                     'text-sm font-black uppercase tracking-tight transition-colors',
-                                    isSelected ? 'text-emerald-600' : 'text-foreground group-hover:text-emerald-600'
+                                    isSelected
+                                      ? 'text-emerald-600'
+                                      : 'text-foreground group-hover:text-emerald-600'
                                   )}
                                 >
                                   {asset.name}
@@ -363,7 +367,9 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
                                     <span
                                       className={cn(
                                         'text-[13px] font-black truncate uppercase transition-colors',
-                                        isSelected ? 'text-emerald-600' : 'text-foreground/80 group-hover:text-emerald-600'
+                                        isSelected
+                                          ? 'text-emerald-600'
+                                          : 'text-foreground/80 group-hover:text-emerald-600'
                                       )}
                                     >
                                       {asset.name}

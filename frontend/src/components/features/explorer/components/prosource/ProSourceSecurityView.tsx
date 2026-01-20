@@ -158,7 +158,7 @@ export const ProSourceSecurityView: React.FC<ProSourceSecurityViewProps> = ({ co
               </p>
             </div>
           ) : (
-            <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1800px] mx-auto">
+            <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-[1600px] mx-auto">
               {filteredAccounts.map((acc: any, i: number) => {
                 const id = acc.ACCOUNT || acc.account
                 const isSelected = selectedAccounts.has(id)
@@ -195,7 +195,9 @@ export const ProSourceSecurityView: React.FC<ProSourceSecurityViewProps> = ({ co
                             variant="secondary"
                             className={cn(
                               'border-none text-[9px] font-black uppercase px-2 h-5 transition-colors',
-                              isSelected ? 'bg-cyan-500 text-white' : 'bg-emerald-500/10 text-emerald-600'
+                              isSelected
+                                ? 'bg-cyan-500 text-white'
+                                : 'bg-emerald-500/10 text-emerald-600'
                             )}
                           >
                             Verified_Active

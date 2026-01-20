@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Sheet,
   SheetContent,
@@ -62,39 +63,49 @@ export const ProSourceMeshHeader: React.FC<ProSourceMeshHeaderProps> = ({
   })
 
   return (
-    <div className="h-20 px-8 border-b border-border/10 bg-muted/5 flex items-center gap-8 shrink-0 relative z-20 backdrop-blur-sm">
-      <div className="flex items-center gap-4">
-        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
-          <Layers size={24} />
+    <div className="h-20 px-8 border-b border-border/10 bg-muted/5 flex items-center gap-10 shrink-0 relative z-20 backdrop-blur-sm">
+      <div className="flex items-center gap-5 shrink-0">
+        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner group">
+          <Layers size={24} className="group-hover:rotate-12 transition-transform" />
         </div>
-        <div className="min-w-0 mr-4">
-          <h2 className="text-sm sm:text-xl font-black tracking-tighter text-foreground uppercase leading-none">
-            Entity Mesh
-          </h2>
-          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-1.5 opacity-60 hidden sm:block">
-            {asset?.name || 'Seabed Explorer'}
+        <div className="min-w-0 mr-2">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm sm:text-xl font-black tracking-tighter text-foreground uppercase leading-none">
+              Entity Mesh
+            </h2>
+            <Badge
+              variant="outline"
+              className="h-4.5 px-1.5 border-primary/20 bg-primary/5 text-primary text-[8px] font-black uppercase tracking-widest leading-none"
+            >
+              V2.4
+            </Badge>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-1.5 opacity-40 hidden sm:block">
+            {asset?.name || 'Seabed Global Explorer'}
           </p>
         </div>
       </div>
 
-      <div className="flex-1 max-w-2xl relative group">
+      <div className="flex-1 max-w-3xl relative group">
         <Search className="z-20 absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 transition-colors group-focus-within:text-primary" />
         <div className="relative">
           <Input
-            placeholder={asset ? `Filtering ${asset.name}...` : 'Select an asset to filter...'}
+            placeholder={
+              asset ? `Filtering domain: ${asset.name}...` : 'Select an asset from registry...'
+            }
             className={cn(
-              'h-12 pl-12 pr-32 rounded-2xl bg-background border-border/40 shadow-2xl focus:ring-8 focus:ring-primary/5 transition-all text-sm font-medium',
+              'h-12 pl-12 pr-32 rounded-2xl bg-background border-border/40 shadow-xl focus:ring-8 focus:ring-primary/5 transition-all text-sm font-medium placeholder:opacity-30',
               pendingSql && 'border-primary/30 ring-4 ring-primary/5'
             )}
             value={
               asset && pendingSql
-                ? `SQL: ${pendingSql.length > 40 ? pendingSql.substring(0, 40) + '...' : pendingSql}`
+                ? `SQL: ${pendingSql.length > 50 ? pendingSql.substring(0, 50) + '...' : pendingSql}`
                 : ''
             }
             readOnly
           />
           {pendingSql && (
-            <div className="absolute left-12 -top-2 px-2 py-0.5 rounded-md bg-primary text-[8px] font-black uppercase tracking-widest text-white shadow-lg animate-in fade-in zoom-in-95">
+            <div className="absolute left-12 -top-2 px-2 py-0.5 rounded-md bg-primary text-[8px] font-black uppercase tracking-widest text-white shadow-lg animate-in fade-in zoom-in-95 ring-2 ring-background">
               Active Filter
             </div>
           )}
@@ -112,7 +123,7 @@ export const ProSourceMeshHeader: React.FC<ProSourceMeshHeaderProps> = ({
                   onApplyQuery(null)
                 }}
                 className="h-8 w-8 rounded-xl flex items-center justify-center text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
-                title="Clear filter"
+                title="Reset Workspace"
               >
                 <X size={16} />
               </motion.button>
@@ -124,11 +135,11 @@ export const ProSourceMeshHeader: React.FC<ProSourceMeshHeaderProps> = ({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  'h-8 w-8 rounded-lg transition-all',
-                  pendingSql ? 'text-primary bg-primary/5' : 'hover:text-primary'
+                  'h-9 w-9 rounded-xl transition-all',
+                  pendingSql ? 'text-primary bg-primary/5' : 'hover:text-primary hover:bg-primary/5'
                 )}
               >
-                <SlidersHorizontal size={16} />
+                <SlidersHorizontal size={18} />
               </Button>
             </SheetTrigger>
             <SheetContent
@@ -142,11 +153,10 @@ export const ProSourceMeshHeader: React.FC<ProSourceMeshHeaderProps> = ({
                   </div>
                   <div>
                     <SheetTitle className="text-xl font-black uppercase tracking-widest">
-                      Visual Query Architect
+                      Visual Logic Engine
                     </SheetTitle>
                     <SheetDescription className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Construct precise Oracle SQL predicates for{' '}
-                      <b className="text-foreground">{asset?.name}</b>
+                      Predicate construction for <b className="text-foreground">{asset?.name}</b>
                     </SheetDescription>
                   </div>
                 </div>
@@ -161,7 +171,7 @@ export const ProSourceMeshHeader: React.FC<ProSourceMeshHeaderProps> = ({
               <div className="p-8 border-t border-border/10 bg-muted/5 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                   <Database size={12} className="opacity-40" />
-                  Target: {asset?.name}
+                  Context: {asset?.name}
                 </div>
                 <div className="flex gap-3">
                   <Button
@@ -178,7 +188,7 @@ export const ProSourceMeshHeader: React.FC<ProSourceMeshHeaderProps> = ({
                     }}
                     className="rounded-xl font-black uppercase text-[10px] tracking-widest px-8 h-11 bg-primary shadow-xl shadow-primary/20 text-white"
                   >
-                    Apply Transformation
+                    Deploy Predicate
                   </Button>
                 </div>
               </div>
@@ -187,8 +197,8 @@ export const ProSourceMeshHeader: React.FC<ProSourceMeshHeaderProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center ml-auto gap-4 shrink-0 pl-4 border-l border-border/10">
-        <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl border border-border/40 h-10">
+      <div className="flex items-center ml-auto gap-5 shrink-0 pl-6 border-l border-border/10 h-10">
+        <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl border border-border/40 h-10 shadow-sm">
           <Button
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
             size="icon"
@@ -217,10 +227,10 @@ export const ProSourceMeshHeader: React.FC<ProSourceMeshHeaderProps> = ({
           variant="default"
           size="sm"
           onClick={onToggleAI}
-          className="h-10 px-6 rounded-2xl gap-3 bg-primary hover:bg-primary/90 text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95"
+          className="h-10 px-6 rounded-2xl gap-3 bg-primary hover:bg-primary/90 text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20 transition-all active:scale-95 group"
         >
-          <Sparkles size={14} className="animate-pulse" />
-          Neural Discovery
+          <Sparkles size={14} className="group-hover:rotate-12 transition-transform" />
+          Neural Synthesis
         </Button>
       </div>
     </div>

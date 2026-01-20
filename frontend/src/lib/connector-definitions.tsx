@@ -356,7 +356,13 @@ export const CONNECTOR_CONFIG_SCHEMAS: Record<string, any> = {
         name: 'project_scope',
         label: 'Project Filter (Optional)',
         type: 'text',
-        placeholder: 'e.g. GOM_2024',
+        placeholder: 'e.g. PSFO_ARCH',
+      },
+      {
+        name: 'db_schema',
+        label: 'Data Dictionary Schema (Optional)',
+        type: 'text',
+        placeholder: 'e.g. DD_2018',
       },
     ],
   },
@@ -1156,7 +1162,7 @@ export const CONNECTOR_TYPE_INFO: Record<string, any> = Object.entries(CONNECTOR
     acc[key] = {
       label: meta.name,
       group: meta.category,
-      icon: meta.icon.type,
+      icon: React.isValidElement(meta.icon) ? (meta.icon as any).type : Server,
       color: meta.color,
       popular: meta.popular,
       fields: CONNECTOR_CONFIG_SCHEMAS[key]?.fields || [],

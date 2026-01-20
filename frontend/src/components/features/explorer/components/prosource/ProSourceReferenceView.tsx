@@ -247,7 +247,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
               </p>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1800px] mx-auto">
+            <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-[1600px] mx-auto">
               {currentData.map((item: any, i: number) => {
                 const code = item.CODE || item.code
                 const isSelected = selectedCodes.has(code)
@@ -282,7 +282,9 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
                           variant="outline"
                           className={cn(
                             'text-[8px] font-black h-5 px-2 uppercase tracking-widest border-none transition-colors',
-                            isSelected ? 'bg-amber-500 text-white' : 'bg-muted/30 text-muted-foreground/60'
+                            isSelected
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-muted/30 text-muted-foreground/60'
                           )}
                         >
                           {code || 'REF'}
@@ -305,7 +307,9 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
                       <h4
                         className={cn(
                           'text-[13px] font-black uppercase tracking-tight truncate transition-colors',
-                          isSelected ? 'text-amber-600' : 'text-foreground group-hover:text-amber-600'
+                          isSelected
+                            ? 'text-amber-600'
+                            : 'text-foreground group-hover:text-amber-600'
                         )}
                       >
                         {item.NAME || item.name || 'Untitled Standard'}
@@ -399,7 +403,9 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
                         <div
                           className={cn(
                             'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-inner',
-                            isSelected ? 'bg-amber-500/20 text-amber-600' : 'bg-muted/20 text-muted-foreground group-hover:bg-amber-500/10 group-hover:text-amber-600'
+                            isSelected
+                              ? 'bg-amber-500/20 text-amber-600'
+                              : 'bg-muted/20 text-muted-foreground group-hover:bg-amber-500/10 group-hover:text-amber-600'
                           )}
                         >
                           {activeTab === 'crs' ? <Globe size={18} /> : <Ruler size={18} />}
@@ -408,7 +414,9 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
                           <span
                             className={cn(
                               'text-[13px] font-black truncate uppercase transition-colors',
-                              isSelected ? 'text-amber-600' : 'text-foreground/80 group-hover:text-amber-600'
+                              isSelected
+                                ? 'text-amber-600'
+                                : 'text-foreground/80 group-hover:text-amber-600'
                             )}
                           >
                             {item.NAME || item.name}

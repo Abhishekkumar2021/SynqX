@@ -137,7 +137,7 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
     ]
 
     // Add first 8 columns for visibility
-    columns_list.slice(0, 8).forEach((colName: string) => {
+    columns_list.slice(0, 10).forEach((colName: string) => {
       cols.push(
         columnHelper.accessor(colName, {
           id: colName,
@@ -145,17 +145,21 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
             <Button
               variant="ghost"
               onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-              className="h-8 px-2 text-[10px] font-black uppercase tracking-widest hover:bg-transparent -ml-2"
+              className="h-8 px-2 text-[10px] font-black uppercase tracking-[0.1em] hover:bg-transparent -ml-2 text-muted-foreground/60 group-hover:text-primary transition-colors"
             >
               {colName}
-              <ArrowUpDown className="ml-2 h-3 w-3" />
+              <ArrowUpDown className="ml-2 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
             </Button>
           ),
           cell: ({ getValue }) => {
             const val = getValue()
             return (
-              <span className="text-[11px] font-medium text-foreground/80 truncate block max-w-[200px]">
-                {val === null ? <span className="opacity-20 italic">NULL</span> : String(val)}
+              <span className="text-[11px] font-bold text-foreground/70 truncate block max-w-[250px] tabular-nums tracking-tight">
+                {val === null ? (
+                  <span className="opacity-20 italic font-medium">---</span>
+                ) : (
+                  String(val)
+                )}
               </span>
             )
           },
@@ -166,15 +170,39 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
     cols.push(
       columnHelper.display({
         id: 'actions',
+        header: () => (
+          <div className="text-right pr-4 text-[9px] font-black uppercase tracking-widest opacity-30">
+            Actions
+          </div>
+        ),
         cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 pr-2">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 hover:bg-primary/5 hover:text-primary transition-colors"
+              className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
               onClick={() => onSelectRecord(row.original)}
             >
               <Eye size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg hover:bg-muted active:scale-90"
+              onClick={(e) => {
+                e.stopPropagation()
+                const blob = new Blob([JSON.stringify(row.original, null, 2)], {
+                  type: 'application/json',
+                })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `record_${Date.now()}.json`
+                a.click()
+                toast.success('Record exported')
+              }}
+            >
+              <Download size={14} className="opacity-40 hover:opacity-100" />
             </Button>
           </div>
         ),
@@ -345,7 +373,7 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
             </Table>
           </div>
         ) : (
-          <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1800px] mx-auto pb-48">
+          <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-[1600px] mx-auto pb-48">
             {results.map((record: any, i: number) => {
               const isSelected = selectedIndices.has(i)
               return (
@@ -380,7 +408,7 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
                             : 'bg-muted/30 text-muted-foreground/60'
                         )}
                       >
-                        INDEX_{i + pageOffset + 1}
+                        RECORD_INDEX_{i + pageOffset + 1}
                       </Badge>
                       <Checkbox
                         checked={isSelected}
@@ -403,7 +431,7 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
 
                   <div className="space-y-4 relative z-10 flex-1 px-1">
                     {Object.entries(record)
-                      .slice(0, 5)
+                      .slice(0, 6)
                       .map(([k, v]) => (
                         <div key={k} className="space-y-1.5 group/field">
                           <div className="flex items-center gap-2">
@@ -412,9 +440,9 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
                               {k}
                             </span>
                           </div>
-                          <p className="text-[12px] font-bold text-foreground/80 truncate leading-tight tracking-tight pl-3">
+                          <p className="text-[12px] font-bold text-foreground/80 truncate leading-tight tracking-tight pl-3 tabular-nums">
                             {v === null ? (
-                              <span className="opacity-20 italic">---</span>
+                              <span className="opacity-20 italic font-medium">---</span>
                             ) : (
                               String(v)
                             )}
@@ -433,7 +461,7 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
                           : 'text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10'
                       )}
                     >
-                      Inspect_Context
+                      Materialize_Entity
                     </Button>
                     <ArrowRight
                       size={16}
@@ -449,7 +477,9 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
                   {/* Technical background decoration */}
                   <div className="absolute -right-12 -bottom-12 h-48 w-48 bg-primary/[0.02] blur-3xl rounded-full group-hover:bg-primary/[0.05] transition-all duration-700 pointer-events-none" />
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
-                    <span className="text-[40px] font-black font-mono leading-none">{i + 1}</span>
+                    <span className="text-[40px] font-black font-mono leading-none">
+                      {i + pageOffset + 1}
+                    </span>
                   </div>
                 </div>
               )

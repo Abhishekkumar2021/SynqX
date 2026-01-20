@@ -27,11 +27,11 @@ Q_DISCOVER_ASSETS = """
 SELECT 
     me.entity AS view_name, 
     mov.base_entity, 
-    NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD}.meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel) AS domain, 
+    NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD_PREFIX}meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel) AS domain, 
     me.description, 
     me.entity_type AS view_type 
-FROM {SCHEMA_DD}.meta_entity me 
-LEFT JOIN {SCHEMA_DD}.meta_object_view mov ON me.entity = mov.view_name 
+FROM {SCHEMA_DD_PREFIX}meta_entity me 
+LEFT JOIN {SCHEMA_DD_PREFIX}meta_object_view mov ON me.entity = mov.view_name 
 WHERE me.primary_submodel NOT IN ('Spatial','Meta','Root','System') 
 AND me.entity_type IN ('View','ObjectView','Extension','Table')
 """
@@ -45,31 +45,31 @@ SELECT
     mfa.description, 
     mfa.measurement, 
     mfa.unit 
-FROM {SCHEMA_DD}.meta_flat_attribute mfa 
+FROM {SCHEMA_DD_PREFIX}meta_flat_attribute mfa 
 WHERE mfa.entity = '{ASSET}'
 """
 
 # 5. Row Count
-Q_ROW_COUNT = "SELECT COUNT(*) as cnt FROM {PROJECT}.{ASSET}"
+Q_ROW_COUNT = "SELECT COUNT(*) as cnt FROM {PROJECT_PREFIX}{ASSET}"
 
 # 6. Coordinate Reference System (CRS)
 Q_CRS_INFO = """
 SELECT 
     name, 
     opengis_well_known_text AS persistable_reference 
-FROM {SCHEMA_DD}.r_coordinate_ref_system 
+FROM {SCHEMA_DD_PREFIX}r_coordinate_ref_system 
 WHERE code = (
     SELECT crs 
-    FROM {PROJECT}.coordinate_system 
-    WHERE id = (SELECT storage_coord_sys_id FROM {PROJECT}.project_default)
+    FROM {PROJECT_PREFIX}coordinate_system 
+    WHERE id = (SELECT storage_coord_sys_id FROM {PROJECT_PREFIX}project_default)
 )
 """
 
 # 7. Unit System
 Q_UNIT_SYSTEM = """
 SELECT us.standard as namespace 
-FROM {PROJECT}.project_default pd 
-JOIN {SCHEMA_DD}.r_unit_system us ON pd.storage_unit_system = us.code
+FROM {PROJECT_PREFIX}project_default pd 
+JOIN {SCHEMA_DD_PREFIX}r_unit_system us ON pd.storage_unit_system = us.code
 """
 
 # 8. Document Listing (Filtered)
@@ -87,20 +87,20 @@ SELECT
     ed.entity_id, 
     ed.entity_tbl, 
     ed.file_size 
-FROM {PROJECT}.entity_document ed 
+FROM {PROJECT_PREFIX}entity_document ed 
 WHERE entity_id IN ({ENTITY_IDS})
 """
 
 # 9. Domain Stats Aggregation
 Q_DOMAIN_STATS = """
 SELECT 
-    NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD}.meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel) AS domain, 
+    NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD_PREFIX}meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel) AS domain, 
     COUNT(*) as count
-FROM {SCHEMA_DD}.meta_entity me 
-LEFT JOIN {SCHEMA_DD}.meta_object_view mov ON me.entity = mov.view_name 
+FROM {SCHEMA_DD_PREFIX}meta_entity me 
+LEFT JOIN {SCHEMA_DD_PREFIX}meta_object_view mov ON me.entity = mov.view_name 
 WHERE me.primary_submodel NOT IN ('Spatial','Meta','Root','System') 
 AND me.entity_type IN ('View','ObjectView','Extension','Table')
-GROUP BY NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD}.meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel)
+GROUP BY NVL((SELECT me2.primary_submodel FROM {SCHEMA_DD_PREFIX}meta_entity me2 WHERE me2.entity = mov.base_entity AND me.entity_type = 'ObjectView'), me.primary_submodel)
 """
 
 # 10. Relationship Metadata (Lineage)
@@ -113,8 +113,8 @@ WITH relationaltable AS (
         mla.source_attribute,
         mla.target_attribute,
         ROW_NUMBER() OVER (PARTITION BY ml.entity_domain ORDER BY mla.source_attribute) AS rankedrows
-    FROM {SCHEMA_DD}.meta_link ml
-    JOIN {SCHEMA_DD}.meta_link_attribute mla
+    FROM {SCHEMA_DD_PREFIX}meta_link ml
+    JOIN {SCHEMA_DD_PREFIX}meta_link_attribute mla
       ON UPPER(ml.entity) = UPPER(mla.entity)
      AND ml.link = mla.link
     WHERE UPPER(ml.entity) = UPPER('{ASSET}')
@@ -125,8 +125,8 @@ WHERE rankedrows = 1
 """
 
 # 11. Reference Data Listing
-Q_LIST_CRS = "SELECT name, opengis_well_known_text AS persistable_reference FROM {SCHEMA_DD}.r_coordinate_ref_system"
-Q_LIST_UNITS = "SELECT * FROM {SCHEMA_DD}.r_unit_system"
+Q_LIST_CRS = "SELECT name, opengis_well_known_text AS persistable_reference FROM {SCHEMA_DD_PREFIX}r_coordinate_ref_system"
+Q_LIST_UNITS = "SELECT * FROM {SCHEMA_DD_PREFIX}r_unit_system"
 
 # 12. Global Discovery
 Q_LIST_ALL_DOCUMENTS = """
@@ -143,21 +143,21 @@ SELECT
     ed.entity_id, 
     ed.entity_tbl, 
     ed.file_size 
-FROM {PROJECT}.entity_document ed
+FROM {PROJECT_PREFIX}entity_document ed
 """
 Q_LIST_ACCOUNTS = "SELECT * FROM SDS_ACCOUNT"
 
 # 13. Dashboard Diagnostics
 Q_DOC_FORMAT_STATS = """
 SELECT document_format as label, COUNT(*) as value 
-FROM {PROJECT}.entity_document 
+FROM {PROJECT_PREFIX}entity_document 
 GROUP BY document_format 
 ORDER BY value DESC
 """
 
 Q_ENTITY_TYPE_STATS = """
 SELECT entity_type as label, COUNT(*) as value 
-FROM {SCHEMA_DD}.meta_entity 
+FROM {SCHEMA_DD_PREFIX}meta_entity 
 WHERE primary_submodel NOT IN ('Spatial','Meta','Root','System')
 GROUP BY entity_type 
 ORDER BY value DESC
@@ -165,7 +165,7 @@ ORDER BY value DESC
 
 Q_SCHEMA_SOURCE_STATS = """
 SELECT source as label, COUNT(*) as value 
-FROM {SCHEMA_DD}.meta_entity 
+FROM {SCHEMA_DD_PREFIX}meta_entity 
 WHERE source IS NOT NULL
 GROUP BY source 
 ORDER BY value DESC

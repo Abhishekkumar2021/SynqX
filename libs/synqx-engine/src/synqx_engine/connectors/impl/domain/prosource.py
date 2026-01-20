@@ -66,13 +66,13 @@ class ProSourceConnector(OracleConnector):
     def _discover_schemas(self) -> dict[str, str]:
         """
         Discovers both Data Dictionary (DD) and Project/Data schemas.
-        Project/Data schema is the project_name itself.
+        Project/Data schema is the project_scope (mapped to project_name) itself.
         DD schema is the 'scope' of that project in SDS_ACCOUNT.
         """
-        schemas = {"dd": "SEABED", "data": "SEABED"}
+        schemas = {"dd": None, "data": None}
         
-        # 1. Map Data Schema directly to project_name
-        project_name = self.config.get("project_name")
+        # 1. Map Data Schema directly to project_name (which comes from config field 'project_scope')
+        project_name = self.config.get("project_scope") or self.config.get("project_name")
         if project_name:
             schemas["data"] = project_name
             # 2. Discover DD Schema (scope) for this specific project
@@ -86,8 +86,8 @@ class ProSourceConnector(OracleConnector):
             except Exception as e:
                 logger.warning(f"Failed to find DD scope for project {project_name}: {e}")
 
-        # 3. Fallback for DD Schema if project discovery failed
-        if schemas["dd"] == "SEABED":
+        # 3. Fallback for DD Schema if project discovery failed or no project provided
+        if not schemas["dd"]:
             try:
                 rows = self.execute_query(Q_DISCOVER_SCHEMA)
                 if rows:
@@ -104,10 +104,15 @@ class ProSourceConnector(OracleConnector):
         # Priority: Config > Discovery
         schema_dd = self.config.get("db_schema") or schemas["dd"]
         project_data = self.config.get("project_schema") or schemas["data"]
-        project_name = self.config.get("project_name", "DEMO")
+        project_name = self.config.get("project_scope") or self.config.get("project_name") or "DEMO"
 
-        query = query_template.replace("{SCHEMA_DD}", str(schema_dd))
-        query = query.replace("{PROJECT}", str(project_data))
+        # Handle prefixing logic: only add dot if schema is present
+        project_prefix = f"{project_data}." if project_data else ""
+        dd_prefix = f"{schema_dd}." if schema_dd else ""
+
+        query = query_template.replace("{SCHEMA_DD_PREFIX}", dd_prefix)
+        query = query.replace("{SCHEMA_DD}", str(schema_dd) if schema_dd else "")
+        query = query.replace("{PROJECT_PREFIX}", project_prefix)
         query = query.replace("{PROJECT_NAME}", f"'{project_name}'")
 
         for k, v in kwargs.items():
