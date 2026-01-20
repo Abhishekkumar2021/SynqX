@@ -163,7 +163,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-8 max-w-[1600px] mx-auto w-full pb-32">
+        <div className="w-full pb-32">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-48 gap-6 opacity-40">
               <div className="relative">
@@ -182,7 +182,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
               </p>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 max-w-[1800px] mx-auto">
               {currentData.map((item: any, i: number) => (
                 <div
                   key={i}
@@ -264,15 +264,15 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
               ))}
             </div>
           ) : (
-            <div className="bg-card border border-border/40 rounded-[2.5rem] overflow-hidden shadow-xl backdrop-blur-sm">
-              <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b bg-muted/30 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 sticky top-0 z-10">
+            <div className="w-full">
+              <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b bg-muted/50 backdrop-blur-xl sticky top-0 z-20 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 shadow-sm">
                 <div className="col-span-2">Standard_Code</div>
                 <div className="col-span-5">Identity_Reference</div>
                 <div className="col-span-2">Dimension_Type</div>
                 <div className="col-span-2 text-center">Source_Authority</div>
                 <div className="col-span-1 text-right">Action</div>
               </div>
-              <div className="divide-y divide-border/10">
+              <div className="divide-y divide-border/5">
                 {currentData.map((item: any, i: number) => (
                   <div
                     key={i}

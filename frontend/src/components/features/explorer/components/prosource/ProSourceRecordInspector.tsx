@@ -450,18 +450,20 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
                       <div className="h-1 w-1 rounded-full bg-rose-500" />
                       Linked_Knowledge_Objects
                     </h4>
-                                        {isLoadingDocs ? (
-                                          <div className="flex flex-col items-center justify-center py-20 opacity-50">
-                                            <RefreshCw className="animate-spin text-primary" />
-                                          </div>
-                                        ) : documents.length === 0 ? (
-                                          <div className="flex flex-col items-center justify-center py-32 opacity-20 grayscale gap-4">
-                                            <FileText size={64} strokeWidth={1} />
-                                            <p className="font-black uppercase text-[10px] tracking-[0.3em]">No unstructured anchors</p>
-                                          </div>
-                                        ) : (
-                                          <div className="grid grid-cols-1 gap-4">
-                                            {documents.map((doc: any, i: number) => (
+                    {isLoadingDocs ? (
+                      <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                        <RefreshCw className="animate-spin text-primary" />
+                      </div>
+                    ) : documents.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-32 opacity-20 grayscale gap-4">
+                        <FileText size={64} strokeWidth={1} />
+                        <p className="font-black uppercase text-[10px] tracking-[0.3em]">
+                          No unstructured anchors
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4">
+                        {documents.map((doc: any, i: number) => (
                           <div
                             key={i}
                             className="flex items-center justify-between p-5 rounded-[1.5rem] bg-card border border-border/40 group hover:border-rose-500/30 hover:shadow-lg transition-all"

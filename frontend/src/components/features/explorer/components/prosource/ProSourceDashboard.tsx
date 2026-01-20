@@ -1,15 +1,7 @@
 import React, { useMemo } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { motion } from 'framer-motion'
-import {
-  Database,
-  Layers,
-  Activity,
-  Globe,
-  FileText,
-  Box,
-  RefreshCw
-} from 'lucide-react'
+import { Database, Layers, Activity, Globe, FileText, Box, RefreshCw } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatNumber, cn } from '@/lib/utils'
@@ -64,7 +56,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connectionId, assets }) => {
-  const { data: diagnostics, isLoading, refetch } = useQuery({
+  const {
+    data: diagnostics,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['prosource', 'diagnostics', connectionId],
     queryFn: () => getConnectionMetadata(connectionId, 'get_dashboard_diagnostics'),
   })
@@ -79,10 +75,12 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
   )
 
   const entityDistribution = useMemo(() => {
-    return Object.entries(diagnostics?.domain_counts || {}).map(([name, value]) => ({
+    return Object.entries(diagnostics?.domain_counts || {})
+      .map(([name, value]) => ({
         name: name.toUpperCase(),
         value,
-    })).sort((a, b) => (b.value as number) - (a.value as number))
+      }))
+      .sort((a, b) => (b.value as number) - (a.value as number))
   }, [diagnostics])
 
   return (
@@ -98,7 +96,7 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
               icon: Layers,
               color: 'text-indigo-500',
               bg: 'bg-indigo-500/10',
-              border: 'border-indigo-500/20'
+              border: 'border-indigo-500/20',
             },
             {
               label: 'Unstructured Assets',
@@ -107,7 +105,7 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
               icon: FileText,
               color: 'text-rose-500',
               bg: 'bg-rose-500/10',
-              border: 'border-rose-500/20'
+              border: 'border-rose-500/20',
             },
             {
               label: 'Functional Domains',
@@ -116,7 +114,7 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
               icon: Database,
               color: 'text-emerald-500',
               bg: 'bg-emerald-500/10',
-              border: 'border-emerald-500/20'
+              border: 'border-emerald-500/20',
             },
             {
               label: 'Network Latency',
@@ -125,56 +123,63 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
               icon: Activity,
               color: 'text-amber-500',
               bg: 'bg-amber-500/10',
-              border: 'border-amber-500/20'
+              border: 'border-amber-500/20',
             },
           ].map((kpi, i) => (
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              key={i}
             >
-                <Card
-                className="bg-card/40 border-border/40 shadow-2xl backdrop-blur-md group hover:border-primary/40 transition-all duration-500 relative overflow-hidden"
-                >
+              <Card className="bg-card/40 border-border/40 shadow-2xl backdrop-blur-md group hover:border-primary/40 transition-all duration-500 relative overflow-hidden">
                 <CardContent className="p-8">
-                    <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-start justify-between mb-6">
                     <div
-                        className={cn(
+                      className={cn(
                         'p-4 rounded-[1.25rem] border transition-all duration-500 shadow-inner group-hover:scale-110 group-hover:rotate-6',
                         kpi.bg,
                         kpi.color,
                         kpi.border
-                        )}
+                      )}
                     >
-                        <kpi.icon size={24} strokeWidth={1.5} />
+                      <kpi.icon size={24} strokeWidth={1.5} />
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                        <Badge
-                            variant="outline"
-                            className="text-[8px] font-black uppercase tracking-widest border-emerald-500/20 text-emerald-500 bg-emerald-500/5 px-2 h-5"
-                        >
-                            Live_Stream
-                        </Badge>
-                        <span className="text-[7px] font-black text-muted-foreground/40 uppercase tracking-tighter">Verified_Context</span>
+                      <Badge
+                        variant="outline"
+                        className="text-[8px] font-black uppercase tracking-widest border-emerald-500/20 text-emerald-500 bg-emerald-500/5 px-2 h-5"
+                      >
+                        Live_Stream
+                      </Badge>
+                      <span className="text-[7px] font-black text-muted-foreground/40 uppercase tracking-tighter">
+                        Verified_Context
+                      </span>
                     </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-4xl font-black text-foreground tracking-tighter tabular-nums leading-none">
+                      {typeof kpi.val === 'number' ? formatNumber(kpi.val) : kpi.val}
                     </div>
-                    <div className="space-y-1">
-                        <div className="text-4xl font-black text-foreground tracking-tighter tabular-nums leading-none">
-                        {typeof kpi.val === 'number' ? formatNumber(kpi.val) : kpi.val}
-                        </div>
-                        <div className="flex flex-col">
-                            <p className="text-[11px] font-black text-foreground/80 uppercase tracking-widest leading-relaxed">
-                            {kpi.label}
-                            </p>
-                            <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">{kpi.sub}</p>
-                        </div>
+                    <div className="flex flex-col">
+                      <p className="text-[11px] font-black text-foreground/80 uppercase tracking-widest leading-relaxed">
+                        {kpi.label}
+                      </p>
+                      <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                        {kpi.sub}
+                      </p>
                     </div>
-                    
-                    {/* Background decoration */}
-                    <div className={cn("absolute -right-4 -bottom-4 h-24 w-24 blur-3xl opacity-10 rounded-full transition-all duration-700 group-hover:scale-150 group-hover:opacity-20", kpi.bg.replace('/10', ''))} />
+                  </div>
+
+                  {/* Background decoration */}
+                  <div
+                    className={cn(
+                      'absolute -right-4 -bottom-4 h-24 w-24 blur-3xl opacity-10 rounded-full transition-all duration-700 group-hover:scale-150 group-hover:opacity-20',
+                      kpi.bg.replace('/10', '')
+                    )}
+                  />
                 </CardContent>
-                </Card>
+              </Card>
             </motion.div>
           ))}
         </div>
@@ -182,60 +187,85 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
         {/* Charts Grid - Overhauled */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-8">
-            <DashboardWidget 
-                title="SOCIOTECHNICAL_ENTITY_DISTRIBUTION" 
-                icon={Database}
-                description="High-level clustering of Seabed objects by functional submodel"
+            <DashboardWidget
+              title="SOCIOTECHNICAL_ENTITY_DISTRIBUTION"
+              icon={Database}
+              description="High-level clustering of Seabed objects by functional submodel"
             >
               <div className="h-[450px] w-full pt-8">
                 {isLoading ? (
-                    <div className="h-full w-full flex flex-col items-center justify-center gap-4 opacity-30">
-                        <RefreshCw className="animate-spin text-primary" size={32} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Calculating Projections...</span>
-                    </div>
+                  <div className="h-full w-full flex flex-col items-center justify-center gap-4 opacity-30">
+                    <RefreshCw className="animate-spin text-primary" size={32} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em]">
+                      Calculating Projections...
+                    </span>
+                  </div>
                 ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={entityDistribution} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                        <defs>
-                            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />
-                        <XAxis
-                            dataKey="name"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 9, fontWeight: '900', fill: 'hsl(var(--muted-foreground))' }}
-                            angle={-45}
-                            textAnchor="end"
-                            dy={20}
-                        />
-                        <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{ fontSize: 10, fontWeight: 'bold', fill: 'hsl(var(--muted-foreground)/0.5)' }} 
-                            dx={-10} 
-                        />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--primary)/0.03)' }} />
-                        <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={40} animationDuration={1500}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={entityDistribution}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                    >
+                      <defs>
+                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.8} />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fontSize: 9,
+                          fontWeight: '900',
+                          fill: 'hsl(var(--muted-foreground))',
+                        }}
+                        angle={-45}
+                        textAnchor="end"
+                        dy={20}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{
+                          fontSize: 10,
+                          fontWeight: 'bold',
+                          fill: 'hsl(var(--muted-foreground)/0.5)',
+                        }}
+                        dx={-10}
+                      />
+                      <Tooltip
+                        content={<CustomTooltip />}
+                        cursor={{ fill: 'hsl(var(--primary)/0.03)' }}
+                      />
+                      <Bar
+                        dataKey="value"
+                        radius={[8, 8, 0, 0]}
+                        barSize={40}
+                        animationDuration={1500}
+                      >
                         {entityDistribution.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} opacity={0.8} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                            opacity={0.8}
+                          />
                         ))}
-                        </Bar>
+                      </Bar>
                     </BarChart>
-                    </ResponsiveContainer>
+                  </ResponsiveContainer>
                 )}
               </div>
             </DashboardWidget>
           </div>
 
           <div className="lg:col-span-4">
-            <DashboardWidget 
-                title="OBJECT_TYPE_SPECIFICATION" 
-                icon={Box}
-                description="ProSource technical metadata breakdown"
+            <DashboardWidget
+              title="OBJECT_TYPE_SPECIFICATION"
+              icon={Box}
+              description="ProSource technical metadata breakdown"
             >
               <div className="h-[450px] w-full relative pt-4">
                 <ResponsiveContainer width="100%" height="100%">
@@ -277,10 +307,10 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
           </div>
 
           <div className="lg:col-span-6">
-            <DashboardWidget 
-                title="UNSTRUCTURED_FORMAT_INDEX" 
-                icon={FileText}
-                description="Global index of knowledge objects by MIME type"
+            <DashboardWidget
+              title="UNSTRUCTURED_FORMAT_INDEX"
+              icon={FileText}
+              description="Global index of knowledge objects by MIME type"
             >
               <div className="h-[350px] w-full pt-6">
                 <ResponsiveContainer width="100%" height="100%">
@@ -299,7 +329,11 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
                       type="category"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 9, fontWeight: '900', fill: 'hsl(var(--muted-foreground))' }}
+                      tick={{
+                        fontSize: 9,
+                        fontWeight: '900',
+                        fill: 'hsl(var(--muted-foreground))',
+                      }}
                       width={100}
                     />
                     <Tooltip content={<CustomTooltip />} />
@@ -319,10 +353,10 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
           </div>
 
           <div className="lg:col-span-6">
-            <DashboardWidget 
-                title="SCHEMA_SOURCE_PROVENANCE" 
-                icon={Globe}
-                description="Data lineage roots across the enterprise"
+            <DashboardWidget
+              title="SCHEMA_SOURCE_PROVENANCE"
+              icon={Globe}
+              description="Data lineage roots across the enterprise"
             >
               <div className="h-[350px] w-full pt-6">
                 <ResponsiveContainer width="100%" height="100%">
@@ -338,7 +372,11 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
                       dataKey="name"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 9, fontWeight: '900', fill: 'hsl(var(--muted-foreground))' }}
+                      tick={{
+                        fontSize: 9,
+                        fontWeight: '900',
+                        fill: 'hsl(var(--muted-foreground))',
+                      }}
                     />
                     <YAxis axisLine={false} tickLine={false} hide />
                     <Tooltip content={<CustomTooltip />} />
@@ -355,26 +393,34 @@ export const ProSourceDashboard: React.FC<ProSourceDashboardProps> = ({ connecti
             </DashboardWidget>
           </div>
         </div>
-        
+
         {/* Connection health footer */}
         <div className="flex items-center justify-between p-8 border border-border/40 rounded-[2.5rem] bg-card/20 backdrop-blur-sm">
-            <div className="flex items-center gap-6">
-                <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Protocol_Healthy</span>
-                </div>
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase text-foreground/60 tracking-widest leading-none mb-1">Session_Identity</span>
-                    <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
-                        {diagnostics?.driver_info || 'Oracle Thin Driver'} / Seabed Context
-                    </span>
-                </div>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
+                Protocol_Healthy
+              </span>
             </div>
-            <div className="flex items-center gap-4">
-                <Button variant="outline" className="h-10 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2 bg-background hover:bg-muted transition-all active:scale-95 shadow-sm" onClick={() => refetch()}>
-                    <RefreshCw size={14} /> Global_Rescan
-                </Button>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase text-foreground/60 tracking-widest leading-none mb-1">
+                Session_Identity
+              </span>
+              <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                {diagnostics?.driver_info || 'Oracle Thin Driver'} / Seabed Context
+              </span>
             </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              className="h-10 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2 bg-background hover:bg-muted transition-all active:scale-95 shadow-sm"
+              onClick={() => refetch()}
+            >
+              <RefreshCw size={14} /> Global_Rescan
+            </Button>
+          </div>
         </div>
       </div>
     </ScrollArea>

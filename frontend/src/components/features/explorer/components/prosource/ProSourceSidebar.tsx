@@ -25,8 +25,12 @@ export const ProSourceSidebar: React.FC<ProSourceSidebarProps> = ({
     const filtered = assets.filter(
       (a) =>
         a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (a.metadata?.module || a.metadata?.MODULE || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (a.metadata?.table || a.metadata?.TABLE || '').toLowerCase().includes(searchQuery.toLowerCase())
+        (a.metadata?.module || a.metadata?.MODULE || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        (a.metadata?.table || a.metadata?.TABLE || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
     )
 
     filtered.forEach((asset) => {
@@ -144,9 +148,10 @@ export const ProSourceSidebar: React.FC<ProSourceSidebarProps> = ({
                                   </span>
                                 )}
                               </div>
-                                                                  <p className="text-[8px] font-medium text-muted-foreground/40 uppercase mt-1 truncate tracking-wider group-hover:text-muted-foreground/60 transition-colors">
-                                                                      {asset.metadata?.table || asset.metadata?.TABLE}
-                                                                  </p>                            </div>
+                              <p className="text-[8px] font-medium text-muted-foreground/40 uppercase mt-1 truncate tracking-wider group-hover:text-muted-foreground/60 transition-colors">
+                                {asset.metadata?.table || asset.metadata?.TABLE}
+                              </p>{' '}
+                            </div>
 
                             <ChevronRight
                               size={12}
