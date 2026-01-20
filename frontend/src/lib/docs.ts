@@ -1,4 +1,3 @@
- 
 // Extract documentation metadata dynamically from MDX files
 // Using eager: true to have them available at runtime
 const mdxFiles = import.meta.glob('@/docs/**/*.mdx', { eager: true })

@@ -18,19 +18,19 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { 
-  Eye, 
-  ArrowUpDown, 
-  MoreHorizontal, 
-  FileDown, 
-  Copy, 
+import {
+  Eye,
+  ArrowUpDown,
+  MoreHorizontal,
+  FileDown,
+  Copy,
   Trash2,
   FileArchive,
   Image,
   FileCode,
   FileText,
   File,
-  Globe
+  Globe,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -111,63 +111,69 @@ export const StorageList: React.FC<StorageListProps> = ({
         },
         cell: ({ row }) => (
           <div className="flex items-center gap-3 max-w-[300px]">
-             <div className="h-8 w-8 rounded-lg bg-muted/30 border border-border/50 flex items-center justify-center shrink-0">
-                {React.cloneElement(getFileIcon(row.original.name) as any, { size: 16 })}
-             </div>
-             <div className="flex flex-col min-w-0">
-                 <span className="font-bold text-xs truncate text-foreground/90" title={row.original.name}>
-                    {row.original.name}
-                 </span>
-                 <span className="text-[9px] text-muted-foreground/60 truncate font-mono">
-                    {row.original.id.split(':').pop()}
-                 </span>
-             </div>
+            <div className="h-8 w-8 rounded-lg bg-muted/30 border border-border/50 flex items-center justify-center shrink-0">
+              {React.cloneElement(getFileIcon(row.original.name) as any, { size: 16 })}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span
+                className="font-bold text-xs truncate text-foreground/90"
+                title={row.original.name}
+              >
+                {row.original.name}
+              </span>
+              <span className="text-[9px] text-muted-foreground/60 truncate font-mono">
+                {row.original.id.split(':').pop()}
+              </span>
+            </div>
           </div>
         ),
       }),
       columnHelper.accessor('category', {
         header: 'Category',
         cell: ({ row }) => (
-            <Badge variant="outline" className="h-5 px-2 text-[9px] font-black uppercase tracking-widest border-primary/20 bg-primary/5 text-primary">
-                 {row.original.category}
-            </Badge>
+          <Badge
+            variant="outline"
+            className="h-5 px-2 text-[9px] font-black uppercase tracking-widest border-primary/20 bg-primary/5 text-primary"
+          >
+            {row.original.category}
+          </Badge>
         ),
       }),
       columnHelper.accessor('size', {
         header: 'Size',
         cell: ({ row }) => (
-            <span className="text-[11px] font-mono font-medium text-foreground/80">
-                {formatBytes(parseInt(row.original.size))}
-            </span>
+          <span className="text-[11px] font-mono font-medium text-foreground/80">
+            {formatBytes(parseInt(row.original.size))}
+          </span>
         ),
       }),
-       columnHelper.accessor('source', {
+      columnHelper.accessor('source', {
         header: 'Source',
         cell: ({ row }) => {
-            const src = row.original.source.split('/').pop() || 'Persistent';
-            return (
-                <div className="flex items-center gap-1.5 opacity-70">
-                    <Globe size={12} className="text-muted-foreground" />
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                        {src}
-                    </span>
-                </div>
-            )
+          const src = row.original.source.split('/').pop() || 'Persistent'
+          return (
+            <div className="flex items-center gap-1.5 opacity-70">
+              <Globe size={12} className="text-muted-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                {src}
+              </span>
+            </div>
+          )
         },
       }),
       columnHelper.accessor('createdAt', {
         header: 'Indexed',
         cell: ({ row }) => (
-             <span className="font-mono text-[10px] text-muted-foreground">
-                {new Date(row.original.createdAt).toLocaleDateString()}
-             </span>
+          <span className="font-mono text-[10px] text-muted-foreground">
+            {new Date(row.original.createdAt).toLocaleDateString()}
+          </span>
         ),
       }),
       columnHelper.display({
         id: 'actions',
         cell: ({ row }) => (
           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-             <Button
+            <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 hover:bg-primary/5 hover:text-primary transition-colors text-muted-foreground"
@@ -190,22 +196,25 @@ export const StorageList: React.FC<StorageListProps> = ({
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm">
+              <DropdownMenuContent
+                align="end"
+                className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm"
+              >
                 <DropdownMenuItem
-                    className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                     onClick={() => copyToClipboard(row.original.id, 'ID')}
+                  className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
+                  onClick={() => copyToClipboard(row.original.id, 'ID')}
                 >
-                    <Copy size={12} className="opacity-50" /> Copy ID
+                  <Copy size={12} className="opacity-50" /> Copy ID
                 </DropdownMenuItem>
-                 <DropdownMenuItem
-                    className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                    onClick={() => onDownload(row.original.id, row.original.name)}
+                <DropdownMenuItem
+                  className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
+                  onClick={() => onDownload(row.original.id, row.original.name)}
                 >
-                    <FileDown size={12} className="opacity-50" /> Download
+                  <FileDown size={12} className="opacity-50" /> Download
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="opacity-20" />
                 <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-destructive focus:text-destructive cursor-pointer">
-                    <Trash2 size={12} /> Delete
+                  <Trash2 size={12} /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -234,13 +243,13 @@ export const StorageList: React.FC<StorageListProps> = ({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent border-border/40">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="h-11 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/60">
+                <TableHead
+                  key={header.id}
+                  className="h-11 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/60"
+                >
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -253,7 +262,7 @@ export const StorageList: React.FC<StorageListProps> = ({
                 key={row.id}
                 data-state={row.getIsSelected() && 'selected'}
                 className="border-border/20 hover:bg-muted/10 transition-colors group cursor-pointer"
-                onClick={() => onSelectFile(row.original.id)} 
+                onClick={() => onSelectFile(row.original.id)}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="py-2.5">
@@ -264,7 +273,10 @@ export const StorageList: React.FC<StorageListProps> = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-xs text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-xs text-muted-foreground"
+              >
                 No results found.
               </TableCell>
             </TableRow>

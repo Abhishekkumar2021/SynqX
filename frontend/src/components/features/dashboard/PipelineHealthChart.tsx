@@ -1,4 +1,3 @@
- 
 import React, { useMemo } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { AlertTriangle } from 'lucide-react'

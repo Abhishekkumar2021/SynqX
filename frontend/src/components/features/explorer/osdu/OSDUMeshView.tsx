@@ -1,4 +1,3 @@
- 
 import React, { useState, useMemo } from 'react'
 import { MeshHeader } from './mesh/MeshHeader'
 import { MeshToolbar } from './mesh/MeshToolbar'
@@ -41,7 +40,7 @@ export const OSDUMeshView: React.FC<OSDUMeshViewProps> = ({
 }) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
-  
+
   const results = useMemo(() => searchResults?.results || [], [searchResults])
   const totalAvailable = useMemo(() => searchResults?.total_count || 0, [searchResults])
 
@@ -83,68 +82,70 @@ export const OSDUMeshView: React.FC<OSDUMeshViewProps> = ({
         />
 
         <div className="flex-1 min-h-0 relative overflow-hidden bg-muted/5">
-            {isLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center py-48 gap-8 opacity-40">
-                    <div className="relative">
-                    <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse" />
-                    <RefreshCw className="h-16 w-16 text-primary animate-spin" strokeWidth={1} />
-                    </div>
-                    <span className="text-[11px] font-black uppercase tracking-[0.5em] animate-pulse">
-                    Materializing partition frame...
-                    </span>
+          {isLoading ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-48 gap-8 opacity-40">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse" />
+                <RefreshCw className="h-16 w-16 text-primary animate-spin" strokeWidth={1} />
+              </div>
+              <span className="text-[11px] font-black uppercase tracking-[0.5em] animate-pulse">
+                Materializing partition frame...
+              </span>
+            </div>
+          ) : results.length === 0 ? (
+            <div className="flex-1 absolute inset-0 flex flex-col items-center justify-center text-center p-12 space-y-8 z-10 animate-in fade-in zoom-in duration-700">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/10 blur-[100px] rounded-full" />
+                <div className="relative h-24 w-24 rounded-[2.5rem] border-2 border-dashed border-muted-foreground/30 flex items-center justify-center shadow-inner bg-background/50">
+                  <Search size={48} strokeWidth={1} className="text-muted-foreground/40" />
                 </div>
-            ) : results.length === 0 ? (
-                 <div className="flex-1 absolute inset-0 flex flex-col items-center justify-center text-center p-12 space-y-8 z-10 animate-in fade-in zoom-in duration-700">
-                    <div className="relative">
-                    <div className="absolute inset-0 bg-primary/10 blur-[100px] rounded-full" />
-                    <div className="relative h-24 w-24 rounded-[2.5rem] border-2 border-dashed border-muted-foreground/30 flex items-center justify-center shadow-inner bg-background/50">
-                        <Search size={48} strokeWidth={1} className="text-muted-foreground/40" />
-                    </div>
-                    </div>
-                    <div className="space-y-2">
-                    <p className="font-black text-3xl tracking-tighter uppercase text-foreground">
-                        Discovery Idle
-                    </p>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.3em] max-w-sm mx-auto text-muted-foreground leading-relaxed">
-                        The mesh is empty. Execute a query or use the neural assistant to resolve
-                        partition entities.
-                    </p>
-                    </div>
-                    <Button
-                    variant="outline"
-                    className="rounded-2xl border-primary/20 hover:bg-primary/5 text-primary font-black uppercase text-[10px] tracking-[0.2em] h-11 px-8"
-                    onClick={onToggleAI}
-                    >
-                    <Sparkles size={14} className="mr-3" /> Initialize Assistant
-                    </Button>
-                </div>
-            ) : (
-                <ScrollArea className="h-full">
-                    <div className={cn(
-                        "w-full mx-auto",
-                        viewMode === 'grid' ? "p-10 max-w-[1600px]" : "p-0"
-                    )}>
-                        {viewMode === 'grid' ? (
-                            <MeshGrid
-                                isLoading={isLoading}
-                                results={results}
-                                selectedIds={selectedIds}
-                                onToggleSelection={toggleSelection}
-                                onSelectRecord={onSelectRecord}
-                                onToggleAI={onToggleAI}
-                            />
-                        ) : (
-                            <MeshList 
-                                results={results}
-                                selectedIds={selectedIds}
-                                onToggleSelection={toggleSelection}
-                                onSelectRecord={onSelectRecord}
-                            />
-                        )}
-                        {viewMode === 'grid' && <div className="h-24" />}
-                    </div>
-                </ScrollArea>
-            )}
+              </div>
+              <div className="space-y-2">
+                <p className="font-black text-3xl tracking-tighter uppercase text-foreground">
+                  Discovery Idle
+                </p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.3em] max-w-sm mx-auto text-muted-foreground leading-relaxed">
+                  The mesh is empty. Execute a query or use the neural assistant to resolve
+                  partition entities.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="rounded-2xl border-primary/20 hover:bg-primary/5 text-primary font-black uppercase text-[10px] tracking-[0.2em] h-11 px-8"
+                onClick={onToggleAI}
+              >
+                <Sparkles size={14} className="mr-3" /> Initialize Assistant
+              </Button>
+            </div>
+          ) : (
+            <ScrollArea className="h-full">
+              <div
+                className={cn(
+                  'w-full mx-auto',
+                  viewMode === 'grid' ? 'p-10 max-w-[1600px]' : 'p-0'
+                )}
+              >
+                {viewMode === 'grid' ? (
+                  <MeshGrid
+                    isLoading={isLoading}
+                    results={results}
+                    selectedIds={selectedIds}
+                    onToggleSelection={toggleSelection}
+                    onSelectRecord={onSelectRecord}
+                    onToggleAI={onToggleAI}
+                  />
+                ) : (
+                  <MeshList
+                    results={results}
+                    selectedIds={selectedIds}
+                    onToggleSelection={toggleSelection}
+                    onSelectRecord={onSelectRecord}
+                  />
+                )}
+                {viewMode === 'grid' && <div className="h-24" />}
+              </div>
+            </ScrollArea>
+          )}
         </div>
 
         <MeshFooter

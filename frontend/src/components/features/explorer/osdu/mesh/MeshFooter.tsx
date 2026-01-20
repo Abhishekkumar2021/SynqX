@@ -58,10 +58,7 @@ export const MeshFooter: React.FC<MeshFooterProps> = ({
           onClick={() => onOffsetChange(Math.max(0, pageOffset - limit))}
           disabled={pageOffset === 0 || isLoading}
         >
-          <ChevronLeft
-            size={16}
-            className="group-hover:-translate-x-0.5 transition-transform"
-          />{' '}
+          <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />{' '}
           Previous
         </Button>
         <Button

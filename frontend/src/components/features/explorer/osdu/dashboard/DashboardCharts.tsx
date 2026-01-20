@@ -40,9 +40,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="glass p-4 rounded-xl z-[1000]">
-        <p className="subtitle mb-2 pb-2 border-b border-border/50">
-          {label}
-        </p>
+        <p className="subtitle mb-2 pb-2 border-b border-border/50">{label}</p>
         <div className="flex flex-col gap-2">
           {payload.map((p: any, i: number) => (
             <div key={i} className="flex items-center justify-between gap-8">
@@ -53,9 +51,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 />
                 <span className="text-xs font-bold text-foreground">{p.name}</span>
               </div>
-              <span className="text-xs font-black text-foreground">
-                {formatNumber(p.value)}
-              </span>
+              <span className="text-xs font-black text-foreground">{formatNumber(p.value)}</span>
             </div>
           ))}
         </div>
@@ -86,10 +82,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
         >
           <div className="h-[400px] w-full mt-6 min-h-0 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={sovereigntyData}
-                margin={{ top: 20, right: 30, bottom: 20, left: 0 }}
-              >
+              <BarChart data={sovereigntyData} margin={{ top: 20, right: 30, bottom: 20, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={colors.GRID} />
                 <XAxis
                   dataKey="name"
@@ -148,12 +141,8 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="subtitle opacity-70">
-                Registered
-              </span>
-              <span className="text-4xl font-black text-foreground mt-1">
-                {totalKinds}
-              </span>
+              <span className="subtitle opacity-70">Registered</span>
+              <span className="text-4xl font-black text-foreground mt-1">{totalKinds}</span>
             </div>
           </div>
         </DashboardWidget>
@@ -173,11 +162,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
                 layout="vertical"
                 margin={{ top: 20, right: 40, left: 40, bottom: 20 }}
               >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  horizontal={false}
-                  stroke={colors.GRID}
-                />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={colors.GRID} />
                 <XAxis
                   type="number"
                   axisLine={false}

@@ -55,10 +55,10 @@ export const MeshList: React.FC<MeshListProps> = ({
       columnHelper.display({
         id: 'select',
         header: ({ table }) => (
-            <div className="px-1">
-                 {/* Select All is handled by parent Toolbar, but we could add it here too if desired */}
-                 {/* For now keeping it simple as per MeshGrid parity */}
-            </div>
+          <div className="px-1">
+            {/* Select All is handled by parent Toolbar, but we could add it here too if desired */}
+            {/* For now keeping it simple as per MeshGrid parity */}
+          </div>
         ),
         cell: ({ row }) => (
           <div className="px-1" onClick={(e) => e.stopPropagation()}>
@@ -87,62 +87,61 @@ export const MeshList: React.FC<MeshListProps> = ({
         },
         cell: ({ row }) => (
           <div className="flex flex-col max-w-[200px]">
-             <span className="font-bold text-xs truncate" title={row.original.id}>
-                {row.original.id.split(':').pop()}
-             </span>
-             <span className="text-[9px] text-muted-foreground/50 truncate font-mono">
-                {row.original.id}
-             </span>
+            <span className="font-bold text-xs truncate" title={row.original.id}>
+              {row.original.id.split(':').pop()}
+            </span>
+            <span className="text-[9px] text-muted-foreground/50 truncate font-mono">
+              {row.original.id}
+            </span>
           </div>
         ),
       }),
       columnHelper.accessor('kind', {
         header: 'Kind',
         cell: ({ row }) => {
-             // Parse URN: authority:source:entity:version
-             const parts = row.original.kind.split(':')
-             const shortKind = parts[2] || 'Unknown'
-             return (
-                 <div className="flex flex-col max-w-[250px]">
-                    <div className="flex items-center gap-2">
-                         <Badge variant="outline" className="h-5 px-2 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary/80">
-                             {shortKind}
-                         </Badge>
-                    </div>
-                 </div>
-             )
+          // Parse URN: authority:source:entity:version
+          const parts = row.original.kind.split(':')
+          const shortKind = parts[2] || 'Unknown'
+          return (
+            <div className="flex flex-col max-w-[250px]">
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="h-5 px-2 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary/80"
+                >
+                  {shortKind}
+                </Badge>
+              </div>
+            </div>
+          )
         },
       }),
-       columnHelper.accessor('authority', {
+      columnHelper.accessor('authority', {
         header: 'Partition',
         cell: ({ row }) => {
-            const parts = row.original.kind.split(':')
-            const authority = parts[0] || row.original.authority || 'OSDU'
-            return (
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                    {authority}
-                </span>
-            )
+          const parts = row.original.kind.split(':')
+          const authority = parts[0] || row.original.authority || 'OSDU'
+          return (
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              {authority}
+            </span>
+          )
         },
       }),
-       columnHelper.accessor('source', {
+      columnHelper.accessor('source', {
         header: 'Source',
         cell: ({ row }) => {
-            const parts = row.original.kind.split(':')
-            const source = parts[1] || row.original.source || 'Standard'
-            return (
-                <span className="text-[10px] font-medium text-foreground/70">
-                    {source}
-                </span>
-            )
+          const parts = row.original.kind.split(':')
+          const source = parts[1] || row.original.source || 'Standard'
+          return <span className="text-[10px] font-medium text-foreground/70">{source}</span>
         },
       }),
       columnHelper.accessor('version', {
         header: 'Version',
         cell: ({ row }) => (
-             <span className="font-mono text-[10px] text-muted-foreground">
-                {row.original.version ? String(row.original.version) : '-'}
-             </span>
+          <span className="font-mono text-[10px] text-muted-foreground">
+            {row.original.version ? String(row.original.version) : '-'}
+          </span>
         ),
       }),
       columnHelper.display({
@@ -164,22 +163,25 @@ export const MeshList: React.FC<MeshListProps> = ({
                   <MoreHorizontal className="h-4 w-4 text-muted-foreground/50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm">
+              <DropdownMenuContent
+                align="end"
+                className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm"
+              >
                 <DropdownMenuItem
-                    className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                     onClick={() => copyToClipboard(row.original.id, 'ID')}
+                  className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
+                  onClick={() => copyToClipboard(row.original.id, 'ID')}
                 >
-                    <Hash size={12} className="opacity-50" /> Copy ID
+                  <Hash size={12} className="opacity-50" /> Copy ID
                 </DropdownMenuItem>
-                 <DropdownMenuItem
-                    className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                    onClick={() => onSelectRecord(row.original.id)}
+                <DropdownMenuItem
+                  className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
+                  onClick={() => onSelectRecord(row.original.id)}
                 >
-                    <Binary size={12} className="opacity-50" /> Inspect
+                  <Binary size={12} className="opacity-50" /> Inspect
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="opacity-20" />
                 <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-rose-500 focus:text-rose-500 cursor-pointer">
-                    <Trash2 size={12} /> Delete
+                  <Trash2 size={12} /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -208,13 +210,13 @@ export const MeshList: React.FC<MeshListProps> = ({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent border-border/40">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="h-11 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/60">
+                <TableHead
+                  key={header.id}
+                  className="h-11 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/60"
+                >
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -238,7 +240,10 @@ export const MeshList: React.FC<MeshListProps> = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-xs text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-xs text-muted-foreground"
+              >
                 No results found.
               </TableCell>
             </TableRow>

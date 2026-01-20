@@ -924,7 +924,9 @@ class ConnectionService:
                             import hashlib  # noqa: PLC0415
                             import json  # noqa: PLC0415
 
-                            from synqx_core.models.connections import AssetSchemaVersion  # noqa: PLC0415
+                            from synqx_core.models.connections import (
+                                AssetSchemaVersion,
+                            )
 
                             schema_json = json.dumps(osdu_schema, sort_keys=True)
                             schema_hash = hashlib.sha256(
@@ -1314,7 +1316,9 @@ class ConnectionService:
         if is_remote:
             from synqx_core.schemas.ephemeral import EphemeralJobCreate  # noqa: PLC0415
 
-            from app.services.ephemeral_service import EphemeralJobService  # noqa: PLC0415
+            from app.services.ephemeral_service import (
+                EphemeralJobService,
+            )
 
             job_in = EphemeralJobCreate(
                 job_type=JobType.EXPLORER,

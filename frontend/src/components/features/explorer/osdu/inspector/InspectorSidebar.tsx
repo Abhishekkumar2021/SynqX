@@ -1,13 +1,5 @@
 import React from 'react'
-import {
-  Activity,
-  Cpu,
-  Globe,
-  Database,
-  History,
-  Save,
-  Trash2,
-} from 'lucide-react'
+import { Activity, Cpu, Globe, Database, History, Save, Trash2 } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 

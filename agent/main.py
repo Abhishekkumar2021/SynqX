@@ -330,7 +330,9 @@ class SynqxAgent:
             if not conn_data:
                 raise ValueError("Connection metadata missing")
 
-            from synqx_engine.connectors.factory import ConnectorFactory  # noqa: PLC0415
+            from synqx_engine.connectors.factory import (
+                ConnectorFactory,
+            )
 
             connector = ConnectorFactory.get_connector(
                 conn_data["type"], conn_data["config"]

@@ -28,7 +28,7 @@ export const InteractiveActivityPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const [filterType, setFilterType] = useState<string>('all')
   const [agentFilter, setAgentFilter] = useState<string>('all')
-   
+
   const [selectedJob, setSelectedJob] = useState<any | null>(null)
 
   // --- Data Fetching ---

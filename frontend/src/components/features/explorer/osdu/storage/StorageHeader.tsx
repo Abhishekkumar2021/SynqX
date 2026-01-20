@@ -41,29 +41,29 @@ export const StorageHeader: React.FC<StorageHeaderProps> = ({
 
       <div className="flex items-center gap-4">
         <div className="flex bg-muted/20 rounded-xl p-1 border border-border/20">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-9 w-9 p-0 rounded-lg hover:bg-background/80 transition-all",
-                viewMode === 'grid' && "bg-background shadow-sm text-primary"
-              )}
-              onClick={() => setViewMode('grid')}
-            >
-              <LayoutGrid size={18} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-9 w-9 p-0 rounded-lg hover:bg-background/80 transition-all",
-                viewMode === 'list' && "bg-background shadow-sm text-primary"
-              )}
-              onClick={() => setViewMode('list')}
-            >
-              <List size={18} />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'h-9 w-9 p-0 rounded-lg hover:bg-background/80 transition-all',
+              viewMode === 'grid' && 'bg-background shadow-sm text-primary'
+            )}
+            onClick={() => setViewMode('grid')}
+          >
+            <LayoutGrid size={18} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'h-9 w-9 p-0 rounded-lg hover:bg-background/80 transition-all',
+              viewMode === 'list' && 'bg-background shadow-sm text-primary'
+            )}
+            onClick={() => setViewMode('list')}
+          >
+            <List size={18} />
+          </Button>
+        </div>
 
         <div className="relative group w-full md:w-80">
           <Search className="z-20 absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />

@@ -11,7 +11,7 @@ import {
   FileDown,
   Copy,
   Trash2,
-  Database
+  Database,
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
@@ -80,8 +80,10 @@ export const StorageGrid: React.FC<StorageGridProps> = ({
         >
           <div
             className={cn(
-                "absolute top-4 left-4 z-30 transition-all duration-200",
-                selectedIds.has(f.id) ? "opacity-100 scale-100" : "opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100"
+              'absolute top-4 left-4 z-30 transition-all duration-200',
+              selectedIds.has(f.id)
+                ? 'opacity-100 scale-100'
+                : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
             )}
             onClick={(e) => e.stopPropagation()}
           >
@@ -89,37 +91,42 @@ export const StorageGrid: React.FC<StorageGridProps> = ({
               checked={selectedIds.has(f.id)}
               onCheckedChange={() => toggleSelection(f.id)}
               className={cn(
-                "h-5 w-5 rounded-md border-border/40 bg-background/50 backdrop-blur-sm transition-opacity",
-                 selectedIds.has(f.id) ? "opacity-100 bg-primary border-primary text-primary-foreground" : "opacity-100 bg-background/80"
+                'h-5 w-5 rounded-md border-border/40 bg-background/50 backdrop-blur-sm transition-opacity',
+                selectedIds.has(f.id)
+                  ? 'opacity-100 bg-primary border-primary text-primary-foreground'
+                  : 'opacity-100 bg-background/80'
               )}
             />
           </div>
 
           <div className="flex items-start justify-between pl-8 min-w-0">
-             <div className="flex flex-col gap-1.5 min-w-0 w-full">
-                 <div className="flex items-center gap-2">
-                    <Badge
-                        variant="secondary"
-                        className="text-[9px] font-black uppercase bg-primary/5 text-primary/80 border-primary/10 px-1.5 py-0 rounded-md tracking-wider h-5 shrink-0"
-                    >
-                        {f.category}
-                    </Badge>
-                    <span className="text-[10px] text-muted-foreground/50 truncate font-mono" title={f.id}>
-                        {f.id.split(':').pop()}
-                    </span>
-                 </div>
-                 <div className="flex items-center gap-2">
-                    <div className="shrink-0 opacity-70">
-                        {React.cloneElement(getFileIcon(f.name) as any, { size: 14 })}
-                    </div>
-                    <h4
-                        className="font-bold text-sm text-foreground/90 truncate tracking-tight leading-snug pr-2"
-                        title={f.name}
-                    >
-                        {f.name}
-                    </h4>
-                 </div>
-             </div>
+            <div className="flex flex-col gap-1.5 min-w-0 w-full">
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className="text-[9px] font-black uppercase bg-primary/5 text-primary/80 border-primary/10 px-1.5 py-0 rounded-md tracking-wider h-5 shrink-0"
+                >
+                  {f.category}
+                </Badge>
+                <span
+                  className="text-[10px] text-muted-foreground/50 truncate font-mono"
+                  title={f.id}
+                >
+                  {f.id.split(':').pop()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="shrink-0 opacity-70">
+                  {React.cloneElement(getFileIcon(f.name) as any, { size: 14 })}
+                </div>
+                <h4
+                  className="font-bold text-sm text-foreground/90 truncate tracking-tight leading-snug pr-2"
+                  title={f.name}
+                >
+                  {f.name}
+                </h4>
+              </div>
+            </div>
           </div>
 
           <div className="bg-muted/30 rounded-2xl p-3 border border-border/20 flex flex-col gap-2 mt-1">
@@ -142,61 +149,70 @@ export const StorageGrid: React.FC<StorageGridProps> = ({
           </div>
 
           <div className="mt-auto pt-2 flex items-center justify-between">
-             <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider" title="Source">
-                    <Globe size={10} /> {f.source.split('/').pop() || 'Cloud'}
-                </div>
-             </div>
-            
-             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                <Button
+            <div className="flex items-center gap-3">
+              <div
+                className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider"
+                title="Source"
+              >
+                <Globe size={10} /> {f.source.split('/').pop() || 'Cloud'}
+              </div>
+            </div>
+
+            <div
+              className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground"
+                onClick={() => onDownload(f.id, f.name)}
+              >
+                <FileDown size={14} />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-lg hover:bg-primary/5 hover:text-primary transition-colors"
+                onClick={() => onSelectFile(f.id)}
+              >
+                <Eye size={14} />
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground"
+                  >
+                    <MoreHorizontal size={14} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm"
+                >
+                  <DropdownMenuItem
+                    className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
+                    onClick={() => copyToClipboard(f.id, 'ID')}
+                  >
+                    <Copy size={12} className="opacity-50" /> Copy ID
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
                     onClick={() => onDownload(f.id, f.name)}
-                >
-                    <FileDown size={14} />
-                </Button>
-
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 rounded-lg hover:bg-primary/5 hover:text-primary transition-colors"
-                    onClick={() => onSelectFile(f.id)}
-                >
-                    <Eye size={14} />
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-lg hover:bg-muted text-muted-foreground"
-                    >
-                        <MoreHorizontal size={14} />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm">
-                    <DropdownMenuItem
-                        className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                        onClick={() => copyToClipboard(f.id, 'ID')}
-                    >
-                        <Copy size={12} className="opacity-50" /> Copy ID
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                        onClick={() => onDownload(f.id, f.name)}
-                    >
-                        <FileDown size={12} className="opacity-50" /> Download
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="opacity-20" />
-                    <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-destructive focus:text-destructive cursor-pointer">
-                        <Trash2 size={12} /> Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-             </div>
+                  >
+                    <FileDown size={12} className="opacity-50" /> Download
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="opacity-20" />
+                  <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-destructive focus:text-destructive cursor-pointer">
+                    <Trash2 size={12} /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </motion.div>
       ))}

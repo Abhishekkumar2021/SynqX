@@ -98,7 +98,11 @@ class DBLogger:
             timestamp = timestamp or datetime.now(UTC)
             log_id = None
 
-            from synqx_core.models.execution import Job, PipelineRun, StepRun  # noqa: PLC0415
+            from synqx_core.models.execution import (  # noqa: PLC0415
+                Job,
+                PipelineRun,
+                StepRun,
+            )
 
             # Efficient lookup for workspace_id
             workspace_id = None

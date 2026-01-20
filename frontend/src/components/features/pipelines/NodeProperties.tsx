@@ -1,70 +1,28 @@
 /* eslint-disable react-hooks/incompatible-library */
- 
- 
+
 import React, { useEffect, useState, useMemo } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
-import {
-  X,
-  Trash2,
-  Save,
-  Code,
-  Sliders,
-  Database,
-  Info,
-  HelpCircle,
-  Copy,
-  Plus,
-  Share2,
-  GitCompare,
-  ArrowRight,
-  Loader2,
-  Sparkles,
-  Shield,
-  Zap,
-  Lock,
-  Layers,
-  Globe,
-  FileCode,
-  Workflow,
-} from 'lucide-react'
-import { CodeBlock } from '@/components/ui/docs/CodeBlock'
-import { useTheme } from '@/hooks/useTheme'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Sliders, Shield, Zap, Share2, Workflow } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
 import { type Node } from '@xyflow/react'
 import { toast } from 'sonner'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@/components/ui/alert-dialog'
-import { getConnections, getConnectionAssets, getColumnLineage, getPipelines } from '@/lib/api'
+
+import { getConnections, getConnection, getConnectionAssets, getPipelines } from '@/lib/api'
 import { getNodeIcon, getOperatorDefinition, type OperatorField } from '@/lib/pipeline-definitions'
 import { useWorkspace } from '@/hooks/useWorkspace'
 import { type PipelineNodeData } from '@/types/pipeline'
+
+// Sub-components
+import { NodePropertiesHeader } from './node-properties/NodePropertiesHeader'
+import { NodePropertiesFooter } from './node-properties/NodePropertiesFooter'
+import { NodeSettingsTab } from './node-properties/NodeSettingsTab'
+import { NodeContractTab } from './node-properties/NodeContractTab'
+import { NodeSafetyTab } from './node-properties/NodeSafetyTab'
+import { NodeLineageTab } from './node-properties/NodeLineageTab'
+import { NodeAdvancedTab } from './node-properties/NodeAdvancedTab'
+import { NodeDiffTab } from './node-properties/NodeDiffTab'
 
 interface NodePropertiesProps {
   node: Node<PipelineNodeData> | null
@@ -72,610 +30,6 @@ interface NodePropertiesProps {
   onUpdate: (id: string, data: Partial<PipelineNodeData>) => void
   onDelete: (id: string) => void
   onDuplicate: (nodeId: string) => void
-}
-
-// --- Automated Lineage Component ---
-const AutomatedLineageView = ({ assetId }: { assetId: number }) => {
-  const [lineageData, setLineageData] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-
-  const { data: assets } = useQuery({
-    queryKey: ['asset-detail', assetId],
-    queryFn: () => getConnectionAssets(assetId), // This should ideally be getAsset but let's assume assets is available
-    enabled: !!assetId,
-  })
-
-  const columns = useMemo(() => {
-    // Find the specific asset from the list
-    const asset = assets?.find((a: any) => a.id === assetId)
-    return asset?.schema_metadata?.columns?.map((c: any) => c.name) || []
-  }, [assets, assetId])
-
-  const fetchLineage = async (col: string) => {
-    setLoading(true)
-    try {
-      const data = await getColumnLineage(assetId, col)
-      setLineageData(data)
-    } catch (err) {
-      toast.error('Lineage Trace Failed', {
-        description: 'Could not retrieve automated lineage for this column.',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Trace Output Column
-        </Label>
-        <Select onValueChange={fetchLineage}>
-          <SelectTrigger className="h-9 rounded-lg bg-muted/20 border-border/40">
-            <SelectValue placeholder="Select column to trace ancestry..." />
-          </SelectTrigger>
-          <SelectContent>
-            {columns.map((c: string) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-12 space-y-4">
-          <Loader2 className="h-8 w-8 text-primary animate-spin opacity-40" />
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-            Analyzing Ancestry...
-          </p>
-        </div>
-      ) : lineageData ? (
-        <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                <Share2 size={14} />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70">
-                  Origin Point
-                </p>
-                <p className="text-xs font-mono font-bold text-foreground truncate max-w-[200px]">
-                  Asset #{lineageData.origin_asset_id} • {lineageData.origin_column_name}
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3 relative">
-              {/* Vertical Path Line */}
-              <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-linear-to-b from-primary/40 to-transparent" />
-
-              {lineageData.path.map((step: any, idx: number) => (
-                <div key={idx} className="flex items-start gap-4 relative pl-8">
-                  <div className="absolute left-[11px] top-1.5 h-2 w-2 rounded-full bg-primary border-2 border-background ring-4 ring-primary/10 shadow-sm" />
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className="text-[8px] h-4 uppercase tracking-tighter bg-background/50 border-primary/20 text-primary/80"
-                      >
-                        {step.transformation_type}
-                      </Badge>
-                      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                        Node {step.node_id}
-                      </span>
-                    </div>
-                    <p className="text-[11px] font-medium text-foreground">
-                      <span className="text-muted-foreground/60">{step.source_column}</span>
-                      <ArrowRight size={10} className="inline mx-1.5 text-muted-foreground/40" />
-                      <span className="text-primary/90">{step.target_column}</span>
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="p-12 text-center border-2 border-dashed border-border/40 rounded-3xl bg-muted/5">
-          <Sparkles className="h-10 w-10 mx-auto mb-3 text-muted-foreground/20" />
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-            Automated Insights
-          </p>
-          <p className="text-[9px] text-muted-foreground mt-2 max-w-[200px] mx-auto leading-relaxed">
-            Select an output column above to visually trace its journey through the entire
-            workspace.
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// --- Lineage Mapper Component ---
-const LineageMapper = ({ watch, setValue }: any) => {
-  const mapping = watch('column_mapping_obj') || []
-
-  const addMapping = () => {
-    setValue('column_mapping_obj', [...mapping, { source: '', target: '' }])
-  }
-
-  const removeMapping = (index: number) => {
-    const newMapping = [...mapping]
-    newMapping.splice(index, 1)
-    setValue('column_mapping_obj', newMapping)
-  }
-
-  const updateMapping = (index: number, field: 'source' | 'target', value: string) => {
-    const newMapping = [...mapping]
-    newMapping[index] = { ...newMapping[index], [field]: value }
-    setValue('column_mapping_obj', newMapping)
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Column Mappings
-        </Label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addMapping}
-          className="h-7 text-[9px] font-bold uppercase tracking-wider rounded-lg border-primary/20 hover:bg-primary/5"
-        >
-          <Plus className="h-3 w-3 mr-1" /> Add Mapping
-        </Button>
-      </div>
-
-      <div className="space-y-3">
-        {mapping.map((m: any, index: number) => (
-          <div key={index} className="flex items-center gap-2 group/map">
-            <Input
-              placeholder="Source Column"
-              value={m.source}
-              onChange={(e) => updateMapping(index, 'source', e.target.value)}
-              className="h-8 text-[10px] font-mono bg-muted/20"
-            />
-            <ArrowRight size={12} className="text-muted-foreground shrink-0" />
-            <Input
-              placeholder="Target Column"
-              value={m.target}
-              onChange={(e) => updateMapping(index, 'target', e.target.value)}
-              className="h-8 text-[10px] font-mono bg-muted/20"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => removeMapping(index)}
-              className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover/map:opacity-100 transition-opacity"
-            >
-              <Trash2 size={12} />
-            </Button>
-          </div>
-        ))}
-
-        {mapping.length === 0 && (
-          <div className="p-8 text-center border-2 border-dashed border-border/40 rounded-xl bg-muted/5">
-            <Share2 className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              No manual lineage mapping
-            </p>
-            <p className="text-[9px] text-muted-foreground mt-1 max-w-[200px] mx-auto">
-              SynqX will attempt to trace lineage automatically based on operator logic.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-const VALIDATION_CHECKS = [
-  { label: 'Not Null', value: 'not_null' },
-  { label: 'Unique', value: 'unique' },
-  { label: 'Regex Match', value: 'regex' },
-  { label: 'Min Value', value: 'min_value' },
-  { label: 'Max Value', value: 'max_value' },
-  { label: 'In List', value: 'in_list' },
-  { label: 'Data Type', value: 'data_type' },
-]
-
-const GUARDRAIL_METRICS = [
-  { label: 'Null Percentage', value: 'null_percentage' },
-  { label: 'Minimum Value', value: 'min' },
-  { label: 'Maximum Value', value: 'max' },
-  { label: 'Mean Average', value: 'mean' },
-]
-
-const GUARDRAIL_OPERATORS = [
-  { label: 'Greater Than', value: 'greater_than' },
-  { label: 'Less Than', value: 'less_than' },
-  { label: 'Equal To', value: 'equal' },
-]
-
-const DATA_TYPES = [
-  { label: 'String', value: 'string' },
-  { label: 'Integer', value: 'int' },
-  { label: 'Float', value: 'float' },
-  { label: 'Boolean', value: 'bool' },
-  { label: 'Date/Time', value: 'date' },
-]
-
-const HelpIcon = ({ content }: { content?: string }) => {
-  if (!content) return null
-  return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <HelpCircle className="h-3 w-3 text-muted-foreground/50 hover:text-primary cursor-help transition-colors ml-1.5" />
-        </TooltipTrigger>
-        <TooltipContent className="max-w-55 text-[10px] leading-relaxed p-3 rounded-xl border-border/40 bg-background/95 backdrop-blur-md shadow-2xl">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 text-primary/80 font-bold uppercase tracking-widest text-[9px]">
-              <Info className="h-3 w-3" /> Information
-            </div>
-            <p className="text-foreground/90 font-medium">{content}</p>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  )
-}
-
-const RuleBuilder = ({ watch, setValue, rulesKey = 'schema_rules' }: any) => {
-  const rules = watch(rulesKey) || []
-
-  const addRule = () => {
-    setValue(rulesKey, [...rules, { column: '', check: 'not_null' }])
-  }
-
-  const removeRule = (index: number) => {
-    const newRules = [...rules]
-    newRules.splice(index, 1)
-    setValue(rulesKey, newRules)
-  }
-
-  const updateRule = (index: number, field: string, value: any) => {
-    const newRules = [...rules]
-    newRules[index] = { ...newRules[index], [field]: value }
-    setValue(rulesKey, newRules)
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between px-1">
-        <div className="flex flex-col">
-          <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">
-            Governance Rules
-          </Label>
-          <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">
-            Logic validation sequence
-          </span>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addRule}
-          className="h-8 text-[9px] font-bold uppercase tracking-widest rounded-xl border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all gap-2"
-        >
-          <Plus className="h-3.5 w-3.5" /> New Clause
-        </Button>
-      </div>
-
-      <div className="space-y-4">
-        {rules.map((rule: any, index: number) => (
-          <div
-            key={index}
-            className="group p-5 rounded-3xl border border-border/40 bg-muted/5 hover:border-primary/30 hover:bg-primary/[0.02] transition-all duration-300 relative"
-          >
-            <div className="absolute -left-1.5 top-6 bottom-6 w-1 rounded-full bg-primary/20 group-hover:bg-primary/40 transition-colors" />
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => removeRule(index)}
-              className="absolute top-4 right-4 h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 size={14} />
-            </Button>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                  Field Identifier
-                </Label>
-                <Input
-                  placeholder="e.g. email_address"
-                  value={rule.column}
-                  onChange={(e) => updateRule(index, 'column', e.target.value)}
-                  className="h-9 text-xs font-mono bg-background/50 rounded-xl border-border/40 focus:ring-primary/10"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                  Constraint Type
-                </Label>
-                <Select value={rule.check} onValueChange={(val) => updateRule(index, 'check', val)}>
-                  <SelectTrigger className="h-9 text-xs bg-background/50 rounded-xl border-border/40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-border/40">
-                    {VALIDATION_CHECKS.map((c) => (
-                      <SelectItem key={c.value} value={c.value} className="text-xs font-medium">
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-              {rule.check === 'regex' && (
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    Pattern Match (Regex)
-                  </Label>
-                  <Input
-                    placeholder="^[a-z]+$"
-                    value={rule.pattern || ''}
-                    onChange={(e) => updateRule(index, 'pattern', e.target.value)}
-                    className="h-9 text-xs font-mono bg-black/20 text-primary border-white/5 rounded-xl"
-                  />
-                </div>
-              )}
-              {(rule.check === 'min_value' || rule.check === 'max_value') && (
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    Threshold Bound
-                  </Label>
-                  <Input
-                    type="number"
-                    value={rule.value || 0}
-                    onChange={(e) => updateRule(index, 'value', Number(e.target.value))}
-                    className="h-9 text-xs font-mono bg-background/50 rounded-xl"
-                  />
-                </div>
-              )}
-              {rule.check === 'data_type' && (
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    Enforced Primitive
-                  </Label>
-                  <Select
-                    value={rule.type || 'string'}
-                    onValueChange={(val) => updateRule(index, 'type', val)}
-                  >
-                    <SelectTrigger className="h-9 text-xs bg-background/50 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/40">
-                      {DATA_TYPES.map((t) => (
-                        <SelectItem key={t.value} value={t.value} className="text-xs font-medium">
-                          {t.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {rule.check === 'in_list' && (
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    Allowed Values
-                  </Label>
-                  <Input
-                    placeholder="e.g. active, pending, deleted"
-                    value={
-                      rule.values
-                        ? Array.isArray(rule.values)
-                          ? rule.values.join(', ')
-                          : rule.values
-                        : ''
-                    }
-                    onChange={(e) =>
-                      updateRule(
-                        index,
-                        'values',
-                        e.target.value.split(',').map((s) => s.trim())
-                      )
-                    }
-                    className="h-9 text-xs font-mono bg-background/50 rounded-xl border-border/40"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-
-        {rules.length === 0 && (
-          <div className="p-12 text-center border-2 border-dashed border-border/40 rounded-[2.5rem] bg-muted/5 group hover:bg-muted/10 transition-colors duration-500">
-            <div className="relative inline-block mb-4">
-              <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full group-hover:bg-primary/20 transition-all" />
-              <div className="relative h-16 w-16 rounded-3xl glass-card flex items-center justify-center border-0 shadow-xl mx-auto">
-                <Shield className="h-8 w-8 text-primary/40 group-hover:text-primary transition-colors" />
-              </div>
-            </div>
-            <p className="text-[11px] font-bold text-foreground uppercase tracking-widest">
-              No Active Contract Clauses
-            </p>
-            <p className="text-[9px] text-muted-foreground mt-2 max-w-[240px] mx-auto leading-relaxed">
-              Secure your data stream by adding validation rules. Violations will be diverted to
-              quarantine automatically.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-const GuardrailBuilder = ({ watch, setValue }: any) => {
-  const guardrails = watch('guardrails_list') || []
-
-  const addGuardrail = () => {
-    setValue('guardrails_list', [
-      ...guardrails,
-      { column: '', metric: 'null_percentage', operator: 'greater_than', threshold: 0 },
-    ])
-  }
-
-  const removeGuardrail = (index: number) => {
-    const newGuardrails = [...guardrails]
-    newGuardrails.splice(index, 1)
-    setValue('guardrails_list', newGuardrails)
-  }
-
-  const updateGuardrail = (index: number, field: string, value: any) => {
-    const newGuardrails = [...guardrails]
-    newGuardrails[index] = { ...newGuardrails[index], [field]: value }
-    setValue('guardrails_list', newGuardrails)
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between px-1">
-        <div className="flex flex-col">
-          <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">
-            Circuit Rules
-          </Label>
-          <span className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">
-            Statistical enforcement thresholds
-          </span>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={addGuardrail}
-          className="h-8 text-[9px] font-bold uppercase tracking-widest rounded-xl border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 transition-all gap-2"
-        >
-          <Plus className="h-3.5 w-3.5" /> Arm Breaker
-        </Button>
-      </div>
-
-      <div className="space-y-4">
-        {guardrails.map((gr: any, index: number) => (
-          <div
-            key={index}
-            className="group p-5 rounded-3xl border border-border/40 bg-muted/5 hover:border-amber-500/30 hover:bg-amber-500/[0.02] transition-all duration-300 relative"
-          >
-            <div className="absolute -left-1.5 top-6 bottom-6 w-1 rounded-full bg-amber-500/20 group-hover:bg-amber-500/40 transition-colors" />
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => removeGuardrail(index)}
-              className="absolute top-4 right-4 h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 size={14} />
-            </Button>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                  Monitored Column
-                </Label>
-                <Input
-                  placeholder="e.g. order_id"
-                  value={gr.column}
-                  onChange={(e) => updateGuardrail(index, 'column', e.target.value)}
-                  className="h-9 text-xs font-mono bg-background/50 rounded-xl border-border/40"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    Telemetry Metric
-                  </Label>
-                  <Select
-                    value={gr.metric}
-                    onValueChange={(val) => updateGuardrail(index, 'metric', val)}
-                  >
-                    <SelectTrigger className="h-9 text-xs bg-background/50 rounded-xl border-border/40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/40">
-                      {GUARDRAIL_METRICS.map((m) => (
-                        <SelectItem key={m.value} value={m.value} className="text-xs font-medium">
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    Condition
-                  </Label>
-                  <Select
-                    value={gr.operator}
-                    onValueChange={(val) => updateGuardrail(index, 'operator', val)}
-                  >
-                    <SelectTrigger className="h-9 text-xs bg-background/50 rounded-xl border-border/40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/40">
-                      {GUARDRAIL_OPERATORS.map((o) => (
-                        <SelectItem key={o.value} value={o.value} className="text-xs font-medium">
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                  Termination Threshold
-                </Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    value={gr.threshold}
-                    onChange={(e) => updateGuardrail(index, 'threshold', Number(e.target.value))}
-                    className="h-9 text-xs font-mono bg-background/50 rounded-xl border-border/40 pr-12"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground/40 uppercase">
-                    {gr.metric === 'null_percentage' ? '%' : 'Val'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {guardrails.length === 0 && (
-          <div className="p-12 text-center border-2 border-dashed border-border/40 rounded-[2.5rem] bg-muted/5 group hover:bg-muted/10 transition-colors duration-500">
-            <div className="relative inline-block mb-4">
-              <div className="absolute inset-0 bg-amber-500/10 blur-2xl rounded-full group-hover:bg-amber-500/20 transition-all" />
-              <div className="relative h-16 w-16 rounded-3xl glass-card flex items-center justify-center border-0 shadow-xl mx-auto">
-                <Zap className="h-8 w-8 text-amber-500/40 group-hover:text-amber-500 transition-colors" />
-              </div>
-            </div>
-            <p className="text-[11px] font-bold text-foreground uppercase tracking-widest">
-              No Active Circuit Breakers
-            </p>
-            <p className="text-[9px] text-muted-foreground mt-2 max-w-[240px] mx-auto leading-relaxed">
-              Establish threshold rules that will automatically terminate execution if data quality
-              deviates from standards.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
 }
 
 export const NodeProperties: React.FC<NodePropertiesProps> = ({
@@ -689,22 +43,11 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
   const [activeTab, setActiveTab] = useState('settings')
   const [schemaMode, setSchemaMode] = useState<'visual' | 'manual'>('visual')
   const { isEditor, isAdmin } = useWorkspace()
-  useTheme()
 
   // Watchers
   const nodeType = (watch('operator_type') || '').toLowerCase()
   const operatorClass = watch('operator_class')
   const selectedConnectionId = watch('connection_id')
-
-  // Reset asset_id when connection changes
-  useEffect(() => {
-    if (selectedConnectionId) {
-      const currentAssetId = watch('asset_id')
-      if (currentAssetId && node && String(node.data.connection_id) !== selectedConnectionId) {
-        setValue('asset_id', '')
-      }
-    }
-  }, [selectedConnectionId, setValue, watch, node])
 
   // Get Definition
   const opDef = useMemo(() => getOperatorDefinition(operatorClass), [operatorClass])
@@ -714,6 +57,35 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     queryKey: ['connections'],
     queryFn: getConnections,
   })
+
+  // Fetch detailed connection for OSDU defaults
+  const { data: connectionDetail } = useQuery({
+    queryKey: ['connection-detail', selectedConnectionId],
+    queryFn: () => getConnection(parseInt(selectedConnectionId)),
+    enabled: !!selectedConnectionId && !isNaN(parseInt(selectedConnectionId)),
+  })
+
+  // Auto-fill OSDU defaults from connection
+  useEffect(() => {
+    if (connectionDetail?.connector_type === 'osdu' && connectionDetail.config) {
+      const currentAcl = watch('osdu_acl')
+      const currentLegal = watch('osdu_legal')
+
+      // Only pre-fill if empty or default-placeholder
+      if (!currentAcl || currentAcl === '{\n  "viewers": [],\n  "owners": []\n}') {
+        const defaultAcl = connectionDetail.config.default_acl || connectionDetail.config.acl
+        if (defaultAcl) setValue('osdu_acl', JSON.stringify(defaultAcl, null, 2))
+      }
+
+      if (
+        !currentLegal ||
+        currentLegal === '{\n  "legaltags": [],\n  "otherRelevantDataCountries": ["US"]\n}'
+      ) {
+        const defaultLegal = connectionDetail.config.default_legal || connectionDetail.config.legal
+        if (defaultLegal) setValue('osdu_legal', JSON.stringify(defaultLegal, null, 2))
+      }
+    }
+  }, [connectionDetail, setValue, watch])
 
   // Fetch Assets
   const { data: assets, isLoading: isLoadingAssets } = useQuery({
@@ -741,13 +113,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     if (node) {
       const config = node.data.config || {}
       const currentType = (node.data.type || node.data.operator_type || 'transform').toLowerCase()
-      const currentOpClass =
-        node.data.operator_class ||
-        (currentType === 'source'
-          ? 'extractor'
-          : currentType === 'sink'
-            ? 'loader'
-            : 'pandas_transform')
+      const currentOpClass = node.data.operator_class || 'pandas_transform'
 
       const mapping = node.data.column_mapping || {}
       const mappingArray = Object.entries(mapping).map(([target, source]) => ({
@@ -769,46 +135,44 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
                 node.data.asset_id || node.data.source_asset_id || node.data.destination_asset_id
               )
             : '',
-        write_strategy: node.data.write_strategy || config.write_mode || 'append',
+        write_strategy: node.data.write_strategy || 'append',
         schema_evolution_policy: node.data.schema_evolution_policy || 'strict',
-        sync_mode: node.data.sync_mode || config.sync_mode || 'full_load',
-        cdc_config: node.data.cdc_config || config.cdc_config || {},
+        sync_mode: node.data.sync_mode || 'full_load',
         cdc_slot_name: node.data.cdc_config?.slot_name || '',
         cdc_publication_name: node.data.cdc_config?.publication_name || 'synqx_pub',
         cdc_server_id: node.data.cdc_config?.server_id || 999,
-        incremental: config.incremental === true || node.data.sync_mode === 'incremental',
-        watermark_column: config.watermark_column || '',
+        incremental: !!node.data.sync_mode && node.data.sync_mode === 'incremental',
+        watermark_column: node.data.watermark_column || '',
         max_retries: node.data.max_retries ?? 3,
         retry_strategy: node.data.retry_strategy || 'fixed',
         retry_delay_seconds: node.data.retry_delay_seconds ?? 60,
         timeout_seconds: node.data.timeout_seconds ?? 3600,
         data_contract_json: node.data.data_contract
-          ? typeof node.data.data_contract === 'string'
-            ? node.data.data_contract
-            : JSON.stringify(node.data.data_contract, null, 2)
+          ? JSON.stringify(node.data.data_contract, null, 2)
           : '',
         contract_rules: node.data.data_contract?.columns || [],
+        quarantine_connection_id: node.data.quarantine_connection_id
+          ? String(node.data.quarantine_connection_id)
+          : '',
         quarantine_asset_id: node.data.quarantine_asset_id
           ? String(node.data.quarantine_asset_id)
           : '',
-        schema_rules: currentOpClass === 'validate' ? config.schema || [] : [],
-        schema_json_manual:
-          currentOpClass === 'validate' ? JSON.stringify(config.schema || [], null, 2) : '',
+        schema_rules: config.schema || [],
+        schema_json_manual: JSON.stringify(config.schema || [], null, 2),
         guardrails_list: node.data.guardrails || [],
         is_dynamic: !!node.data.is_dynamic,
         mapping_expr: node.data.mapping_expr || '',
         sub_pipeline_id: node.data.sub_pipeline_id ? String(node.data.sub_pipeline_id) : '',
         worker_tag: node.data.worker_tag || '',
-        osdu_kind: config.osdu_kind || '',
+        osdu_kind: node.data.osdu_kind || config.osdu_kind || '',
         auto_create_schema: config.auto_create_schema === true,
         osdu_inference_strategy: config.osdu_inference_strategy || 'data_driven',
         osdu_acl: config.acl ? JSON.stringify(config.acl, null, 2) : '',
         osdu_legal: config.legal ? JSON.stringify(config.legal, null, 2) : '',
       }
 
-      const def = getOperatorDefinition(currentOpClass)
-      if (def?.fields) {
-        def.fields.forEach((field) => {
+      if (opDef?.fields) {
+        opDef.fields.forEach((field) => {
           const val = config[field.configKey]
           if (field.type === 'json') {
             formValues[field.name] = val ? JSON.stringify(val, null, 2) : ''
@@ -824,7 +188,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
 
       reset(formValues)
     }
-  }, [node, reset])
+  }, [node, reset, opDef])
 
   if (!node) return null
 
@@ -832,16 +196,12 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
 
   const onSubmit = (data: any) => {
     try {
-      const baseConfig = JSON.parse(data.config)
+      const baseConfig = data.config ? JSON.parse(data.config) : {}
       const dynamicConfig: any = {}
 
       if (opDef?.fields) {
         opDef.fields.forEach((field) => {
-          let val = data[field.name]
-          if (field.name === 'schema' && data.operator_class === 'validate') {
-            val = schemaMode === 'visual' ? data.schema_rules : data.schema_json_manual
-          }
-
+          const val = data[field.name]
           if (field.type === 'json') {
             try {
               if (typeof val === 'string' && val.trim())
@@ -873,24 +233,6 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         })
       }
 
-      // Resolve Data Contract (JSON)
-      let finalContract: any = {}
-      try {
-        if (activeTab === 'contract') {
-          // If we are on the contract tab, prefer the visual rules if in visual mode
-          if (schemaMode === 'visual') {
-            finalContract = { columns: data.contract_rules, strict: false }
-          } else {
-            finalContract = data.data_contract_json ? JSON.parse(data.data_contract_json) : {}
-          }
-        } else {
-          // Use existing logic
-          finalContract = data.data_contract_json ? JSON.parse(data.data_contract_json) : {}
-        }
-      } catch (e) {
-        console.error('Failed to parse contract JSON', e)
-      }
-
       const payload: Partial<PipelineNodeData> = {
         label: data.label,
         description: data.description,
@@ -899,54 +241,27 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         config: {
           ...baseConfig,
           ...dynamicConfig,
-          sync_mode: data.operator_type === 'source' ? data.sync_mode : undefined,
-          cdc_config:
-            data.operator_type === 'source' && data.sync_mode === 'cdc'
-              ? {
-                  slot_name: data.cdc_slot_name,
-                  publication_name: data.cdc_publication_name,
-                  server_id: data.cdc_server_id,
-                }
-              : undefined,
-          incremental:
-            data.operator_type === 'source'
-              ? data.incremental || data.sync_mode === 'cdc'
-              : undefined,
-          watermark_column: data.operator_type === 'source' ? data.watermark_column : undefined,
           osdu_kind: data.osdu_kind || undefined,
           auto_create_schema: data.auto_create_schema,
           osdu_inference_strategy: data.osdu_inference_strategy,
           acl: data.osdu_acl ? JSON.parse(data.osdu_acl) : undefined,
           legal: data.osdu_legal ? JSON.parse(data.osdu_legal) : undefined,
         },
-        sync_mode: data.operator_type === 'source' ? data.sync_mode : undefined,
-        cdc_config:
-          data.operator_type === 'source' && data.sync_mode === 'cdc'
-            ? {
-                slot_name: data.cdc_slot_name,
-                publication_name: data.cdc_publication_name,
-                server_id: data.cdc_server_id,
-              }
-            : undefined,
-        column_mapping: colMapping,
-        write_strategy: data.operator_type === 'sink' ? data.write_strategy : undefined,
-        schema_evolution_policy:
-          data.operator_type === 'sink' ? data.schema_evolution_policy : undefined,
-        data_contract: finalContract,
-        guardrails: data.guardrails_list,
-        quarantine_asset_id: data.quarantine_asset_id
-          ? parseInt(data.quarantine_asset_id)
-          : undefined,
         connection_id: data.connection_id ? parseInt(data.connection_id) : undefined,
         asset_id: data.asset_id ? parseInt(data.asset_id) : undefined,
-        max_retries: data.max_retries,
-        retry_strategy: data.retry_strategy,
-        retry_delay_seconds: data.retry_delay_seconds,
-        timeout_seconds: data.timeout_seconds,
+        osdu_kind: data.osdu_kind || undefined,
+        write_strategy: data.write_strategy,
+        schema_evolution_policy: data.schema_evolution_policy,
+        sync_mode: data.sync_mode,
+        column_mapping: colMapping,
         is_dynamic: data.is_dynamic,
         mapping_expr: data.mapping_expr,
         sub_pipeline_id: data.sub_pipeline_id ? parseInt(data.sub_pipeline_id) : undefined,
         worker_tag: data.worker_tag,
+        max_retries: data.max_retries,
+        retry_strategy: data.retry_strategy,
+        retry_delay_seconds: data.retry_delay_seconds,
+        timeout_seconds: data.timeout_seconds,
       }
 
       if (data.operator_type === 'source') payload.source_asset_id = payload.asset_id
@@ -959,229 +274,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     }
   }
 
-  const renderField = (field: OperatorField) => {
-    if (field.name === 'schema' && operatorClass === 'validate') {
-      return (
-        <div key={field.name} className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Label className="text-[10px] font-bold">{field.label}</Label>
-              <HelpIcon content={field.tooltip} />
-            </div>
-            <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-border/40">
-              <Button
-                type="button"
-                variant={schemaMode === 'visual' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-6 px-2 text-[9px] font-bold rounded-md"
-                onClick={() => setSchemaMode('visual')}
-              >
-                Visual
-              </Button>
-              <Button
-                type="button"
-                variant={schemaMode === 'manual' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-6 px-2 text-[9px] font-bold rounded-md"
-                onClick={() => setSchemaMode('manual')}
-              >
-                JSON
-              </Button>
-            </div>
-          </div>
-          {schemaMode === 'visual' ? (
-            <RuleBuilder watch={watch} setValue={setValue} />
-          ) : (
-            <div className="space-y-2">
-              <CodeBlock
-                code={watch('schema_json_manual') || ''}
-                language="json"
-                editable={isEditor}
-                onChange={(val) => setValue('schema_json_manual', val)}
-                maxHeight="256px"
-                rounded
-                className="border-border/40 bg-background/50 text-[10px]"
-              />
-              <p className="text-[9px] text-muted-foreground">
-                Manual JSON override. Use with caution.
-              </p>
-            </div>
-          )}
-        </div>
-      )
-    }
-    switch (field.type) {
-      case 'select':
-        return (
-          <Controller
-            key={field.name}
-            control={control}
-            name={field.name}
-            render={({ field: selectField }) => (
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <Label className="text-[10px] font-bold">{field.label}</Label>
-                  <HelpIcon content={field.tooltip} />
-                </div>
-                <Select
-                  onValueChange={selectField.onChange}
-                  value={selectField.value}
-                  disabled={!isEditor}
-                >
-                  <SelectTrigger className="h-9 rounded-lg bg-background/50">
-                    <SelectValue placeholder={`Select ${field.label}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {field.options?.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          />
-        )
-      case 'json':
-      case 'textarea':
-        return (
-          <div key={field.name} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Label className="text-[10px] font-bold">{field.label}</Label>
-                <HelpIcon content={field.tooltip} />
-              </div>
-              {(field.name === 'code' || field.name === 'script') && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    id={`upload-${field.name}`}
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        const text = await file.text()
-                        setValue(field.name, text)
-                        toast.success('Script Imported', {
-                          description: `Successfully loaded ${file.name}`,
-                        })
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-[9px] font-bold gap-1.5 hover:bg-primary/10 hover:text-primary"
-                    onClick={() => document.getElementById(`upload-${field.name}`)?.click()}
-                  >
-                    <FileCode size={10} /> Import File
-                  </Button>
-                </div>
-              )}
-            </div>
-            <CodeBlock
-              code={watch(field.name) || ''}
-              language={
-                field.name === 'code' || field.name === 'script'
-                  ? 'python'
-                  : field.type === 'json'
-                    ? 'json'
-                    : 'text'
-              }
-              editable={isEditor}
-              onChange={(val) => setValue(field.name, val)}
-              maxHeight="256px"
-              rounded
-              className="border-border/40 bg-background/50"
-            />
-            {field.description && (
-              <p className="text-[9px] text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        )
-      case 'boolean':
-        return (
-          <Controller
-            key={field.name}
-            control={control}
-            name={field.name}
-            render={({ field: checkboxField }) => (
-              <div className="flex items-center space-x-2 py-1">
-                <Checkbox
-                  id={field.name}
-                  checked={checkboxField.value}
-                  onCheckedChange={checkboxField.onChange}
-                  disabled={!isEditor}
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <label
-                    htmlFor={field.name}
-                    className="text-[10px] font-bold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center"
-                  >
-                    {field.label}
-                    <HelpIcon content={field.tooltip} />
-                  </label>
-                </div>
-              </div>
-            )}
-          />
-        )
-      default:
-        return (
-          <div key={field.name} className="space-y-2">
-            <div className="flex items-center">
-              <Label className="text-[10px] font-bold">{field.label}</Label>
-              <HelpIcon content={field.tooltip} />
-            </div>
-            <Input
-              {...register(field.name)}
-              type={field.type}
-              placeholder={field.placeholder}
-              readOnly={!isEditor}
-              className="h-9 bg-background/50 rounded-lg"
-            />
-            {field.description && (
-              <p className="text-[9px] text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        )
-    }
-  }
-
   return (
     <div className="h-full flex flex-col bg-background/40 backdrop-blur-xl border-l border-border/40 animate-in slide-in-from-right duration-300">
-      {/* Header */}
-      <div className="p-6 border-b border-border/40 flex items-center justify-between bg-muted/20">
-        <div className="flex items-center gap-4">
-          <div
-            className={cn(
-              'h-10 w-10 rounded-xl flex items-center justify-center border shadow-sm transition-colors',
-              nodeType === 'source'
-                ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                : nodeType === 'sink'
-                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                  : 'bg-primary/10 text-primary border-primary/20'
-            )}
-          >
-            <Icon size={20} />
-          </div>
-          <div>
-            <h3 className="font-bold text-sm text-foreground">Inspector</h3>
-            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
-              {node.id}
-            </p>
-          </div>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-lg h-8 w-8">
-          <X size={16} />
-        </Button>
-      </div>
+      <NodePropertiesHeader nodeId={node.id} nodeType={nodeType} icon={Icon} onClose={onClose} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <div className="px-6 pt-4 shrink-0">
-          <TabsList className="w-full grid grid-cols-4 h-10 p-1 bg-muted/30 rounded-xl">
+          <TabsList className="w-full grid grid-cols-5 h-10 p-1 bg-muted/30 rounded-xl">
             <TabsTrigger
               value="settings"
               className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0"
@@ -1206,982 +305,82 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
             >
               <Share2 size={11} /> Lineage
             </TabsTrigger>
+            <TabsTrigger
+              value="advanced"
+              className="gap-1.5 text-[9px] font-bold uppercase tracking-tighter transition-all px-0"
+            >
+              <Workflow size={11} /> Advanced
+            </TabsTrigger>
           </TabsList>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
           <ScrollArea className="flex-1">
-            <div className="p-6 space-y-8 pb-24">
-              <TabsContent value="settings" className="m-0 space-y-8 focus-visible:outline-none">
-                {/* Section: Basic Identity */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 px-1">
-                    <div className="h-1 w-4 rounded-full bg-primary/40" />
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                      Identity & Purpose
-                    </Label>
-                  </div>
-                  <div className="p-5 rounded-[2rem] border border-border/40 bg-muted/5 space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">
-                        Display Label
-                      </Label>
-                      <Input
-                        {...register('label', { required: true })}
-                        placeholder="Descriptive name..."
-                        readOnly={!isEditor}
-                        className="h-10 rounded-2xl bg-background/50 border-border/40 focus:ring-primary/20"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">
-                        Logic Description
-                      </Label>
-                      <Textarea
-                        {...register('description')}
-                        placeholder="What does this node achieve?"
-                        readOnly={!isEditor}
-                        className="min-h-[80px] rounded-2xl bg-background/50 border-border/40 resize-none text-xs leading-relaxed"
-                      />
-                    </div>
-                  </div>
-                </div>
+            <TabsContent value="settings" className="m-0 focus-visible:outline-none p-6">
+              <NodeSettingsTab
+                register={register}
+                control={control}
+                watch={watch}
+                setValue={setValue}
+                isEditor={isEditor}
+                nodeType={nodeType}
+                operatorClass={operatorClass}
+                connections={connections || []}
+                assets={assets || []}
+                isLoadingAssets={isLoadingAssets}
+                filteredAssets={filteredAssets}
+                selectedConnectionId={selectedConnectionId}
+                opDef={opDef}
+                renderField={() => null} // Handled via opDef loop if needed, or inline
+              />
+            </TabsContent>
 
-                {/* Section: IO Mapping */}
-                {(nodeType === 'source' || nodeType === 'sink') && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 px-1">
-                      <div className="h-1 w-4 rounded-full bg-blue-500/40" />
-                      <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                        IO Mapping
-                      </Label>
-                    </div>
-                    <div className="p-5 rounded-[2rem] border border-blue-500/20 bg-blue-500/[0.02] space-y-5">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold">Connection</Label>
-                        <Controller
-                          control={control}
-                          name="connection_id"
-                          render={({ field }) => (
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={!isEditor}
-                            >
-                              <SelectTrigger className="h-10 rounded-xl bg-background/50 border-blue-500/10">
-                                <SelectValue placeholder="Select connection" />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-xl">
-                                {connections?.map((c: any) => (
-                                  <SelectItem key={c.id} value={String(c.id)}>
-                                    {c.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold">Target Asset</Label>
-                        <Controller
-                          control={control}
-                          name="asset_id"
-                          render={({ field }) => (
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={!selectedConnectionId || !isEditor || isLoadingAssets}
-                            >
-                              <SelectTrigger className="h-10 rounded-xl bg-background/50 border-blue-500/10">
-                                <SelectValue
-                                  placeholder={
-                                    isLoadingAssets
-                                      ? 'Loading assets...'
-                                      : !selectedConnectionId
-                                        ? 'Connect first'
-                                        : filteredAssets.length === 0
-                                          ? 'No assets found'
-                                          : 'Select asset'
-                                  }
-                                />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-xl">
-                                {filteredAssets?.map((a: any) => (
-                                  <SelectItem key={a.id} value={String(a.id)}>
-                                    {a.name}
-                                  </SelectItem>
-                                ))}
-                                {filteredAssets.length === 0 && !isLoadingAssets && (
-                                  <div className="p-4 text-center text-[10px] text-muted-foreground ">
-                                    No assets found.
-                                  </div>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </div>
+            <TabsContent value="contract" className="m-0 focus-visible:outline-none">
+              <NodeContractTab
+                watch={watch}
+                setValue={setValue}
+                isEditor={isEditor}
+                schemaMode={schemaMode}
+                setSchemaMode={setSchemaMode}
+                connections={connections || []}
+                filteredAssets={filteredAssets}
+                control={control}
+              />
+            </TabsContent>
 
-                      {nodeType === 'source' && (
-                        <div className="space-y-4 pt-2 border-t border-blue-500/10 mt-2">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold flex items-center">
-                              Extraction Mode{' '}
-                              <HelpIcon content="Determines how data is read from the source." />
-                            </Label>
-                            <Controller
-                              control={control}
-                              name="sync_mode"
-                              render={({ field }) => (
-                                <Select
-                                  onValueChange={field.onChange}
-                                  value={field.value}
-                                  disabled={!isEditor}
-                                >
-                                  <SelectTrigger className="h-10 rounded-xl bg-background/50 border-primary/20">
-                                    <SelectValue placeholder="Select mode" />
-                                  </SelectTrigger>
-                                  <SelectContent className="rounded-xl">
-                                    <SelectItem value="full_load" className="text-xs font-bold">
-                                      Full Load (Overwrite)
-                                    </SelectItem>
-                                    <SelectItem value="incremental" className="text-xs font-bold">
-                                      Incremental (Watermark)
-                                    </SelectItem>
-                                    <SelectItem value="cdc" className="text-xs font-bold">
-                                      Real-time CDC (Log Tailing)
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            />
-                          </div>
+            <TabsContent value="guardrails" className="m-0 focus-visible:outline-none">
+              <NodeSafetyTab watch={watch} setValue={setValue} />
+            </TabsContent>
 
-                          {watch('sync_mode') === 'incremental' && (
-                            <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                              <Label className="text-[10px] font-bold">Watermark Column</Label>
-                              <Input
-                                {...register('watermark_column')}
-                                placeholder="e.g. updated_at"
-                                readOnly={!isEditor}
-                                className="h-9 text-[10px] font-mono bg-background/50 rounded-lg"
-                              />
-                            </div>
-                          )}
+            <TabsContent value="lineage" className="m-0 focus-visible:outline-none">
+              <NodeLineageTab
+                nodeType={nodeType}
+                assetId={watch('asset_id')}
+                watch={watch}
+                setValue={setValue}
+              />
+            </TabsContent>
 
-                          {watch('sync_mode') === 'cdc' && (
-                            <div className="space-y-4 p-4 rounded-2xl bg-primary/5 border border-primary/10 animate-in zoom-in-95 duration-300">
-                              <div className="flex items-center gap-2">
-                                <Zap className="h-3 w-3 text-primary animate-pulse" />
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-primary">
-                                  Zero-Infra Streaming
-                                </span>
-                              </div>
-                              <div className="space-y-3">
-                                {connections?.find(
-                                  (c: any) => String(c.id) === selectedConnectionId
-                                )?.connector_type === 'mysql' ? (
-                                  <div className="space-y-1.5">
-                                    <Label className="text-[9px] font-bold text-muted-foreground uppercase">
-                                      Replica Server ID
-                                    </Label>
-                                    <Input
-                                      type="number"
-                                      {...register('cdc_server_id', { valueAsNumber: true })}
-                                      className="h-8 text-[10px] font-mono rounded-lg"
-                                    />
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="space-y-1.5">
-                                      <Label className="text-[9px] font-bold text-muted-foreground uppercase">
-                                        Replication Slot
-                                      </Label>
-                                      <Input
-                                        {...register('cdc_slot_name')}
-                                        placeholder="synqx_slot_1"
-                                        className="h-8 text-[10px] font-mono rounded-lg"
-                                      />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                      <Label className="text-[9px] font-bold text-muted-foreground uppercase">
-                                        Publication Name
-                                      </Label>
-                                      <Input
-                                        {...register('cdc_publication_name')}
-                                        placeholder="synqx_pub"
-                                        className="h-8 text-[10px] font-mono rounded-lg"
-                                      />
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {nodeType === 'sink' && (
-                        <div className="space-y-4 pt-2 border-t border-blue-500/10 mt-2">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-[10px] font-bold flex items-center">
-                                Write Strategy{' '}
-                                <HelpIcon content="Determines how data is committed to the target asset." />
-                              </Label>
-                              <Controller
-                                control={control}
-                                name="write_strategy"
-                                render={({ field }) => (
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    value={field.value}
-                                    disabled={!isEditor}
-                                  >
-                                    <SelectTrigger className="h-9 rounded-xl bg-background/50 border-blue-500/10">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl">
-                                      <SelectItem value="append">Append</SelectItem>
-                                      <SelectItem value="overwrite">Overwrite</SelectItem>
-                                      <SelectItem value="upsert">Upsert</SelectItem>
-                                      <SelectItem value="scd2">SCD Type 2</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                )}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-[10px] font-bold flex items-center">
-                                Evolution Policy{' '}
-                                <HelpIcon content="Defines behavior when incoming data schema differs from target." />
-                              </Label>
-                              <Controller
-                                control={control}
-                                name="schema_evolution_policy"
-                                render={({ field }) => (
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    value={field.value}
-                                    disabled={!isEditor}
-                                  >
-                                    <SelectTrigger className="h-9 rounded-xl bg-background/50 border-blue-500/10">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl">
-                                      <SelectItem value="strict">Strict</SelectItem>
-                                      <SelectItem value="evolve">Evolve</SelectItem>
-                                      <SelectItem value="ignore">Ignore</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                )}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Section: Domain Governance (OSDU Specific) */}
-                {nodeType === 'sink' &&
-                  connections?.find((c: any) => String(c.id) === selectedConnectionId)
-                    ?.connector_type === 'osdu' && (
-                    <div className="space-y-4 animate-in slide-in-from-top-4 duration-500">
-                      <div className="flex items-center gap-2 px-1">
-                        <div className="h-1 w-4 rounded-full bg-blue-600" />
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600">
-                          Domain Governance (OSDU)
-                        </Label>
-                      </div>
-                      <div className="p-6 rounded-[2.5rem] border border-blue-500/20 bg-blue-500/[0.03] space-y-6 relative overflow-hidden">
-                        <div className="absolute -right-12 -top-12 h-40 w-40 bg-blue-500/5 blur-3xl rounded-full" />
-
-                        <div className="space-y-4 relative z-10">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold flex items-center gap-2">
-                              Target OSDU Kind{' '}
-                              <HelpIcon content="The fully qualified OSDU kind name." />
-                            </Label>
-                            <Input
-                              {...register('osdu_kind')}
-                              placeholder="authority:source:entity:1.0.0"
-                              className="h-10 text-xs font-mono bg-background/50 border-blue-500/10 rounded-xl"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 rounded-2xl bg-background/40 border border-blue-500/10 flex flex-col gap-3">
-                              <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold">Auto-Provision</Label>
-                                <Controller
-                                  control={control}
-                                  name="auto_create_schema"
-                                  render={({ field }) => (
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                      className="data-[state=checked]:bg-blue-600"
-                                    />
-                                  )}
-                                />
-                              </div>
-                              {watch('auto_create_schema') && (
-                                <Controller
-                                  control={control}
-                                  name="osdu_inference_strategy"
-                                  render={({ field }) => (
-                                    <Select
-                                      onValueChange={field.onChange}
-                                      value={field.value || 'data_driven'}
-                                    >
-                                      <SelectTrigger className="h-8 text-[10px] bg-background/60 border-blue-500/10">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="data_driven" className="text-[10px]">
-                                          Data-driven
-                                        </SelectItem>
-                                        <SelectItem value="canonical" className="text-[10px]">
-                                          Contract-driven
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  )}
-                                />
-                              )}
-                            </div>
-                            <div className="p-4 rounded-2xl bg-blue-600/5 border border-blue-600/10 flex flex-col items-center justify-center text-center gap-1.5">
-                              <Shield size={16} className="text-blue-600 opacity-60" />
-                              <span className="text-[9px] font-black uppercase text-blue-600 tracking-tighter">
-                                Governance Active
-                              </span>
-                              <span className="text-[8px] text-muted-foreground font-medium">
-                                Policy-based ingestion
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4 pt-2">
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2 px-1">
-                                <Lock size={10} className="text-blue-600" />
-                                <Label className="text-[9px] font-bold uppercase tracking-widest text-foreground/70">
-                                  Access Control List (ACL)
-                                </Label>
-                              </div>
-                              <CodeBlock
-                                code={watch('osdu_acl') || '{\n  "viewers": [],\n  "owners": []\n}'}
-                                language="json"
-                                editable={isEditor}
-                                onChange={(val) => setValue('osdu_acl', val)}
-                                maxHeight="120px"
-                                rounded
-                                className="border-blue-500/10 bg-black/40 text-blue-400"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2 px-1">
-                                <Globe size={10} className="text-blue-600" />
-                                <Label className="text-[9px] font-bold uppercase tracking-widest text-foreground/70">
-                                  Legal Metadata
-                                </Label>
-                              </div>
-                              <CodeBlock
-                                code={
-                                  watch('osdu_legal') ||
-                                  '{\n  "legaltags": [],\n  "otherRelevantDataCountries": ["US"]\n}'
-                                }
-                                language="json"
-                                editable={isEditor}
-                                onChange={(val) => setValue('osdu_legal', val)}
-                                maxHeight="120px"
-                                rounded
-                                className="border-blue-500/10 bg-black/40 text-blue-400"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                {/* Section: Operator specific fields */}
-                {opDef?.fields && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 px-1">
-                      <div className="h-1 w-4 rounded-full bg-primary/40" />
-                      <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                        Functional Parameters
-                      </Label>
-                    </div>
-                    <div className="p-6 rounded-[2rem] border border-border/40 bg-muted/5 space-y-5">
-                      {opDef.fields.map(renderField)}
-                    </div>
-                  </div>
-                )}
-
-                {/* Section: Reliability */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 px-1">
-                    <div className="h-1 w-4 rounded-full bg-amber-500/40" />
-                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                      Fault Recovery
-                    </Label>
-                  </div>
-                  <div className="p-6 rounded-[2rem] border border-amber-500/20 bg-amber-500/[0.02] space-y-5">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold">Retry Logic</Label>
-                        <Controller
-                          control={control}
-                          name="retry_strategy"
-                          render={({ field }) => (
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={!isEditor}
-                            >
-                              <SelectTrigger className="h-9 rounded-xl bg-background/50 border-amber-500/10">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="rounded-xl">
-                                <SelectItem value="none">Disabled</SelectItem>
-                                <SelectItem value="fixed">Fixed</SelectItem>
-                                <SelectItem value="linear_backoff">Linear</SelectItem>
-                                <SelectItem value="exponential_backoff">Exponential</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </div>
-                      {watch('retry_strategy') !== 'none' && (
-                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold">Max Retries</Label>
-                          <Input
-                            type="number"
-                            {...register('max_retries', { valueAsNumber: true })}
-                            readOnly={!isEditor}
-                            className="h-9 bg-background/50 rounded-xl"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold">Retry Delay (s)</Label>
-                        <Input
-                          type="number"
-                          {...register('retry_delay_seconds', { valueAsNumber: true })}
-                          readOnly={!isEditor}
-                          className="h-9 bg-background/50 rounded-xl"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold">Timeout (s)</Label>
-                        <Input
-                          type="number"
-                          {...register('timeout_seconds', { valueAsNumber: true })}
-                          placeholder="3600"
-                          readOnly={!isEditor}
-                          className="h-9 bg-background/50 rounded-xl"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Expert Access */}
-                {!(node.data.diffStatus && node.data.diffStatus !== 'none') && (
-                  <div className="space-y-4 pt-4">
-                    <div className="flex items-center justify-between px-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1 w-4 rounded-full bg-muted-foreground/40" />
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-                          Expert Mode
-                        </Label>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="text-[8px] opacity-40 uppercase tracking-tighter"
-                      >
-                        Raw JSON
-                      </Badge>
-                    </div>
-                    <div className="p-4 rounded-[2rem] border border-border/20 bg-muted/10">
-                      <CodeBlock
-                        code={watch('config') || '{}'}
-                        language="json"
-                        editable={isEditor}
-                        onChange={(val) => setValue('config', val)}
-                        maxHeight="200px"
-                        rounded
-                        className="bg-[#050505] border-white/5"
-                      />
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="contract" className="m-0 focus-visible:outline-none">
-                <div className="p-6 space-y-8 pb-32">
-                  <div className="space-y-6">
-                    <div className="relative group overflow-hidden p-6 rounded-[2rem] bg-primary/5 border border-primary/10 transition-all duration-500 hover:bg-primary/10">
-                      <div className="absolute -right-10 -top-10 h-32 w-32 bg-primary/10 blur-3xl rounded-full" />
-                      <div className="relative z-10 flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner border border-primary/20">
-                          <Shield size={24} />
-                        </div>
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">
-                              Trust Governance
-                            </h4>
-                            <div className="flex items-center gap-1 bg-background/40 backdrop-blur-md p-1 rounded-xl border border-white/5 shadow-inner">
-                              <button
-                                type="button"
-                                onClick={() => setSchemaMode('visual')}
-                                className={cn(
-                                  'px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all',
-                                  schemaMode === 'visual'
-                                    ? 'bg-primary text-primary-foreground shadow-lg'
-                                    : 'text-muted-foreground hover:text-foreground'
-                                )}
-                              >
-                                Visual
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSchemaMode('manual')}
-                                className={cn(
-                                  'px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-all',
-                                  schemaMode === 'manual'
-                                    ? 'bg-primary text-primary-foreground shadow-lg'
-                                    : 'text-muted-foreground hover:text-foreground'
-                                )}
-                              >
-                                JSON
-                              </button>
-                            </div>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground/70 leading-relaxed font-medium">
-                            Define the structural integrity of your data stream. Violations are
-                            automatically diverted to isolation while keeping the pipeline active.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {schemaMode === 'visual' ? (
-                      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <RuleBuilder watch={watch} setValue={setValue} rulesKey="contract_rules" />
-                      </div>
-                    ) : (
-                      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center justify-between px-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">
-                            Source Blueprint (JSON)
-                          </Label>
-                          <Badge
-                            variant="outline"
-                            className="text-[8px] font-mono opacity-60 bg-background/50 border-0 h-5 px-2"
-                          >
-                            STRICT_VALIDATION: OFF
-                          </Badge>
-                        </div>
-                        <div className="relative group">
-                          <div className="absolute inset-0 bg-primary/5 blur-xl rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                          <CodeBlock
-                            code={watch('data_contract_json') || ''}
-                            language="json"
-                            editable={isEditor}
-                            onChange={(val) => setValue('data_contract_json', val)}
-                            maxHeight="350px"
-                            rounded
-                            className="border-white/5 bg-[#0a0a0a] text-primary/90 shadow-2xl relative z-10"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <Separator className="opacity-50" />
-
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Quarantine Buffer
-                      </span>
-                    </div>
-
-                    <div className="space-y-4 p-4 rounded-xl border border-destructive/20 bg-destructive/5">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold">Sink Connection</Label>
-                        <Controller
-                          control={control}
-                          name="quarantine_connection_id"
-                          render={({ field }) => (
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={!isEditor}
-                            >
-                              <SelectTrigger className="h-9 rounded-lg bg-background/50 border-destructive/10">
-                                <SelectValue placeholder="Select connection..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {connections?.map((c: any) => (
-                                  <SelectItem key={c.id} value={String(c.id)}>
-                                    {c.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold">Quarantine Asset</Label>
-                        <Controller
-                          control={control}
-                          name="quarantine_asset_id"
-                          render={({ field }) => (
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              disabled={!watch('quarantine_connection_id') || !isEditor}
-                            >
-                              <SelectTrigger className="h-9 rounded-lg bg-background/50 border-destructive/10">
-                                <SelectValue placeholder="Select asset..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {/* We'd need to fetch assets for this specific connection too, but for prototype let's reuse assets if same connection or assume user knows */}
-                                {filteredAssets?.map((a: any) => (
-                                  <SelectItem key={a.id} value={String(a.id)}>
-                                    {a.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </div>
-                      <p className="text-[9px] text-muted-foreground">
-                        Invalid rows will be written to this asset with a{' '}
-                        <code>__synqx_quarantine_reason__</code> column.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="guardrails" className="m-0 focus-visible:outline-none">
-                <div className="p-6 space-y-8 pb-32">
-                  <div className="space-y-6">
-                    <div className="relative group overflow-hidden p-6 rounded-[2rem] bg-amber-500/5 border border-amber-500/10 transition-all duration-500 hover:bg-amber-500/10">
-                      <div className="absolute -right-10 -top-10 h-32 w-32 bg-amber-500/10 blur-3xl rounded-full" />
-                      <div className="relative z-10 flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shadow-inner border border-amber-500/20">
-                          <Zap size={24} />
-                        </div>
-                        <div className="space-y-1.5 flex-1">
-                          <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">
-                            Fail-Safe Infrastructure
-                          </h4>
-                          <p className="text-[10px] text-muted-foreground/70 leading-relaxed font-medium">
-                            Establish automated circuit breakers. These rules monitor statistical
-                            telemetry in real-time and will terminate the job instantly if
-                            reliability thresholds are breached.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <GuardrailBuilder watch={watch} setValue={setValue} />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="security" className="m-0 focus-visible:outline-none">
-                <div className="p-6 space-y-8 pb-32">
-                  <div className="space-y-6">
-                    <div className="relative group overflow-hidden p-6 rounded-[2rem] bg-blue-500/5 border border-blue-500/10 transition-all duration-500 hover:bg-blue-500/10">
-                      <div className="absolute -right-10 -top-10 h-32 w-32 bg-blue-500/10 blur-3xl rounded-full" />
-                      <div className="relative z-10 flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner border border-blue-500/20">
-                          <Lock size={24} />
-                        </div>
-                        <div className="space-y-1.5 flex-1">
-                          <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">
-                            OSDU Security Context
-                          </h4>
-                          <p className="text-[10px] text-muted-foreground/70 leading-relaxed font-medium">
-                            Define the entitlements and regional governance for newly provisioned
-                            records. These settings are applied during the ingestion phase.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">
-                          Access Control List (ACL)
-                        </Label>
-                        <CodeBlock
-                          code={watch('osdu_acl') || '{\n  "viewers": [],\n  "owners": []\n}'}
-                          language="json"
-                          editable={isEditor}
-                          onChange={(val) => setValue('osdu_acl', val)}
-                          maxHeight="200px"
-                          rounded
-                          className="border-white/5 bg-[#0a0a0a] text-blue-400 shadow-2xl"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/70">
-                          Legal Metadata
-                        </Label>
-                        <CodeBlock
-                          code={
-                            watch('osdu_legal') ||
-                            '{\n  "legaltags": [],\n  "otherRelevantDataCountries": ["US"]\n}'
-                          }
-                          language="json"
-                          editable={isEditor}
-                          onChange={(val) => setValue('osdu_legal', val)}
-                          maxHeight="200px"
-                          rounded
-                          className="border-white/5 bg-[#0a0a0a] text-blue-400 shadow-2xl"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="lineage" className="m-0 focus-visible:outline-none">
-                <div className="p-6">
-                  {(nodeType === 'source' || nodeType === 'sink') && watch('asset_id') ? (
-                    <div className="space-y-8">
-                      <AutomatedLineageView assetId={parseInt(watch('asset_id'))} />
-                      <Separator className="opacity-50" />
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <Sliders className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            Manual Override
-                          </span>
-                        </div>
-                        <LineageMapper watch={watch} setValue={setValue} />
-                      </div>
-                    </div>
-                  ) : (
-                    <LineageMapper watch={watch} setValue={setValue} />
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="advanced" className="m-0 focus-visible:outline-none">
-                <div className="p-6 space-y-8 pb-32">
-                  <div className="space-y-6">
-                    <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Zap className="h-4 w-4 text-amber-500" />
-                        <span className="text-xs font-bold uppercase tracking-widest">
-                          Dynamic Fan-out
-                        </span>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="is_dynamic"
-                            checked={watch('is_dynamic')}
-                            onCheckedChange={(v) => setValue('is_dynamic', !!v)}
-                          />
-                          <label
-                            htmlFor="is_dynamic"
-                            className="text-[10px] font-bold uppercase tracking-widest cursor-pointer"
-                          >
-                            Enable Dynamic Mapping
-                          </label>
-                        </div>
-                        {watch('is_dynamic') && (
-                          <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                            <Label className="text-[9px] font-bold text-muted-foreground uppercase">
-                              Mapping Expression
-                            </Label>
-                            <Input
-                              {...register('mapping_expr')}
-                              placeholder="e.g. inputs['node_id'].rows"
-                              className="h-8 text-[10px] font-mono"
-                            />
-                            <p className="text-[8px] text-muted-foreground italic">
-                              Spawns parallel instances for each item in the list.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Workflow className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-bold uppercase tracking-widest">
-                          Modular Orchestration
-                        </span>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="text-[9px] font-bold text-muted-foreground uppercase">
-                            Target Sub-pipeline
-                          </Label>
-                          <Controller
-                            control={control}
-                            name="sub_pipeline_id"
-                            render={({ field }) => (
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value ? String(field.value) : undefined}
-                                disabled={!isEditor || isLoadingPipelines}
-                              >
-                                <SelectTrigger className="h-8 text-[10px] font-medium bg-background/50 border-border/40">
-                                  <SelectValue
-                                    placeholder={
-                                      isLoadingPipelines ? 'Loading...' : 'Select pipeline...'
-                                    }
-                                  />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {pipelines?.map((p: any) => (
-                                    <SelectItem key={p.id} value={String(p.id)} className="text-xs">
-                                      <span className="font-bold">{p.name}</span>{' '}
-                                      <span className="text-muted-foreground ml-2">#{p.id}</span>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                          <p className="text-[8px] text-muted-foreground italic">
-                            Executes the specified pipeline as a logical child node.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        Expert JSON Configuration
-                      </Label>
-                      <CodeBlock
-                        code={watch('config') || '{}'}
-                        language="json"
-                        editable={isEditor}
-                        onChange={(val) => setValue('config', val)}
-                        maxHeight="384px"
-                        rounded
-                        className="shadow-2xl border-border/40"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="diff" className="m-0 space-y-6 focus-visible:outline-none">
-                <div className="p-6 space-y-4">
-                  <Badge
-                    className={cn(
-                      'text-[10px] font-bold uppercase tracking-widest',
-                      node.data.diffStatus === 'added'
-                        ? 'bg-emerald-500/20 text-emerald-500'
-                        : node.data.diffStatus === 'removed'
-                          ? 'bg-destructive/20 text-destructive'
-                          : 'bg-amber-500/20 text-amber-500'
-                    )}
-                  >
-                    {String(node.data.diffStatus || '')}
-                  </Badge>
-                  {node.data.diffInfo?.changes?.config && (
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase text-muted-foreground">
-                        Delta
-                      </Label>
-                      <div className="p-4 rounded-xl bg-[#0a0a0a] border border-white/5 overflow-hidden">
-                        <pre className="text-[10px] font-mono text-muted-foreground">
-                          {JSON.stringify(node.data.diffInfo.changes.config, null, 2)}
-                        </pre>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            </div>
+            <TabsContent value="advanced" className="m-0 focus-visible:outline-none">
+              <NodeAdvancedTab
+                watch={watch}
+                setValue={setValue}
+                register={register}
+                isEditor={isEditor}
+                isLoadingPipelines={isLoadingPipelines}
+                pipelines={pipelines || []}
+                control={control}
+              />
+            </TabsContent>
           </ScrollArea>
 
-          <div className="p-6 border-t border-border/40 bg-muted/20 flex items-center gap-3 backdrop-blur-md">
-            {isEditor && (
-              <Button
-                type="submit"
-                className="flex-1 rounded-xl h-10 font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-primary/20"
-              >
-                <Save size={14} className="mr-2" /> Save Config
-              </Button>
-            )}
-            {isEditor && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={() => onDuplicate(node.id)}
-                className="h-10 w-10 rounded-xl"
-              >
-                <Copy size={16} />
-              </Button>
-            )}
-            {isAdmin && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 rounded-xl text-muted-foreground/40 hover:text-destructive"
-                  >
-                    <Trash2 size={18} />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-3xl border-border/40 backdrop-blur-2xl bg-background/95 shadow-2xl">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-xl font-bold uppercase tracking-tighter">
-                      De-provision Node?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="font-medium text-sm">
-                      This will permanently remove the operator.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter className="gap-2 mt-6">
-                    <AlertDialogCancel className="rounded-xl h-10 px-6 font-bold text-[10px] uppercase tracking-widest border-border/40">
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        onDelete(node.id)
-                        onClose()
-                      }}
-                      className="bg-destructive text-white hover:bg-destructive/90 rounded-xl h-10 px-6 font-bold text-[10px] uppercase tracking-widest"
-                    >
-                      Delete Operator
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
+          <NodePropertiesFooter
+            isEditor={isEditor}
+            isAdmin={isAdmin}
+            onDuplicate={() => onDuplicate(node.id)}
+            onDelete={() => onDelete(node.id)}
+            onClose={onClose}
+          />
         </form>
       </Tabs>
     </div>

@@ -1,4 +1,3 @@
- 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useJobLogs } from '@/hooks/useJobLogs'
 import {

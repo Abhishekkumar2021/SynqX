@@ -58,7 +58,12 @@ export const DashboardKPIs: React.FC<DashboardKPIsProps> = ({
       {kpis.map((kpi, i) => (
         <motion.div key={i} variants={itemVariants}>
           <div className="metric-card group relative overflow-hidden">
-            <div className={cn("absolute left-0 top-0 bottom-0 w-1", kpi.bg.replace('/15', '').replace('/20', ''))} />
+            <div
+              className={cn(
+                'absolute left-0 top-0 bottom-0 w-1',
+                kpi.bg.replace('/15', '').replace('/20', '')
+              )}
+            />
             <div className="flex items-center gap-6">
               <div
                 className={cn(
@@ -70,9 +75,7 @@ export const DashboardKPIs: React.FC<DashboardKPIsProps> = ({
                 <kpi.icon size={28} />
               </div>
               <div className="min-w-0">
-                <p className="subtitle mb-2.5">
-                  {kpi.label}
-                </p>
+                <p className="subtitle mb-2.5">{kpi.label}</p>
                 <h4 className="text-3xl font-black tracking-tighter leading-none text-foreground">
                   {formatNumber(kpi.value)}
                 </h4>

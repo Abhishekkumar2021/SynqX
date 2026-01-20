@@ -7,7 +7,9 @@ from synqx_core.models.enums import (
     OperatorType,
     PipelineStatus,
     RetryStrategy,
+    SchemaEvolutionPolicy,
     SyncMode,
+    WriteStrategy,
 )
 
 
@@ -22,8 +24,23 @@ class PipelineNodeBase(BaseModel):
     source_asset_id: int | None = Field(None, gt=0)
     destination_asset_id: int | None = Field(None, gt=0)
     connection_id: int | None = None
+    osdu_kind: str | None = Field(None, max_length=500)
+    
+    # Strategy & Movement
+    write_strategy: WriteStrategy = Field(default=WriteStrategy.APPEND)
+    schema_evolution_policy: SchemaEvolutionPolicy = Field(default=SchemaEvolutionPolicy.STRICT)
+    
+    # Governance & Quality
+    data_contract: dict[str, Any] | None = Field(default_factory=dict)
+    column_mapping: dict[str, Any] | None = Field(default_factory=dict)
     guardrails: list[dict[str, Any]] | None = Field(default_factory=list)
+    quarantine_asset_id: int | None = None
+
+    # Advanced Orchestration
     sub_pipeline_id: int | None = None
+    is_dynamic: bool = Field(default=False)
+    mapping_expr: str | None = Field(None, max_length=500)
+    worker_tag: str | None = Field(None, max_length=100)
 
     # Real-time Capabilities
     sync_mode: SyncMode = Field(default=SyncMode.FULL_LOAD)
@@ -52,11 +69,30 @@ class PipelineNodeUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = Field(None, max_length=2000)
     config: dict[str, Any] | None = None
+    osdu_kind: str | None = None
+    
+    # Strategy & Movement
+    write_strategy: WriteStrategy | None = None
+    schema_evolution_policy: SchemaEvolutionPolicy | None = None
+    
+    # Governance & Quality
+    data_contract: dict[str, Any] | None = None
+    column_mapping: dict[str, Any] | None = None
+    guardrails: list[dict[str, Any]] | None = None
+    quarantine_asset_id: int | None = None
+
+    # Advanced Orchestration
+    sub_pipeline_id: int | None = None
+    is_dynamic: bool | None = None
+    mapping_expr: str | None = None
+    worker_tag: str | None = None
+
+    # Real-time Capabilities
     sync_mode: SyncMode | None = None
     cdc_config: dict[str, Any] | None = None
+    
     max_retries: int | None = Field(None, ge=0, le=10)
     timeout_seconds: int | None = Field(None, gt=0, le=86400)
-    sub_pipeline_id: int | None = None
 
 
 class PipelineNodeRead(PipelineNodeBase):

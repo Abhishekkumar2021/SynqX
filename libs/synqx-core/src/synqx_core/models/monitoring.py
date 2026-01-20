@@ -150,9 +150,7 @@ class AlertConfig(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
         Boolean, default=True, nullable=False, index=True
     )
     cooldown_minutes: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
-    last_triggered_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Workspace scoping
     workspace_id: Mapped[int | None] = mapped_column(

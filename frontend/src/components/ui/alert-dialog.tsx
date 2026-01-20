@@ -36,7 +36,6 @@ function AlertDialogContent({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
-   
   const Content = AlertDialogPrimitive.Content as any
   return (
     <AlertDialogPortal>

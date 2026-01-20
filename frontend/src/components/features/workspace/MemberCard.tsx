@@ -1,4 +1,3 @@
- 
 import React from 'react'
 import { Trash2, Shield } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'

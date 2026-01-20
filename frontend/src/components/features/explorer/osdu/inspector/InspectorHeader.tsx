@@ -1,10 +1,5 @@
 import React from 'react'
-import {
-  ArrowLeft,
-  X,
-  Download,
-  Fingerprint,
-} from 'lucide-react'
+import { ArrowLeft, X, Download, Fingerprint } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -61,7 +56,7 @@ export const InspectorHeader: React.FC<InspectorHeaderProps> = ({
       <div className="flex items-center gap-3 shrink-0">
         {!isLoading && record && (
           <div className="flex items-center gap-2">
-            {(record.details?.kind?.toLowerCase().includes('dataset--') || 
+            {(record.details?.kind?.toLowerCase().includes('dataset--') ||
               record.details?.data?.DatasetProperties) && (
               <Button
                 onClick={onDownload}

@@ -1,4 +1,3 @@
- 
 import {
   ConnectorType,
   PipelineStatus,

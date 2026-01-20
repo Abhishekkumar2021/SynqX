@@ -1,4 +1,3 @@
- 
 import React, { useMemo, useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -60,7 +59,13 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
   const setKind = (kind: string | null) => {
     setCurrentCursor(null)
     // Sync: Clear search query when switching kinds to avoid stale filters
-    updateParams({ kind, service: kind ? 'mesh' : activeService, recordId: null, offset: '0', q: '*' })
+    updateParams({
+      kind,
+      service: kind ? 'mesh' : activeService,
+      recordId: null,
+      offset: '0',
+      q: '*',
+    })
   }
   const setRecordId = (recordId: string | null) => updateParams({ recordId })
   const setQuery = (q: string) => {
@@ -138,12 +143,17 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
   const totalCount = useMemo(() => searchResponse?.total_count || 0, [searchResponse])
 
   // Record Deep Dive
-  const { data: record, isLoading: isLoadingRecord, isError: isRecordError, error: recordError } = useQuery({
+  const {
+    data: record,
+    isLoading: isLoadingRecord,
+    isError: isRecordError,
+    error: recordError,
+  } = useQuery({
     queryKey: ['osdu', 'record', connectionId, activeRecordId],
     queryFn: async () => {
       // Strip version suffix if present (e.g., :123456) to ensure Storage Service finds the record
       const cleanId = activeRecordId!.replace(/:\d+$/, '')
-      
+
       const [details, relationships, ancestry, spatial] = await Promise.all([
         getConnectionMetadata(connectionId, 'get_record', { record_id: cleanId }),
         getConnectionMetadata(connectionId, 'get_record_relationships', {
@@ -155,27 +165,27 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
       return { details, relationships, ancestry, spatial }
     },
     enabled: !!activeRecordId,
-    retry: false
+    retry: false,
   })
 
   // Handle Record Fetch Error
   useEffect(() => {
     if (isRecordError && recordError) {
-        let msg = (recordError as any).message || 'Unknown error'
-        try {
-            // Attempt to parse standard backend error structure or JSON string
-            if ((recordError as any).response?.data?.detail) {
-                msg = (recordError as any).response.data.detail
-            } else {
-                const parsed = JSON.parse(msg)
-                if (parsed.detail) msg = parsed.detail
-            }
-        } catch {}
+      let msg = (recordError as any).message || 'Unknown error'
+      try {
+        // Attempt to parse standard backend error structure or JSON string
+        if ((recordError as any).response?.data?.detail) {
+          msg = (recordError as any).response.data.detail
+        } else {
+          const parsed = JSON.parse(msg)
+          if (parsed.detail) msg = parsed.detail
+        }
+      } catch {}
 
-        toast.error('Unable to inspect record', { 
-            description: msg.length > 100 ? msg.substring(0, 100) + '...' : msg 
-        })
-        setRecordId(null)
+      toast.error('Unable to inspect record', {
+        description: msg.length > 100 ? msg.substring(0, 100) + '...' : msg,
+      })
+      setRecordId(null)
     }
   }, [isRecordError, recordError])
 
@@ -204,7 +214,7 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
         const blob = new Blob([data], { type: 'application/octet-stream' })
         const link = document.createElement('a')
         link.href = window.URL.createObjectURL(blob)
-        link.download = variables.name || `download-${Date.now()}.bin` 
+        link.download = variables.name || `download-${Date.now()}.bin`
         link.click()
         window.URL.revokeObjectURL(link.href)
         toast.success(`Download started: ${variables.name}`)
@@ -213,16 +223,16 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
       }
     },
     onError: (err: any) => {
-        let msg = err.message || 'Unknown error'
-        try {
-            if (err.response?.data?.detail) {
-                msg = err.response.data.detail
-            } else {
-                const parsed = JSON.parse(msg)
-                if (parsed.detail) msg = parsed.detail
-            }
-        } catch {}
-        toast.error('Download failed', { description: msg })
+      let msg = err.message || 'Unknown error'
+      try {
+        if (err.response?.data?.detail) {
+          msg = err.response.data.detail
+        } else {
+          const parsed = JSON.parse(msg)
+          if (parsed.detail) msg = parsed.detail
+        }
+      } catch {}
+      toast.error('Download failed', { description: msg })
     },
   })
 

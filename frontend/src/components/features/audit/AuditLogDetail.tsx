@@ -1,4 +1,3 @@
- 
 import React from 'react'
 import { format } from 'date-fns'
 import { User, Clock, Terminal, Box, Globe, Fingerprint } from 'lucide-react'

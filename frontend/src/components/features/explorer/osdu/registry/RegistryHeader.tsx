@@ -40,7 +40,7 @@ export const RegistryHeader: React.FC<RegistryHeaderProps> = ({
           </Button>
         </div>
         <div className="flex items-center gap-2">
-           <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-2">
             {totalCount} Definitions
           </span>
           <div className="flex bg-muted rounded-lg p-1 border border-border/40">
@@ -48,8 +48,8 @@ export const RegistryHeader: React.FC<RegistryHeaderProps> = ({
               variant="ghost"
               size="sm"
               className={cn(
-                "h-7 w-7 p-0 rounded-md hover:bg-background/80 transition-all",
-                viewMode === 'grid' && "bg-background shadow-sm text-primary"
+                'h-7 w-7 p-0 rounded-md hover:bg-background/80 transition-all',
+                viewMode === 'grid' && 'bg-background shadow-sm text-primary'
               )}
               onClick={() => setViewMode('grid')}
             >
@@ -59,8 +59,8 @@ export const RegistryHeader: React.FC<RegistryHeaderProps> = ({
               variant="ghost"
               size="sm"
               className={cn(
-                "h-7 w-7 p-0 rounded-md hover:bg-background/80 transition-all",
-                viewMode === 'list' && "bg-background shadow-sm text-primary"
+                'h-7 w-7 p-0 rounded-md hover:bg-background/80 transition-all',
+                viewMode === 'list' && 'bg-background shadow-sm text-primary'
               )}
               onClick={() => setViewMode('list')}
             >

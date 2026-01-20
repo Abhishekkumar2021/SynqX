@@ -1,4 +1,3 @@
- 
 import React from 'react'
 import { MembersToolbar } from './MembersToolbar'
 import { MembersList } from './MembersList'

@@ -1,4 +1,3 @@
- 
 import React, { useState, useMemo } from 'react'
 import { FileType } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -123,12 +122,9 @@ export const OSDURegistryView: React.FC<OSDURegistryViewProps> = ({
               toggleGroup={toggleGroup}
             />
           ) : (
-             <div className="p-6 max-w-7xl mx-auto w-full pb-32">
-                <RegistryList
-                    kinds={fuzzyResults}
-                    onSelectKind={onSelectKind}
-                />
-             </div>
+            <div className="p-6 max-w-7xl mx-auto w-full pb-32">
+              <RegistryList kinds={fuzzyResults} onSelectKind={onSelectKind} />
+            </div>
           )}
         </ScrollArea>
       </main>

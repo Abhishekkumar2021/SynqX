@@ -25,7 +25,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': 'off',
       'react-hooks/exhaustive-deps': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',
-      'no-empty-pattern': 'off'
+      'no-empty-pattern': 'off',
     },
   },
   eslintConfigPrettier

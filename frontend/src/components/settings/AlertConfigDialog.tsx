@@ -58,7 +58,6 @@ export const AlertConfigDialog: React.FC = () => {
       reset()
     },
     onError: (error: any) => {
-       
       toast.error('Failed to create alert', {
         description: error.response?.data?.detail || 'Unknown error',
       })

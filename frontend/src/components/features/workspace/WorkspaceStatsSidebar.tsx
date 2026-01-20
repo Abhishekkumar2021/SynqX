@@ -1,4 +1,3 @@
- 
 import React from 'react'
 import { Activity, ShieldCheck, UserCheck } from 'lucide-react'
 import { DangerZone } from './DangerZone'

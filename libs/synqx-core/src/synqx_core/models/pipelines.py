@@ -70,9 +70,7 @@ class Pipeline(Base, AuditMixin, SoftDeleteMixin, OwnerMixin):
         Integer, default=60, nullable=False
     )
 
-    execution_timeout_seconds: Mapped[int | None] = mapped_column(
-        Integer, default=3600
-    )
+    execution_timeout_seconds: Mapped[int | None] = mapped_column(Integer, default=3600)
     agent_group: Mapped[str] = mapped_column(
         String(100), index=True, server_default="internal", default="internal"
     )  # Target specific agent group/tag

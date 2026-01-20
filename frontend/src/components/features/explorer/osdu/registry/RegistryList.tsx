@@ -34,7 +34,10 @@ export const RegistryList: React.FC<RegistryListProps> = ({ kinds, onSelectKind 
               </div>
               <div className="min-w-0 flex flex-col">
                 <span className="text-sm font-bold text-foreground truncate">{k.entity_name}</span>
-                <span className="text-[10px] font-mono text-muted-foreground/60 truncate" title={k.full_kind}>
+                <span
+                  className="text-[10px] font-mono text-muted-foreground/60 truncate"
+                  title={k.full_kind}
+                >
                   {k.full_kind}
                 </span>
               </div>
@@ -46,18 +49,23 @@ export const RegistryList: React.FC<RegistryListProps> = ({ kinds, onSelectKind 
             </div>
 
             <div className="col-span-2">
-               <Badge variant="outline" className="text-[10px] font-black border-border/60 bg-muted/30 px-2 h-5 text-foreground/70">
-                  {k.source}
-               </Badge>
+              <Badge
+                variant="outline"
+                className="text-[10px] font-black border-border/60 bg-muted/30 px-2 h-5 text-foreground/70"
+              >
+                {k.source}
+              </Badge>
             </div>
 
             <div className="col-span-2 flex items-center gap-2">
-               <Box size={12} className="text-muted-foreground/40" />
-               <span className="text-xs font-medium text-foreground/80 truncate">{k.group}</span>
+              <Box size={12} className="text-muted-foreground/40" />
+              <span className="text-xs font-medium text-foreground/80 truncate">{k.group}</span>
             </div>
 
             <div className="col-span-1">
-               <span className="text-xs font-mono font-bold text-muted-foreground/80">v{k.version}</span>
+              <span className="text-xs font-mono font-bold text-muted-foreground/80">
+                v{k.version}
+              </span>
             </div>
 
             <div className="col-span-1 flex justify-end">

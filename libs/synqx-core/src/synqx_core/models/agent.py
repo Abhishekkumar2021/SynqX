@@ -45,9 +45,7 @@ class Agent(Base, AuditMixin, SoftDeleteMixin):
     status: Mapped[AgentStatus] = mapped_column(
         SQLEnum(AgentStatus), default=AgentStatus.OFFLINE, nullable=False
     )
-    last_heartbeat_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ip_address: Mapped[str | None] = mapped_column(String(45))  # IPv6
     version: Mapped[str | None] = mapped_column(String(50))  # Agent version
 
@@ -57,9 +55,7 @@ class Agent(Base, AuditMixin, SoftDeleteMixin):
     )  # e.g. {"cloud": "aws", "region": "us-east-1"}
 
     # System Info (optional telemetry)
-    system_info: Mapped[dict | None] = mapped_column(
-        JSON, default=dict
-    )  # OS, CPU, RAM
+    system_info: Mapped[dict | None] = mapped_column(JSON, default=dict)  # OS, CPU, RAM
 
     # Relationships
     workspace: Mapped[Workspace] = relationship("Workspace")

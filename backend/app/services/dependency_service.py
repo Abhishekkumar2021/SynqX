@@ -56,7 +56,10 @@ class DependencyService:
         # Simple check for now
         if self.connection.user_id != self.user_id:
             # Check workspace member role
-            from synqx_core.models.workspace import WorkspaceMember, WorkspaceRole  # noqa: PLC0415
+            from synqx_core.models.workspace import (  # noqa: PLC0415
+                WorkspaceMember,
+                WorkspaceRole,
+            )
 
             member = (
                 self.db.query(WorkspaceMember)

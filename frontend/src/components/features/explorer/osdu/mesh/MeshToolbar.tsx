@@ -1,11 +1,5 @@
 import React from 'react'
-import {
-  Layers,
-  Binary,
-  X,
-  LayoutGrid,
-  List,
-} from 'lucide-react'
+import { Layers, Binary, X, LayoutGrid, List } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -69,54 +63,60 @@ export const MeshToolbar: React.FC<MeshToolbarProps> = ({
 
       <div className="flex items-center gap-4">
         <AnimatePresence>
-            {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && (
             <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="flex items-center gap-3"
             >
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary">
                 {selectedIds.size} SELECTED
-                </span>
-                <div className="h-5 w-px bg-border/20 mx-1" />
-                <Button
+              </span>
+              <div className="h-5 w-px bg-border/20 mx-1" />
+              <Button
                 variant="default"
                 size="sm"
                 className="h-8 px-5 rounded-xl gap-2.5 font-black uppercase text-[10px] tracking-widest bg-primary shadow-lg shadow-primary/20 text-white transition-all active:scale-95"
                 onClick={handleExport}
-                >
+              >
                 <Binary size={14} /> Export Bundle
-                </Button>
-                <Button
+              </Button>
+              <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 rounded-xl hover:bg-muted"
                 onClick={() => setSelectedIds(new Set())}
-                >
+              >
                 <X size={14} />
-                </Button>
+              </Button>
             </motion.div>
-            )}
+          )}
         </AnimatePresence>
 
         <div className="flex items-center gap-1 bg-background/50 p-1 rounded-xl border border-border/40 h-10">
-            <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="h-8 w-8 rounded-lg transition-all"
-                onClick={() => onViewModeChange('grid')}
-            >
-                <LayoutGrid size={16} className={viewMode === 'grid' ? 'text-foreground' : 'text-muted-foreground'} />
-            </Button>
-            <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="h-8 w-8 rounded-lg transition-all"
-                onClick={() => onViewModeChange('list')}
-            >
-                <List size={16} className={viewMode === 'list' ? 'text-foreground' : 'text-muted-foreground'} />
-            </Button>
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8 rounded-lg transition-all"
+            onClick={() => onViewModeChange('grid')}
+          >
+            <LayoutGrid
+              size={16}
+              className={viewMode === 'grid' ? 'text-foreground' : 'text-muted-foreground'}
+            />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8 rounded-lg transition-all"
+            onClick={() => onViewModeChange('list')}
+          >
+            <List
+              size={16}
+              className={viewMode === 'list' ? 'text-foreground' : 'text-muted-foreground'}
+            />
+          </Button>
         </div>
       </div>
     </div>

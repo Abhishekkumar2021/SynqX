@@ -1,10 +1,6 @@
- 
 import React, { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Key,
-  RefreshCw,
-} from 'lucide-react'
+import { Key, RefreshCw } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { formatNumber } from '@/lib/utils'
 import { getConnectionMetadata } from '@/lib/api/connections'
@@ -67,7 +63,9 @@ export const OSDUGovernanceView: React.FC<OSDUGovernanceViewProps> = ({
   }
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['osdu', initialMode === 'identity' ? 'groups' : 'legal'] })
+    queryClient.invalidateQueries({
+      queryKey: ['osdu', initialMode === 'identity' ? 'groups' : 'legal'],
+    })
     toast.success('Refreshing governance data...')
   }
 
@@ -89,12 +87,12 @@ export const OSDUGovernanceView: React.FC<OSDUGovernanceViewProps> = ({
       {/* MAIN LIST DISCOVERY */}
       <div className="flex-1 flex flex-col min-h-0 relative">
         <GovernanceToolbar
-            totalAvailable={items.length}
-            selectedCount={selectedIds.size}
-            onClearSelection={() => setSelectedIds(new Set())}
-            isAllSelected={items.length > 0 && selectedIds.size === items.length}
-            onToggleSelectAll={toggleSelectAll}
-            initialMode={initialMode}
+          totalAvailable={items.length}
+          selectedCount={selectedIds.size}
+          onClearSelection={() => setSelectedIds(new Set())}
+          isAllSelected={items.length > 0 && selectedIds.size === items.length}
+          onToggleSelectAll={toggleSelectAll}
+          initialMode={initialMode}
         />
 
         <div className="flex-1 min-h-0 relative overflow-hidden">
@@ -116,7 +114,7 @@ export const OSDUGovernanceView: React.FC<OSDUGovernanceViewProps> = ({
           )}
 
           <ScrollArea className="h-full">
-            <div className={cn("w-full mx-auto", viewMode === 'grid' ? "p-10 max-w-7xl" : "p-0")}>
+            <div className={cn('w-full mx-auto', viewMode === 'grid' ? 'p-10 max-w-7xl' : 'p-0')}>
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-48 gap-8 opacity-40">
                   <RefreshCw className="h-16 w-16 text-primary animate-spin" />
@@ -126,17 +124,17 @@ export const OSDUGovernanceView: React.FC<OSDUGovernanceViewProps> = ({
                 </div>
               ) : viewMode === 'grid' ? (
                 <GovernanceGrid
-                    items={items}
-                    selectedIds={selectedIds}
-                    toggleSelection={toggleSelection}
-                    initialMode={initialMode}
+                  items={items}
+                  selectedIds={selectedIds}
+                  toggleSelection={toggleSelection}
+                  initialMode={initialMode}
                 />
               ) : (
                 <GovernanceList
-                    items={items}
-                    selectedIds={selectedIds}
-                    toggleSelection={toggleSelection}
-                    initialMode={initialMode}
+                  items={items}
+                  selectedIds={selectedIds}
+                  toggleSelection={toggleSelection}
+                  initialMode={initialMode}
                 />
               )}
             </div>

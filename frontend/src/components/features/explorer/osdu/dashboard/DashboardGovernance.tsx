@@ -39,9 +39,7 @@ export const DashboardGovernance: React.FC<DashboardGovernanceProps> = ({
           </div>
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-6 w-full md:w-auto">
             <div className="flex flex-col items-end mr-2">
-              <span className="subtitle">
-                Pulse Status
-              </span>
+              <span className="subtitle">Pulse Status</span>
               <div className="flex items-center gap-2.5 mt-1.5">
                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
                 <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">

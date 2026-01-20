@@ -177,7 +177,9 @@ class NodeExecutor:
 
         # Pre-flight check for Custom Script environments
         if node.operator_class == "custom_script":
-            from app.services.dependency_service import DependencyService  # noqa: PLC0415
+            from app.services.dependency_service import (
+                DependencyService,
+            )
 
             # Find the language from the asset config
             asset_id = node.source_asset_id or node.destination_asset_id
@@ -449,7 +451,9 @@ class NodeExecutor:
                 # PERFORMANCE: Apply ELT Pushdown (Collapse downstream transforms into SQL)  # noqa: E501
                 pushdown_ops = node.config.get("_pushdown_operators")
                 if pushdown_ops:
-                    from app.engine.agent_core.sql_generator import SQLPushdownGenerator  # noqa: PLC0415
+                    from app.engine.agent_core.sql_generator import (
+                        SQLPushdownGenerator,
+                    )
 
                     original_asset = read_params.get("asset") or read_params.get(
                         "query"
@@ -475,7 +479,9 @@ class NodeExecutor:
                 # --- DATA CONTRACT INITIALIZATION ---
                 contract_validator = None
                 if node.data_contract:
-                    from synqx_engine.core.contract import ContractValidator  # noqa: PLC0415
+                    from synqx_engine.core.contract import (
+                        ContractValidator,
+                    )
 
                     contract_validator = ContractValidator(node.data_contract)
                     DBLogger.log_step(
@@ -727,7 +733,9 @@ class NodeExecutor:
                     # --- DATA CONTRACT INITIALIZATION ---
                     contract_validator = None
                     if node.data_contract:
-                        from synqx_engine.core.contract import ContractValidator  # noqa: PLC0415
+                        from synqx_engine.core.contract import (
+                            ContractValidator,
+                        )
 
                         contract_validator = ContractValidator(node.data_contract)
                         DBLogger.log_step(
@@ -976,7 +984,9 @@ class NodeExecutor:
                 # --- DATA CONTRACT INITIALIZATION ---
                 contract_validator = None
                 if node.data_contract:
-                    from synqx_engine.core.contract import ContractValidator  # noqa: PLC0415
+                    from synqx_engine.core.contract import (
+                        ContractValidator,
+                    )
 
                     contract_validator = ContractValidator(node.data_contract)
 

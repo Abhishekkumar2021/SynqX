@@ -1,4 +1,3 @@
- 
 import React, { useMemo } from 'react'
 import {
   LineChart,
@@ -13,14 +12,7 @@ import {
   Cell,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import {
-  Database,
-  Activity,
-  TrendingUp,
-  Globe,
-  ChevronRight,
-  Ruler,
-} from 'lucide-react'
+import { Database, Activity, TrendingUp, Globe, ChevronRight, Ruler } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { DashboardWidget } from '@/components/features/dashboard/DashboardWidget'

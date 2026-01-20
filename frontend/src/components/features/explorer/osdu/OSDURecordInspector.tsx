@@ -1,13 +1,5 @@
- 
 import React, { useState, useMemo } from 'react'
-import {
-  FileJson,
-  Boxes,
-  History,
-  Lock,
-  Map as MapIcon,
-  RefreshCw,
-} from 'lucide-react'
+import { FileJson, Boxes, History, Lock, Map as MapIcon, RefreshCw } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { motion } from 'framer-motion'
 import { OSDUAncestryGraph } from './OSDUAncestryGraph'
@@ -46,19 +38,19 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
     // 2. Check OSDU native SpatialLocation (Standard)
     const wgs84 = record?.details?.data?.SpatialLocation?.Wgs84Coordinates
     if (wgs84?.geometries?.length > 0) {
-        const coords = wgs84.geometries[0]?.coordinates
-        if (Array.isArray(coords) && coords.length >= 2) {
-            return { lon: coords[0], lat: coords[1] }
-        }
+      const coords = wgs84.geometries[0]?.coordinates
+      if (Array.isArray(coords) && coords.length >= 2) {
+        return { lon: coords[0], lat: coords[1] }
+      }
     }
 
     // 3. Check legacy or alternative SpatialPoint
     const spatialPoint = record?.details?.data?.SpatialPoint
     if (spatialPoint?.Wgs84Coordinates?.geometries?.length > 0) {
-         const coords = spatialPoint.Wgs84Coordinates.geometries[0]?.coordinates
-         if (Array.isArray(coords) && coords.length >= 2) {
-            return { lon: coords[0], lat: coords[1] }
-        }
+      const coords = spatialPoint.Wgs84Coordinates.geometries[0]?.coordinates
+      if (Array.isArray(coords) && coords.length >= 2) {
+        return { lon: coords[0], lat: coords[1] }
+      }
     }
 
     return null
@@ -142,18 +134,19 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
                   </TabsContent>
 
                   <TabsContent value="ancestry" className="h-full m-0 relative overflow-hidden">
-                    <OSDUAncestryGraph ancestryData={record.ancestry} rootId={record.details.id} onNavigate={onNavigate} />
+                    <OSDUAncestryGraph
+                      ancestryData={record.ancestry}
+                      rootId={record.details.id}
+                      onNavigate={onNavigate}
+                    />
                   </TabsContent>
 
                   <TabsContent value="security" className="h-full m-0 bg-muted/5">
                     <InspectorPolicy record={record} />
                   </TabsContent>
 
-                  <TabsContent
-                    value="map"
-                    className="h-full m-0 flex flex-col"
-                  >
-                     <InspectorSpatial record={record} coordinates={coordinates} />
+                  <TabsContent value="map" className="h-full m-0 flex flex-col">
+                    <InspectorSpatial record={record} coordinates={coordinates} />
                   </TabsContent>
                 </div>
               </Tabs>

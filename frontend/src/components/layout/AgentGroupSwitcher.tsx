@@ -41,7 +41,6 @@ export const AgentGroupSwitcher: React.FC = () => {
   const agentGroups = useMemo(() => {
     const groups = new Set<string>()
     if (agents) {
-       
       agents.forEach((a: any) => {
         if (a.tags?.groups) {
           a.tags.groups.forEach((g: string) => {

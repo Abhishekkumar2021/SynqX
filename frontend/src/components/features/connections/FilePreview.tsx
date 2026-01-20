@@ -1,4 +1,3 @@
- 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Editor, { DiffEditor } from '@monaco-editor/react'

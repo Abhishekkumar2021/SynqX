@@ -32,7 +32,10 @@ def test_celery():
 )
 def deliver_alert_task(self, alert_id: int):  # noqa: PLR0912, PLR0915
     """Deliver an alert to an external system (Slack, Teams, Webhook)."""
-    from synqx_core.models.enums import AlertDeliveryMethod, AlertStatus  # noqa: PLC0415
+    from synqx_core.models.enums import (  # noqa: PLC0415
+        AlertDeliveryMethod,
+        AlertStatus,
+    )
     from synqx_core.models.monitoring import Alert  # noqa: PLC0415
 
     with session_scope() as session:
@@ -300,7 +303,10 @@ def execute_pipeline_task(self, job_id: int) -> str:  # noqa: PLR0911, PLR0912, 
 
             # Trigger Job Started Alert
             try:
-                from synqx_core.models.enums import AlertLevel, AlertType  # noqa: PLC0415
+                from synqx_core.models.enums import (  # noqa: PLC0415
+                    AlertLevel,
+                    AlertType,
+                )
 
                 from app.services.alert_service import AlertService  # noqa: PLC0415
 
@@ -400,10 +406,15 @@ def execute_pipeline_task(self, job_id: int) -> str:  # noqa: PLR0911, PLR0912, 
 
                 # POST-PROCESSING (Alerts, Logs, Dependencies) - Wrap in try/except to not fail the task  # noqa: E501
                 try:
-                    from synqx_core.models.enums import AlertLevel, AlertType  # noqa: PLC0415
+                    from synqx_core.models.enums import (  # noqa: PLC0415
+                        AlertLevel,
+                        AlertType,
+                    )
 
                     from app.services.alert_service import AlertService  # noqa: PLC0415
-                    from app.services.pipeline_service import PipelineService  # noqa: PLC0415
+                    from app.services.pipeline_service import (
+                        PipelineService,
+                    )
 
                     with session_scope() as post_session:
                         # 1. Trigger Success Alerts

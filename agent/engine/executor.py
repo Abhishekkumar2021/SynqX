@@ -233,7 +233,8 @@ class NodeExecutor:
                     conn_data["type"], conn_data["config"]
                 )
                 asset_name = (
-                    config.get("table")
+                    config.get("osdu_kind")
+                    or config.get("table")
                     or config.get("asset")
                     or config.get("query")
                     or "unknown"
@@ -277,7 +278,7 @@ class NodeExecutor:
                 conn_data = self.connections.get(conn_id)
                 if not conn_data:
                     raise ValueError(
-                        f"Target connection metadata (ID: {conn_id}) is missing from payload."  # noqa: E501
+                        f"Target connection metadata (ID: {conn_id}) is missing from payload."
                     )
 
                 connector = ConnectorFactory.get_connector(
@@ -288,7 +289,7 @@ class NodeExecutor:
                 native_query = config.get("_native_elt_query")
                 if native_query:
                     logger.info(
-                        "  ELT Pushdown active: Executing Zero-Movement transfer inside database."  # noqa: E501
+                        "  ELT Pushdown active: Executing Zero-Movement transfer inside database."
                     )
                     with connector.session():
                         for stmt in native_query.split(";"):
@@ -297,8 +298,10 @@ class NodeExecutor:
                     stats["out"] = 0
                     logger.info("  [SUCCESS] Native ELT command completed.")
                 else:
+                    # Resolve asset name (Kind for OSDU, Table for SQL)
                     asset_name = (
-                        config.get("table")
+                        config.get("osdu_kind")
+                        or config.get("table")
                         or config.get("target_table")
                         or "synqx_output"
                     )
@@ -310,16 +313,22 @@ class NodeExecutor:
                                 yield df
 
                     logger.info(
-                        f"  Streaming commit to {conn_data['type'].upper()} entity: '{asset_name}'"  # noqa: E501
+                        f"  Streaming commit to {conn_data['type'].upper()} entity: '{asset_name}'"
                     )
+                    
+                    # Map write_strategy to mode for connector compatibility
+                    write_mode = (
+                        config.get("write_strategy") 
+                        or config.get("write_mode") 
+                        or "append"
+                    )
+
                     with connector.session():
                         rows_written = connector.write_batch(
                             input_stream(),
                             asset=asset_name,
-                            mode=config.get("write_mode", "append"),
-                            allow_schema_evolution=config.get(
-                                "allow_schema_evolution", False
-                            ),
+                            mode=write_mode,
+                            **config
                         )
                         stats["out"] = rows_written
                 results = []

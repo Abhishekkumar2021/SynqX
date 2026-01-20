@@ -1,5 +1,3 @@
-
-
 def is_remote_group(group_name: str | None) -> bool:
     """
     Checks if an agent group name is considered 'remote'.

@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import {
-  Search,
-  RefreshCw,
-  X,
-  Layers,
-  Sparkles,
-  Box,
-} from 'lucide-react'
+import { Search, RefreshCw, X, Layers, Sparkles, Box } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

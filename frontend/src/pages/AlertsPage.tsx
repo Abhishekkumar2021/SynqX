@@ -1,4 +1,3 @@
- 
 import React, { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getAlertHistory, acknowledgeAlert } from '@/lib/api'

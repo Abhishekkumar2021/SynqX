@@ -58,7 +58,9 @@ class SQLConnector(BaseConnector):
 
         try:
             if not self._engine:
-                from synqx_engine.core.engine_manager import EngineManager  # noqa: PLC0415
+                from synqx_engine.core.engine_manager import (
+                    EngineManager,
+                )
 
                 self._engine = EngineManager.get_engine(
                     connector_type=self.__class__.__name__,

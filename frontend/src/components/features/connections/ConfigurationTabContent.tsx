@@ -1,4 +1,3 @@
- 
 import { format } from 'date-fns'
 import { Database, Settings2, Activity, Wifi, Globe, Shield, AlertTriangle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'

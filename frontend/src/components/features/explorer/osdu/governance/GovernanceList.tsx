@@ -18,15 +18,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { 
-  ArrowUpDown, 
-  MoreHorizontal, 
-  Copy, 
-  Trash2,
-  Users,
-  ShieldCheck,
-  Info
-} from 'lucide-react'
+import { ArrowUpDown, MoreHorizontal, Copy, Trash2, Users, ShieldCheck, Info } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,18 +60,19 @@ export const GovernanceList: React.FC<GovernanceListProps> = ({
           const id = row.original.id || row.original.name || row.original.email
           return (
             <div className="px-1" onClick={(e) => e.stopPropagation()}>
-                <Checkbox
+              <Checkbox
                 checked={selectedIds.has(id)}
                 onCheckedChange={() => toggleSelection(id)}
                 className="translate-y-[2px] border-muted-foreground/40 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                />
+              />
             </div>
           )
         },
         enableSorting: false,
         size: 40,
       }),
-      columnHelper.accessor('name', { // Fallback accessor, cell uses custom logic
+      columnHelper.accessor('name', {
+        // Fallback accessor, cell uses custom logic
         header: ({ column }) => {
           return (
             <Button
@@ -93,102 +86,113 @@ export const GovernanceList: React.FC<GovernanceListProps> = ({
           )
         },
         cell: ({ row }) => {
-            const displayName = row.original.displayName || row.original.name || row.original.email?.split('@')[0]
-            const id = row.original.id || row.original.name || row.original.email
-            return (
-                <div className="flex items-center gap-3 max-w-[300px]">
-                    <div className={cn(
-                        "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 border shadow-sm",
-                        initialMode === 'identity' 
-                            ? "bg-indigo-500/5 text-indigo-600 border-indigo-500/10"
-                            : "bg-rose-500/5 text-rose-600 border-rose-500/10"
-                    )}>
-                        {initialMode === 'identity' ? <Users size={14} /> : <ShieldCheck size={14} />}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                        <span className="font-bold text-xs truncate text-foreground/90" title={displayName}>
-                            {displayName}
-                        </span>
-                        <span className="text-[9px] text-muted-foreground/60 truncate font-mono">
-                            {id}
-                        </span>
-                    </div>
-                </div>
-            )
+          const displayName =
+            row.original.displayName || row.original.name || row.original.email?.split('@')[0]
+          const id = row.original.id || row.original.name || row.original.email
+          return (
+            <div className="flex items-center gap-3 max-w-[300px]">
+              <div
+                className={cn(
+                  'h-8 w-8 rounded-lg flex items-center justify-center shrink-0 border shadow-sm',
+                  initialMode === 'identity'
+                    ? 'bg-indigo-500/5 text-indigo-600 border-indigo-500/10'
+                    : 'bg-rose-500/5 text-rose-600 border-rose-500/10'
+                )}
+              >
+                {initialMode === 'identity' ? <Users size={14} /> : <ShieldCheck size={14} />}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-bold text-xs truncate text-foreground/90" title={displayName}>
+                  {displayName}
+                </span>
+                <span className="text-[9px] text-muted-foreground/60 truncate font-mono">{id}</span>
+              </div>
+            </div>
+          )
         },
       }),
       columnHelper.display({
         id: 'type',
         header: 'Type',
         cell: () => (
-            <Badge variant="outline" className={cn(
-                "h-5 px-2 text-[9px] font-black uppercase tracking-widest border px-1.5 py-0 rounded-md tracking-wider h-5 shrink-0",
-                initialMode === 'identity' 
-                  ? "bg-indigo-500/5 text-indigo-600 border-indigo-500/20"
-                  : "bg-rose-500/5 text-rose-600 border-rose-500/20"
-            )}>
-                 {initialMode === 'identity' ? 'Security Group' : 'Legal Tag'}
-            </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              'h-5 px-2 text-[9px] font-black uppercase tracking-widest border px-1.5 py-0 rounded-md tracking-wider h-5 shrink-0',
+              initialMode === 'identity'
+                ? 'bg-indigo-500/5 text-indigo-600 border-indigo-500/20'
+                : 'bg-rose-500/5 text-rose-600 border-rose-500/20'
+            )}
+          >
+            {initialMode === 'identity' ? 'Security Group' : 'Legal Tag'}
+          </Badge>
         ),
       }),
       columnHelper.accessor('description', {
         header: 'Description',
         cell: ({ row }) => (
-            <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[200px] block" title={row.original.description}>
-                {row.original.description || '-'}
-            </span>
+          <span
+            className="text-[11px] font-medium text-muted-foreground truncate max-w-[200px] block"
+            title={row.original.description}
+          >
+            {row.original.description || '-'}
+          </span>
         ),
       }),
       columnHelper.display({
         id: 'status',
         header: 'Status',
         cell: () => (
-             <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[9px] font-black h-5 uppercase">
-                Active
-            </Badge>
+          <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[9px] font-black h-5 uppercase">
+            Active
+          </Badge>
         ),
       }),
       columnHelper.display({
         id: 'actions',
         cell: ({ row }) => {
-            const id = row.original.id || row.original.name || row.original.email
-            return (
-                <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 hover:bg-primary/5 hover:text-primary transition-colors text-muted-foreground"
+          const id = row.original.id || row.original.name || row.original.email
+          return (
+            <div
+              className="flex items-center justify-end gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-primary/5 hover:text-primary transition-colors text-muted-foreground"
+                onClick={() => copyToClipboard(id, 'ID')}
+              >
+                <Copy size={14} />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground/60">
+                    <span className="sr-only">Open menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm"
+                >
+                  <DropdownMenuItem
+                    className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
                     onClick={() => copyToClipboard(id, 'ID')}
-                    >
-                        <Copy size={14} />
-                    </Button>
-                    <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground/60">
-                        <span className="sr-only">Open menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm">
-                        <DropdownMenuItem
-                            className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                            onClick={() => copyToClipboard(id, 'ID')}
-                        >
-                            <Copy size={12} className="opacity-50" /> Copy ID
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                            className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
-                        >
-                            <Info size={12} className="opacity-50" /> View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="opacity-20" />
-                        <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-destructive focus:text-destructive cursor-pointer">
-                            <Trash2 size={12} /> Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            )
+                  >
+                    <Copy size={12} className="opacity-50" /> Copy ID
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer">
+                    <Info size={12} className="opacity-50" /> View Details
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="opacity-20" />
+                  <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-destructive focus:text-destructive cursor-pointer">
+                    <Trash2 size={12} /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )
         },
       }),
     ],
@@ -213,13 +217,13 @@ export const GovernanceList: React.FC<GovernanceListProps> = ({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent border-border/40">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="h-11 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/60">
+                <TableHead
+                  key={header.id}
+                  className="h-11 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/60"
+                >
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -242,7 +246,10 @@ export const GovernanceList: React.FC<GovernanceListProps> = ({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-xs text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-xs text-muted-foreground"
+              >
                 No governance records found.
               </TableCell>
             </TableRow>

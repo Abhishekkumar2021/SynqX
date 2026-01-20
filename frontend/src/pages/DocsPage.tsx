@@ -1,4 +1,3 @@
- 
 import React, { Suspense, useMemo } from 'react'
 import { useParams, Navigate, Link } from 'react-router-dom'
 import { MDXProvider } from '@mdx-js/react'

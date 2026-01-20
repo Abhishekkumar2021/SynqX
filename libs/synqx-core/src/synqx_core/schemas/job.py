@@ -141,9 +141,7 @@ class PipelineRunContextRead(BaseModel):
 
 
 class PipelineRunDetailRead(PipelineRunRead):
-    version: PipelineVersionRead | None = (
-        None  # Will contain version nodes and edges
-    )
+    version: PipelineVersionRead | None = None  # Will contain version nodes and edges
     step_runs: list[StepRunRead] = Field(default_factory=list)
     context: PipelineRunContextRead | None = None
 

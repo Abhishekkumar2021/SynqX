@@ -20,7 +20,7 @@ const SelectTrigger = React.forwardRef<
     ref={ref}
     className={cn(
       // Layout & Typography
-      'flex h-10 w-full items-center justify-between rounded-xl px-4 py-2 text-sm',
+      'group flex h-10 w-full items-center justify-between rounded-xl px-4 py-2 text-sm',
 
       // Colors & Borders (Theme Aware)
       'border border-input/50 bg-background/50 backdrop-blur-sm',
@@ -84,7 +84,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        'relative z-50 max-h-96 min-w-32 overflow-hidden rounded-xl border border-border/50',
+        'relative z-[1000] max-h-96 min-w-32 overflow-hidden rounded-xl border border-border/50',
 
         // Colors (Glass Effect)
         'bg-popover/80 backdrop-blur-xl text-popover-foreground shadow-2xl shadow-black/10',

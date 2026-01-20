@@ -1,4 +1,3 @@
- 
 import React from 'react'
 import { Table, Layers, FileText, FileCode, Activity, Sparkles, Database } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'

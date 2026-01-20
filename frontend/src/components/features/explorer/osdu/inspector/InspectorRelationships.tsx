@@ -1,11 +1,5 @@
 import React from 'react'
-import {
-  ArrowUpRight,
-  Link2,
-  Copy,
-  Navigation,
-  ChevronRight,
-} from 'lucide-react'
+import { ArrowUpRight, Link2, Copy, Navigation, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -86,11 +80,11 @@ export const InspectorRelationships: React.FC<InspectorRelationshipsProps> = ({
                 </div>
               ))}
               {outbound.length === 0 && (
-                  <InspectorEmptyState
-                      icon={ArrowUpRight}
-                      title="No Outbound Links"
-                      description="This record does not reference any other entities."
-                  />
+                <InspectorEmptyState
+                  icon={ArrowUpRight}
+                  title="No Outbound Links"
+                  description="This record does not reference any other entities."
+                />
               )}
             </div>
           </div>
@@ -147,12 +141,12 @@ export const InspectorRelationships: React.FC<InspectorRelationshipsProps> = ({
                   </div>
                 </div>
               ))}
-               {inbound.length === 0 && (
-                  <InspectorEmptyState
-                      icon={Link2}
-                      title="No Inbound Links"
-                      description="No other entities reference this record."
-                  />
+              {inbound.length === 0 && (
+                <InspectorEmptyState
+                  icon={Link2}
+                  title="No Inbound Links"
+                  description="No other entities reference this record."
+                />
               )}
             </div>
           </div>

@@ -1,4 +1,3 @@
- 
 import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query'
 import { getPipelines, getJobs, triggerPipeline, getPipelineStats, type Pipeline } from '@/lib/api'

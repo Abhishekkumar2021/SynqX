@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/preserve-manual-memoization */
- 
+
 import React, { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
@@ -276,7 +276,7 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
                   onCopyId={(id) => copyToClipboard(id, 'Registry ID')}
                 />
               ) : (
-                <StorageList 
+                <StorageList
                   files={filteredFiles}
                   selectedIds={selectedIds}
                   toggleSelection={toggleSelection}

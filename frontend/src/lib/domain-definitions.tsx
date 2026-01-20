@@ -1,4 +1,3 @@
- 
 import { Layers, Database, Shield, Globe } from 'lucide-react'
 
 export interface DomainConfig {

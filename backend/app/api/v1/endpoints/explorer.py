@@ -283,7 +283,9 @@ def get_connection_schema_metadata(
 
         # Inject Execution Context for Custom Script
         if connection.connector_type.value == "custom_script":
-            from app.services.dependency_service import DependencyService  # noqa: PLC0415
+            from app.services.dependency_service import (
+                DependencyService,
+            )
 
             dep_service = DependencyService(db, connection.id, user_id=current_user.id)
             exec_ctx = {}
