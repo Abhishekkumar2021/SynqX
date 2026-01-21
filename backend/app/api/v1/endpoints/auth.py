@@ -2,6 +2,7 @@ from datetime import timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from synqx_core.models.user import User
@@ -70,31 +71,30 @@ async def oidc_callback(
                 status_code=400, detail="Email not provided by OIDC provider"
             )
 
-        # 3. Find or Create User
-        user = db.query(User).filter(User.oidc_id == oidc_id).first()
-        if not user:
-            # Fallback to email search (if user registered with password first)
-            user = db.query(User).filter(User.email == email.lower()).first()
-            if user:
-                # Link existing user to OIDC
-                user.oidc_id = oidc_id
-                user.oidc_provider = (
-                    "external"  # Can be more specific if multiple providers supported
-                )
-            else:
-                # Create new user
-                user = User(
-                    email=email.lower(),
-                    full_name=full_name,
-                    oidc_id=oidc_id,
-                    oidc_provider="external",
-                    is_active=True,
-                    hashed_password=None,  # OIDC users don't have a password
-                )
-                db.add(user)
+        # 3. Find or Create User (Synchronous DB logic wrapped for async safety)
+        def _get_or_create_user():
+            u = db.query(User).filter(User.oidc_id == oidc_id).first()
+            if not u:
+                # Fallback to email search
+                u = db.query(User).filter(User.email == email.lower()).first()
+                if u:
+                    u.oidc_id = oidc_id
+                    u.oidc_provider = "external"
+                else:
+                    u = User(
+                        email=email.lower(),
+                        full_name=full_name,
+                        oidc_id=oidc_id,
+                        oidc_provider="external",
+                        is_active=True,
+                        hashed_password=None,
+                    )
+                    db.add(u)
+                db.commit()
+                db.refresh(u)
+            return u
 
-            db.commit()
-            db.refresh(user)
+        user = await run_in_threadpool(_get_or_create_user)
 
         if not user.is_active:
             raise HTTPException(status_code=403, detail="Inactive user")
@@ -105,7 +105,8 @@ async def oidc_callback(
             user.id, expires_delta=access_token_expires
         )
 
-        AuditService.log_event(
+        await run_in_threadpool(
+            AuditService.log_event,
             db,
             user_id=user.id,
             workspace_id=user.active_workspace_id,

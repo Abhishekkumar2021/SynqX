@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { FileJson, Boxes, History, Lock, Map as MapIcon, RefreshCw } from 'lucide-react'
+import { FileJson, Boxes, History, Lock, Map as MapIcon, RefreshCw, Clock } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { motion } from 'framer-motion'
 import { OSDUAncestryGraph } from './OSDUAncestryGraph'
@@ -8,6 +8,7 @@ import { InspectorPayload } from './inspector/InspectorPayload'
 import { InspectorGraph } from './inspector/InspectorGraph'
 import { InspectorPolicy } from './inspector/InspectorPolicy'
 import { InspectorSpatial } from './inspector/InspectorSpatial'
+import { InspectorHistory } from './inspector/InspectorHistory'
 
 interface OSDURecordInspectorProps {
   record: any
@@ -15,6 +16,10 @@ interface OSDURecordInspectorProps {
   onClose: () => void
   onNavigate: (id: string) => void
   onDownload?: () => void
+  onDelete?: () => void
+  isDeleting?: boolean
+  onUpdate?: (data: any) => void
+  isUpdating?: boolean
 }
 
 export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
@@ -23,6 +28,10 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
   onClose,
   onNavigate,
   onDownload,
+  onDelete,
+  isDeleting,
+  onUpdate,
+  isUpdating,
 }) => {
   const [activeTab, setActiveTab] = useState('payload')
 
@@ -69,6 +78,8 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
         isLoading={isLoading}
         onClose={onClose}
         onDownload={onDownload}
+        onDelete={onDelete}
+        isDeleting={isDeleting}
       />
 
       {/* --- INSPECTION VIEWPORT --- */}
@@ -105,6 +116,12 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
                       <History size={12} /> Lineage
                     </TabsTrigger>
                     <TabsTrigger
+                      value="history"
+                      className="gap-2 text-[10px] font-bold uppercase tracking-widest rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-7 px-3"
+                    >
+                      <Clock size={12} /> History
+                    </TabsTrigger>
+                    <TabsTrigger
                       value="security"
                       className="gap-2 text-[10px] font-bold uppercase tracking-widest rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-7 px-3"
                     >
@@ -123,7 +140,7 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
 
                 <div className="flex-1 min-h-0 relative">
                   <TabsContent value="payload" className="h-full m-0 overflow-hidden bg-background">
-                    <InspectorPayload record={record} />
+                    <InspectorPayload record={record} onUpdate={onUpdate} isUpdating={isUpdating} />
                   </TabsContent>
 
                   <TabsContent
@@ -139,6 +156,10 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
                       rootId={record.details.id}
                       onNavigate={onNavigate}
                     />
+                  </TabsContent>
+
+                  <TabsContent value="history" className="h-full m-0 bg-muted/5">
+                    <InspectorHistory record={record} onNavigate={onNavigate} />
                   </TabsContent>
 
                   <TabsContent value="security" className="h-full m-0 bg-muted/5">

@@ -497,16 +497,6 @@ class ParallelAgent:
                                         elif strategy == "linear_backoff":
                                             wait_time = delay * (attempt + 1)
 
-                                    else:
-                                        # Cleanup any partial data in cache for this attempt
-                                        self.cache.clear_node(n.get("node_id"))
-                                        
-                                        wait_time = delay
-                                        if strategy == "exponential_backoff":
-                                            wait_time = delay * (2**attempt)
-                                        elif strategy == "linear_backoff":
-                                            wait_time = delay * (attempt + 1)
-
                                         log_cb(
                                             f"[RETRY] Node '{n.get('node_id')}' failed "
                                             f"(Attempt {attempt + 1}/{max_attempts}). Retrying "
@@ -526,6 +516,8 @@ class ParallelAgent:
                                             )
                                         time.sleep(wait_time)
                                     else:
+                                        # Cleanup any partial data in cache for this attempt
+                                        self.cache.clear_node(n.get("node_id"))
                                         raise exc
 
                         if status_cb:

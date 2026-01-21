@@ -64,19 +64,21 @@ export const DashboardKPIs: React.FC<DashboardKPIsProps> = ({
                 kpi.bg.replace('/15', '').replace('/20', '')
               )}
             />
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-5">
               <div
                 className={cn(
-                  'h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110',
+                  'h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105',
                   kpi.bg,
                   kpi.color
                 )}
               >
-                <kpi.icon size={28} />
+                <kpi.icon size={24} />
               </div>
               <div className="min-w-0">
-                <p className="subtitle mb-2.5">{kpi.label}</p>
-                <h4 className="text-3xl font-black tracking-tighter leading-none text-foreground">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mb-1.5 leading-none">
+                  {kpi.label}
+                </p>
+                <h4 className="text-2xl font-black tracking-tighter leading-none text-foreground">
                   {formatNumber(kpi.value)}
                 </h4>
               </div>

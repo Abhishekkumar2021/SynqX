@@ -18,7 +18,7 @@ export const OSDUHubHeader: React.FC<OSDUHubHeaderProps> = ({
   children,
 }) => {
   return (
-    <header className="px-6 py-3 border-b border-border/10 bg-muted/5 flex items-center justify-between shrink-0 relative z-40 backdrop-blur-md">
+    <header className="px-6 py-3 border-b border-border/10 bg-card/20 flex items-center justify-between shrink-0 relative z-40 backdrop-blur-md">
       <div className="flex items-center gap-4 min-w-0">
         <Button
           variant="ghost"
@@ -30,8 +30,11 @@ export const OSDUHubHeader: React.FC<OSDUHubHeaderProps> = ({
         </Button>
 
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2">
-            <Database size={12} className="text-primary/60" />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-background/40 border border-border/40 shadow-sm">
+            <div className="relative flex h-2 w-2 mr-1">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+            </div>
             <h1 className="text-sm font-black tracking-tight text-foreground uppercase truncate max-w-[200px]">
               {connectionName || 'OSDU'}
             </h1>
@@ -46,14 +49,7 @@ export const OSDUHubHeader: React.FC<OSDUHubHeaderProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 flex justify-center px-4">{children}</div>
-
-      <div className="flex items-center gap-2">
-        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">
-          System Online
-        </span>
-      </div>
+      <div className="flex items-center gap-4">{children}</div>
     </header>
   )
 }

@@ -750,6 +750,7 @@ class PipelineService:
     ) -> dict[str, PipelineNode]:
         """Helper to create PipelineNode objects and return a map."""
         node_map: dict[str, PipelineNode] = {}
+        nodes_to_add = []
         for node_data in nodes_data:
             # Map fields directly from Pydantic model to SQLAlchemy model
             # Exclude fields that are synthetic or handled specially
@@ -772,8 +773,10 @@ class PipelineService:
                 if isinstance(node_data.cdc_config, dict)
                 else {},
             )
-            self.db_session.add(db_node)
+            nodes_to_add.append(db_node)
             node_map[node_data.node_id] = db_node
+
+        self.db_session.add_all(nodes_to_add)
         return node_map
 
     def _create_pipeline_edges(
@@ -783,6 +786,7 @@ class PipelineService:
         node_map: dict[str, PipelineNode],
     ) -> None:
         """Helper to create PipelineEdge objects using the provided node map."""
+        edges_to_add = []
         for edge_data in edges_data:
             from_node = node_map.get(edge_data.from_node_id)
             to_node = node_map.get(edge_data.to_node_id)
@@ -798,7 +802,9 @@ class PipelineService:
                 to_node=to_node,
                 edge_type=edge_data.edge_type,
             )
-            self.db_session.add(db_edge)
+            edges_to_add.append(db_edge)
+
+        self.db_session.add_all(edges_to_add)
 
     def _get_node_db_id(self, pipeline_version_id: int, node_code_id: str) -> int:
         """

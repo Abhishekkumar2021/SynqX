@@ -12,11 +12,23 @@ import {
   Cell,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Database, Activity, TrendingUp, Globe, ChevronRight, Ruler } from 'lucide-react'
+import {
+  Database,
+  Activity,
+  TrendingUp,
+  Globe,
+  ChevronRight,
+  Ruler,
+  Compass,
+  Badge,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { DashboardWidget } from '@/components/features/dashboard/DashboardWidget'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { OSDUTrajectoryViewer } from './OSDUTrajectoryViewer'
+import { ChevronLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface OSDUWellboreViewProps {
   records: any[]
@@ -90,25 +102,25 @@ const StatsCard = ({ title, value, subtext, icon: Icon, variant = 'primary' }: a
 
   return (
     <Card className="bg-background/40 backdrop-blur-md border-border/40 shadow-sm overflow-hidden group hover:border-primary/30 transition-all duration-500">
-      <CardContent className="p-6 relative">
+      <CardContent className="p-4 relative">
         <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:scale-110 transition-transform duration-700">
-          <Icon size={100} />
+          <Icon size={80} />
         </div>
         <div className="flex items-start justify-between relative z-10">
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className={cn('p-2 rounded-xl border shadow-inner', variants[variant])}>
-                <Icon size={16} />
+              <div className={cn('p-1.5 rounded-lg border shadow-inner', variants[variant])}>
+                <Icon size={14} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">
                 {title}
               </span>
             </div>
-            <div className="space-y-1">
-              <h3 className="text-3xl font-black tracking-tighter text-foreground tabular-nums">
+            <div className="space-y-0.5">
+              <h3 className="text-2xl font-black tracking-tighter text-foreground tabular-nums leading-none">
                 {value}
               </h3>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+              <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest flex items-center gap-1.5">
                 {subtext}
               </p>
             </div>
@@ -121,6 +133,7 @@ const StatsCard = ({ title, value, subtext, icon: Icon, variant = 'primary' }: a
 
 export const OSDUWellboreView: React.FC<OSDUWellboreViewProps> = ({ records }) => {
   const { theme } = useTheme()
+  const [activeTrajectoryId, setActiveTrajectoryId] = React.useState<string | null>(null)
   const colors = useMemo(() => getThemeColors(theme), [theme])
 
   const stats = useMemo(() => {
@@ -137,6 +150,7 @@ export const OSDUWellboreView: React.FC<OSDUWellboreViewProps> = ({ records }) =
         depthData.push({
           name: r.data?.ElementName || r.id.split(':').pop(),
           depth: depth,
+          id: r.id, // Keep ID for drill down
         })
       }
 
@@ -160,21 +174,61 @@ export const OSDUWellboreView: React.FC<OSDUWellboreViewProps> = ({ records }) =
     }
   }, [records])
 
+  if (activeTrajectoryId) {
+    return (
+      <div className="p-8 space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 max-w-8xl mx-auto flex flex-col h-full overflow-hidden">
+        <div className="flex items-center justify-between shrink-0">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-xl hover:bg-muted"
+                onClick={() => setActiveTrajectoryId(null)}
+              >
+                <ChevronLeft size={20} />
+              </Button>
+              <h2 className="text-2xl font-black tracking-tighter text-foreground uppercase flex items-center gap-3">
+                <Compass className="text-primary" /> Path Deviation Trace
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground font-medium ml-13">
+              Survey station analysis for trajectory{' '}
+              <span className="text-foreground font-bold">
+                {activeTrajectoryId.split(':').pop()}
+              </span>
+            </p>
+          </div>
+          <Badge
+            variant="outline"
+            className="h-9 px-4 rounded-xl border-primary/20 bg-primary/5 text-primary font-black uppercase text-[10px] tracking-widest"
+          >
+            WDMS_SURVEY_STREAM
+          </Badge>
+        </div>
+
+        <ScrollArea className="flex-1 -mx-4 px-4 overflow-y-auto">
+          <OSDUTrajectoryViewer trajectoryId={activeTrajectoryId} name={activeTrajectoryId} />
+        </ScrollArea>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-8 space-y-8 animate-in fade-in duration-500 max-w-8xl mx-auto flex flex-col h-full overflow-hidden">
-      <div className="space-y-1 shrink-0 px-1">
-        <h2 className="text-2xl font-black tracking-tighter text-foreground uppercase flex items-center gap-3">
-          <Database className="text-primary" /> Wellbore Intelligence
+    <div className="p-6 space-y-6 animate-in fade-in duration-500 max-w-8xl mx-auto flex flex-col h-full overflow-hidden">
+      <div className="space-y-0.5 shrink-0 px-1">
+        <h2 className="text-xl font-bold tracking-tight text-foreground uppercase flex items-center gap-3 leading-none">
+          <Database className="text-primary" size={20} /> Wellbore Intelligence
         </h2>
-        <p className="text-sm text-muted-foreground font-medium">
-          Domain-specific specialized view for master-data--Well entities.
+        <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider opacity-50">
+          Domain-specific specialized view for well master records.
         </p>
       </div>
 
-      <ScrollArea className="flex-1 -mx-4 px-4 overflow-y-auto custom-scrollbar">
-        <div className="space-y-8 pb-20">
+      <ScrollArea className="flex-1 -mx-2 px-2 overflow-y-auto custom-scrollbar">
+        <div className="space-y-6 pb-20">
           {/* KPI Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 shrink-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
             <StatsCard
               title="Total Wells"
               value={stats.count}
@@ -300,40 +354,63 @@ export const OSDUWellboreView: React.FC<OSDUWellboreViewProps> = ({ records }) =
           </div>
 
           {/* Rankings List */}
-          <Card className="bg-background/40 backdrop-blur-md border-border/40 shadow-xl overflow-hidden">
-            <CardHeader className="border-b border-border/5 bg-muted/5 flex flex-row items-center justify-between">
+          <Card className="bg-background/40 backdrop-blur-md border-border/40 shadow-xl overflow-hidden rounded-[2rem]">
+            <CardHeader className="border-b border-border/5 bg-muted/5 flex flex-row items-center justify-between p-6">
               <div>
-                <CardTitle className="text-base font-bold uppercase">Provider League</CardTitle>
-                <CardDescription className="text-xs">
-                  Ranking of operators by successful asset registration
+                <CardTitle className="text-sm font-bold uppercase tracking-tight">
+                  Technical Asset Roster
+                </CardTitle>
+                <CardDescription className="text-[10px] font-medium text-muted-foreground/60">
+                  Detailed registry of discovered well master records
                 </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-border/5">
-                {stats.operators.map((op, i) => (
+                {records.slice(0, 50).map((well, i) => (
                   <div
-                    key={op.name}
-                    className="px-8 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors group"
+                    key={well.id}
+                    className="px-6 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors group"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="h-9 w-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm">
-                        <span className="text-xs font-black">{i + 1}</span>
+                    <div className="flex items-center gap-5">
+                      <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-600 border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm">
+                        <span className="text-[10px] font-black">{i + 1}</span>
                       </div>
-                      <span className="font-bold text-sm text-foreground/80 group-hover:text-primary transition-colors">
-                        {op.name}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-[13px] text-foreground/80 group-hover:text-primary transition-colors uppercase tracking-tight">
+                          {well.data?.ProjectName ||
+                            well.data?.ElementName ||
+                            well.id.split(':').pop()}
+                        </span>
+                        <span className="text-[8px] font-mono text-muted-foreground/30">
+                          {well.id}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-6">
                       <div className="flex flex-col items-end gap-0.5">
-                        <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest leading-none">
-                          Registered Wells
+                        <span className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest leading-none">
+                          Measured Depth
                         </span>
-                        <span className="font-mono text-sm font-bold text-foreground/60">
-                          {op.value}
+                        <span className="font-mono text-[11px] font-bold text-foreground/50 group-hover:text-foreground transition-colors">
+                          {well.data?.VerticalMeasurements?.[0]?.VerticalMeasurement || '0'}m
                         </span>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7.5 rounded-lg text-[8px] font-black uppercase tracking-widest gap-1.5 border-primary/20 text-primary hover:bg-primary/5"
+                        onClick={() => {
+                          // Try to find a trajectory ID. In real OSDU, we'd query for associated WellboreTrajectories.
+                          // For prototype, we'll use a deterministic ID if data exists or mock it.
+                          setActiveTrajectoryId(
+                            well.id.replace('master-data--Well', 'master-data--WellboreTrajectory')
+                          )
+                        }}
+                      >
+                        <Compass size={11} /> Inspect
+                      </Button>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-primary transition-colors" />
                     </div>
                   </div>
                 ))}

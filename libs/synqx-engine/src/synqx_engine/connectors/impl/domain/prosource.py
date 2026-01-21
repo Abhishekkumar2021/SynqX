@@ -2,26 +2,26 @@ from typing import Any
 
 from synqx_core.logging import get_logger
 
-from synqx_engine.connectors.impl.sql.oracle import OracleConnector
 from synqx_engine.connectors.impl.domain.prosource_queries import (
-    Q_SCOPE_VALIDATION,
-    Q_DISCOVER_SCHEMA,
-    Q_DISCOVER_ASSETS,
-    Q_INFER_SCHEMA,
-    Q_ROW_COUNT,
     Q_CRS_INFO,
-    Q_UNIT_SYSTEM,
-    Q_LIST_DOCUMENTS,
-    Q_DOMAIN_STATS,
-    Q_RELATIONSHIPS_META,
-    Q_LIST_CRS,
-    Q_LIST_UNITS,
-    Q_LIST_ALL_DOCUMENTS,
-    Q_LIST_ACCOUNTS,
+    Q_DISCOVER_ASSETS,
+    Q_DISCOVER_SCHEMA,
     Q_DOC_FORMAT_STATS,
+    Q_DOMAIN_STATS,
     Q_ENTITY_TYPE_STATS,
+    Q_INFER_SCHEMA,
+    Q_LIST_ACCOUNTS,
+    Q_LIST_ALL_DOCUMENTS,
+    Q_LIST_CRS,
+    Q_LIST_DOCUMENTS,
+    Q_LIST_UNITS,
+    Q_RELATIONSHIPS_META,
+    Q_ROW_COUNT,
     Q_SCHEMA_SOURCE_STATS,
+    Q_SCOPE_VALIDATION,
+    Q_UNIT_SYSTEM,
 )
+from synqx_engine.connectors.impl.sql.oracle import OracleConnector
 
 logger = get_logger(__name__)
 

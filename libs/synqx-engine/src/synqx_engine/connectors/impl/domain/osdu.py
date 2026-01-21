@@ -1,8 +1,9 @@
+import hashlib
 from collections.abc import Iterator
 from typing import Any
 
 import pandas as pd
-from synqx_core.errors import ConfigurationError
+from synqx_core.errors import ConfigurationError, DataTransferError
 from synqx_core.logging import get_logger
 
 from synqx_engine.connectors.base import BaseConnector
@@ -10,8 +11,11 @@ from synqx_engine.domains.osdu import (
     OSDUCoreService,
     OSDUFileService,
     OSDUGovernanceService,
+    OSDUPolicyService,
     OSDURefService,
+    OSDUSeismicService,
     OSDUWellboreService,
+    OSDUWorkflowService,
 )
 
 logger = get_logger(__name__)
@@ -40,6 +44,9 @@ class OSDUConnector(BaseConnector):
         self.gov = OSDUGovernanceService(url, partition, token)
         self.wellbore = OSDUWellboreService(url, partition, token)
         self.ref = OSDURefService(url, partition, token)
+        self.seismic = OSDUSeismicService(url, partition, token)
+        self.workflow = OSDUWorkflowService(url, partition, token)
+        self.policy = OSDUPolicyService(url, partition, token)
 
     def connect(self) -> None:
         pass
@@ -47,20 +54,22 @@ class OSDUConnector(BaseConnector):
     def disconnect(self) -> None:
         pass
 
-    def test_connection(self) -> dict[str, bool]:
+    def test_connection(self) -> bool:
         """
         Verifies connectivity via Entitlements service.
         """
         try:
             groups = self.gov.get_groups()
             logger.info(f"OSDU Heartbeat Success. User has {len(groups)} entitlements.")
-            return {"success": True}
+            return True
         except Exception as e:
             logger.error(f"OSDU Heartbeat Failed: {e}")
-            return {"success": False}
+            return False
 
     def discover_assets(
-        self, pattern: str | None = None, **kwargs
+        self,
+        pattern: str | None = None,
+        **kwargs
     ) -> list[dict[str, Any]]:
         """
         Discovers Kinds (Schemas) using Search Service aggregations.
@@ -114,10 +123,129 @@ class OSDUConnector(BaseConnector):
         """
         return self.core.get_schema(asset)
 
+    # --- Record-Level CRUD Operations (Storage Service) ---
+
+    def get_record(self, record_id: str) -> dict[str, Any]:
+        """
+        Retrieves a single record by its full OSDU ID.
+        """
+        try:
+            return self.core.get_record(record_id)
+        except Exception as e:
+            logger.error(f"Failed to fetch OSDU record {record_id}: {e}")
+            raise DataTransferError(f"Fetch failed: {e!s}")
+
+    def get_record_version(self, record_id: str, version: int) -> dict[str, Any]:
+        """
+        Retrieves a specific version of a record.
+        """
+        try:
+            return self.core._get(f"api/storage/v2/records/{record_id}/{version}").json()
+        except Exception as e:
+            logger.error(f"Failed to fetch version {version} for {record_id}: {e}")
+            raise DataTransferError(f"Version fetch failed: {e!s}")
+
+    def delete_record(self, record_id: str) -> bool:
+        """
+        Deletes a record by its OSDU ID.
+        """
+        try:
+            self.core.delete_record(record_id)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete OSDU record {record_id}: {e}")
+            raise DataTransferError(f"Delete failed: {e!s}")
+
+    def update_record(self, record_id: str, data: dict[str, Any], **kwargs) -> str:
+        """
+        Updates an existing record. Performs a GET-Modify-PUT cycle to preserve
+        system metadata and lineage.
+        """
+        try:
+            existing = self.get_record(record_id)
+            # Merge new data into existing record data block
+            existing["data"].update(data)
+            
+            # Allow overriding top-level fields like tags, acl, legal if provided
+            if "tags" in kwargs: existing["tags"] = kwargs["tags"]
+            if "acl" in kwargs: existing["acl"] = kwargs["acl"]
+            if "legal" in kwargs: existing["legal"] = kwargs["legal"]
+
+            # Storage PUT returns a list of IDs (usually one for single record)
+            ids = self.core.upsert_records([existing])
+            return ids[0] if ids else record_id
+        except Exception as e:
+            logger.error(f"Failed to update OSDU record {record_id}: {e}")
+            raise DataTransferError(f"Update failed: {e!s}")
+
+    def get_record_versions(self, record_id: str) -> list[int]:
+        """
+        Retrieves all available version numbers for a record.
+        """
+        try:
+            return self.core.get_record_versions(record_id)
+        except Exception as e:
+            logger.error(f"Failed to fetch versions for {record_id}: {e}")
+            return []
+
+    def get_record_ancestry(self, record_id: str) -> dict[str, Any]:
+        """
+        Retrieves parent/lineage information for a record.
+        """
+        try:
+            return self.core.get_ancestry(record_id)
+        except Exception as e:
+            logger.error(f"Failed to fetch ancestry for {record_id}: {e}")
+            return {"record_id": record_id, "parents": []}
+
+    def get_record_relationships(self, record_id: str) -> dict[str, Any]:
+        """
+        Discovers inbound and outbound relationships for a record.
+        """
+        try:
+            return self.core.get_record_relationships(record_id)
+        except Exception as e:
+            logger.error(f"Failed to fetch relationships for {record_id}: {e}")
+            return {"record_id": record_id, "inbound": [], "outbound": []}
+
+    def get_record_deep_dive(self, record_id: str) -> dict[str, Any]:
+        """
+        Orchestrates a comprehensive fetch of all record-related metadata.
+        """
+        try:
+            return self.core.get_record_deep_dive(record_id)
+        except Exception as e:
+            logger.error(f"Failed record deep dive for {record_id}: {e}")
+            raise DataTransferError(f"Deep dive failed: {e!s}")
+
+    # --- File & Dataset Operations ---
+
+    def get_file_metadata(self, file_id: str) -> dict[str, Any]:
+        """
+        Retrieves metadata for a registered file.
+        """
+        return self.file.get_file_metadata(file_id)
+
+    def download_dataset(self, dataset_id: str) -> bytes:
+        """
+        Downloads content for a Dataset Registry ID.
+        """
+        signed_url = self.file.get_dataset_url(dataset_id)
+        if not signed_url:
+            raise DataTransferError(f"Could not resolve download URL for dataset {dataset_id}")
+        
+        import requests
+        resp = requests.get(signed_url)
+        resp.raise_for_status()
+        return resp.content
+
     # --- Engine Batch Operations ---
 
     def read_batch(
-        self, asset: str, limit: int | None = None, **kwargs
+        self,
+        asset: str,
+        limit: int | None = None,
+        **kwargs
     ) -> Iterator[pd.DataFrame]:
         """
         Engine implementation for reading data via Search Service.
@@ -144,7 +272,7 @@ class OSDUConnector(BaseConnector):
             df = pd.DataFrame(results)
             if "data" in df.columns:
                 df = df.drop(columns=["data"]).join(
-                    pd.json_normalize(df["data"]), rsuffix="_data"
+                    pd.json_normalize(df["data"]),suffix="_data"
                 )
 
             yield df
@@ -184,6 +312,8 @@ class OSDUConnector(BaseConnector):
             )
             # We search for all IDs of this kind and delete them
             try:
+                from concurrent.futures import ThreadPoolExecutor
+                
                 # Use a loop to handle potential search result limits
                 while True:
                     search_res = self.core.search(
@@ -193,8 +323,9 @@ class OSDUConnector(BaseConnector):
                     if not ids_to_delete:
                         break
 
-                    for rid in ids_to_delete:
-                        self.core.delete_record(rid)
+                    # Parallel deletion for speed
+                    with ThreadPoolExecutor(max_workers=10) as executor:
+                        executor.map(self.core.delete_record, ids_to_delete)
 
                     logger.debug(f"  Purged batch of {len(ids_to_delete)} records.")
                     if len(ids_to_delete) < 1000:
@@ -206,18 +337,23 @@ class OSDUConnector(BaseConnector):
 
         # Prepare records for ingestion
         records = []
-        for _, row in data.iterrows():
+        pk_col = kwargs.get("primary_key") or "id"
+        
+        # Performance: Use to_dict(orient="records") instead of iterrows
+        data_records = data.where(pd.notnull(data), None).to_dict(orient="records")
+        
+        for record in data_records:
             # ID Generation Strategy:
             # 1. Use provided 'id' if exists
             # 2. Use 'id' from config mapping (logical primary key)
             # 3. Fallback to deterministic hash of the entire row
 
-            pk_col = kwargs.get("primary_key") or "id"
-            row_id = (
-                str(row.get(pk_col))
-                if row.get(pk_col)
-                else hashlib.sha256(str(row.to_dict()).encode()).hexdigest()[:16]
-            )
+            row_id = record.get(pk_col)
+            if not row_id:
+                # Deterministic hash for idempotency if no ID provided
+                row_id = hashlib.sha256(str(record).encode()).hexdigest()[:16]
+            else:
+                row_id = str(row_id)
 
             # Ensure the ID follows OSDU format: data-partition-id:kind:record-id
             full_id = f"{self.config['data_partition_id']}:{asset}:{row_id}"
@@ -228,7 +364,7 @@ class OSDUConnector(BaseConnector):
                     "kind": asset,
                     "acl": acl,
                     "legal": legal,
-                    "data": row.where(pd.notnull(row), None).to_dict(),
+                    "data": record,
                 }
             )
 
@@ -245,7 +381,8 @@ class OSDUConnector(BaseConnector):
 
     def _provision_kind_if_needed(self, kind: str, df: pd.DataFrame) -> None:
         """
-        Verifies Kind existence and registers a new schema if missing.
+        Verifies Kind existence and registers a new well-defined schema if missing.
+        Matches the structure seen in high-quality OSDU schema definitions.
         """
         try:
             # Check if schema exists
@@ -253,7 +390,7 @@ class OSDUConnector(BaseConnector):
             logger.debug(f"OSDU Kind '{kind}' already exists. Skipping provision.")
         except Exception:
             logger.info(
-                f"OSDU Kind '{kind}' not found. Initiating auto-provisioning..."
+                f"OSDU Kind '{kind}' not found. Initiating well-defined auto-provisioning..."
             )
 
             # Map pandas/numpy types to OSDU/JSON types
@@ -261,46 +398,91 @@ class OSDUConnector(BaseConnector):
             for col, dtype in df.dtypes.items():
                 dt = str(dtype).lower()
                 if "int" in dt:
-                    properties[col] = {"type": "integer"}
+                    properties[col] = {"type": "integer", "title": col.replace("_", " ").title()}
                 elif "float" in dt or "double" in dt:
-                    properties[col] = {"type": "number"}
+                    properties[col] = {"type": "number", "title": col.replace("_", " ").title()}
                 elif "bool" in dt:
-                    properties[col] = {"type": "boolean"}
+                    properties[col] = {"type": "boolean", "title": col.replace("_", " ").title()}
                 elif "datetime" in dt:
-                    properties[col] = {"type": "string", "format": "date-time"}
+                    properties[col] = {"type": "string", "format": "date-time", "title": col.replace("_", " ").title()}
                 else:
-                    properties[col] = {"type": "string"}
+                    properties[col] = {"type": "string", "title": col.replace("_", " ").title()}
 
-            # Construct OSDU Schema object
             parts = kind.split(":")
+            authority = parts[0] if len(parts) > 0 else "osdu"
+            source = parts[1] if len(parts) > 1 else "wks"
+            entity_type = parts[2].split("--")[-1] if len(parts) > 2 else parts[2]
+            version = parts[3] if len(parts) > 3 else "1.0.0"
+            v_parts = version.split(".")
+            v_maj = int(v_parts[0]) if len(v_parts) > 0 else 1
+            v_min = int(v_parts[1]) if len(v_parts) > 1 else 0
+            v_pat = int(v_parts[2]) if len(v_parts) > 2 else 0
+
+            # Construct Comprehensive OSDU Schema object matching schema-example.json
             schema_obj = {
-                "kind": kind,
                 "schemaInfo": {
                     "schemaIdentity": {
-                        "authority": parts[0],
-                        "source": parts[1],
-                        "entityType": parts[2].split("--")[-1]
-                        if "--" in parts[2]
-                        else parts[2],
-                        "schemaVersionMajor": 1,
-                        "schemaVersionMinor": 0,
-                        "schemaVersionPatch": 0,
+                        "authority": authority,
+                        "source": source,
+                        "entityType": entity_type,
+                        "schemaVersionMajor": v_maj,
+                        "schemaVersionMinor": v_min,
+                        "schemaVersionPatch": v_pat,
                     },
-                    "status": "PUBLISHED",
+                    "status": "DEVELOPMENT",
                 },
                 "schema": {
+                    "$schema": "http://json-schema.org/draft-07/schema#",
                     "x-osdu-license": "Copyright 2024, SLB",
-                    "x-osdu-schema-source": "Synqx-AutoProvision",
+                    "x-osdu-schema-source": kind,
+                    "title": f"Auto-provisioned {entity_type}",
+                    "description": f"Synqx generated schema for {kind}",
                     "type": "object",
-                    "properties": {
-                        "data": {"type": "object", "properties": properties}
+                    "definitions": {
+                        kind: {
+                            "type": "object",
+                            "properties": properties
+                        },
+                        "osdu:wks:AbstractLegalTags:1.0.0": {
+                            "type": "object",
+                            "properties": {
+                                "legaltags": {"type": "array", "items": {"type": "string"}},
+                                "otherRelevantDataCountries": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z]{2}$"}},
+                                "status": {"type": "string", "pattern": "^(compliant|uncompliant)$"}
+                            },
+                            "required": ["legaltags", "otherRelevantDataCountries"]
+                        },
+                        "osdu:wks:AbstractAccessControlList:1.0.0": {
+                            "type": "object",
+                            "properties": {
+                                "viewers": {"type": "array", "items": {"type": "string"}},
+                                "owners": {"type": "array", "items": {"type": "string"}}
+                            },
+                            "required": ["owners", "viewers"]
+                        }
                     },
-                },
+                    "properties": {
+                        "id": {"type": "string", "pattern": "^[\\w\\-\\.]+:[\\w\\-\\.]+:[\\w\\-\\.\\:\%]+$"},
+                        "kind": {"type": "string", "pattern": "^[\\w\\-\\.]+:[\\w\\-\\.]+:[\\w\\-\\.]+:[0-9]+.[0-9]+.[0-9]+$"},
+                        "version": {"type": "integer", "format": "int64"},
+                        "acl": {"$ref": "#/definitions/osdu:wks:AbstractAccessControlList:1.0.0"},
+                        "legal": {"$ref": "#/definitions/osdu:wks:AbstractLegalTags:1.0.0"},
+                        "data": {
+                            "allOf": [{"$ref": f"#/definitions/{kind}"}]
+                        },
+                        "createTime": {"type": "string", "format": "date-time"},
+                        "createUser": {"type": "string"},
+                        "modifyTime": {"type": "string", "format": "date-time"},
+                        "modifyUser": {"type": "string"},
+                        "tags": {"type": "object", "additionalProperties": {"type": "string"}}
+                    },
+                    "required": ["kind", "acl", "legal"]
+                }
             }
 
             try:
                 self.core.create_schema(schema_obj)
-                logger.info(f"Successfully provisioned OSDU Kind: {kind}")
+                logger.info(f"Successfully provisioned well-defined OSDU Kind: {kind}")
             except Exception as e:
                 logger.error(f"Failed to auto-provision OSDU Kind '{kind}': {e}")
                 raise ConfigurationError(
@@ -315,16 +497,16 @@ class OSDUConnector(BaseConnector):
         Dynamic dispatcher for UI-driven service actions.
         Enables the Frontend to call any method on core, file, gov, wellbore, or ref services.
         """  # noqa: E501
-        # 1. Check sub-services
-        for service in [self.core, self.file, self.gov, self.wellbore, self.ref]:
-            if hasattr(service, action):
-                method = getattr(service, action)
-                return method(**params)
-
-        # 2. Check the connector instance itself
+        # 1. Check the connector instance itself
         if hasattr(self, action):
             method = getattr(self, action)
             return method(**params)
+
+        # 2. Check sub-services
+        for service in [self.core, self.file, self.gov, self.wellbore, self.ref, self.seismic, self.workflow, self.policy]:
+            if hasattr(service, action):
+                method = getattr(service, action)
+                return method(**params)
 
         raise AttributeError(
             f"Action '{action}' not implemented in any OSDU service module."
@@ -368,7 +550,10 @@ class OSDUConnector(BaseConnector):
         }
 
     def get_total_count(
-        self, query_or_asset: str, is_query: bool = False, **kwargs
+        self,
+        query_or_asset: str,
+        is_query: bool = False,
+        **kwargs
     ) -> int | None:
         """
         Efficiently fetches the total count for a query or asset.
@@ -401,14 +586,14 @@ class OSDUConnector(BaseConnector):
         Allows direct access to methods like `get_groups()` or `get_legal_tags()`.
         """
         # Avoid infinite recursion for internal lookups
-        if name.startswith("_") or name in ["core", "file", "gov", "wellbore", "ref"]:
+        if name.startswith("_") or name in ["core", "file", "gov", "wellbore", "ref", "seismic", "workflow", "policy"]:
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
 
         # Safely iterate through sub-services
         services = []
-        for s in ["core", "file", "gov", "wellbore", "ref"]:
+        for s in ["core", "file", "gov", "wellbore", "ref", "seismic", "workflow", "policy"]:
             svc = self.__dict__.get(s)
             if svc:
                 services.append(svc)

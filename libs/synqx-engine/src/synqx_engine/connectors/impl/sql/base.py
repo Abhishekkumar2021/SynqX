@@ -148,9 +148,6 @@ class SQLConnector(BaseConnector):
                 all_assets = [t for t in all_assets if pattern.lower() in t.lower()]
 
             if not include_metadata:
-                # Even without full metadata, basic stats are useful if cheap
-                # But for now, we stick to the requested logic or maybe enable it?
-                # User complaint implies they want it. Let's make sure if they ask for it (include_metadata=True), they get it.  # noqa: E501
                 return [
                     {
                         "name": t,
@@ -160,17 +157,31 @@ class SQLConnector(BaseConnector):
                     for t in all_assets
                 ]
 
+            # Only fetch detailed metadata (row counts, sizes) if explicitly requested
+            # and potentially limited to a subset to avoid performance collapse
             results = []
-            for asset in all_assets:
-                row_count = self._get_row_count(asset, db_schema)
-                size_bytes = self._get_table_size(asset, db_schema)
+            
+            # Optimization: Use a smaller limit for auto-discovery if not otherwise specified
+            discovery_limit = kwargs.get("discovery_limit", 500)
+            assets_to_probe = all_assets[:discovery_limit]
+
+            for asset in assets_to_probe:
+                # PERFORMANCE: Row counting can be extremely slow on large tables
+                # Skip if skip_stats=True is passed in kwargs
+                row_count = None
+                size_bytes = None
+                
+                if not kwargs.get("skip_stats", False):
+                    row_count = self._get_row_count(asset, db_schema)
+                    size_bytes = self._get_table_size(asset, db_schema)
 
                 # Fetch full schema metadata if requested
                 schema_metadata = None
-                try:
-                    schema_metadata = self.infer_schema(asset)
-                except Exception:
-                    pass
+                if kwargs.get("include_schema", True):
+                    try:
+                        schema_metadata = self.infer_schema(asset)
+                    except Exception:
+                        pass
 
                 results.append(
                     {
@@ -185,6 +196,17 @@ class SQLConnector(BaseConnector):
                         "schema_metadata": schema_metadata,
                     }
                 )
+            
+            # Append remaining assets without metadata if we hit the limit
+            if len(all_assets) > discovery_limit:
+                for asset in all_assets[discovery_limit:]:
+                    results.append({
+                        "name": asset,
+                        "fully_qualified_name": f"{db_schema}.{asset}" if db_schema else asset,
+                        "type": "table" if asset in tables else "view",
+                        "partial": True # Indicate this asset wasn't fully probed
+                    })
+
             return results
         except Exception as e:
             raise SchemaDiscoveryError(f"Failed to discover assets: {e}")  # noqa: B904
@@ -545,14 +567,33 @@ class SQLConnector(BaseConnector):
                                 f"Target table '{asset}' does not exist and 'auto_create_schema' is disabled."
                             )
 
-                # Robust type conversion
+                # UNIVERSAL DATA TYPE PREPARATION
+                # This ensures that complex Python/Pandas types are converted to 
+                # formats that SQLAlchemy and underlying drivers can handle.
                 for col in df.columns:
-                    if df[col].dtype == "object":
-                        df[col] = df[col].apply(
-                            lambda x: json.dumps(x)
-                            if isinstance(x, (dict, list))
-                            else x
-                        )
+                    dtype = df[col].dtype
+                    
+                    # 1. Handle JSON/Dictionaries/Lists
+                    if dtype == "object":
+                        # Check first non-null element to see if it's a dict/list
+                        first_valid = df[col].first_valid_index()
+                        if first_valid is not None:
+                            sample_val = df.at[first_valid, col]
+                            if isinstance(sample_val, (dict, list)):
+                                logger.debug(f"Serializing JSON column: {col}")
+                                df[col] = df[col].apply(
+                                    lambda x: json.dumps(x) if isinstance(x, (dict, list)) else x
+                                )
+
+                    # 2. Handle UUIDs (convert to strings)
+                    from uuid import UUID
+                    if any(isinstance(x, UUID) for x in df[col].head(5).dropna()):
+                        df[col] = df[col].astype(str)
+
+                    # 3. Handle Binary Data (BLOBs)
+                    # Ensure they are in bytes/bytearray format
+                    if any(isinstance(x, (bytearray, memoryview)) for x in df[col].head(5).dropna()):
+                        df[col] = df[col].apply(lambda x: bytes(x) if isinstance(x, (bytearray, memoryview)) else x)
 
                 df.to_sql(
                     name=name,
@@ -560,6 +601,7 @@ class SQLConnector(BaseConnector):
                     con=self._connection,
                     if_exists=if_exists_val,
                     index=False,
+                    method="multi" if "postgres" in str(self._engine.url).lower() else None,
                     **kwargs,
                 )
 

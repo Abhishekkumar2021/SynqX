@@ -61,3 +61,43 @@ class OSDUBaseClient:
                 f"Access Denied to OSDU Partition '{self.data_partition_id}' (403)"
             )
         resp.raise_for_status()
+
+    def search(
+        self,
+        kind: str = "*:*:*:*",
+        query: str = "*",
+        limit: int = 100,
+        offset: int = 0,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """
+        Generic search method available to all OSDU domain services.
+        Handles limit/offset boundaries and internal kwarg cleaning.
+        """
+        # Strip internal Synqx metadata that OSDU parser rejects
+        clean_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k
+            in [
+                "aggregateBy",
+                "spatialFilter",
+                "returnedFields",
+                "sort",
+                "trackTotalCount",
+            ]
+        }
+
+        # OSDU Limit/Offset Boundaries
+        safe_limit = min(limit, 1000)
+        safe_offset = max(offset, 0)
+
+        payload = {
+            "kind": kind or "*:*:*:*",
+            "query": query or "*",
+            "limit": safe_limit,
+            "offset": safe_offset,
+            "trackTotalCount": True,
+            **clean_kwargs,
+        }
+        return self._post("api/search/v2/query", json=payload).json()

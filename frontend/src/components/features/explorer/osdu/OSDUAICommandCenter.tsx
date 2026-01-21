@@ -199,33 +199,33 @@ export const OSDUAICommandCenter: React.FC<OSDUAICommandCenterProps> = ({
           className="absolute inset-0 z-[100] bg-background/95 backdrop-blur-3xl flex flex-col overflow-hidden"
         >
           {/* --- MINIMAL NAVIGATION HEADER --- */}
-          <header className="h-16 px-8 border-b border-border/40 flex items-center justify-between shrink-0 z-20">
-            <div className="flex items-center gap-4">
-              <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <BrainCircuit size={18} />
+          <header className="h-14 px-6 border-b border-border/40 flex items-center justify-between shrink-0 z-20 transition-all">
+            <div className="flex items-center gap-3">
+              <div className="h-7 w-7 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <BrainCircuit size={16} />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/60">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/60">
                 Neural_Mesh
               </span>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
-              <TabsList className="bg-muted/50 h-9 p-1 rounded-xl border border-border/40">
+              <TabsList className="bg-muted/50 h-8 p-0.5 rounded-lg border border-border/40">
                 <TabsTrigger
                   value="chat"
-                  className="text-[10px] font-black uppercase px-6 h-7 rounded-lg data-[state=active]:bg-background shadow-none"
+                  className="text-[9px] font-black uppercase px-4 h-7 rounded-md data-[state=active]:bg-background shadow-none"
                 >
-                  Conversation
+                  Prompt
                 </TabsTrigger>
                 <TabsTrigger
                   value="history"
-                  className="text-[10px] font-black uppercase px-6 h-7 rounded-lg data-[state=active]:bg-background shadow-none"
+                  className="text-[9px] font-black uppercase px-4 h-7 rounded-md data-[state=active]:bg-background shadow-none"
                 >
                   Buffer
                 </TabsTrigger>
                 <TabsTrigger
                   value="help"
-                  className="text-[10px] font-black uppercase px-6 h-7 rounded-lg data-[state=active]:bg-background shadow-none"
+                  className="text-[9px] font-black uppercase px-4 h-7 rounded-md data-[state=active]:bg-background shadow-none"
                 >
                   Atlas
                 </TabsTrigger>
@@ -236,9 +236,9 @@ export const OSDUAICommandCenter: React.FC<OSDUAICommandCenterProps> = ({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="h-10 w-10 rounded-xl hover:bg-muted"
+              className="h-8 w-8 rounded-lg hover:bg-muted"
             >
-              <X size={20} />
+              <X size={18} />
             </Button>
           </header>
 
@@ -335,37 +335,37 @@ export const OSDUAICommandCenter: React.FC<OSDUAICommandCenterProps> = ({
                                 </div>
 
                                 {msg.role === 'user' ? (
-                                  <div className="p-4 px-6 rounded-[2rem] rounded-tr-none bg-primary text-primary-foreground text-[15px] font-medium leading-relaxed shadow-lg shadow-primary/10">
+                                  <div className="p-3.5 px-5 rounded-[1.5rem] rounded-tr-none bg-primary text-primary-foreground text-[14px] font-medium leading-relaxed shadow-lg shadow-primary/10">
                                     {msg.content}
                                   </div>
                                 ) : msg.error ? (
-                                  <div className="p-4 px-6 rounded-[2rem] rounded-tl-none bg-destructive/10 border border-destructive/20 text-destructive text-[14px] font-bold">
+                                  <div className="p-3.5 px-5 rounded-[1.5rem] rounded-tl-none bg-destructive/10 border border-destructive/20 text-destructive text-[13px] font-bold">
                                     {msg.content}
                                   </div>
                                 ) : (
-                                  <div className="space-y-4 w-full">
+                                  <div className="space-y-3 w-full">
                                     {/* Description Bubble */}
-                                    <div className="p-5 px-7 rounded-[2rem] rounded-tl-none bg-card border border-border text-[15px] font-medium text-foreground/80 leading-relaxed italic shadow-sm">
+                                    <div className="p-4 px-6 rounded-[1.5rem] rounded-tl-none bg-card border border-border text-[13px] font-medium text-foreground/70 leading-relaxed italic shadow-sm">
                                       "{msg.explanation}"
                                     </div>
 
                                     {/* Manifest Logic Card */}
-                                    <div className="rounded-[2rem] bg-muted/20 border border-border overflow-hidden relative group flex flex-col transition-all hover:border-primary/30 w-full">
-                                      <div className="px-6 py-3 border-b border-border/40 bg-muted/20 flex items-center justify-between shrink-0">
-                                        <div className="flex items-center gap-3">
-                                          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                                            <Terminal size={14} />
+                                    <div className="rounded-[1.5rem] bg-muted/20 border border-border overflow-hidden relative group flex flex-col transition-all hover:border-primary/30 w-full">
+                                      <div className="px-5 py-2.5 border-b border-border/40 bg-muted/20 flex items-center justify-between shrink-0">
+                                        <div className="flex items-center gap-2.5">
+                                          <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                            <Terminal size={12} />
                                           </div>
-                                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/80">
+                                          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground/70">
                                             Lucene Manifest
                                           </span>
                                         </div>
                                         <Button
                                           size="sm"
-                                          className="h-7 px-4 rounded-full bg-primary hover:bg-primary/90 text-white text-[9px] font-black uppercase tracking-widest shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                          className="h-6 px-3 rounded-full bg-primary hover:bg-primary/90 text-white text-[8px] font-black uppercase tracking-widest shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
                                           onClick={() => onApplyQuery(msg.lucene)}
                                         >
-                                          <Play size={10} fill="currentColor" className="mr-2" />{' '}
+                                          <Play size={9} fill="currentColor" className="mr-1.5" />{' '}
                                           Apply
                                         </Button>
                                       </div>
@@ -375,9 +375,9 @@ export const OSDUAICommandCenter: React.FC<OSDUAICommandCenterProps> = ({
                                             code={msg.lucene}
                                             language="text"
                                             rounded={false}
-                                            className="border-0 !bg-transparent !shadow-none p-4"
+                                            className="border-0 !bg-transparent !shadow-none p-3.5 text-[11px]"
                                             wrap={true}
-                                            maxHeight="200px"
+                                            maxHeight="180px"
                                           />
                                         </div>
                                       </div>
@@ -409,13 +409,13 @@ export const OSDUAICommandCenter: React.FC<OSDUAICommandCenterProps> = ({
                 </div>
 
                 {/* --- REFINED COMPACT INPUT HUB --- */}
-                <div className="shrink-0 p-6 md:p-8 bg-background border-t border-border/40 relative z-50">
+                <div className="shrink-0 p-4 md:p-6 bg-background border-t border-border/40 relative z-50">
                   <div className="max-w-3xl mx-auto">
-                    <div className="relative group bg-muted/20 border border-border rounded-full flex items-center p-1.5 focus-within:bg-background focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/5 transition-all duration-300 shadow-lg">
+                    <div className="relative group bg-muted/20 border border-border rounded-full flex items-center p-1 focus-within:bg-background focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/5 transition-all duration-300 shadow-lg">
                       <div className="flex-1 flex items-center px-4">
                         <Input
                           placeholder="Message Neural Mesh..."
-                          className="flex-1 !bg-transparent !border-0 !shadow-none !ring-0 !outline-none h-10 text-[15px] font-medium placeholder:text-muted-foreground/40"
+                          className="flex-1 !bg-transparent !border-0 !shadow-none !ring-0 !outline-none h-9 text-[14px] font-medium placeholder:text-muted-foreground/30"
                           value={prompt}
                           onChange={(e) => setPrompt(e.target.value)}
                           onKeyDown={(e) => {
@@ -433,41 +433,41 @@ export const OSDUAICommandCenter: React.FC<OSDUAICommandCenterProps> = ({
                         disabled={!prompt || isProcessing}
                         onClick={() => handleConvert()}
                         className={cn(
-                          'h-9 w-9 rounded-full shrink-0 shadow-lg transition-all duration-300',
+                          'h-8 w-8 rounded-full shrink-0 shadow-lg transition-all duration-300',
                           prompt
                             ? 'bg-primary text-primary-foreground opacity-100 scale-100'
                             : 'bg-muted text-muted-foreground opacity-20 scale-95'
                         )}
                       >
                         {isProcessing ? (
-                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <Send className="h-4 w-4" />
+                          <Send className="h-3.5 w-3.5" />
                         )}
                       </Button>
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between px-6 opacity-30">
+                    <div className="mt-2.5 flex items-center justify-between px-6 opacity-30">
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5">
-                          <Command size={10} />
+                          <Command size={9} />
                           <span className="text-[8px] font-black uppercase tracking-widest">
-                            Enter to send
+                            Return to send
                           </span>
                         </div>
-                        <div className="h-1 w-1 rounded-full bg-border" />
+                        <div className="h-0.5 w-0.5 rounded-full bg-border" />
                         <div className="flex items-center gap-1.5 text-primary">
-                          <Sparkle size={10} className="text-primary" />
+                          <Sparkle size={9} className="text-primary" />
                           <span className="text-[8px] font-black uppercase tracking-widest">
-                            Gemini PRO
+                            Gemini 2.0
                           </span>
                         </div>
                       </div>
                       <button
                         onClick={clearChat}
-                        className="text-[9px] font-black uppercase tracking-widest hover:text-destructive transition-colors"
+                        className="text-[8px] font-black uppercase tracking-widest hover:text-destructive transition-colors"
                       >
-                        <Eraser size={10} className="inline mr-1" /> Reset
+                        <Eraser size={10} className="inline mr-1" /> Reset Hub
                       </button>
                     </div>
                   </div>

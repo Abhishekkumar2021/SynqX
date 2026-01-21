@@ -15,7 +15,7 @@ import {
 import { motion } from 'framer-motion'
 import { useTheme } from '@/hooks/useTheme'
 import { DashboardWidget } from '@/components/features/dashboard/DashboardWidget'
-import { formatNumber } from '@/lib/utils'
+import { cn, formatNumber } from '@/lib/utils'
 
 interface DashboardChartsProps {
   sovereigntyData: any[]
@@ -72,43 +72,53 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
   const colors = getThemeColors(theme)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Partition Sovereignty Bar Chart */}
       <motion.div variants={itemVariants} className="lg:col-span-8 min-h-0 min-w-0">
         <DashboardWidget
           title="Authority Sovereignty"
-          description="Entity schema distribution per verified authority domain"
+          description="Schema distribution per authority domain"
           className="h-full glass-card"
         >
-          <div className="h-[400px] w-full mt-6 min-h-0 min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sovereigntyData} margin={{ top: 20, right: 30, bottom: 20, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={colors.GRID} />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: colors.TEXT, fontSize: 11, fontWeight: 600 }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: colors.TEXT, fontSize: 11, fontWeight: 600 }}
-                  dx={-10}
-                />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: colors.GRID }} />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={40}>
-                  {sovereigntyData.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={colors.CHART_COLORS[index % colors.CHART_COLORS.length]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {({ isMaximized }) => (
+            <div
+              className={cn(
+                'w-full mt-4 min-h-0 min-w-0',
+                isMaximized ? 'h-full pb-10' : 'h-[300px]'
+              )}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={sovereigntyData}
+                  margin={{ top: 10, right: 30, bottom: 10, left: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={colors.GRID} />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: colors.TEXT, fontSize: isMaximized ? 12 : 10, fontWeight: 600 }}
+                    dy={5}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: colors.TEXT, fontSize: isMaximized ? 12 : 10, fontWeight: 600 }}
+                    dx={-5}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: colors.GRID }} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={isMaximized ? 64 : 32}>
+                    {sovereigntyData.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={colors.CHART_COLORS[index % colors.CHART_COLORS.length]}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </DashboardWidget>
       </motion.div>
 
@@ -116,81 +126,109 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({
       <motion.div variants={itemVariants} className="lg:col-span-4 min-h-0 min-w-0">
         <DashboardWidget
           title="Functional Groups"
-          description="Mapping of entity functional classifications"
+          description="Entity classification mapping"
           className="h-full glass-card"
         >
-          <div className="h-[400px] w-full mt-6 relative min-h-0 min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-                <Pie
-                  data={compositionData}
-                  innerRadius={90}
-                  outerRadius={130}
-                  paddingAngle={5}
-                  dataKey="value"
-                  stroke="none"
+          {({ isMaximized }) => (
+            <div
+              className={cn(
+                'w-full mt-4 relative min-h-0 min-w-0',
+                isMaximized ? 'h-full pb-10' : 'h-[300px]'
+              )}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                  <Pie
+                    data={compositionData}
+                    innerRadius={isMaximized ? 140 : 70}
+                    outerRadius={isMaximized ? 200 : 100}
+                    paddingAngle={4}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {compositionData.map((_, index) => (
+                      <PieCell
+                        key={`cell-${index}`}
+                        fill={colors.CHART_COLORS[index % colors.CHART_COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span
+                  className={cn(
+                    'font-black uppercase text-muted-foreground/50 tracking-widest leading-none',
+                    isMaximized ? 'text-sm' : 'text-[9px]'
+                  )}
                 >
-                  {compositionData.map((_, index) => (
-                    <PieCell
-                      key={`cell-${index}`}
-                      fill={colors.CHART_COLORS[index % colors.CHART_COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="subtitle opacity-70">Registered</span>
-              <span className="text-4xl font-black text-foreground mt-1">{totalKinds}</span>
+                  Total
+                </span>
+                <span
+                  className={cn(
+                    'font-black text-foreground mt-1 tracking-tighter',
+                    isMaximized ? 'text-5xl' : 'text-3xl'
+                  )}
+                >
+                  {totalKinds}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </DashboardWidget>
       </motion.div>
 
       {/* Source Provenance Bar Chart */}
       <motion.div variants={itemVariants} className="lg:col-span-12 min-h-0 min-w-0">
         <DashboardWidget
-          title="Schema Origin Provenance"
-          description="Distribution of registry definition sources across the partition"
+          title="Origin Provenance"
+          description="Registry definition sources across the partition"
           className="glass-card"
         >
-          <div className="h-[350px] w-full mt-6 min-h-0 min-w-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={provenanceData}
-                layout="vertical"
-                margin={{ top: 20, right: 40, left: 40, bottom: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={colors.GRID} />
-                <XAxis
-                  type="number"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: colors.TEXT, fontSize: 11, fontWeight: 600 }}
-                  dy={10}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: colors.TEXT, fontSize: 12, fontWeight: 700 }}
-                  width={120}
-                  dx={-10}
-                />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: colors.GRID }} />
-                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={32}>
-                  {provenanceData.map((_, index) => (
-                    <Cell
-                      key={`cell-prov-${index}`}
-                      fill={colors.CHART_COLORS[(index + 4) % colors.CHART_COLORS.length]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {({ isMaximized }) => (
+            <div
+              className={cn(
+                'w-full mt-4 min-h-0 min-w-0',
+                isMaximized ? 'h-full pb-10' : 'h-[280px]'
+              )}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={provenanceData}
+                  layout="vertical"
+                  margin={{ top: 10, right: 40, left: 40, bottom: 10 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={colors.GRID} />
+                  <XAxis
+                    type="number"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: colors.TEXT, fontSize: isMaximized ? 12 : 10, fontWeight: 600 }}
+                    dy={5}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: colors.TEXT, fontSize: isMaximized ? 14 : 11, fontWeight: 700 }}
+                    width={isMaximized ? 150 : 100}
+                    dx={-5}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: colors.GRID }} />
+                  <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={isMaximized ? 48 : 24}>
+                    {provenanceData.map((_, index) => (
+                      <Cell
+                        key={`cell-prov-${index}`}
+                        fill={colors.CHART_COLORS[(index + 4) % colors.CHART_COLORS.length]}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </DashboardWidget>
       </motion.div>
     </div>

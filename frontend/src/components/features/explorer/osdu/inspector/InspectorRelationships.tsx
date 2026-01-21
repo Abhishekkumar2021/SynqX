@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
-import { InspectorEmptyState } from './InspectorEmptyState'
+import { OSDUDiscoveryEmptyState } from '../shared/OSDUDiscoveryEmptyState'
 
 interface InspectorRelationshipsProps {
   record: any
@@ -80,11 +80,13 @@ export const InspectorRelationships: React.FC<InspectorRelationshipsProps> = ({
                 </div>
               ))}
               {outbound.length === 0 && (
-                <InspectorEmptyState
-                  icon={ArrowUpRight}
-                  title="No Outbound Links"
-                  description="This record does not reference any other entities."
-                />
+                <div className="relative min-h-[200px]">
+                  <OSDUDiscoveryEmptyState
+                    icon={ArrowUpRight}
+                    title="No Outbound Links"
+                    description="This record does not reference any other entities in the current metadata frame."
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -142,11 +144,13 @@ export const InspectorRelationships: React.FC<InspectorRelationshipsProps> = ({
                 </div>
               ))}
               {inbound.length === 0 && (
-                <InspectorEmptyState
-                  icon={Link2}
-                  title="No Inbound Links"
-                  description="No other entities reference this record."
-                />
+                <div className="relative min-h-[200px]">
+                  <OSDUDiscoveryEmptyState
+                    icon={Link2}
+                    title="No Inbound Links"
+                    description="No other entities reference this record in the technical OSDU mesh."
+                  />
+                </div>
               )}
             </div>
           </div>

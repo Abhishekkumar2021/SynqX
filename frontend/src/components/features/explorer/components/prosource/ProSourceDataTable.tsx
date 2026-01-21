@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import React, { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getConnectionMetadata } from '@/lib/api'
@@ -503,40 +504,40 @@ export const ProSourceDataTable: React.FC<ProSourceDataTableProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            size="sm"
-            className="h-10 px-6 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] gap-3 active:scale-95 disabled:opacity-20 border-border/40 hover:bg-muted transition-all"
+            size="icon"
+            className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted transition-all active:scale-95"
             disabled={pageOffset === 0}
             onClick={() => onOffsetChange(Math.max(0, pageOffset - pageSize))}
           >
-            <ChevronLeft size={16} /> Prev_Context
+            <ChevronLeft size={14} />
           </Button>
 
-          <div className="flex items-center gap-2 mx-4">
-            <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary text-white text-[11px] font-black shadow-xl shadow-primary/30 relative">
+          <div className="flex items-center gap-2 mx-2">
+            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary text-white text-[10px] font-black shadow-lg shadow-primary/30 relative">
               {Math.floor(pageOffset / pageSize) + 1}
-              <div className="absolute -top-1 -right-1 h-3 w-3 bg-white rounded-full flex items-center justify-center">
-                <div className="h-1.5 w-1.5 bg-primary rounded-full animate-pulse" />
+              <div className="absolute -top-1 -right-1 h-2 w-2 bg-white rounded-full flex items-center justify-center">
+                <div className="h-1 w-1 bg-primary rounded-full animate-pulse" />
               </div>
             </div>
-            <span className="text-[10px] font-black text-muted-foreground/20 uppercase tracking-widest mx-1">
-              OF
+            <span className="text-[9px] font-black text-muted-foreground/20 uppercase tracking-widest mx-1">
+              /
             </span>
-            <span className="h-10 w-10 flex items-center justify-center text-[11px] font-black text-muted-foreground/60 border border-border/20 rounded-xl bg-muted/10">
+            <span className="h-8 w-8 flex items-center justify-center text-[10px] font-black text-muted-foreground/60 border border-border/20 rounded-lg bg-muted/10">
               {Math.ceil((data?.total_count || 0) / pageSize) || 1}
             </span>
           </div>
 
           <Button
             variant="outline"
-            size="sm"
-            className="h-10 px-6 rounded-xl font-black uppercase text-[10px] tracking-[0.2em] gap-3 active:scale-95 disabled:opacity-20 border-border/40 hover:bg-muted transition-all"
+            size="icon"
+            className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted transition-all active:scale-95"
             disabled={pageOffset + pageSize >= (data?.total_count || 0)}
             onClick={() => onOffsetChange(pageOffset + pageSize)}
           >
-            Next_Context <ChevronRight size={16} />
+            <ChevronRight size={14} />
           </Button>
         </div>
       </div>

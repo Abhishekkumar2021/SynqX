@@ -5,7 +5,7 @@ interface DashboardWidgetProps {
   title: string
   description?: string
   icon?: React.ElementType
-  children: React.ReactNode
+  children: React.ReactNode | ((args: { isMaximized: boolean }) => React.ReactNode)
   className?: string
   headerActions?: React.ReactNode
 }

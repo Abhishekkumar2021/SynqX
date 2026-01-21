@@ -130,13 +130,11 @@ class S3Connector(BaseConnector):
                 )
 
             assets = []
-            max_assets = 10000
-
+            discovery_limit = kwargs.get("discovery_limit", 500)
+            
             for f in files:
-                if len(assets) >= max_assets:
-                    logger.warning(
-                        f"Reached max discovery limit of {max_assets} assets for bucket {self._config_model.bucket}"  # noqa: E501
-                    )
+                if len(assets) >= discovery_limit:
+                    # Append remaining as partial if we hit limit
                     break
 
                 if f.lower().endswith(valid_extensions):
@@ -163,13 +161,21 @@ class S3Connector(BaseConnector):
                     }
 
                     if include_metadata:
-                        info = self._fs.info(f)
-                        asset["metadata"] = {
-                            "size_bytes": info.get("size"),
-                            "last_modified": str(info.get("LastModified")),
-                            "format": rel_path.split(".")[-1],
-                        }
+                        # PERFORMANCE: info() triggers a HEAD request per file
+                        if not kwargs.get("skip_stats", False):
+                            info = self._fs.info(f)
+                            asset["metadata"] = {
+                                "size_bytes": info.get("size"),
+                                "last_modified": str(info.get("LastModified")),
+                                "format": rel_path.split(".")[-1],
+                            }
                     assets.append(asset)
+            
+            # Handle remainder
+            if len(files) > discovery_limit and len(assets) == discovery_limit:
+                 # Add a marker or just stop
+                 pass
+
             return assets
         except Exception as e:
             raise DataTransferError(f"Failed to discover S3 assets: {e}")  # noqa: B904

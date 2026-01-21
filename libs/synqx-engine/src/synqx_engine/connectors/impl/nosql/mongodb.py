@@ -118,20 +118,31 @@ class MongoDBConnector(BaseConnector):
                     for c in collections
                 ]
 
+            discovery_limit = kwargs.get("discovery_limit", 500)
+            assets_to_probe = collections[:discovery_limit]
+
             enriched = []
-            for col_name in collections:
+            for col_name in assets_to_probe:
                 fqn = f"{self._config_model.database}.{col_name}"
                 try:
-                    stats = self._db.command("collstats", col_name)
-                    enriched.append(
-                        {
+                    # PERFORMANCE: collstats can be slow
+                    if kwargs.get("skip_stats", False):
+                         enriched.append({
                             "name": col_name,
                             "fully_qualified_name": fqn,
                             "type": "collection",
-                            "row_count": stats.get("count", 0),
-                            "size_bytes": stats.get("size", 0),
-                        }
-                    )
+                        })
+                    else:
+                        stats = self._db.command("collstats", col_name)
+                        enriched.append(
+                            {
+                                "name": col_name,
+                                "fully_qualified_name": fqn,
+                                "type": "collection",
+                                "row_count": stats.get("count", 0),
+                                "size_bytes": stats.get("size", 0),
+                            }
+                        )
                 except Exception:
                     enriched.append(
                         {
@@ -140,6 +151,17 @@ class MongoDBConnector(BaseConnector):
                             "type": "collection",
                         }
                     )
+            
+            # Append remaining assets without metadata
+            if len(collections) > discovery_limit:
+                for col_name in collections[discovery_limit:]:
+                    enriched.append({
+                        "name": col_name,
+                        "fully_qualified_name": f"{self._config_model.database}.{col_name}",
+                        "type": "collection",
+                        "partial": True
+                    })
+
             return enriched
         except Exception as e:
             raise DataTransferError(f"Failed to discover MongoDB collections: {e}")  # noqa: B904

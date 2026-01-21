@@ -1,11 +1,14 @@
 import React, { useState, useMemo } from 'react'
-import { FileType } from 'lucide-react'
+import { FileType, Grid3X3, Search } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useFuzzySearch } from '@/hooks/useFuzzySearch'
-import { RegistryHeader } from './registry/RegistryHeader'
 import { RegistrySidebar } from './registry/RegistrySidebar'
 import { RegistryGrid } from './registry/RegistryGrid'
 import { RegistryList } from './registry/RegistryList'
+import { OSDUPageHeader } from './shared/OSDUPageHeader'
+import { OSDUDiscoveryEmptyState } from './shared/OSDUDiscoveryEmptyState'
+import { OSDUPlatformLoader } from './shared/OSDUPlatformLoader'
+import { cn } from '@/lib/utils'
 
 interface OSDURegistryViewProps {
   kinds: any[]
@@ -40,9 +43,9 @@ export const OSDURegistryView: React.FC<OSDURegistryViewProps> = ({
     })
 
     return {
-      authorities: Array.from(auths).sort(),
-      sources: Array.from(srcs).sort(),
-      types: Array.from(types).sort(),
+      authorities: Array.from(auths).filter(Boolean).sort(),
+      sources: Array.from(srcs).filter(Boolean).sort(),
+      types: Array.from(types).filter(Boolean).sort(),
     }
   }, [kinds])
 
@@ -77,7 +80,7 @@ export const OSDURegistryView: React.FC<OSDURegistryViewProps> = ({
   }
 
   return (
-    <div className="h-full flex overflow-hidden bg-muted/5 animate-in fade-in duration-500">
+    <div className="h-full flex overflow-hidden bg-muted/2 animate-in fade-in duration-500">
       {/* FACET SIDEBAR */}
       <RegistrySidebar
         facets={facets}
@@ -88,45 +91,55 @@ export const OSDURegistryView: React.FC<OSDURegistryViewProps> = ({
       />
 
       {/* MAIN REGISTRY VIEWPORT */}
-      <main className="flex-1 flex flex-col min-w-0 bg-background/20 relative">
-        <RegistryHeader
+      <main className="flex-1 flex flex-col min-w-0 bg-background relative overflow-hidden">
+        <OSDUPageHeader
+          icon={Grid3X3}
+          title="Kind Registry"
+          subtitle="Enterprise Schema Catalog"
+          iconColor="text-emerald-500"
           search={search}
-          setSearch={setSearch}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          isLoading={isLoading}
+          onSearchChange={setSearch}
+          searchPlaceholder="Filter schemas (e.g. wellbore)..."
           onRefresh={onRefresh}
+          isLoading={isLoading}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
           totalCount={filteredKinds.length}
+          countLabel="Schemas"
         />
 
-        <ScrollArea className="flex-1">
-          {groupedKinds.length === 0 && !isLoading ? (
-            <div className="flex flex-col items-center justify-center text-center py-48 space-y-8 opacity-40">
-              <div className="h-32 w-32 rounded-[3.5rem] border-2 border-dashed border-muted-foreground flex items-center justify-center shadow-inner">
-                <FileType size={64} strokeWidth={1} />
-              </div>
-              <div className="space-y-2">
-                <p className="font-black text-3xl tracking-tighter uppercase text-foreground">
-                  Registry Empty
-                </p>
-                <p className="text-sm font-bold uppercase tracking-[0.2em] max-w-sm text-muted-foreground">
-                  No schema definitions match your current partition filters.
-                </p>
-              </div>
-            </div>
-          ) : viewMode === 'grid' ? (
-            <RegistryGrid
-              groupedKinds={groupedKinds}
-              onSelectKind={onSelectKind}
-              collapsedGroups={collapsedGroups}
-              toggleGroup={toggleGroup}
+        <div className="flex-1 min-h-0 relative overflow-hidden bg-muted/2">
+          {isLoading ? (
+            <OSDUPlatformLoader message="Syncing schema registry..." iconColor="text-emerald-500" />
+          ) : groupedKinds.length === 0 ? (
+            <OSDUDiscoveryEmptyState
+              icon={FileType}
+              title="Registry Empty"
+              description="No schema definitions match your current partition filters."
             />
           ) : (
-            <div className="p-6 max-w-7xl mx-auto w-full pb-32">
-              <RegistryList kinds={fuzzyResults} onSelectKind={onSelectKind} />
-            </div>
+            <ScrollArea className="h-full">
+              <div
+                className={cn(
+                  'w-full mx-auto transition-all duration-500',
+                  viewMode === 'grid' ? 'p-6 max-w-[1600px]' : 'p-0'
+                )}
+              >
+                {viewMode === 'grid' ? (
+                  <RegistryGrid
+                    groupedKinds={groupedKinds}
+                    onSelectKind={onSelectKind}
+                    collapsedGroups={collapsedGroups}
+                    toggleGroup={toggleGroup}
+                  />
+                ) : (
+                  <RegistryList kinds={fuzzyResults} onSelectKind={onSelectKind} />
+                )}
+                {viewMode === 'grid' && <div className="h-24" />}
+              </div>
+            </ScrollArea>
           )}
-        </ScrollArea>
+        </div>
       </main>
     </div>
   )

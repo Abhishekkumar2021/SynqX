@@ -258,7 +258,6 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({
                   <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity" />
                   <Search className="z-20 absolute left-5 top-4 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <Input
-                    autoFocus
                     placeholder="Search connectors (e.g. Postgres, S3, OSDU)..."
                     className="relative z-10 pl-14 h-13 rounded-[1.5rem] bg-background/50 border-border/40 focus:border-primary/40 focus:bg-background focus:ring-4 focus:ring-primary/5 transition-all text-base shadow-sm"
                     value={searchQuery}
@@ -415,7 +414,6 @@ export const CreateConnectionDialog: React.FC<CreateConnectionDialogProps> = ({
                               </Label>
                               <FormControl>
                                 <Input
-                                  autoFocus
                                   placeholder="e.g. Production Analytics Warehouse"
                                   className="h-11 rounded-2xl bg-background border-border/40 shadow-sm focus:ring-primary/20"
                                   {...field}

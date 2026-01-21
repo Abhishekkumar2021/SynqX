@@ -368,31 +368,19 @@ class DashboardService:
 
             while current_bucket <= actual_end_date and buckets_count < max_buckets:
                 buckets_count += 1
-                match = None
-                for key, row in throughput_map.items():
-                    k = (
-                        key.replace(tzinfo=UTC)
-                        if key.tzinfo is None
-                        else key.astimezone(UTC)
-                    )
-                    c = (
-                        current_bucket.replace(tzinfo=UTC)
-                        if current_bucket.tzinfo is None
-                        else current_bucket.astimezone(UTC)
-                    )
+                
+                # Normalize current_bucket for lookup
+                lookup_key = current_bucket
+                if group_interval == "hour":
+                    lookup_key = lookup_key.replace(minute=0, second=0, microsecond=0)
+                else:
+                    lookup_key = lookup_key.replace(hour=0, minute=0, second=0, microsecond=0)
+                
+                # Make lookup_key timezone-aware if needed for matching
+                if lookup_key.tzinfo is None:
+                    lookup_key = lookup_key.replace(tzinfo=UTC)
 
-                    if group_interval == "hour":
-                        if (
-                            k.year == c.year
-                            and k.month == c.month
-                            and k.day == c.day
-                            and k.hour == c.hour
-                        ):
-                            match = row
-                            break
-                    elif k.year == c.year and k.month == c.month and k.day == c.day:
-                        match = row
-                        break
+                match = throughput_map.get(lookup_key)
 
                 if match:
                     throughput.append(
@@ -460,7 +448,7 @@ class DashboardService:
 
                 quality_map = {
                     (
-                        row.time_bucket
+                        row.time_bucket.replace(tzinfo=UTC) if row.time_bucket.tzinfo is None else row.time_bucket
                         if isinstance(row.time_bucket, datetime)
                         else datetime.strptime(
                             row.time_bucket,
@@ -486,31 +474,12 @@ class DashboardService:
                 q_buckets_count = 0
                 while it_bucket <= actual_end_date and q_buckets_count < max_buckets:
                     q_buckets_count += 1
-                    match = None
-                    for key, row in quality_map.items():
-                        k = (
-                            key.replace(tzinfo=UTC)
-                            if key.tzinfo is None
-                            else key.astimezone(UTC)
-                        )
-                        c = (
-                            it_bucket.replace(tzinfo=UTC)
-                            if it_bucket.tzinfo is None
-                            else it_bucket.astimezone(UTC)
-                        )
+                    
+                    lookup_key = it_bucket
+                    if lookup_key.tzinfo is None:
+                        lookup_key = lookup_key.replace(tzinfo=UTC)
 
-                        if group_interval == "hour":
-                            if (
-                                k.year == c.year
-                                and k.month == c.month
-                                and k.day == c.day
-                                and k.hour == c.hour
-                            ):
-                                match = row
-                                break
-                        elif k.year == c.year and k.month == c.month and k.day == c.day:
-                            match = row
-                            break
+                    match = quality_map.get(lookup_key)
 
                     if match:
                         v = int(match.valid_rows or 0)

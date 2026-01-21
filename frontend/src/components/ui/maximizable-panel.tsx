@@ -15,7 +15,7 @@ import { motion } from 'framer-motion'
 
 interface MaximizablePanelProps {
   title?: React.ReactNode
-  children: React.ReactNode
+  children: React.ReactNode | ((args: { isMaximized: boolean }) => React.ReactNode)
   className?: string
   headerActions?: React.ReactNode
   icon?: React.ElementType
@@ -29,6 +29,13 @@ export const MaximizablePanel: React.FC<MaximizablePanelProps> = ({
   icon: Icon,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false)
+
+  const renderChildren = (maximized: boolean) => {
+    if (typeof children === 'function') {
+      return children({ isMaximized: maximized })
+    }
+    return children
+  }
 
   const HeaderContent = (isFull: boolean) => (
     <div
@@ -121,7 +128,7 @@ export const MaximizablePanel: React.FC<MaximizablePanelProps> = ({
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-tr from-white/5 via-transparent to-transparent opacity-30" />
 
         {HeaderContent(false)}
-        <div className="flex-1 min-h-0 relative z-10">{children}</div>
+        <div className="flex-1 min-h-0 relative z-10">{renderChildren(false)}</div>
       </motion.div>
 
       <Dialog open={isMaximized} onOpenChange={setIsMaximized}>
@@ -131,7 +138,7 @@ export const MaximizablePanel: React.FC<MaximizablePanelProps> = ({
             <DialogDescription>Full screen panel view</DialogDescription>
           </VisuallyHidden.Root>
           <DialogHeader className="p-0 space-y-0 text-left">{HeaderContent(true)}</DialogHeader>
-          <div className="flex-1 w-full h-full p-8 overflow-hidden">{children}</div>
+          <div className="flex-1 w-full h-full p-8 overflow-hidden">{renderChildren(true)}</div>
         </DialogContent>
       </Dialog>
     </>

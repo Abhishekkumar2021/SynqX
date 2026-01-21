@@ -27,7 +27,7 @@ class AIConvertResponse(BaseModel):
 
 
 @router.post("/convert", response_model=AIConvertResponse)
-async def convert_prompt(
+def convert_prompt(
     request: AIConvertRequest,
     current_user: models.User = Depends(deps.get_current_user),  # noqa: B008
 ):

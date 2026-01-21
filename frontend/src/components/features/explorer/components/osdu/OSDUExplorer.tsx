@@ -12,27 +12,37 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 
 // OSDU Hub Components
 import { OSDUHubHeader } from '../../osdu/OSDUHubHeader'
-import { OSDUHubNav, type OSDUService } from '../../osdu/OSDUHubNav'
+import { OSDUSidebar, type OSDUService } from '../../osdu/OSDUSidebar'
 import { OSDUDashboard } from '../../osdu/OSDUDashboard'
 import { OSDUMeshView } from '../../osdu/OSDUMeshView'
 import { OSDURegistryView } from '../../osdu/OSDURegistryView'
 import { OSDUFileBrowser } from '../../osdu/OSDUFileBrowser'
 import { OSDUGovernanceView } from '../../osdu/OSDUGovernanceView'
+import { OSDUWorkflowView } from '../../osdu/OSDUWorkflowView'
+import { OSDUPolicyView } from '../../osdu/OSDUPolicyView'
+import { OSDUSeismicView } from '../../osdu/OSDUSeismicView'
+import { OSDUWellDeliveryView } from '../../osdu/OSDUWellDeliveryView'
 import { OSDURecordInspector } from '../../osdu/OSDURecordInspector'
 import { OSDUAICommandCenter } from '../../osdu/OSDUAICommandCenter'
+import { DeleteConfirmationDialog } from '../../osdu/shared/DeleteConfirmationDialog'
+import { Sparkles, Activity, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface OSDUExplorerProps {
   connectionId: number
 }
 
 export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
-  // const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
   // --- Local State ---
   const [isAICommandCenterOpen, setIsAICommandCenterOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [currentCursor, setCurrentCursor] = useState<string | null>(null)
+  const [recordToDelete, setRecordIdToDelete] = useState<string | null>(null)
 
   // --- URL Synced State ---
   const activeService = (searchParams.get('service') as OSDUService) || 'dashboard'
@@ -148,7 +158,7 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
   const results = useMemo(() => searchResponse?.results || [], [searchResponse])
   const totalCount = useMemo(() => searchResponse?.total_count || 0, [searchResponse])
 
-  // Record Deep Dive
+  // Record Deep Dive (Optimized to 1 call)
   const {
     data: record,
     isLoading: isLoadingRecord,
@@ -157,18 +167,14 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
   } = useQuery({
     queryKey: ['osdu', 'record', connectionId, activeRecordId],
     queryFn: async () => {
-      // Strip version suffix if present (e.g., :123456) to ensure Storage Service finds the record
-      const cleanId = activeRecordId!.replace(/:\d+$/, '')
+      // OSDU IDs from Search often include a version suffix (e.g. :123456789)
+      // Storage service GET records/{id} usually expects the UNVERSIONED ID.
+      // We strip the version suffix only if it's a long numeric string at the end.
+      const cleanId = activeRecordId!.replace(/:\d{10,}$/, '').replace(/:\d{4,9}$/, '')
 
-      const [details, relationships, ancestry, spatial] = await Promise.all([
-        getConnectionMetadata(connectionId, 'get_record', { record_id: cleanId }),
-        getConnectionMetadata(connectionId, 'get_record_relationships', {
-          record_id: cleanId,
-        }),
-        getConnectionMetadata(connectionId, 'get_ancestry', { record_id: cleanId }),
-        getConnectionMetadata(connectionId, 'get_spatial_data', { record_id: cleanId }),
-      ])
-      return { details, relationships, ancestry, spatial }
+      return getConnectionMetadata(connectionId, 'get_record_deep_dive', {
+        record_id: cleanId,
+      })
     },
     enabled: !!activeRecordId,
     retry: false,
@@ -210,8 +216,53 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
     enabled: activeService === 'dashboard' || activeService === 'compliance',
   })
 
+  // --- New Services Queries ---
+  const { data: workflows = [] } = useQuery({
+    queryKey: ['osdu', 'workflows', connectionId],
+    queryFn: () => getConnectionMetadata(connectionId, 'list_workflows', {}),
+    enabled: activeService === 'workflow',
+  })
+
+  const { data: policies = [] } = useQuery({
+    queryKey: ['osdu', 'policies', connectionId],
+    queryFn: () => getConnectionMetadata(connectionId, 'list_policies', {}),
+    enabled: activeService === 'policy',
+  })
+
+  const {
+    data: wellboreData = { fields: [], wellbores: [], logs: [], trajectories: [] },
+    isLoading: isWellboreLoading,
+  } = useQuery({
+    queryKey: ['osdu', 'wellbore', connectionId, pageOffset],
+    queryFn: () =>
+      getConnectionMetadata(connectionId, 'get_well_domain_overview', {
+        offset: pageOffset,
+        limit: 50,
+      }),
+    enabled: activeService === 'well-delivery',
+  })
+
+  const {
+    data: seismicData = { projects: [], traces: [], bingrids: [], interpretations: [] },
+    isLoading: isSeismicLoading,
+  } = useQuery({
+    queryKey: ['osdu', 'seismic', connectionId, pageOffset],
+    queryFn: () =>
+      getConnectionMetadata(connectionId, 'get_seismic_domain_overview', {
+        offset: pageOffset,
+        limit: 50,
+      }),
+    enabled: activeService === 'seismic',
+  })
+
+  const { data: health } = useQuery({
+    queryKey: ['osdu', 'health', connectionId],
+    queryFn: () => getConnectionMetadata(connectionId, 'check_health', {}),
+    refetchInterval: 30000,
+  })
+
   const downloadMutation = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+    mutationFn: async ({ id }: { id: string; name: string }) => {
       const cleanId = id.replace(/:\d+$/, '')
       const data = await getConnectionMetadata(connectionId, 'download_file', { file_id: cleanId })
       return data
@@ -219,7 +270,23 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
     onSuccess: (data, variables) => {
       // Handle direct file download
       try {
-        const blob = new Blob([data], { type: 'application/octet-stream' })
+        // If data is a base64 string (which it should be from backend), decode it
+        let content = data
+        if (typeof data === 'string') {
+          try {
+            // Check if it's base64-ish
+            const binaryString = window.atob(data)
+            const bytes = new Uint8Array(binaryString.length)
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i)
+            }
+            content = bytes
+          } catch (e) {
+            // Not base64 or failed to decode, assume raw string or leave as is
+          }
+        }
+
+        const blob = new Blob([content], { type: 'application/octet-stream' })
         const link = document.createElement('a')
         link.href = window.URL.createObjectURL(blob)
         link.download = variables.name || `download-${Date.now()}.bin`
@@ -246,6 +313,43 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
     },
   })
 
+  const deleteRecordMutation = useMutation({
+    mutationFn: async (recordId: string) => {
+      const cleanId = recordId.replace(/:\d+$/, '')
+      return getConnectionMetadata(connectionId, 'delete_record', { record_id: cleanId })
+    },
+    onSuccess: () => {
+      toast.success('Record deleted successfully')
+      queryClient.invalidateQueries({ queryKey: ['osdu', 'search'] })
+      setRecordId(null)
+    },
+    onError: (err: any) => {
+      toast.error('Failed to delete record', {
+        description: err.response?.data?.detail || err.message,
+      })
+    },
+  })
+
+  const updateRecordMutation = useMutation({
+    mutationFn: async ({ recordId, data }: { recordId: string; data: any }) => {
+      const cleanId = recordId.replace(/:\d+$/, '')
+      return getConnectionMetadata(connectionId, 'update_record', {
+        record_id: cleanId,
+        data,
+      })
+    },
+    onSuccess: () => {
+      toast.success('Record updated successfully')
+      queryClient.invalidateQueries({ queryKey: ['osdu', 'record', connectionId, activeRecordId] })
+      queryClient.invalidateQueries({ queryKey: ['osdu', 'search'] })
+    },
+    onError: (err: any) => {
+      toast.error('Failed to update record', {
+        description: err.response?.data?.detail || err.message,
+      })
+    },
+  })
+
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col bg-background relative overflow-hidden">
@@ -254,7 +358,30 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
           partitionId={partitionId}
           onBack={() => navigate('/explorer')}
         >
-          <OSDUHubNav activeService={activeService} onServiceChange={setService} />
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="h-9 w-9 rounded-xl hover:bg-muted text-muted-foreground transition-all"
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </Button>
+            <div className="h-8 w-px bg-border/10 mx-2" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/20 border border-border/10 shadow-inner">
+              <Activity
+                size={12}
+                className={cn(
+                  health?.status === 'healthy'
+                    ? 'text-emerald-500 animate-pulse'
+                    : 'text-destructive'
+                )}
+              />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                {health?.status === 'healthy' ? 'Partition Online' : 'Degraded Mesh'}
+              </span>
+            </div>
+          </div>
         </OSDUHubHeader>
 
         <OSDUAICommandCenter
@@ -263,59 +390,172 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
           onApplyQuery={handleApplyAIQuery}
         />
 
-        <div className="flex-1 min-h-0 relative">
-          <AnimatePresence mode="wait">
-            {activeService === 'dashboard' && (
-              <motion.div key="dashboard" className="h-full">
-                <OSDUDashboard kinds={kinds} groups={groups} legalTags={legalTags} />
-              </motion.div>
-            )}
+        <div className="flex-1 flex min-h-0 relative overflow-hidden">
+          {/* SIDEBAR NAVIGATION */}
+          <OSDUSidebar
+            activeService={activeService}
+            onServiceChange={setService}
+            isCollapsed={isSidebarCollapsed}
+            onToggleAI={() => setIsAICommandCenterOpen(true)}
+          />
 
-            {activeService === 'mesh' && (
-              <motion.div key="mesh" className="h-full overflow-hidden">
-                <OSDUMeshView
-                  searchQuery={searchQuery}
-                  onQueryChange={setQuery}
-                  selectedKind={selectedKind}
-                  onKindChange={setKind}
-                  searchResults={{ results, total_count: totalCount }}
-                  isLoading={isSearching}
-                  onExecute={refetchSearch}
-                  onSelectRecord={setRecordId}
-                  pageOffset={pageOffset}
-                  onOffsetChange={setOffset}
-                  limit={limit}
-                  onToggleAI={() => setIsAICommandCenterOpen(true)}
-                />
-              </motion.div>
-            )}
+          {/* MAIN VIEWPORT */}
+          <div className="flex-1 min-h-0 relative">
+            <AnimatePresence mode="wait">
+              {activeService === 'dashboard' && (
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full"
+                >
+                  <OSDUDashboard
+                    kinds={kinds}
+                    groups={groups}
+                    legalTags={legalTags}
+                    health={health}
+                  />
+                </motion.div>
+              )}
 
-            {activeService === 'registry' && (
-              <motion.div key="registry" className="h-full">
-                <OSDURegistryView
-                  kinds={kinds}
-                  onSelectKind={setKind}
-                  isLoading={isLoadingKinds}
-                  onRefresh={refetchKinds}
-                />
-              </motion.div>
-            )}
+              {activeService === 'mesh' && (
+                <motion.div
+                  key="mesh"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full overflow-hidden"
+                >
+                  <OSDUMeshView
+                    kinds={kinds}
+                    onRefreshKinds={refetchKinds}
+                    searchQuery={searchQuery}
+                    onQueryChange={setQuery}
+                    selectedKind={selectedKind}
+                    onKindChange={setKind}
+                    searchResults={{ results, total_count: totalCount }}
+                    isLoading={isSearching}
+                    onExecute={refetchSearch}
+                    onSelectRecord={setRecordId}
+                    onDeleteRecord={(recordId) => {
+                      setRecordIdToDelete(recordId)
+                    }}
+                    pageOffset={pageOffset}
+                    onOffsetChange={setOffset}
+                    limit={limit}
+                    onToggleAI={() => setIsAICommandCenterOpen(true)}
+                  />
+                </motion.div>
+              )}
 
-            {activeService === 'storage' && (
-              <motion.div key="storage" className="h-full">
-                <OSDUFileBrowser connectionId={connectionId} />
-              </motion.div>
-            )}
+              {activeService === 'registry' && (
+                <motion.div
+                  key="registry"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full"
+                >
+                  <OSDURegistryView
+                    kinds={kinds}
+                    onSelectKind={setKind}
+                    isLoading={isLoadingKinds}
+                    onRefresh={refetchKinds}
+                  />
+                </motion.div>
+              )}
 
-            {(activeService === 'identity' || activeService === 'compliance') && (
-              <motion.div key="gov" className="h-full">
-                <OSDUGovernanceView
-                  connectionId={connectionId}
-                  initialMode={activeService as any}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+              {activeService === 'storage' && (
+                <motion.div
+                  key="storage"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full"
+                >
+                  <OSDUFileBrowser connectionId={connectionId} />
+                </motion.div>
+              )}
+
+              {(activeService === 'identity' || activeService === 'compliance') && (
+                <motion.div
+                  key="gov"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full"
+                >
+                  <OSDUGovernanceView
+                    connectionId={connectionId}
+                    initialMode={activeService as any}
+                  />
+                </motion.div>
+              )}
+
+              {activeService === 'workflow' && (
+                <motion.div
+                  key="workflow"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full"
+                >
+                  <OSDUWorkflowView workflows={workflows} />
+                </motion.div>
+              )}
+
+              {activeService === 'policy' && (
+                <motion.div
+                  key="policy"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full"
+                >
+                  <OSDUPolicyView policies={policies} />
+                </motion.div>
+              )}
+
+              {activeService === 'well-delivery' && (
+                <motion.div
+                  key="well-delivery"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full"
+                >
+                  <OSDUWellDeliveryView
+                    data={wellboreData}
+                    onInspect={setRecordId}
+                    pageOffset={pageOffset}
+                    onOffsetChange={setOffset}
+                    limit={50}
+                    isLoading={isWellboreLoading}
+                  />
+                </motion.div>
+              )}
+
+              {activeService === 'seismic' && (
+                <motion.div
+                  key="seismic"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="h-full"
+                >
+                  <OSDUSeismicView
+                    data={seismicData}
+                    onInspect={setRecordId}
+                    pageOffset={pageOffset}
+                    onOffsetChange={setOffset}
+                    limit={50}
+                    isLoading={isSeismicLoading}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <AnimatePresence>
@@ -333,9 +573,26 @@ export const OSDUExplorer: React.FC<OSDUExplorerProps> = ({ connectionId }) => {
                   'dataset.bin'
                 downloadMutation.mutate({ id: record.details.id, name })
               }}
+              onDelete={() => {
+                setRecordIdToDelete(activeRecordId)
+              }}
+              isDeleting={deleteRecordMutation.isPending}
+              onUpdate={(data) => updateRecordMutation.mutate({ recordId: activeRecordId, data })}
+              isUpdating={updateRecordMutation.isPending}
             />
           )}
         </AnimatePresence>
+
+        <DeleteConfirmationDialog
+          open={!!recordToDelete}
+          onOpenChange={(open) => !open && setRecordIdToDelete(null)}
+          onConfirm={() => {
+            if (recordToDelete) {
+              deleteRecordMutation.mutate(recordToDelete)
+            }
+          }}
+          isDeleting={deleteRecordMutation.isPending}
+        />
       </div>
     </TooltipProvider>
   )

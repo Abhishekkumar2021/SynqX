@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import desc, func
+from sqlalchemy import and_, case, desc, func
 from sqlalchemy.orm import Session
 from synqx_core.models.enums import JobStatus, PipelineRunStatus
 from synqx_core.models.execution import Job, PipelineRun, StepRun
@@ -408,70 +408,35 @@ class PipelineRunService:
         if not pipeline_exists:
             raise AppError("Pipeline not found")
 
-        base_run_query = self.db_session.query(PipelineRun).filter(
-            PipelineRun.pipeline_id == pipeline_id
-        )
+        # Base filter for runs
+        run_filters = [PipelineRun.pipeline_id == pipeline_id]
         if workspace_id:
-            base_run_query = base_run_query.filter(
-                PipelineRun.workspace_id == workspace_id
-            )
+            run_filters.append(PipelineRun.workspace_id == workspace_id)
         else:
-            base_run_query = base_run_query.filter(PipelineRun.user_id == user_id)
+            run_filters.append(PipelineRun.user_id == user_id)
 
-        total_runs = (
-            self.db_session.query(func.count(PipelineRun.id))
-            .filter(PipelineRun.id.in_(base_run_query.with_entities(PipelineRun.id)))
-            .scalar()
-            or 0
-        )
-
-        successful_runs = (
-            self.db_session.query(func.count(PipelineRun.id))
-            .filter(
-                PipelineRun.id.in_(base_run_query.with_entities(PipelineRun.id)),
-                PipelineRun.status == PipelineRunStatus.COMPLETED,
+        # Optimize by fetching all metrics in a single query
+        metrics = (
+            self.db_session.query(
+                func.count(PipelineRun.id).label("total"),
+                func.sum(case((PipelineRun.status == PipelineRunStatus.COMPLETED, 1), else_=0)).label("success"),
+                func.sum(case((PipelineRun.status == PipelineRunStatus.FAILED, 1), else_=0)).label("failed"),
+                func.avg(case((PipelineRun.status == PipelineRunStatus.COMPLETED, PipelineRun.duration_seconds), else_=None)).label("avg_duration"),
+                func.sum(PipelineRun.total_loaded).label("total_records"),
+                func.sum(StepRun.records_error).label("total_quarantined")
             )
-            .scalar()
-            or 0
+            .select_from(PipelineRun)
+            .outerjoin(StepRun, PipelineRun.id == StepRun.pipeline_run_id)
+            .filter(and_(*run_filters))
+            .first()
         )
 
-        failed_runs = (
-            self.db_session.query(func.count(PipelineRun.id))
-            .filter(
-                PipelineRun.id.in_(base_run_query.with_entities(PipelineRun.id)),
-                PipelineRun.status == PipelineRunStatus.FAILED,
-            )
-            .scalar()
-            or 0
-        )
-
-        avg_duration = (
-            self.db_session.query(func.avg(PipelineRun.duration_seconds))
-            .filter(
-                PipelineRun.id.in_(base_run_query.with_entities(PipelineRun.id)),
-                PipelineRun.status == PipelineRunStatus.COMPLETED,
-                PipelineRun.duration_seconds.isnot(None),
-            )
-            .scalar()
-        )
-
-        total_records = (
-            self.db_session.query(func.sum(PipelineRun.total_loaded))
-            .filter(PipelineRun.id.in_(base_run_query.with_entities(PipelineRun.id)))
-            .scalar()
-            or 0
-        )
-
-        total_quarantined = (
-            self.db_session.query(func.sum(StepRun.records_error))
-            .filter(
-                StepRun.pipeline_run_id.in_(
-                    base_run_query.with_entities(PipelineRun.id)
-                )
-            )
-            .scalar()
-            or 0
-        )
+        total_runs = metrics.total or 0
+        successful_runs = metrics.success or 0
+        failed_runs = metrics.failed or 0
+        avg_duration = metrics.avg_duration
+        total_records = metrics.total_records or 0
+        total_quarantined = metrics.total_quarantined or 0
 
         return {
             "total_runs": total_runs,
@@ -481,6 +446,6 @@ class PipelineRunService:
                 (successful_runs / total_runs * 100) if total_runs > 0 else 0, 2
             ),
             "average_duration_seconds": float(avg_duration) if avg_duration else None,
-            "total_records_processed": total_records,
+            "total_records_processed": int(total_records),
             "total_quarantined": int(total_quarantined),
         }

@@ -16,7 +16,8 @@ import dagre from 'dagre'
 import { useTheme } from '@/hooks/useTheme'
 import { Box, ArrowUpRight, Link2, CircleDot } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { InspectorEmptyState } from './InspectorEmptyState'
+import { OSDUDiscoveryEmptyState } from '../shared/OSDUDiscoveryEmptyState'
+import { RefreshCw } from 'lucide-react'
 
 const DAGRE_RANKING_OPTS = {
   rankdir: 'LR',
@@ -339,11 +340,18 @@ export const InspectorGraph: React.FC<InspectorGraphProps> = ({ record, onNaviga
 
   if (outboundCount === 0 && inboundCount === 0) {
     return (
-      <div className="h-full flex items-center justify-center bg-muted/5">
-        <InspectorEmptyState
+      <div className="h-full flex items-center justify-center bg-muted/2 relative">
+        <OSDUDiscoveryEmptyState
           icon={Box}
-          title="Isolated Entity"
-          description="This record is an island. No inbound or outbound relationships detected."
+          title="No Relationships Found"
+          description="This record has no recorded inbound or outbound relationships in the OSDU connectivity mesh."
+          action={{
+            label: 'Trigger Connectivity Probe',
+            onClick: () => {
+              // Action logic handled by parent
+            },
+            icon: RefreshCw,
+          }}
         />
       </div>
     )
@@ -364,7 +372,6 @@ export const InspectorGraph: React.FC<InspectorGraphProps> = ({ record, onNaviga
         minZoom={0.1}
         maxZoom={2}
         nodesConnectable={false}
-        edgesConnectable={false}
         nodesDraggable={true}
       >
         <Background color={theme === 'dark' ? '#333' : '#e5e7eb'} gap={20} size={1} />

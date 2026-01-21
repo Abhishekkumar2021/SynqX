@@ -8,6 +8,7 @@ interface MeshGridProps {
   onToggleSelection: (id: string) => void
   onSelectRecord: (id: string) => void
   onToggleAI: () => void
+  onDeleteRecord?: (id: string) => void
 }
 
 export const MeshGrid: React.FC<MeshGridProps> = ({
@@ -15,6 +16,7 @@ export const MeshGrid: React.FC<MeshGridProps> = ({
   selectedIds,
   onToggleSelection,
   onSelectRecord,
+  onDeleteRecord,
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
@@ -25,6 +27,7 @@ export const MeshGrid: React.FC<MeshGridProps> = ({
           isSelected={selectedIds.has(r.id)}
           onToggleSelection={onToggleSelection}
           onSelectRecord={onSelectRecord}
+          onDeleteRecord={onDeleteRecord}
         />
       ))}
     </div>

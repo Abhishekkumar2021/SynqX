@@ -1,5 +1,5 @@
 import React from 'react'
-import { Eye, Box, Copy, Globe, Database } from 'lucide-react'
+import { Eye, Box, Copy, Globe, Database, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -13,6 +13,7 @@ interface MeshItemProps {
   isSelected: boolean
   onToggleSelection: (id: string) => void
   onSelectRecord: (id: string) => void
+  onDeleteRecord?: (id: string) => void
 }
 
 export const MeshItem: React.FC<MeshItemProps> = ({
@@ -20,6 +21,7 @@ export const MeshItem: React.FC<MeshItemProps> = ({
   isSelected,
   onToggleSelection,
   onSelectRecord,
+  onDeleteRecord,
 }) => {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text)
@@ -86,16 +88,16 @@ export const MeshItem: React.FC<MeshItemProps> = ({
           <div className="flex items-center gap-2">
             <Badge
               variant="secondary"
-              className="text-[9px] font-black uppercase bg-primary/5 text-primary/80 border-primary/10 px-1.5 py-0 rounded-md tracking-wider h-5 shrink-0"
+              className="text-[10px] font-black uppercase bg-primary/5 text-primary/80 border-primary/10 px-1.5 py-0 rounded-md tracking-wider h-5 shrink-0"
             >
               {shortKind}
             </Badge>
-            <span className="text-[10px] text-muted-foreground/50 truncate font-mono">
+            <span className="text-[11px] text-muted-foreground/50 truncate font-mono">
               {kindAuthority}
             </span>
           </div>
           <h4
-            className="font-bold text-sm text-foreground/90 truncate tracking-tight leading-snug pr-2"
+            className="font-bold text-base text-foreground/90 truncate tracking-tight leading-snug pr-2"
             title={name}
           >
             {name}
@@ -110,17 +112,17 @@ export const MeshItem: React.FC<MeshItemProps> = ({
               key={key || `attr-${kIdx}`}
               className="flex items-center justify-between gap-4 min-w-0"
             >
-              <span className="text-[9px] font-bold uppercase text-muted-foreground/50 truncate tracking-wider shrink-0">
+              <span className="text-[10px] font-bold uppercase text-muted-foreground/50 truncate tracking-wider shrink-0">
                 {key}
               </span>
-              <span className="text-[10px] font-medium truncate text-foreground/70 text-right font-mono">
+              <span className="text-[11px] font-medium truncate text-foreground/70 text-right font-mono">
                 {String(val)}
               </span>
             </div>
           ))
         ) : (
           <div className="py-1 text-center">
-            <span className="text-[9px] text-muted-foreground/30 italic">No properties</span>
+            <span className="text-[10px] text-muted-foreground/30 italic">No properties</span>
           </div>
         )}
       </div>
@@ -128,13 +130,13 @@ export const MeshItem: React.FC<MeshItemProps> = ({
       <div className="mt-auto pt-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider"
+            className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider"
             title="Authority"
           >
             <Globe size={10} /> {kindAuthority || record.authority || 'OSDU'}
           </div>
           <div
-            className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider"
+            className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider"
             title="Source"
           >
             <Database size={10} /> {kindSource || record.source || 'STD'}
@@ -158,6 +160,25 @@ export const MeshItem: React.FC<MeshItemProps> = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">Copy ID</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg hover:bg-rose-500/10 text-rose-500"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDeleteRecord?.(id)
+                  }}
+                >
+                  <Trash2 size={12} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Delete Record</TooltipContent>
             </Tooltip>
           </TooltipProvider>
 

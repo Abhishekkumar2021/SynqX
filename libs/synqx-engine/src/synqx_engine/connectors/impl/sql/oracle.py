@@ -1,9 +1,11 @@
 from typing import Any
+
 import numpy as np
 import pandas as pd
 from sqlalchemy import text
 from synqx_core.errors import ConfigurationError, DataTransferError
 from synqx_core.utils.resilience import retry
+
 from synqx_engine.connectors.impl.sql.base import SQLConnector, logger
 from synqx_engine.connectors.impl.sql.postgres import PostgresConfig
 
@@ -59,7 +61,7 @@ class OracleConnector(SQLConnector):
         """
         try:
             import time  # noqa: PLC0415
-            from datetime import datetime, UTC  # noqa: PLC0415
+            from datetime import UTC, datetime  # noqa: PLC0415
 
             start = time.perf_counter()
             self.connect()

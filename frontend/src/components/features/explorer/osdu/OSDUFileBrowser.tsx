@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/preserve-manual-memoization */
-
 import React, { useState, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
@@ -26,17 +24,24 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { formatNumber, formatBytes } from '@/lib/utils'
 import { getConnectionMetadata } from '@/lib/api/connections'
 import { CodeBlock } from '@/components/ui/docs/CodeBlock'
+import { useFuzzySearch } from '@/hooks/useFuzzySearch'
+
+// Import shared components
+import { OSDUPageHeader } from './shared/OSDUPageHeader'
+import { OSDUDiscoveryEmptyState } from './shared/OSDUDiscoveryEmptyState'
+import { OSDUPlatformLoader } from './shared/OSDUPlatformLoader'
+import { OSDUToolbar } from './shared/OSDUToolbar'
 
 // Import new sub-components
-import { StorageHeader } from './storage/StorageHeader'
-import { StorageToolbar } from './storage/StorageToolbar'
 import { StorageGrid } from './storage/StorageGrid'
 import { StorageList } from './storage/StorageList'
+import { Plus } from 'lucide-react'
 
 interface OSDUFileBrowserProps {
   connectionId: number
@@ -105,12 +110,10 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
   const { data: fileDetails, isLoading: isLoadingDetails } = useQuery({
     queryKey: ['osdu', 'file-details', connectionId, activeFileId],
     queryFn: async () => {
-      const [record, versions, ancestry] = await Promise.all([
-        getConnectionMetadata(connectionId, 'get_record', { record_id: activeFileId }),
-        getConnectionMetadata(connectionId, 'get_record_versions', { record_id: activeFileId }),
-        getConnectionMetadata(connectionId, 'get_ancestry', { record_id: activeFileId }),
-      ])
-      return { record, versions, ancestry }
+      const cleanId = activeFileId!.replace(/:\d{10,}$/, '').replace(/:\d{4,9}$/, '')
+      return getConnectionMetadata(connectionId, 'get_record_deep_dive', {
+        record_id: cleanId,
+      })
     },
     enabled: !!activeFileId,
   })
@@ -196,13 +199,10 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
     }))
   }, [results])
 
-  const filteredFiles = useMemo(() => {
-    return flattenedFiles.filter(
-      (f: { name: string; kind: string }) =>
-        f.name.toLowerCase().includes(search.toLowerCase()) ||
-        f.kind.toLowerCase().includes(search.toLowerCase())
-    )
-  }, [flattenedFiles, search])
+  const filteredFiles = useFuzzySearch(flattenedFiles, search, {
+    keys: ['name', 'kind'],
+    threshold: 0.3,
+  })
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text)
@@ -215,77 +215,96 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
   )
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-background/5 animate-in fade-in duration-500 relative">
-      {/* --- PRIMARY HUB HEADER --- */}
-      <StorageHeader
+    <div className="h-full flex flex-col overflow-hidden bg-muted/2 animate-in fade-in duration-500 relative">
+      <OSDUPageHeader
+        icon={HardDrive}
+        title="Storage Hub"
+        subtitle="Universal Dataset Discovery"
+        iconColor="text-amber-500"
         search={search}
-        setSearch={setSearch}
+        onSearchChange={setSearch}
+        searchPlaceholder="Find datasets or files..."
+        onRefresh={() => queryClient.invalidateQueries({ queryKey: ['osdu', 'files'] })}
+        isLoading={isLoading}
         viewMode={viewMode}
-        setViewMode={setViewMode}
-        isUploading={isUploading}
-        handleUpload={handleUpload}
-        onTriggerUpload={() => document.getElementById('osdu-upload-v16')?.click()}
+        onViewModeChange={setViewMode}
+        totalCount={totalAvailable}
+        countLabel="Assets"
+        actions={
+          <>
+            <input
+              type="file"
+              id="osdu-upload-v16"
+              className="hidden"
+              onChange={handleUpload}
+              disabled={isUploading}
+            />
+            <Button
+              size="sm"
+              onClick={() => document.getElementById('osdu-upload-v16')?.click()}
+              disabled={isUploading}
+              className="h-11 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl shadow-amber-500/20"
+            >
+              <Plus size={14} strokeWidth={3} />
+              {isUploading ? 'Registering...' : 'Upload Asset'}
+            </Button>
+          </>
+        }
       />
 
       <div className="flex-1 flex flex-col min-h-0 relative">
-        {/* TOOLBAR */}
-        <StorageToolbar
+        <OSDUToolbar
           totalAvailable={totalAvailable}
-          isLoading={isLoading}
           selectedCount={selectedIds.size}
           onClearSelection={() => setSelectedIds(new Set())}
-          onBulkDownload={handleBulkDownload}
           isAllSelected={results.length > 0 && selectedIds.size === results.length}
           onToggleSelectAll={toggleSelectAll}
+          isLoading={isLoading}
+          onBulkDownload={handleBulkDownload}
         />
 
-        <div className="flex-1 min-h-0 relative overflow-hidden">
-          {/* EMPTY STATE */}
-          {!isLoading && filteredFiles.length === 0 && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12 space-y-6 opacity-40 z-10">
-              <div className="h-20 w-20 rounded-[2.5rem] border-2 border-dashed border-muted-foreground flex items-center justify-center shadow-inner">
-                <Package size={40} strokeWidth={1} />
+        <div className="flex-1 min-h-0 relative overflow-hidden bg-muted/2">
+          {isLoading ? (
+            <OSDUPlatformLoader
+              message="Resolving storage manifests..."
+              iconColor="text-amber-500"
+            />
+          ) : filteredFiles.length === 0 ? (
+            <OSDUDiscoveryEmptyState
+              icon={Package}
+              title="Registry Idle"
+              description="No file records resolved for this technical scope."
+            />
+          ) : (
+            <ScrollArea className="h-full">
+              <div
+                className={cn(
+                  'w-full mx-auto transition-all duration-500',
+                  viewMode === 'grid' ? 'p-10 max-w-[1600px]' : 'p-0'
+                )}
+              >
+                {viewMode === 'grid' ? (
+                  <StorageGrid
+                    files={filteredFiles}
+                    selectedIds={selectedIds}
+                    toggleSelection={toggleSelection}
+                    onSelectFile={setActiveFileId}
+                    onDownload={downloadFileAction}
+                    onCopyId={(id) => copyToClipboard(id, 'Registry ID')}
+                  />
+                ) : (
+                  <StorageList
+                    files={filteredFiles}
+                    selectedIds={selectedIds}
+                    toggleSelection={toggleSelection}
+                    onSelectFile={setActiveFileId}
+                    onDownload={downloadFileAction}
+                  />
+                )}
+                {viewMode === 'grid' && <div className="h-24" />}
               </div>
-              <div className="space-y-1">
-                <p className="font-black text-2xl tracking-tighter uppercase text-foreground">
-                  Registry Idle
-                </p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] max-w-xs text-muted-foreground">
-                  No file records resolved for this technical scope.
-                </p>
-              </div>
-            </div>
+            </ScrollArea>
           )}
-
-          <ScrollArea className="h-full">
-            <div className="p-6 max-w-7xl mx-auto w-full">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-48 gap-6 opacity-40">
-                  <RefreshCw className="h-12 w-12 text-amber-500 animate-spin" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em]">
-                    Materializing storage frame...
-                  </span>
-                </div>
-              ) : viewMode === 'grid' ? (
-                <StorageGrid
-                  files={filteredFiles}
-                  selectedIds={selectedIds}
-                  toggleSelection={toggleSelection}
-                  onSelectFile={setActiveFileId}
-                  onDownload={downloadFileAction}
-                  onCopyId={(id) => copyToClipboard(id, 'Registry ID')}
-                />
-              ) : (
-                <StorageList
-                  files={filteredFiles}
-                  selectedIds={selectedIds}
-                  toggleSelection={toggleSelection}
-                  onSelectFile={setActiveFileId}
-                  onDownload={downloadFileAction}
-                />
-              )}
-            </div>
-          </ScrollArea>
         </div>
 
         {/* NAVIGATION FOOTER */}
@@ -314,21 +333,21 @@ export const OSDUFileBrowser: React.FC<OSDUFileBrowserProps> = ({ connectionId }
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
-              className="h-9 px-4 gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl border-border/40 hover:bg-muted shadow-sm"
+              size="icon"
+              className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted shadow-sm"
               onClick={() => setOffset(Math.max(0, pageOffset - limit))}
               disabled={pageOffset === 0 || isLoading}
             >
-              <ChevronLeft size={16} /> Previous
+              <ChevronLeft size={14} />
             </Button>
             <Button
               variant="outline"
-              size="sm"
-              className="h-9 px-4 gap-2 text-[10px] font-black uppercase tracking-widest rounded-xl border-border/40 hover:bg-muted shadow-sm"
+              size="icon"
+              className="h-8 w-8 rounded-lg border-border/40 hover:bg-muted shadow-sm"
               onClick={() => setOffset(pageOffset + limit)}
               disabled={pageOffset + limit >= totalAvailable || isLoading}
             >
-              Next Discover <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </Button>
           </div>
         </div>

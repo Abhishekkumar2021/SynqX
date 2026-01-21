@@ -126,7 +126,7 @@ def download_file(
 
 
 @router.post("/{connection_id}/upload")
-async def upload_file(
+def upload_file(
     connection_id: int,
     path: str = "",
     file: UploadFile = File(...),  # noqa: B008
@@ -138,7 +138,7 @@ async def upload_file(
     connection, agent_group = get_routing_info(connection_id, db, current_user)  # noqa: RUF059
     service = ConnectionService(db)
 
-    content = await file.read()
+    content = file.file.read()
     b64_content = base64.b64encode(content).decode("utf-8")
     target_path = os.path.join(path, file.filename) if path else file.filename
 

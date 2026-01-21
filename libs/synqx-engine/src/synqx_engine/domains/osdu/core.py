@@ -1,7 +1,10 @@
 from typing import Any
 
+from synqx_core.logging import get_logger
+
 from .base import OSDUBaseClient
 
+logger = get_logger(__name__)
 
 class OSDUCoreService(OSDUBaseClient):
     """
@@ -9,45 +12,6 @@ class OSDUCoreService(OSDUBaseClient):
     """
 
     # --- Search Service ---
-    def search(
-        self,
-        kind: str = "*:*:*:*",
-        query: str = "*",
-        limit: int = 100,
-        offset: int = 0,
-        **kwargs,
-    ) -> dict[str, Any]:
-        # Robustness: ensure kind is never None or empty
-        safe_kind = kind or "*:*:*:*"
-
-        # Strip internal Synqx metadata that OSDU parser rejects
-        clean_kwargs = {
-            k: v
-            for k, v in kwargs.items()
-            if k
-            in [
-                "aggregateBy",
-                "spatialFilter",
-                "returnedFields",
-                "sort",
-                "trackTotalCount",
-            ]
-        }
-
-        # OSDU Limit/Offset Boundaries
-        safe_limit = min(limit, 1000)
-        safe_offset = max(offset, 0)
-
-        payload = {
-            "kind": safe_kind,
-            "query": query,
-            "limit": safe_limit,
-            "offset": safe_offset,
-            "trackTotalCount": True,
-            **clean_kwargs,
-        }
-        return self._post("api/search/v2/query", json=payload).json()
-
     def query_with_cursor(self, cursor: str, **kwargs) -> dict[str, Any]:
         """
         POST api/search/v2/query_with_cursor
@@ -69,9 +33,97 @@ class OSDUCoreService(OSDUBaseClient):
             .get("aggregations", [])
         )
 
+    def get_record_deep_dive(self, record_id: str) -> dict[str, Any]:
+        """
+        Orchestrates a comprehensive fetch of all record-related metadata.
+        Reduces frontend round-trips from 5 to 1.
+        """
+        # 1. Primary Record Fetch
+        record = self.get_record(record_id)
+        
+        # 2. Version History (Parallel or sequential, but safe)
+        versions = []
+        try:
+            versions = self.get_record_versions(record_id)
+        except Exception:
+            pass
+
+        # 3. Relationships & Ancestry (Using already fetched record data)
+        # We reuse the logic but pass in the record to avoid re-fetching
+        ancestry = {
+            "record_id": record_id,
+            "parents": record.get("ancestry", {}).get("parents", []),
+            "kind": record.get("kind"),
+            "raw_ancestry": record.get("ancestry", {}),
+        }
+
+        # Spatial data extraction
+        data = record.get("data", {})
+        spatial = data.get("SpatialLocation", {}) or data.get("SpatialArea", {})
+        spatial_coordinates = spatial.get("Wgs84Coordinates")
+
+        # Relationship discovery (Outbound from data, Inbound via Search)
+        relationships = self._derive_relationships_from_record(record)
+
+        return {
+            "details": record,
+            "versions": versions,
+            "ancestry": ancestry,
+            "spatial": spatial_coordinates,
+            "relationships": relationships
+        }
+
+    def _derive_relationships_from_record(self, record: dict[str, Any]) -> dict[str, Any]:
+        record_id = record.get("id")
+        data = record.get("data", {})
+        
+        outbound = []
+        for key, value in data.items():
+            if (
+                (key.endswith("ID") or "ID" in key)
+                and isinstance(value, str)
+                and ":" in value
+            ):
+                outbound.append({"field": key, "target_id": value})
+
+        inbound = []
+        try:
+            inbound_resp = self.search(query=f'"{record_id}"', limit=50)
+            inbound = [
+                {"source_id": r.get("id"), "kind": r.get("kind")}
+                for r in inbound_resp.get("results", [])
+                if r.get("id") != record_id
+            ]
+        except Exception:
+            pass
+
+        return {"record_id": record_id, "outbound": outbound, "inbound": inbound}
+
     # --- Storage Service ---
     def get_record(self, record_id: str) -> dict[str, Any]:
-        return self._get(f"api/storage/v2/records/{record_id}").json()
+        """
+        Fetches a record from Storage. If 400 or 404, attempts a rescue via Search.
+        """
+        try:
+            return self._get(f"api/storage/v2/records/{record_id}").json()
+        except Exception as e:
+            # RESCUE: If Storage returns 404 or 400, try to fetch the record via Search
+            # 400 can happen if the ID contains characters the router dislikes
+            err_str = str(e)
+            if "404" in err_str or "400" in err_str:
+                logger.info(f"Storage { '404' if '404' in err_str else '400' } for {record_id}. Attempting rescue via Search...")
+                try:
+                    # We use a strict ID search which is more robust for special characters
+                    search_res = self.search(query=f'id: "{record_id}"', limit=1)
+                    results = search_res.get("results", [])
+                    if results:
+                        logger.info(f"Rescue successful for {record_id}")
+                        return results[0]
+                except Exception as se:
+                    logger.warning(f"Rescue failed for {record_id}: {se}")
+            
+            # Re-raise original if rescue fails or isn't a 404/400
+            raise e
 
     def delete_record(self, record_id: str):
         self._delete(f"api/storage/v2/records/{record_id}")
@@ -122,7 +174,7 @@ class OSDUCoreService(OSDUBaseClient):
                 if r.get("id") != record_id  # Exclude self
             ]
         except Exception as e:
-            logger.warning(  # noqa: F821
+            logger.warning(
                 f"Failed to fetch inbound relationships for {record_id}: {e}"
             )
             inbound = []
@@ -148,6 +200,9 @@ class OSDUCoreService(OSDUBaseClient):
 
     def create_schema(self, schema_obj: dict[str, Any]) -> dict[str, Any]:
         return self._post("api/schema-service/v1/schema", json=schema_obj).json()
+
+    def delete_schema(self, kind: str):
+        self._delete(f"api/schema-service/v1/schema/{kind}")
 
     def list_schemas(
         self, authority: str | None = None, source: str | None = None

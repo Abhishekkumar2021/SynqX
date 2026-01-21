@@ -71,12 +71,12 @@ export const RegistryGrid: React.FC<RegistryGridProps> = ({
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h5 className="font-black text-lg truncate text-foreground tracking-tight leading-none mb-2">
+                          <h5 className="font-black text-lg break-words text-foreground tracking-tight leading-snug mb-2">
                             {k.entity_name}
                           </h5>
                           <div className="flex items-center gap-2">
                             <span
-                              className="text-[11px] font-mono text-muted-foreground/60 truncate tracking-tight"
+                              className="text-[11px] font-mono text-muted-foreground/60 break-all tracking-tight leading-tight"
                               title={k.full_kind}
                             >
                               {k.full_kind}

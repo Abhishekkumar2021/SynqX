@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react'
+/* eslint-disable react-hooks/preserve-manual-memoization */
+import React, { createContext, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getWorkspaces, switchWorkspace, exportWorkspace } from '@/lib/api'
 import { WorkspaceRole } from '@/lib/enums'
@@ -78,16 +79,28 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }
 
-  const value: WorkspaceContextType = {
-    workspaces,
-    activeWorkspace,
-    userRole,
-    isSwitching: switchMutation.isPending,
-    switchActiveWorkspace: (id: number) => switchMutation.mutate(id),
-    downloadWorkspaceContext,
-    refreshWorkspaces: () => refetch(),
-    isLoading,
-  }
+  const value: WorkspaceContextType = useMemo(
+    () => ({
+      workspaces,
+      activeWorkspace,
+      userRole,
+      isSwitching: switchMutation.isPending,
+      switchActiveWorkspace: (id: number) => switchMutation.mutate(id),
+      downloadWorkspaceContext,
+      refreshWorkspaces: () => refetch(),
+      isLoading,
+    }),
+    [
+      workspaces,
+      activeWorkspace,
+      userRole,
+      switchMutation.isPending,
+      switchMutation.mutate,
+      downloadWorkspaceContext,
+      isLoading,
+      refetch,
+    ]
+  )
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>
 }

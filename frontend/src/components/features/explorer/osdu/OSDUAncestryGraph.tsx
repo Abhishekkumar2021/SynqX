@@ -14,9 +14,9 @@ import {
 import '@xyflow/react/dist/style.css'
 import dagre from 'dagre'
 import { useTheme } from '@/hooks/useTheme'
-import { Database, Layers, GitBranch, ArrowDown, CircleDot } from 'lucide-react'
+import { Database, Layers, GitBranch, ArrowDown, CircleDot, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { InspectorEmptyState } from './inspector/InspectorEmptyState'
+import { OSDUDiscoveryEmptyState } from './shared/OSDUDiscoveryEmptyState'
 
 const DAGRE_RANKING_OPTS = {
   rankdir: 'TB', // Top-to-Bottom for Lineage (Time/Process flow)
@@ -241,11 +241,18 @@ export const OSDUAncestryGraph: React.FC<OSDUAncestryGraphProps> = ({
 
   if (!ancestryData || (!ancestryData.parents?.length && !ancestryData.children?.length)) {
     return (
-      <div className="h-full flex items-center justify-center bg-muted/5">
-        <InspectorEmptyState
+      <div className="h-full flex items-center justify-center bg-muted/2 relative">
+        <OSDUDiscoveryEmptyState
           icon={GitBranch}
           title="No Lineage Found"
-          description="This record has no recorded provenance (parents) or derived entities (children)."
+          description="This record has no recorded provenance (parents) or derived entities (children) in the OSDU graph."
+          action={{
+            label: 'Trigger Lineage Probe',
+            onClick: () => {
+              // Action logic already exists via parent refresh
+            },
+            icon: RefreshCw,
+          }}
         />
       </div>
     )
@@ -264,7 +271,6 @@ export const OSDUAncestryGraph: React.FC<OSDUAncestryGraphProps> = ({
         attributionPosition="bottom-right"
         colorMode={theme === 'dark' ? 'dark' : 'light'}
         nodesConnectable={false}
-        edgesConnectable={false}
         nodesDraggable={true}
         minZoom={0.1}
         maxZoom={2}

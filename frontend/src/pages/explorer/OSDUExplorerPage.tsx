@@ -23,15 +23,12 @@ export const OSDUExplorerPage: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        'flex-1 flex flex-col gap-6 md:gap-8 px-1',
-        isZenMode ? 'h-[calc(100vh-3rem)]' : 'h-[calc(100vh-8rem)]'
-      )}
+      className="flex-1 flex flex-col h-full overflow-hidden"
     >
       <PageMeta title={`OSDU Explorer - ${connection?.name || 'Loading...'}`} />
 
       {/* --- Content Area --- */}
-      <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-xl relative overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-border/40 bg-background/40 backdrop-blur-xl shadow-sm relative overflow-hidden">
         <OSDUExplorer connectionId={connectionId} />
       </div>
     </motion.div>

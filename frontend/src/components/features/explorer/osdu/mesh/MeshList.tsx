@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import React, { useMemo, useState } from 'react'
 import {
   useReactTable,
@@ -33,6 +34,7 @@ interface MeshListProps {
   selectedIds: Set<string>
   onToggleSelection: (id: string) => void
   onSelectRecord: (id: string) => void
+  onDeleteRecord?: (id: string) => void
 }
 
 export const MeshList: React.FC<MeshListProps> = ({
@@ -40,6 +42,7 @@ export const MeshList: React.FC<MeshListProps> = ({
   selectedIds,
   onToggleSelection,
   onSelectRecord,
+  onDeleteRecord,
 }) => {
   const [sorting, setSorting] = useState<SortingState>([])
 
@@ -87,10 +90,10 @@ export const MeshList: React.FC<MeshListProps> = ({
         },
         cell: ({ row }) => (
           <div className="flex flex-col max-w-[200px]">
-            <span className="font-bold text-xs truncate" title={row.original.id}>
+            <span className="font-bold text-sm truncate" title={row.original.id}>
               {row.original.id.split(':').pop()}
             </span>
-            <span className="text-[9px] text-muted-foreground/50 truncate font-mono">
+            <span className="text-[9px] text-muted-foreground/40 truncate font-mono mt-0.5">
               {row.original.id}
             </span>
           </div>
@@ -107,7 +110,7 @@ export const MeshList: React.FC<MeshListProps> = ({
               <div className="flex items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="h-5 px-2 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary/80"
+                  className="h-4.5 px-1.5 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary/70"
                 >
                   {shortKind}
                 </Badge>
@@ -133,13 +136,13 @@ export const MeshList: React.FC<MeshListProps> = ({
         cell: ({ row }) => {
           const parts = row.original.kind.split(':')
           const source = parts[1] || row.original.source || 'Standard'
-          return <span className="text-[10px] font-medium text-foreground/70">{source}</span>
+          return <span className="text-[11px] font-medium text-foreground/60">{source}</span>
         },
       }),
       columnHelper.accessor('version', {
         header: 'Version',
         cell: ({ row }) => (
-          <span className="font-mono text-[10px] text-muted-foreground">
+          <span className="font-mono text-[10px] text-muted-foreground/60">
             {row.original.version ? String(row.original.version) : '-'}
           </span>
         ),
@@ -168,19 +171,25 @@ export const MeshList: React.FC<MeshListProps> = ({
                 className="w-48 rounded-xl border-border/40 bg-background/95 backdrop-blur-sm"
               >
                 <DropdownMenuItem
-                  className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
+                  className="text-[11px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
                   onClick={() => copyToClipboard(row.original.id, 'ID')}
                 >
                   <Hash size={12} className="opacity-50" /> Copy ID
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="text-[10px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
+                  className="text-[11px] font-bold uppercase tracking-widest gap-2 cursor-pointer"
                   onClick={() => onSelectRecord(row.original.id)}
                 >
                   <Binary size={12} className="opacity-50" /> Inspect
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="opacity-20" />
-                <DropdownMenuItem className="text-[10px] font-bold uppercase tracking-widest gap-2 text-rose-500 focus:text-rose-500 cursor-pointer">
+                <DropdownMenuItem
+                  className="text-[11px] font-bold uppercase tracking-widest gap-2 text-rose-500 focus:text-rose-500 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDeleteRecord?.(row.original.id)
+                  }}
+                >
                   <Trash2 size={12} /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -212,7 +221,7 @@ export const MeshList: React.FC<MeshListProps> = ({
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className="h-11 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/60"
+                  className="h-9 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground/50"
                 >
                   {header.isPlaceholder
                     ? null

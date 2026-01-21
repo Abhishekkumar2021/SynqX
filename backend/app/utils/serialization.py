@@ -16,6 +16,9 @@ def sanitize_for_json(obj: Any) -> Any:  # noqa: PLR0911
         return obj.isoformat()
     elif isinstance(obj, UUID):
         return str(obj)
+    elif isinstance(obj, bytes):
+        import base64
+        return base64.b64encode(obj).decode("utf-8")
     # Handle pandas/numpy types if they exist without requiring them as dependencies
     elif hasattr(obj, "isoformat") and callable(obj.isoformat):
         return obj.isoformat()

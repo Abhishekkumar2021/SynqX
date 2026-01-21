@@ -32,10 +32,12 @@ export const RegistryList: React.FC<RegistryListProps> = ({ kinds, onSelectKind 
               <div className="h-8 w-8 rounded-lg bg-muted/20 border border-border/10 flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:border-primary/20 transition-colors">
                 <Database size={16} className="text-muted-foreground group-hover:text-primary" />
               </div>
-              <div className="min-w-0 flex flex-col">
-                <span className="text-sm font-bold text-foreground truncate">{k.entity_name}</span>
+              <div className="min-w-0 flex flex-col gap-0.5">
+                <span className="text-sm font-bold text-foreground break-words leading-tight">
+                  {k.entity_name}
+                </span>
                 <span
-                  className="text-[10px] font-mono text-muted-foreground/60 truncate"
+                  className="text-[10px] font-mono text-muted-foreground/60 break-all leading-tight"
                   title={k.full_kind}
                 >
                   {k.full_kind}
