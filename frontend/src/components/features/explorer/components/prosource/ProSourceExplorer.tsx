@@ -104,7 +104,14 @@ export const ProSourceExplorer: React.FC<ProSourceExplorerProps> = ({ connection
             selectedAsset={selectedAsset}
             onSelectAsset={setAsset}
             onSelectEntity={(record) =>
-              setRecordId(record.ID || record.WELL_ID || record.UWI || record.id)
+              setRecordId(
+                record.ID ||
+                  record.WELL_ID ||
+                  record.UWI ||
+                  record.id ||
+                  record.well_id ||
+                  record.Id
+              )
             }
             customQuery={sqlQuery || undefined}
             onApplyQuery={setSql}

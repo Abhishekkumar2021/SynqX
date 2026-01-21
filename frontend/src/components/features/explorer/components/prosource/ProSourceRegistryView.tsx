@@ -262,7 +262,9 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
                                         : 'text-muted-foreground/60'
                                     )}
                                   >
-                                    {asset.metadata?.view_type || 'TABLE'}
+                                    {asset.metadata?.view_type ||
+                                      asset.metadata?.VIEW_TYPE ||
+                                      'TABLE'}
                                   </Badge>
                                   <Checkbox
                                     checked={isSelected}
@@ -290,12 +292,13 @@ export const ProSourceRegistryView: React.FC<ProSourceRegistryViewProps> = ({
                                   {asset.name}
                                 </h4>
                                 <p className="text-[9px] font-mono font-bold text-muted-foreground/40 truncate uppercase mt-1 tracking-widest">
-                                  {asset.metadata?.table}
+                                  {asset.metadata?.table || asset.metadata?.TABLE}
                                 </p>
                               </div>
 
                               <p className="text-[11px] font-medium text-muted-foreground/60 line-clamp-3 leading-relaxed min-h-[3rem] relative z-10">
                                 {asset.metadata?.description ||
+                                  asset.metadata?.DESCRIPTION ||
                                   'Standard Seabed technical view optimized for domain entity processing and attribute mapping.'}
                               </p>
 

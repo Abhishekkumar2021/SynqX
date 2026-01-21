@@ -260,7 +260,7 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                               : 'bg-muted/30 text-muted-foreground/60'
                           )}
                         >
-                          {doc.DOCUMENT_FORMAT || 'FILE'}
+                          {doc.DOCUMENT_FORMAT || doc.document_format || 'FILE'}
                         </Badge>
                         <Checkbox
                           checked={isSelected}
@@ -282,14 +282,14 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                           'text-[13px] font-black uppercase tracking-tight truncate transition-colors',
                           isSelected ? 'text-rose-600' : 'text-foreground group-hover:text-rose-600'
                         )}
-                        title={doc.NAME}
+                        title={doc.NAME || doc.name}
                       >
-                        {doc.NAME}
+                        {doc.NAME || doc.name}
                       </h4>
                       <div className="flex items-center gap-2">
                         <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
                         <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate opacity-60">
-                          {doc.DOCUMENT_TYPE || 'Unspecified Type'}
+                          {doc.DOCUMENT_TYPE || doc.document_type || 'Unspecified Type'}
                         </p>
                       </div>
                     </div>
@@ -300,7 +300,7 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                           Anchor
                         </span>
                         <span className="text-[9px] font-bold text-foreground/70 truncate">
-                          {doc.ENTITY_ID || 'Global'}
+                          {doc.ENTITY_ID || doc.entity_id || 'Global'}
                         </span>
                       </div>
                       <div className="flex flex-col gap-0.5 text-right">
@@ -308,7 +308,7 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                           Payload
                         </span>
                         <span className="text-[9px] font-bold text-foreground/70">
-                          {formatBytes(doc.FILE_SIZE) || '0 B'}
+                          {formatBytes(doc.FILE_SIZE || doc.file_size) || '0 B'}
                         </span>
                       </div>
                     </div>
@@ -319,8 +319,8 @@ export const ProSourceDocumentView: React.FC<ProSourceDocumentViewProps> = ({ co
                           Registered
                         </span>
                         <span className="text-[9px] font-mono font-bold text-muted-foreground/60">
-                          {doc.INSERT_DATE
-                            ? new Date(doc.INSERT_DATE).toLocaleDateString()
+                          {doc.INSERT_DATE || doc.insert_date
+                            ? new Date(doc.INSERT_DATE || doc.insert_date).toLocaleDateString()
                             : 'Legacy'}
                         </span>
                       </div>

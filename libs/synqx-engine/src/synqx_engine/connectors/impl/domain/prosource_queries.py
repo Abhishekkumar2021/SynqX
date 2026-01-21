@@ -164,9 +164,9 @@ ORDER BY value DESC
 """
 
 Q_SCHEMA_SOURCE_STATS = """
-SELECT source as label, COUNT(*) as value 
+SELECT entity_scope as label, COUNT(*) as value 
 FROM {SCHEMA_DD_PREFIX}meta_entity 
-WHERE source IS NOT NULL
-GROUP BY source 
+WHERE entity_scope IS NOT NULL
+GROUP BY entity_scope 
 ORDER BY value DESC
 """

@@ -41,7 +41,9 @@ export const ProSourceSidebar: React.FC<ProSourceSidebarProps> = ({
     )
 
     filtered.forEach((asset) => {
-      let mod = asset.metadata?.module || asset.metadata?.MODULE || 'General'
+      let mod =
+        asset.metadata?.module || asset.metadata?.MODULE || asset.metadata?.domain || 'General'
+      // Normalize casing for grouping
       mod = mod.charAt(0).toUpperCase() + mod.slice(1).toLowerCase()
       if (!groups[mod]) groups[mod] = []
       groups[mod].push(asset)

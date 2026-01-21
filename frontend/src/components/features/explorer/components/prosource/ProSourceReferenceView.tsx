@@ -249,7 +249,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
           ) : viewMode === 'grid' ? (
             <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-[1600px] mx-auto">
               {currentData.map((item: any, i: number) => {
-                const code = item.CODE || item.code
+                const code = item.CODE || item.code || item.NAME || item.name
                 const isSelected = selectedCodes.has(code)
                 return (
                   <div
@@ -287,7 +287,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
                               : 'bg-muted/30 text-muted-foreground/60'
                           )}
                         >
-                          {code || 'REF'}
+                          {item.CODE || item.code || 'REF'}
                         </Badge>
                         <Checkbox
                           checked={isSelected}
@@ -325,7 +325,7 @@ export const ProSourceReferenceView: React.FC<ProSourceReferenceViewProps> = ({ 
                           Dimension
                         </span>
                         <span className="text-[9px] font-bold text-foreground/70 truncate">
-                          {item.DIMENSION_TYPE || item.type || 'Standard'}
+                          {item.DIMENSION_TYPE || item.dimension_type || item.type || 'Standard'}
                         </span>
                       </div>
                       <div className="flex flex-col gap-0.5">

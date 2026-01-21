@@ -6,18 +6,14 @@ import {
   X,
   Download,
   Copy,
-  ExternalLink,
   Activity,
   Info,
   LayoutList,
   Map as MapIcon,
   RefreshCw,
-  Hash,
-  ChevronRight,
-  ArrowRight,
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -25,11 +21,25 @@ import { CodeBlock } from '@/components/ui/docs/CodeBlock'
 import { Separator } from '@/components/ui/separator'
 import { useQuery } from '@tanstack/react-query'
 import { getConnectionMetadata } from '@/lib/api'
-import { cn, formatNumber } from '@/lib/utils'
 import { toast } from 'sonner'
-import { ReactFlow, Background, Controls, useNodesState, useEdgesState } from '@xyflow/react'
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  useNodesState,
+  useEdgesState,
+  type Node,
+  type Edge,
+} from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { SpatialMap } from '@/components/common/SpatialMap'
+import React, { useMemo, useState } from 'react'
+
+interface ProSourceNodeData extends Record<string, unknown> {
+  label: string
+  targetId?: string
+  targetAsset?: string
+}
 
 interface ProSourceRecordInspectorProps {
   connectionId: number
@@ -78,7 +88,7 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
   const documents = useMemo(() => documentData?.results || documentData || [], [documentData])
 
   // Fetch relationships for this record
-  const { data: relationshipData, isLoading: isLoadingLineage } = useQuery({
+  const { data: relationshipData } = useQuery({
     queryKey: ['prosource', 'record-relationships', connectionId, assetName, recordId],
     queryFn: () =>
       getConnectionMetadata(connectionId, 'find_relationships', {
@@ -109,52 +119,36 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
   }, [record])
 
   // React Flow State for Lineage
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<ProSourceNodeData>>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
   // Transform relationships into Graph
   React.useEffect(() => {
     if (!record) return
 
+    const centerNode: Node<ProSourceNodeData> = {
+      id: 'center',
+      type: 'default',
+      data: { label: recordName },
+      position: { x: 0, y: 0 },
+      style: {
+        background: 'hsl(var(--primary) / 0.1)',
+        border: '1px solid hsl(var(--primary) / 0.2)',
+        borderRadius: '1rem',
+        width: 180,
+        fontWeight: 'bold',
+        padding: '10px',
+        fontSize: '12px',
+      },
+    }
+
     if (!relationshipData) {
-      setNodes([
-        {
-          id: 'center',
-          type: 'default',
-          data: { label: recordName },
-          position: { x: 0, y: 0 },
-          style: {
-            background: 'hsl(var(--primary) / 0.1)',
-            border: '1px solid hsl(var(--primary) / 0.2)',
-            borderRadius: '1rem',
-            width: 180,
-            fontWeight: 'bold',
-            padding: '10px',
-            fontSize: '12px',
-          },
-        },
-      ])
+      setNodes([centerNode])
       return
     }
 
-    const newNodes = [
-      {
-        id: 'center',
-        type: 'default',
-        data: { label: recordName },
-        position: { x: 0, y: 0 },
-        style: {
-          background: 'hsl(var(--primary) / 0.1)',
-          border: '1px solid hsl(var(--primary) / 0.2)',
-          borderRadius: '1rem',
-          width: 180,
-          fontWeight: 'bold',
-          padding: '10px',
-          fontSize: '12px',
-        },
-      },
-    ]
-    const newEdges: any[] = []
+    const newNodes: Node<ProSourceNodeData>[] = [centerNode]
+    const newEdges: Edge[] = []
 
     relationshipData.forEach((rel: any, i: number) => {
       const nodeId = `node-${i}`
@@ -277,36 +271,36 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
             onValueChange={setActiveTab}
             className="flex-1 flex flex-col min-h-0"
           >
-            <div className="px-6 py-2 border-b border-border/40 bg-muted/5">
-              <TabsList className="bg-muted/30 p-1 h-10 rounded-xl w-full justify-start overflow-x-auto no-scrollbar border border-border/20">
+            <div className="px-8 py-2 border-b border-border/10 bg-muted/5">
+              <TabsList className="bg-transparent gap-8 h-12 w-full justify-start rounded-none">
                 <TabsTrigger
                   value="data"
-                  className="flex-1 text-[10px] font-black uppercase tracking-widest gap-2 h-8 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                  className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-0 text-[10px] font-black uppercase tracking-[0.2em] gap-2 transition-all"
                 >
                   <FileJson size={14} /> Payload
                 </TabsTrigger>
                 <TabsTrigger
                   value="metadata"
-                  className="flex-1 text-[10px] font-black uppercase tracking-widest gap-2 h-8 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                  className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-0 text-[10px] font-black uppercase tracking-[0.2em] gap-2 transition-all"
                 >
-                  <LayoutList size={14} /> Schema
+                  <LayoutList size={14} /> Attributes
                 </TabsTrigger>
                 <TabsTrigger
                   value="documents"
-                  className="flex-1 text-[10px] font-black uppercase tracking-widest gap-2 h-8 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                  className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-0 text-[10px] font-black uppercase tracking-[0.2em] gap-2 transition-all"
                 >
-                  <FileText size={14} /> Docs
+                  <FileText size={14} /> Knowledge
                 </TabsTrigger>
                 <TabsTrigger
                   value="lineage"
-                  className="flex-1 text-[10px] font-black uppercase tracking-widest gap-2 h-8 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                  className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-0 text-[10px] font-black uppercase tracking-[0.2em] gap-2 transition-all"
                 >
                   <Shield size={14} /> Lineage
                 </TabsTrigger>
                 {coords && (
                   <TabsTrigger
                     value="spatial"
-                    className="flex-1 text-[10px] font-black uppercase tracking-widest gap-2 h-8 rounded-lg data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                    className="data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-0 text-[10px] font-black uppercase tracking-[0.2em] gap-2 transition-all"
                   >
                     <MapIcon size={14} /> Spatial
                   </TabsTrigger>
@@ -391,33 +385,36 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
                       </Button>
                     </div>
 
-                    <div className="bg-card border border-border/40 rounded-[2rem] overflow-hidden shadow-xl">
+                    <div className="bg-card border border-border/40 rounded-[2rem] overflow-hidden shadow-xl ring-1 ring-black/5">
                       <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b bg-muted/30 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
                         <div className="col-span-5">Attribute_Field</div>
                         <div className="col-span-3">Data_Type</div>
-                        <div className="col-span-4">Measurement_Context</div>
+                        <div className="col-span-4">Technical_Constraint</div>
                       </div>
-                      <div className="divide-y divide-border/5">
+                      <div className="divide-y divide-border/5 bg-background/30">
                         {isLoadingMeta ? (
-                          <div className="p-20 flex justify-center opacity-30">
-                            <RefreshCw className="animate-spin" />
+                          <div className="p-20 flex flex-col items-center gap-4 opacity-30">
+                            <RefreshCw className="animate-spin h-8 w-8" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                              Resolving Data Dictionary...
+                            </span>
                           </div>
                         ) : (
                           colMetadata?.columns?.map((col: any, i: number) => (
                             <div
                               key={i}
-                              className="grid grid-cols-12 gap-4 px-8 py-4 items-center hover:bg-primary/[0.02] transition-colors group"
+                              className="grid grid-cols-12 gap-4 px-8 py-4 items-center hover:bg-primary/[0.02] transition-colors group cursor-default"
                             >
                               <div className="col-span-5 flex flex-col gap-0.5">
                                 <span className="text-[11px] font-black text-foreground/80 uppercase group-hover:text-primary transition-colors">
                                   {col.name}
                                 </span>
-                                <span className="text-[8px] font-medium text-muted-foreground/40 truncate leading-tight">
+                                <span className="text-[8px] font-medium text-muted-foreground/40 truncate leading-tight group-hover:text-muted-foreground/60">
                                   {col.description || 'Standard technical attribute'}
                                 </span>
                               </div>
                               <div className="col-span-3">
-                                <code className="text-[9px] font-mono font-black text-primary/60 bg-primary/5 px-2 py-0.5 rounded-md">
+                                <code className="text-[9px] font-mono font-black text-primary/60 bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
                                   {col.type}
                                 </code>
                               </div>
@@ -425,13 +422,13 @@ export const ProSourceRecordInspector: React.FC<ProSourceRecordInspectorProps> =
                                 {col.metadata?.unit && (
                                   <Badge
                                     variant="secondary"
-                                    className="bg-muted text-[8px] font-black uppercase px-1.5 h-4 border-none"
+                                    className="bg-muted text-[8px] font-black uppercase px-1.5 h-4 border-none shadow-sm"
                                   >
                                     {col.metadata.unit}
                                   </Badge>
                                 )}
-                                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase truncate">
-                                  {col.metadata?.measurement}
+                                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase truncate tracking-tight">
+                                  {col.metadata?.measurement || 'UNIT_INVARIANT'}
                                 </span>
                               </div>
                             </div>
