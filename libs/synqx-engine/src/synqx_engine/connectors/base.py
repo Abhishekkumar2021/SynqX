@@ -256,6 +256,7 @@ class BaseConnector(ABC):
             "chunksize",
             "sync_mode",
             "cdc_config",
+            "suffix",
         ]
         for key in internal_keys:
             kwargs.pop(key, None)

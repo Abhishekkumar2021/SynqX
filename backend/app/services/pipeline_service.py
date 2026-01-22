@@ -523,8 +523,11 @@ class PipelineService:
                 }
 
             if async_execution:
+                self.db_session.commit()
                 task = execute_pipeline_task.delay(job.id)
-                job.celery_task_id = task.id
+                self.db_session.query(Job).filter(Job.id == job.id).update(
+                    {"celery_task_id": task.id}
+                )
                 self.db_session.commit()
 
                 logger.info(

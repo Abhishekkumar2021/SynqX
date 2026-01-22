@@ -1,6 +1,7 @@
 import hashlib
 from collections.abc import Iterator
 from typing import Any
+import json
 
 import pandas as pd
 from synqx_core.errors import ConfigurationError, DataTransferError
@@ -240,6 +241,54 @@ class OSDUConnector(BaseConnector):
         return resp.content
 
     # --- Engine Batch Operations ---
+    
+    def _sanitize_json_column(self, series: pd.Series) -> list[dict]:
+        clean = []
+        for v in series:
+            if isinstance(v, dict):
+                clean.append(v)
+            elif isinstance(v, list):
+                clean.append({"_list": v})
+            elif v is None:
+                clean.append({})
+            else:
+                clean.append({"_value": v})
+        return clean
+    
+    def _normalize_osdu_json(self, obj):
+        """
+        Recursively makes OSDU records safe for pandas:
+        - dict -> sanitize values
+        - list -> JSON string
+        - scalars -> unchanged
+        """
+        if isinstance(obj, dict):
+            return {k: self._normalize_osdu_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return json.dumps(obj, ensure_ascii=False)
+        else:
+            return obj
+    
+    def _sanitize_object_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Makes all object columns safe for json_normalize by
+        normalizing lists/scalars into dict wrappers.
+        """
+        for col in df.columns:
+            if df[col].dtype == "object":
+                if df[col].apply(lambda v: isinstance(v, (dict, list)) or v is None).any():
+                    clean = []
+                    for v in df[col]:
+                        if isinstance(v, dict):
+                            clean.append(v)
+                        elif isinstance(v, list):
+                            clean.append({"_list": v})
+                        elif v is None:
+                            clean.append({})
+                        else:
+                            clean.append({"_value": v})
+                    df[col] = clean
+        return df
 
     def read_batch(
         self,
@@ -270,10 +319,14 @@ class OSDUConnector(BaseConnector):
                 break
 
             df = pd.DataFrame(results)
+            
+            df = self._sanitize_object_columns(df)
+            
             if "data" in df.columns:
-                df = df.drop(columns=["data"]).join(
-                    pd.json_normalize(df["data"]),suffix="_data"
-                )
+                safe = [self._normalize_osdu_json(v or {}) for v in df["data"]]
+                data_df = pd.json_normalize(safe, sep=".")
+
+                df = df.drop(columns=["data"]).join(data_df, rsuffix="_data")
 
             yield df
             total_fetched += len(results)

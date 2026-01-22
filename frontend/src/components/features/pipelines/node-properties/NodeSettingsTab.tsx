@@ -513,7 +513,7 @@ export const NodeSettingsTab: React.FC<NodeSettingsTabProps> = ({
 
             {nodeType === 'sink' && (
               <div className="space-y-4 pt-4 border-t border-primary/10 mt-2">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4">
                   <div className="p-4 rounded-2xl bg-primary/[0.03] border border-primary/10 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

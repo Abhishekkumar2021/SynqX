@@ -642,13 +642,8 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
           ) : filteredItems.length === 0 ? (
             <EmptyState onUpload={() => fileInputRef.current?.click()} />
           ) : viewMode === 'list' ? (
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: '100%',
-                position: 'relative',
-              }}
-            >
+            <>
+              {/* Header table (sticky) */}
               <Table wrapperClassName="rounded-none border-none shadow-none">
                 <TableHeader className="bg-muted/10 sticky top-0 z-30 backdrop-blur-md border-b border-border/40">
                   <TableRow className="hover:bg-transparent border-none">
@@ -664,109 +659,130 @@ export const LiveFileExplorer: React.FC<LiveFileExplorerProps> = ({ connectionId
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 text-center w-[10%]">
                       Type
                     </TableHead>
-                    <TableHead className="w-[5%] pr-6"></TableHead>
+                    <TableHead className="w-[5%] pr-6" />
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const item = filteredItems[virtualRow.index]
-                    return (
-                      <TableRow
-                        key={item.path}
-                        role="button"
-                        tabIndex={0}
-                        style={{
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`,
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                        }}
-                        className={cn(
-                          'group transition-all duration-200 border-b border-border/20 cursor-pointer',
-                          item.type === 'directory' ? 'hover:bg-primary/3' : 'hover:bg-muted/30'
-                        )}
-                        onClick={() => handleOpenFile(item)}
-                        onKeyDown={(e) => handleKeyDown(e, item)}
-                      >
-                        <TableCell className="pl-6 w-[50%]">
-                          <div className="flex items-center gap-4">
-                            <div
-                              className={cn(
-                                'p-2.5 rounded-xl transition-all duration-300 group-hover:shadow-md',
-                                item.type === 'directory'
-                                  ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
-                                  : 'bg-muted/50 border border-border/40 text-foreground/60'
-                              )}
-                            >
-                              <FileIcon item={item} />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span
+              </Table>
+
+              {/* Virtualized rows */}
+              <div
+                style={{
+                  height: `${rowVirtualizer.getTotalSize()}px`,
+                  position: 'relative',
+                  width: '100%',
+                }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const item = filteredItems[virtualRow.index]
+
+                  return (
+                    <div
+                      key={item.path}
+                      ref={(el) => {
+                        if (el) rowVirtualizer.measureElement(el)
+                      }}
+
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <Table wrapperClassName="rounded-none border-none shadow-none">
+                        <TableBody>
+                          <TableRow
+                            role="button"
+                            tabIndex={0}
+                            className={cn(
+                              'group transition-all duration-200 border-b border-border/20 cursor-pointer',
+                              item.type === 'directory' ? 'hover:bg-primary/3' : 'hover:bg-muted/30'
+                            )}
+                            onClick={() => handleOpenFile(item)}
+                            onKeyDown={(e) => handleKeyDown(e, item)}
+                          >
+                            <TableCell className="pl-6 w-[50%]">
+                              <div className="flex items-center gap-4">
+                                <div
+                                  className={cn(
+                                    'p-2.5 rounded-xl transition-all duration-300 group-hover:shadow-md',
+                                    item.type === 'directory'
+                                      ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                                      : 'bg-muted/50 border border-border/40 text-foreground/60'
+                                  )}
+                                >
+                                  <FileIcon item={item} />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span
+                                    className={cn(
+                                      'text-sm font-bold tracking-tight transition-colors truncate',
+                                      item.type === 'directory'
+                                        ? 'group-hover:text-primary'
+                                        : 'text-foreground/80'
+                                    )}
+                                  >
+                                    {item.name}
+                                  </span>
+                                  <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                                    {item.type === 'directory' ? 'System Directory' : 'Remote Resource'}
+                                  </span>
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="w-[15%]">
+                              <span className="text-xs font-bold font-mono text-foreground/70 tracking-tight">
+                                {item.type === 'file' ? formatFileSize(item.size) : '—'}
+                              </span>
+                            </TableCell>
+
+                            <TableCell className="w-[20%]">
+                              <div className="flex flex-col">
+                                <span className="text-xs font-bold text-foreground/70 whitespace-nowrap">
+                                  {item.modified_at
+                                    ? format(new Date(item.modified_at * 1000), 'MMM dd, yyyy')
+                                    : '—'}
+                                </span>
+                                <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">
+                                  {item.modified_at
+                                    ? formatDistanceToNow(new Date(item.modified_at * 1000), {
+                                      addSuffix: true,
+                                    })
+                                    : ''}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="text-center w-[10%]">
+                              <Badge
+                                variant="outline"
                                 className={cn(
-                                  'text-sm font-bold tracking-tight transition-colors truncate',
+                                  'h-5 text-[8px] font-bold uppercase tracking-widest',
                                   item.type === 'directory'
-                                    ? 'group-hover:text-primary'
-                                    : 'text-foreground/80'
+                                    ? 'border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-500/10'
+                                    : 'bg-muted/50 border-border/40 text-muted-foreground/70'
                                 )}
                               >
-                                {item.name}
-                              </span>
-                              <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
-                                {item.type === 'directory' ? 'System Directory' : 'Remote Resource'}
-                              </span>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-[15%]">
-                          <span className="text-xs font-bold font-mono text-foreground/70 tracking-tight">
-                            {item.type === 'file' ? formatFileSize(item.size) : '—'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="w-[20%]">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-foreground/70 whitespace-nowrap">
-                              {item.modified_at
-                                ? format(new Date(item.modified_at * 1000), 'MMM dd, yyyy')
-                                : '—'}
-                            </span>
-                            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase">
-                              {item.modified_at
-                                ? formatDistanceToNow(new Date(item.modified_at * 1000), {
-                                    addSuffix: true,
-                                  })
-                                : ''}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center w-[10%]">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              'h-5 text-[8px] font-bold uppercase tracking-widest',
-                              item.type === 'directory'
-                                ? 'border-blue-500/20 text-blue-600 dark:text-blue-400 bg-blue-500/10'
-                                : 'bg-muted/50 border-border/40 text-muted-foreground/70'
-                            )}
-                          >
-                            {item.type === 'directory'
-                              ? 'DIR'
-                              : item.name.split('.').pop()?.toUpperCase() || 'FILE'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell
-                          className="pr-6 py-3 w-[5%]"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ActionMenu item={item} />
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                                {item.type === 'directory'
+                                  ? 'DIR'
+                                  : item.name.split('.').pop()?.toUpperCase() || 'FILE'}
+                              </Badge>
+                            </TableCell>
+
+                            <TableCell className="pr-6 py-3 w-[5%]" onClick={(e) => e.stopPropagation()}>
+                              <ActionMenu item={item} />
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           ) : (
             <div className="p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {filteredItems.map((item) => (
