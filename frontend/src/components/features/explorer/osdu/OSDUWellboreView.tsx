@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   LineChart,
   Line,
@@ -11,16 +11,16 @@ import {
   Bar,
   Cell,
 } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Database,
   Activity,
   TrendingUp,
   Globe,
-  ChevronRight,
   Ruler,
   Compass,
-  Badge,
+  Calendar,
+  Search,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
@@ -29,9 +29,15 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { OSDUTrajectoryViewer } from './OSDUTrajectoryViewer'
 import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { OSDUPageHeader } from './shared/OSDUPageHeader'
+import { OSDUDiscoveryList, type Column } from './shared/OSDUDiscoveryList'
+import { useFuzzySearch } from '@/hooks/useFuzzySearch'
 
 interface OSDUWellboreViewProps {
   records: any[]
+  onInspect: (id: string) => void
+  isLoading?: boolean
 }
 
 // --- Premium Color Palette ---
@@ -131,10 +137,22 @@ const StatsCard = ({ title, value, subtext, icon: Icon, variant = 'primary' }: a
   )
 }
 
-export const OSDUWellboreView: React.FC<OSDUWellboreViewProps> = ({ records }) => {
+export const OSDUWellboreView: React.FC<OSDUWellboreViewProps> = ({
+  records,
+  onInspect,
+  isLoading,
+}) => {
   const { theme } = useTheme()
   const [activeTrajectoryId, setActiveTrajectoryId] = React.useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
   const colors = useMemo(() => getThemeColors(theme), [theme])
+
+  const filteredRecords = useFuzzySearch(records || [], search, {
+    keys: ['id', 'data.ProjectName', 'data.ElementName', 'data.CurrentOperatorID'],
+    threshold: 0.3,
+  })
 
   const stats = useMemo(() => {
     let totalDepth = 0
@@ -173,6 +191,58 @@ export const OSDUWellboreView: React.FC<OSDUWellboreViewProps> = ({ records }) =
       depthData: depthData.sort((a, b) => b.depth - a.depth),
     }
   }, [records])
+
+  const columns: Column<any>[] = [
+    {
+      header: 'Operator',
+      accessor: (item) => (
+        <div className="flex items-center gap-2">
+          <Globe size={12} className="text-muted-foreground/40" />
+          <span className="uppercase">
+            {item.data?.CurrentOperatorID?.split(':').pop() || 'Internal'}
+          </span>
+        </div>
+      ),
+      width: 'w-1/4',
+    },
+    {
+      header: 'Depth',
+      accessor: (item) => (
+        <div className="flex items-center gap-2 font-mono text-indigo-500">
+          <Ruler size={12} />
+          <span>{item.data?.VerticalMeasurements?.[0]?.VerticalMeasurement || '0'}m</span>
+        </div>
+      ),
+      width: 'w-32',
+    },
+    {
+      header: 'Source',
+      accessor: (item) => (
+        <Badge
+          variant="outline"
+          className="text-[9px] font-black uppercase tracking-tighter border-border/40"
+        >
+          {item.kind?.split(':')[1] || 'OSDU'}
+        </Badge>
+      ),
+      width: 'w-32',
+    },
+    {
+      header: 'Registered',
+      accessor: (item) => (
+        <div className="flex items-center gap-2 opacity-60">
+          <Calendar size={12} />
+          <span>{item.createTime ? new Date(item.createTime).toLocaleDateString() : 'N/A'}</span>
+        </div>
+      ),
+      width: 'w-40',
+    },
+  ]
+
+  const getItemDisplayName = (item: any) =>
+    item.data?.ProjectName || item.data?.ElementName || item.id.split(':').pop() || ''
+
+  const getItemId = (item: any) => item.id.split(':').pop() || ''
 
   if (activeTrajectoryId) {
     return (
@@ -215,210 +285,260 @@ export const OSDUWellboreView: React.FC<OSDUWellboreViewProps> = ({ records }) =
   }
 
   return (
-    <div className="p-6 space-y-6 animate-in fade-in duration-500 max-w-8xl mx-auto flex flex-col h-full overflow-hidden">
-      <div className="space-y-0.5 shrink-0 px-1">
-        <h2 className="text-xl font-bold tracking-tight text-foreground uppercase flex items-center gap-3 leading-none">
-          <Database className="text-primary" size={20} /> Wellbore Intelligence
-        </h2>
-        <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider opacity-50">
-          Domain-specific specialized view for well master records.
-        </p>
-      </div>
+    <div className="h-full flex flex-col bg-muted/2 animate-in fade-in duration-500">
+      <OSDUPageHeader
+        icon={Database}
+        title="Wellbore Intelligence"
+        subtitle="Well Master & WDMS Analytics"
+        iconColor="text-indigo-500"
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Filter well records..."
+        totalCount={records.length}
+        countLabel="Total Wells"
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
 
-      <ScrollArea className="flex-1 -mx-2 px-2 overflow-y-auto custom-scrollbar">
-        <div className="space-y-6 pb-20">
-          {/* KPI Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-            <StatsCard
-              title="Total Wells"
-              value={stats.count}
-              subtext="Master Data Records"
-              icon={Database}
-              variant="primary"
-            />
-            <StatsCard
-              title="Mean Depth"
-              value={`${stats.avgDepth}m`}
-              subtext="Vertical Measurement"
-              icon={Ruler}
-              variant="success"
-            />
-            <StatsCard
-              title="Active Ops"
-              value={stats.active}
-              subtext="Recent Spud Events"
-              icon={Activity}
-              variant="warning"
-            />
-            <StatsCard
-              title="Operators"
-              value={stats.operators.length}
-              subtext="Service Providers"
-              icon={Globe}
-              variant="info"
-            />
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8">
-              <DashboardWidget
-                title="Operator Distribution"
-                description="Well volume across top data providers"
-                icon={TrendingUp}
-                className="h-112.5"
-              >
-                <div className="h-full w-full p-6 pb-10">
-                  <ResponsiveContainer width="100%" height="100%" key={`well-op-${theme}`}>
-                    <LineChart
-                      data={stats.operators}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={colors.GRID} />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 9, fontStyle: 'bold', fill: colors.TEXT }}
-                        dy={10}
-                        interval={0}
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 10, fill: colors.TEXT }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        name="Well Count"
-                        stroke={colors.PRIMARY}
-                        strokeWidth={4}
-                        dot={{ r: 6, fill: colors.PRIMARY, strokeWidth: 2, stroke: '#fff' }}
-                        activeDot={{ r: 8, strokeWidth: 0 }}
-                        animationDuration={1500}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </DashboardWidget>
-            </div>
-
-            <div className="lg:col-span-4">
-              <DashboardWidget
-                title="Depth Variance"
-                description="Comparison of well verticality"
+      <div className="flex-1 min-h-0 relative overflow-hidden bg-muted/2 flex flex-col">
+        <ScrollArea className="flex-1">
+          <div className="p-6 space-y-8 max-w-[1600px] mx-auto pb-32 transition-all">
+            {/* KPI Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+              <StatsCard
+                title="Total Wells"
+                value={stats.count}
+                subtext="Master Data Records"
+                icon={Database}
+                variant="primary"
+              />
+              <StatsCard
+                title="Mean Depth"
+                value={`${stats.avgDepth}m`}
+                subtext="Vertical Measurement"
                 icon={Ruler}
-                className="h-112.5"
-              >
-                <div className="h-full w-full p-6">
-                  <ResponsiveContainer width="100%" height="100%" key={`well-depth-${theme}`}>
-                    <BarChart data={stats.depthData} layout="vertical">
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        horizontal={true}
-                        vertical={false}
-                        stroke={colors.GRID}
-                      />
-                      <XAxis type="number" hide />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        tick={{ fontSize: 9, fontStyle: 'bold', fill: colors.TEXT }}
-                        width={80}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        content={<CustomTooltip />}
-                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                      />
-                      <Bar dataKey="depth" name="Depth (m)" radius={[0, 4, 4, 0]} barSize={16}>
-                        {stats.depthData.map((_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={colors.CHART_COLORS[index % colors.CHART_COLORS.length]}
-                            fillOpacity={0.8}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </DashboardWidget>
+                variant="success"
+              />
+              <StatsCard
+                title="Active Ops"
+                value={stats.active}
+                subtext="Recent Spud Events"
+                icon={Activity}
+                variant="warning"
+              />
+              <StatsCard
+                title="Operators"
+                value={stats.operators.length}
+                subtext="Service Providers"
+                icon={Globe}
+                variant="info"
+              />
             </div>
-          </div>
 
-          {/* Rankings List */}
-          <Card className="bg-background/40 backdrop-blur-md border-border/40 shadow-xl overflow-hidden rounded-[2rem]">
-            <CardHeader className="border-b border-border/5 bg-muted/5 flex flex-row items-center justify-between p-6">
-              <div>
-                <CardTitle className="text-sm font-bold uppercase tracking-tight">
-                  Technical Asset Roster
-                </CardTitle>
-                <CardDescription className="text-[10px] font-medium text-muted-foreground/60">
-                  Detailed registry of discovered well master records
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border/5">
-                {records.slice(0, 50).map((well, i) => (
-                  <div
-                    key={well.id}
-                    className="px-6 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors group"
+            {/* Charts Row - Only show in Grid Mode for density */}
+            {viewMode === 'grid' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className="lg:col-span-8">
+                  <DashboardWidget
+                    title="Operator Distribution"
+                    description="Well volume across top data providers"
+                    icon={TrendingUp}
+                    className="h-112.5"
                   >
-                    <div className="flex items-center gap-5">
-                      <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-600 border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm">
-                        <span className="text-[10px] font-black">{i + 1}</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-bold text-[13px] text-foreground/80 group-hover:text-primary transition-colors uppercase tracking-tight">
-                          {well.data?.ProjectName ||
-                            well.data?.ElementName ||
-                            well.id.split(':').pop()}
-                        </span>
-                        <span className="text-[8px] font-mono text-muted-foreground/30">
-                          {well.id}
-                        </span>
-                      </div>
+                    <div className="h-full w-full p-6 pb-10">
+                      <ResponsiveContainer width="100%" height="100%" key={`well-op-${theme}`}>
+                        <LineChart
+                          data={stats.operators}
+                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            vertical={false}
+                            stroke={colors.GRID}
+                          />
+                          <XAxis
+                            dataKey="name"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 9, fontStyle: 'bold', fill: colors.TEXT }}
+                            dy={10}
+                            interval={0}
+                            angle={-45}
+                            textAnchor="end"
+                            height={60}
+                          />
+                          <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fill: colors.TEXT }}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            name="Well Count"
+                            stroke={colors.PRIMARY}
+                            strokeWidth={4}
+                            dot={{ r: 6, fill: colors.PRIMARY, strokeWidth: 2, stroke: '#fff' }}
+                            activeDot={{ r: 8, strokeWidth: 0 }}
+                            animationDuration={1500}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="text-[8px] font-black text-muted-foreground/30 uppercase tracking-widest leading-none">
-                          Measured Depth
-                        </span>
-                        <span className="font-mono text-[11px] font-bold text-foreground/50 group-hover:text-foreground transition-colors">
-                          {well.data?.VerticalMeasurements?.[0]?.VerticalMeasurement || '0'}m
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7.5 rounded-lg text-[8px] font-black uppercase tracking-widest gap-1.5 border-primary/20 text-primary hover:bg-primary/5"
-                        onClick={() => {
-                          // Try to find a trajectory ID. In real OSDU, we'd query for associated WellboreTrajectories.
-                          // For prototype, we'll use a deterministic ID if data exists or mock it.
-                          setActiveTrajectoryId(
-                            well.id.replace('master-data--Well', 'master-data--WellboreTrajectory')
-                          )
-                        }}
-                      >
-                        <Compass size={11} /> Inspect
-                      </Button>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+                  </DashboardWidget>
+                </div>
+
+                <div className="lg:col-span-4">
+                  <DashboardWidget
+                    title="Depth Variance"
+                    description="Comparison of well verticality"
+                    icon={Ruler}
+                    className="h-112.5"
+                  >
+                    <div className="h-full w-full p-6">
+                      <ResponsiveContainer width="100%" height="100%" key={`well-depth-${theme}`}>
+                        <BarChart data={stats.depthData} layout="vertical">
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            horizontal={true}
+                            vertical={false}
+                            stroke={colors.GRID}
+                          />
+                          <XAxis type="number" hide />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            tick={{ fontSize: 9, fontStyle: 'bold', fill: colors.TEXT }}
+                            width={80}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            content={<CustomTooltip />}
+                            cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                          />
+                          <Bar dataKey="depth" name="Depth (m)" radius={[0, 4, 4, 0]} barSize={16}>
+                            {stats.depthData.map((_, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={colors.CHART_COLORS[index % colors.CHART_COLORS.length]}
+                                fillOpacity={0.8}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
-                  </div>
-                ))}
+                  </DashboardWidget>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </ScrollArea>
+            )}
+
+            {/* List Row */}
+            {viewMode === 'list' ? (
+              <OSDUDiscoveryList
+                items={filteredRecords}
+                columns={columns}
+                onInspect={onInspect}
+                icon={Database}
+                iconColor="text-indigo-500"
+                iconBg="bg-indigo-500/10"
+                getDisplayName={getItemDisplayName}
+                getId={getItemId}
+                isLoading={isLoading}
+              />
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-muted-foreground/50">
+                    Master Record Discovery
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+                  {filteredRecords.slice(0, 50).map((well, i) => (
+                    <Card
+                      key={well.id}
+                      className="bg-background/40 backdrop-blur-md border-border/40 hover:border-primary/30 transition-all group cursor-pointer overflow-hidden relative"
+                      onClick={() => onInspect(well.id)}
+                    >
+                      <div className="p-6 flex flex-col h-full gap-6">
+                        <div className="flex items-start justify-between">
+                          <div className="h-10 w-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+                            <Database size={20} />
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className="text-[8px] font-black uppercase border-border/40 bg-muted/20"
+                          >
+                            WELL
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-lg leading-tight truncate uppercase tracking-tight">
+                            {getItemDisplayName(well)}
+                          </h4>
+                          <p className="text-[10px] font-mono text-muted-foreground/40 truncate uppercase">
+                            {well.id}
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mt-auto">
+                          <div className="p-3 rounded-xl bg-muted/20 border border-border/10">
+                            <span className="text-[8px] font-black uppercase text-muted-foreground/40 block mb-1">
+                              Depth
+                            </span>
+                            <span className="text-xs font-bold font-mono">
+                              {well.data?.VerticalMeasurements?.[0]?.VerticalMeasurement || '0'}m
+                            </span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-muted/20 border border-border/10">
+                            <span className="text-[8px] font-black uppercase text-muted-foreground/40 block mb-1">
+                              Operator
+                            </span>
+                            <span className="text-xs font-bold truncate block">
+                              {well.data?.CurrentOperatorID?.split(':').pop() || 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            className="flex-1 rounded-xl h-9 text-[10px] font-black uppercase tracking-widest gap-2 bg-primary/90 hover:bg-primary shadow-lg shadow-primary/20"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onInspect(well.id)
+                            }}
+                          >
+                            <Search size={14} /> Inspect
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 rounded-xl border-border/40"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setActiveTrajectoryId(
+                                well.id.replace(
+                                  'master-data--Well',
+                                  'master-data--WellboreTrajectory'
+                                )
+                              )
+                            }}
+                          >
+                            <Compass size={14} />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
     </div>
   )
 }

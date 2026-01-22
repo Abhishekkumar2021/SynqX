@@ -6,7 +6,7 @@ import type { Variants } from 'framer-motion'
 import { DashboardKPIs } from './dashboard/DashboardKPIs'
 import { DashboardCharts } from './dashboard/DashboardCharts'
 import { DashboardGovernance } from './dashboard/DashboardGovernance'
-import { ShieldCheck, Activity, Server, Cpu, Search, Database } from 'lucide-react'
+import { ShieldCheck, Activity, Cpu } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -142,37 +142,7 @@ export const OSDUDashboard: React.FC<OSDUDashboardProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                {[
-                  { label: 'Search_V2', icon: Search },
-                  { label: 'Storage_V2', icon: Database },
-                  { label: 'Schema_V1', icon: Server },
-                ].map((svc, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-col items-end gap-1.5 p-3 px-5 rounded-2xl bg-muted/20 border border-border/10 shadow-inner group-hover:border-primary/10 transition-colors"
-                  >
-                    <span className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-widest">
-                      {svc.label}
-                    </span>
-                    {health ? (
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'h-4.5 px-1.5 text-[8px] font-black uppercase',
-                          isHealthy
-                            ? 'border-emerald-500/20 text-emerald-500 bg-emerald-500/5'
-                            : 'border-destructive/20 text-destructive bg-destructive/5'
-                        )}
-                      >
-                        {isHealthy ? 'Healthy' : 'Degraded'}
-                      </Badge>
-                    ) : (
-                      <Skeleton className="h-4 w-12 rounded-full" />
-                    )}
-                  </div>
-                ))}
-              </div>
+              {/* Removed individual service indicators per user request */}
             </div>
 
             <div className="metric-card flex flex-col justify-between">

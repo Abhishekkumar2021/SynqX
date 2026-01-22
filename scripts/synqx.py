@@ -589,7 +589,8 @@ def clean(logs: bool = Option(False, help="Also remove log files")):
         
     removed_count = 0
     for p in patterns:
-        for path in (ROOT_DIR.rglob(p.split('/')[-1]) if '/' in p else ROOT_DIR.rglob(p)):
+        # Use glob which supports ** recursive patterns
+        for path in ROOT_DIR.glob(p):
             try:
                 if path.is_dir():
                     shutil.rmtree(path)
@@ -623,26 +624,50 @@ def db_roll(steps: int = Argument(1, help="Number of steps to rollback")):
     run([bin_path, "downgrade", f"-{steps}"], ROOT_DIR/"backend")
 
 # --- Build Commands ---
+def robust_rmtree(path: Path):
+    """Robustly remove a directory, handling Windows file locking and read-only issues."""
+    if not path.exists():
+        return
+        
+    def handle_errors(func, path, exc_info):
+        # Handle read-only files by changing permissions
+        import stat
+        try:
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        except Exception:
+            pass
+
+    # Try a few times on Windows because of transient file locks
+    max_attempts = 5 if platform.system() == "Windows" else 1
+    for i in range(max_attempts):
+        try:
+            shutil.rmtree(path, onerror=handle_errors)
+            return
+        except Exception:
+            if i == max_attempts - 1:
+                raise
+            time.sleep(0.2)
+
 @build_app.command("agent")
 def build_agent(version: str = "1.0.0"):
     """Build a portable SynqX Agent tarball."""
     # Build-time staging area
     build_staging = ROOT_DIR / "dist_agent"
-    if build_staging.exists():
-        shutil.rmtree(build_staging)
-    build_staging.mkdir(parents=True)
+    robust_rmtree(build_staging)
+    build_staging.mkdir(parents=True, exist_ok=True)
     
     # Final distribution directory
     dist_dir = ROOT_DIR / "dist" / "agents"
     dist_dir.mkdir(parents=True, exist_ok=True)
     
     pkgs = build_staging / "packages"
-    pkgs.mkdir()
+    pkgs.mkdir(exist_ok=True)
     
-    # Build internal libs as wheels
+    # Build internal libs as wheels using uv (more reliable than python -m build)
     for lib in ["synqx-core", "synqx-engine"]:
         console.print(f"[info]Building {lib}...[/info]")
-        run([sys.executable, "-m", "build", "--wheel", "--outdir", str(pkgs)], ROOT_DIR/"libs"/lib)
+        run(["uv", "pip", "wheel", "--no-deps", ".", "--wheel-dir", str(pkgs)], ROOT_DIR/"libs"/lib)
     
     # Copy agent source
     console.print("[info]Packaging agent source...[/info]")
@@ -650,15 +675,15 @@ def build_agent(version: str = "1.0.0"):
         ROOT_DIR/"agent", 
         build_staging, 
         dirs_exist_ok=True, 
-        ignore=shutil.ignore_patterns(".venv", "__pycache__", ".env", "*.pid", "*.log")
+        ignore=shutil.ignore_patterns(".venv", "__pycache__", ".env", "*.pid", "*.log", "uv.lock")
     )
     
     # Clean pyproject.toml of local paths for distribution
     p = build_staging / "pyproject.toml"
     if p.exists():
         content = p.read_text()
-        # Remove local path dependencies and uv sources
-        content = re.sub(r'("synqx-(core|engine)",?\s*\n?)|(\[tool\.uv\.sources\][\s\S]*?(?=\n\[|\Z))', '', content)
+        # Remove local path dependencies and uv sources, handling Windows line endings
+        content = re.sub(r'("synqx-(core|engine)",?\s*\r?\n?)|(\[tool\.uv\.sources\][\s\S]*?(?=\r?\n\[|\Z))', '', content)
         p.write_text(content)
     
     # Create archive in dist/agents
@@ -667,6 +692,7 @@ def build_agent(version: str = "1.0.0"):
     console.print(f"[info]Creating archive {archive_name}...[/info]")
     
     with tarfile.open(art, "w:gz") as tar:
+        # Use forward slashes in tar archive for cross-platform compatibility
         tar.add(build_staging, arcname=f"synqx-agent-{version}")
         
     # Generate checksum

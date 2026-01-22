@@ -115,7 +115,7 @@ export const OSDUSidebar: React.FC<OSDUSidebarProps> = ({
                         'w-full rounded-xl gap-2.5 transition-all duration-200 font-bold text-[11px] group relative',
                         isCollapsed ? 'justify-center px-0 h-11' : 'justify-start h-9 px-2.5',
                         isActive
-                          ? 'bg-primary/10 text-primary shadow-[inset_0_0_10px_rgba(var(--primary),0.05)]'
+                          ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm'
                           : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                       )}
                     >
@@ -124,7 +124,7 @@ export const OSDUSidebar: React.FC<OSDUSidebarProps> = ({
                           'p-1.5 rounded-lg transition-all duration-300 flex items-center justify-center shrink-0',
                           isActive
                             ? 'bg-primary/20 scale-105 shadow-sm'
-                            : 'bg-muted/20 group-hover:bg-muted/40'
+                            : 'bg-muted/20 group-hover:bg-muted/40',
                         )}
                       >
                         <Icon size={13} className={cn(isActive ? item.color : 'opacity-40')} />

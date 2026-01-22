@@ -10,6 +10,8 @@ import { InspectorPolicy } from './inspector/InspectorPolicy'
 import { InspectorSpatial } from './inspector/InspectorSpatial'
 import { InspectorHistory } from './inspector/InspectorHistory'
 
+import { extractOSDUSpatialData } from '@/lib/osdu-spatial'
+
 interface OSDURecordInspectorProps {
   record: any
   isLoading: boolean
@@ -35,35 +37,7 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('payload')
 
-  const coordinates = useMemo(() => {
-    // 1. Check pre-calculated spatial helper
-    if (record?.spatial) {
-      const coords = record.spatial.geometries?.[0]?.coordinates || record.spatial.coordinates
-      if (Array.isArray(coords) && coords.length >= 2) {
-        return { lon: coords[0], lat: coords[1] }
-      }
-    }
-
-    // 2. Check OSDU native SpatialLocation (Standard)
-    const wgs84 = record?.details?.data?.SpatialLocation?.Wgs84Coordinates
-    if (wgs84?.geometries?.length > 0) {
-      const coords = wgs84.geometries[0]?.coordinates
-      if (Array.isArray(coords) && coords.length >= 2) {
-        return { lon: coords[0], lat: coords[1] }
-      }
-    }
-
-    // 3. Check legacy or alternative SpatialPoint
-    const spatialPoint = record?.details?.data?.SpatialPoint
-    if (spatialPoint?.Wgs84Coordinates?.geometries?.length > 0) {
-      const coords = spatialPoint.Wgs84Coordinates.geometries[0]?.coordinates
-      if (Array.isArray(coords) && coords.length >= 2) {
-        return { lon: coords[0], lat: coords[1] }
-      }
-    }
-
-    return null
-  }, [record])
+  const spatialData = useMemo(() => extractOSDUSpatialData(record), [record])
 
   return (
     <motion.div
@@ -127,7 +101,7 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
                     >
                       <Lock size={12} /> Policy
                     </TabsTrigger>
-                    {coordinates && (
+                    {spatialData && (
                       <TabsTrigger
                         value="map"
                         className="gap-2 text-[10px] font-bold uppercase tracking-widest rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-7 px-3"
@@ -167,7 +141,7 @@ export const OSDURecordInspector: React.FC<OSDURecordInspectorProps> = ({
                   </TabsContent>
 
                   <TabsContent value="map" className="h-full m-0 flex flex-col">
-                    <InspectorSpatial record={record} coordinates={coordinates} />
+                    <InspectorSpatial record={record} spatialData={spatialData} />
                   </TabsContent>
                 </div>
               </Tabs>

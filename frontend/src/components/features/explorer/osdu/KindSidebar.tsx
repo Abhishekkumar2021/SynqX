@@ -60,7 +60,7 @@ export const KindSidebar: React.FC<KindSidebarProps> = ({
         {/* Search */}
         <div className="p-3 pb-2 shrink-0">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
+            <Search className="z-20 absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/40" />
             <Input
               placeholder="Filter kinds…"
               className="h-8 pl-7 text-[10px] bg-background/60 border-border/40 rounded-lg

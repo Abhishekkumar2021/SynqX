@@ -565,7 +565,7 @@ class ParallelAgent:
                             self.metrics.failed_nodes += 1
                             tb_str = traceback.format_exc()
                             log_cb(
-                                f"[FAILED] Node '{nid}' aborted due to a terminal error:\n{{tb_str}}",  # noqa: E501
+                                f"[FAILED] Node '{nid}' aborted due to a terminal error:\n{tb_str}",  # noqa: E501
                                 nid,
                             )
                             if status_cb:

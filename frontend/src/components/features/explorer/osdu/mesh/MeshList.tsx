@@ -106,11 +106,11 @@ export const MeshList: React.FC<MeshListProps> = ({
           const parts = row.original.kind.split(':')
           const shortKind = parts[2] || 'Unknown'
           return (
-            <div className="flex flex-col max-w-[250px]">
+            <div className="flex flex-col max-w-62.5">
               <div className="flex items-center gap-2">
                 <Badge
                   variant="outline"
-                  className="h-4.5 px-1.5 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary/70"
+                  className="py-2 text-[9px] font-black uppercase tracking-widest border-primary/20 text-primary/70"
                 >
                   {shortKind}
                 </Badge>

@@ -105,10 +105,11 @@ class AgentRuntime:
         self.last_heartbeat = 0
 
         signal.signal(signal.SIGINT, self._handle_exit)
-        signal.signal(signal.SIGTERM, self._handle_exit)
+        if platform.system() != "Windows":
+            signal.signal(signal.SIGTERM, self._handle_exit)
 
     def _handle_exit(self, signum, frame):
-        logger.info("[STOP] Signal received. Shutting down...")
+        logger.info(f"[STOP] Signal {signum} received. Shutting down...")
         self.running = False
         if PID_FILE.exists():
             try:
